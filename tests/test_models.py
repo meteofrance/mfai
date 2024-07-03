@@ -35,11 +35,6 @@ class FakeSumDataset(torch.utils.data.Dataset):
         return x, y
 
 
-def onnx_export_load_infer(model, filepath, sample):
-
-    export_to_onnx(model, sample, filepath)
-    onnx_load_and_infer(filepath, sample)
-
 @pytest.mark.parametrize("model_kls", all_nn_architectures)
 def test_torch_training_loop(model_kls):
     """
@@ -88,4 +83,6 @@ def test_torch_training_loop(model_kls):
     if model.onnx_supported:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".onnx") as dst:
             sample = torch.rand(1, NUM_INPUTS, GRID_HEIGHT, GRID_WIDTH)
-            onnx_export_load_infer(model, dst.name, sample)
+            export_to_onnx(model, sample, dst.name)
+            onnx_load_and_infer(dst.name, sample)
+

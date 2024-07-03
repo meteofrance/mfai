@@ -1,8 +1,10 @@
 """
 A class based NamedTensor implementation for PyTorch, inspired from the unstable PyTorch namedtensors.
 """
+from copy import deepcopy
 from dataclasses import dataclass
 from itertools import chain
+from functools import cached_property
 from typing import List, Union
 import torch
 from tabulate import tabulate

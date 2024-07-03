@@ -21,6 +21,22 @@ def cast_tuple(val, depth):
     return val if isinstance(val, tuple) else (val,) * depth
 
 
+@dataclass_json
+@dataclass(slots=True)
+class SegformerSettings:
+
+    dims: Tuple[int, ...] = (32, 64, 160, 256)
+    heads: Tuple[int, ...] = (1, 2, 5, 8)
+    ff_expansion: Tuple[int, ...] = (8, 8, 4, 4)
+    reduction_ratio: Tuple[int, ...] = (8, 4, 2, 1)
+    num_layers: int = 2
+    decoder_dim: int = 256
+
+    # Number of channels after downsampling
+    # injected in the mit
+    num_downsampling_chans: int = 32
+
+
 class DsConv2d(nn.Module):
     def __init__(self, dim_in, dim_out, kernel_size, padding, stride=1, bias=True):
         super().__init__()
@@ -190,22 +206,6 @@ class MiT(nn.Module):
         return ret
 
 
-@dataclass_json
-@dataclass(slots=True)
-class SegformerSettings:
-
-    dims: Tuple[int, ...] = (32, 64, 160, 256)
-    heads: Tuple[int, ...] = (1, 2, 5, 8)
-    ff_expansion: Tuple[int, ...] = (8, 8, 4, 4)
-    reduction_ratio: Tuple[int, ...] = (8, 4, 2, 1)
-    num_layers: int = 2
-    decoder_dim: int = 256
-
-    # Number of channels after downsampling
-    # injected in the mit
-    num_downsampling_chans: int = 32
-
-
 class Segformer(nn.Module):
     """
     Segformer architecture with extra
@@ -297,6 +297,7 @@ class Segformer(nn.Module):
 
     def forward(self, x):
 
+        x = self.downsampler(x)
         layer_outputs = self.mit(x, return_layer_outputs=True)
 
         fused = [
@@ -304,5 +305,4 @@ class Segformer(nn.Module):
         ]
         fused = torch.cat(fused, dim=1)
         return self.upsampler(fused)
-
 

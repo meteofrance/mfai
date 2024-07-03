@@ -1,5 +1,7 @@
 # MFAI: Météo-France's AI Python package
 
+![Unit Tests](https://github.com/meteofrance/mfai/actions/workflows/tests.yml/badge.svg)
+
 # Table of contents
 
 - [Launch tests](#tests)

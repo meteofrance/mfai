@@ -58,7 +58,7 @@ def onnx_export_load_infer(model, filepath, sample):
     onnx.checker.check_model(onnx_model)
 
     # Perform an inference with onnx
-    onnx_input = sample
+
     ort_session = onnxruntime.InferenceSession(
         filepath, providers=["CPUExecutionProvider"]
     )

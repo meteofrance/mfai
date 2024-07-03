@@ -56,22 +56,24 @@ def test_torch_training_loop(model_kls):
     ds = FakeSumDataset(GRID_HEIGHT, GRID_WIDTH, NUM_INPUTS)
     training_loader = torch.utils.data.DataLoader(ds, batch_size=2)
 
-    for _, data in enumerate(training_loader):
-        # Every data instance is an input + label pair
-        inputs, targets = data
+    # Simulate 2 EPOCHS of training
+    for _ in range(2):
+        for _, data in enumerate(training_loader):
+            # Every data instance is an input + label pair
+            inputs, targets = data
 
-        # Zero your gradients for every batch!
-        optimizer.zero_grad()
+            # Zero your gradients for every batch!
+            optimizer.zero_grad()
 
-        # Make predictions for this batch
-        outputs = model(inputs)
+            # Make predictions for this batch
+            outputs = model(inputs)
 
-        # Compute the loss and its gradients
-        loss = loss_fn(outputs, targets)
-        loss.backward()
+            # Compute the loss and its gradients
+            loss = loss_fn(outputs, targets)
+            loss.backward()
 
-        # Adjust learning weights
-        optimizer.step()
+            # Adjust learning weights
+            optimizer.step()
 
     # Make a prediction in eval mode
     model.eval()

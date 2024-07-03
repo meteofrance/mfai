@@ -37,9 +37,22 @@ class FakeSumDataset(torch.utils.data.Dataset):
 
 
 def onnx_export_load_infer(model, filepath, sample):
-    onnx_program = torch.onnx.dynamo_export(model, sample)
-    onnx_program.save(filepath)
 
+    torch.onnx.export(
+    model,  # model being run
+    sample,  # model input (or a tuple for multiple inputs)
+    filepath,  # where to save the model (can be a file or file-like object)
+    export_params=True,  # store the trained parameter weights inside the model file
+    opset_version=12,  # the ONNX version to export the model to
+    do_constant_folding=True,  # whether to execute constant folding for optimization
+    input_names=["input"],  # the model's input names
+    output_names=["output"],  # the model's output names
+    dynamic_axes={
+        "input": {0: "batch_size"},  # variable length axes
+        "output": {0: "batch_size"},
+    },
+    )
+    
     # Check the model with onnx
     onnx_model = onnx.load(filepath)
     onnx.checker.check_model(onnx_model)
@@ -50,11 +63,7 @@ def onnx_export_load_infer(model, filepath, sample):
         filepath, providers=["CPUExecutionProvider"]
     )
 
-    onnxruntime_input = {
-        k.name: to_numpy(v) for k, v in zip(ort_session.get_inputs(), onnx_input)
-    }
-
-    ort_session.run(None, onnxruntime_input)
+    ort_session.run(None, {"input": to_numpy(sample)})
 
 @pytest.mark.parametrize("model_kls", all_nn_architectures)
 def test_torch_training_loop(model_kls):

@@ -80,7 +80,7 @@ The [**NamedTensor**](../py4cast/datasets/base.py#L38) class is a wrapper around
 pip install mfai
 ```
 
-## Cloning the repository
+## Cloning the repository
 
 ```bash
 git clone https://github.com/meteofrance/mfai

@@ -39,6 +39,72 @@ NamedTensors are a way to give names to dimensions of tensors and to keep track 
 
 The [**NamedTensor**](../py4cast/datasets/base.py#L38) class is a wrapper around a PyTorch tensor, it allows us to pass consistent object linking data and metadata with extra utility methods (concat along features dimension, flatten in place, ...). See the implementation [here](../py4cast/datasets/base.py#L38) and usage for plots [here](../py4cast/observer.py)
 
+
+# Installation
+
+```bash
+pip install mfai
+```
+
+# Usage
+
+## Instanciate a model
+
+Our [unit tests](tests/test_models.py#L39) provides an example of how to use the models in a PyTorch training loop. Our models are instanciated with 2 mandatory positional arguments: **in_channels** and **out_channels** respectively the number of input and output channels of the model. The other parameter is an instance of the model's settings class. 
+
+Here is an example of how to instanciate the UNet model with a 3 channels input (like an RGB image) and 1 channel output with its default settings:
+
+```python
+from mfai.torch.models import UNet
+unet = UNet(in_channels=3, out_channels=1)
+```
+
+**_FEATURE:_** Once instanciated, the model (subclass of **nn.Module**) can be used like any standard [PyTorch model](https://pytorch.org/tutorials/beginner/introyt/trainingyt.html).
+
+In order to instanciate a HalfUNet model with a 2 channels inputs, 2 channels outputs and a custom settings (128 filters, ghost module):
+
+```python
+from mfai.torch.models import HalfUNet
+halfunet = HalfUNet(in_channels=2, out_channels=2, settings=HalfUNet.settings_kls(num_filters=128, use_ghost=True))
+```
+
+**_FEATURE:_**  Each model has its settings class available under the **settings_kls** attribute.
+
+You can use the **load_from_settings_file** function to instanciate a model with its settings from a json file:
+
+```python
+from pathlib import Path
+from mfai.torch.models import load_from_settings_file
+model = load_from_settings_file(
+    "HalfUNet",
+    2,
+    2,
+    Path(".") / "mfai" / "config" / "models" / "halfunet128.json",
+)
+```
+
+**_FEATURE:_**  Use the **load_from_settings_file** to have the strictest validation of the settings.
+
+## Export to onnx
+
+Our tests [illustrate how to export and later reload a model to/from onnx](tests/test_models.py#L91). Here is an example of how to export a model to onnx:
+
+```python
+from mfai.torch import export_to_onnx, onnx_load_and_infer
+
+# Export the model to onnx assuming we have just trained a 'model'
+export_to_onnx(model, "model.onnx")
+
+# Load the onnx model and infer
+output_tensor = onnx_load_and_infer("model.onnx", input_tensor)
+```
+
+Check the code of [onnx_load_and_infer](mfai/torch/__init__.py#L35) if you wouls like to load the model once and make multiple inferences.
+
+## NamedTensors
+
+We use **NamedTensor** instances to keep the link between our torch tensors and our physical/weather feature names (for plotting, for specific losses weights on given features, ...).
+
 Some examples of NamedTensors usage, here for gridded data on a 256x256 grid:
 
 ```python
@@ -88,48 +154,6 @@ Features:
 
 ```
 
-# Installation
-
-```bash
-pip install mfai
-```
-
-# Usage
-
-Our [unit tests](tests/test_models.py#L39) provides an example of how to use the models in a PyTorch training loop. Our models are instanciated with 2 mandatory positional arguments: **in_channels** and **out_channels** respectively the number of input and output channels of the model. The other parameter is an instance of the model's settings class. 
-
-Here is an example of how to instanciate the UNet model with a 3 channels input (like an RGB image) and 1 channel output with its default settings:
-
-```python
-from mfai.torch.models import UNet
-unet = UNet(in_channels=3, out_channels=1)
-```
-
-**_FEATURE:_** Once instanciated, the model (subclass of **nn.Module**) can be used like any standard [PyTorch model](https://pytorch.org/tutorials/beginner/introyt/trainingyt.html).
-
-In order to instanciate a HalfUNet model with a 2 channels inputs, 2 channels outputs and a custom settings (128 filters, ghost module):
-
-```python
-from mfai.torch.models import HalfUNet
-halfunet = HalfUNet(in_channels=2, out_channels=2, settings=HalfUNet.settings_kls(num_filters=128, use_ghost=True))
-```
-
-**_FEATURE:_**  Each model has its settings class available under the **settings_kls** attribute.
-
-You can use the **load_from_settings_file** function to instanciate a model with its settings from a json file:
-
-```python
-from pathlib import Path
-from mfai.torch.models import load_from_settings_file
-model = load_from_settings_file(
-    "HalfUNet",
-    2,
-    2,
-    Path(".") / "mfai" / "config" / "models" / "halfunet128.json",
-)
-```
-
-**_FEATURE:_**  Use the **load_from_settings_file** to have the strictest validation of the settings.
 
 # Running Tests
 

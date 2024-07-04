@@ -18,6 +18,10 @@
     - unetr++
 - [NamedTensors](#namedtensors)
 - [Installation](#installation)
+- [Usage](#usage)
+    - [Instanciate a model](#instanciate-a-model)
+    - [Export to onnx](#export-to-onnx)
+    - [NamedTensors](#namedtensors-example)
 - [Running tests](#tests)
 
 # Neural Network Architectures
@@ -101,7 +105,7 @@ output_tensor = onnx_load_and_infer("model.onnx", input_tensor)
 
 Check the code of [onnx_load_and_infer](mfai/torch/__init__.py#L35) if you wouls like to load the model once and make multiple inferences.
 
-## NamedTensors
+## NamedTensors example
 
 We use **NamedTensor** instances to keep the link between our torch tensors and our physical/weather feature names (for plotting, for specific losses weights on given features, ...).
 

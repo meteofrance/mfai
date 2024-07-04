@@ -220,4 +220,3 @@ class ResNet50(torch.nn.Module):
         y_hat = y_hat.reshape(y_hat.shape[0], -1)
         y_hat = self.fc(y_hat)
         return y_hat
-

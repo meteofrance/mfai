@@ -76,7 +76,11 @@ pip install mfai
 
 ## Instanciate a model
 
-Our [unit tests](tests/test_models.py#L39) provides an example of how to use the models in a PyTorch training loop. Our models are instanciated with 2 mandatory positional arguments: **in_channels** and **out_channels** respectively the number of input and output channels of the model. The other parameter is an instance of the model's settings class. 
+Our [unit tests](tests/test_models.py#L39) provides an example of how to use the models in a PyTorch training loop. Our models are instanciated with 2 mandatory positional arguments: **in_channels** and **out_channels** respectively the number of input and output channels/features of the model. A third **input_shape** parameter is either mandatory (**UNETR++** or **HalfUNet wtih abs pos embedding**) or optional for the other models. It describes the shape of the input tensor along its spatial dimensions.
+
+The last parameter is an instance of the model's settings class and is a keyword argument with a default value set to the default settings.
+
+
 
 Here is an example of how to instanciate the UNet model with a 3 channels input (like an RGB image) and 1 channel output with its default settings:
 
@@ -92,6 +96,13 @@ In order to instanciate a HalfUNet model with a 2 channels inputs, 2 channels ou
 ```python
 from mfai.torch.models import HalfUNet
 halfunet = HalfUNet(in_channels=2, out_channels=2, settings=HalfUNet.settings_kls(num_filters=128, use_ghost=True))
+```
+
+Finally, to instanciate a model with the mandatory **input_shape** parameter, here is an example with the UNETR++ model working on 2d spatial data (256x256) with 3 channels input and 1 channel output:
+
+```python
+from mfai.torch.models import UNETRPP
+unetrpp = UNETRPP(in_channels=3, out_channels=1, input_shape=(256, 256))
 ```
 
 **_FEATURE:_**  Each model has its settings class available under the **settings_kls** attribute.

@@ -146,8 +146,6 @@ class TransformerBlock(nn.Module):
             raise ValueError("dropout_rate should be between 0 and 1.")
 
         if hidden_size % num_heads != 0:
-            print("Hidden size is ", hidden_size)
-            print("Num heads is ", num_heads)
             raise ValueError("hidden_size should be divisible by num_heads.")
 
         self.norm = nn.LayerNorm(hidden_size)
@@ -524,7 +522,7 @@ class UNETRPP(nn.Module):
         self,
         in_channels: int,
         out_channels: int,
-        input_shape: Union[None, Tuple[int, int]] = None,
+        input_shape: Tuple[int, ...],
         settings: UNETRPPSettings = UNETRPPSettings(),
     ) -> None:
         """

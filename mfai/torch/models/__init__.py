@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional, Tuple
 from torch import nn
 from .deeplabv3 import DeepLabV3, DeepLabV3Plus
 from .half_unet import HalfUNet
@@ -20,7 +21,11 @@ all_nn_architectures = (
 
 
 def load_from_settings_file(
-    model_name: str, in_channels: int, out_channels: int, settings_path: Path
+    model_name: str,
+    in_channels: int,
+    out_channels: int,
+    settings_path: Path,
+    input_shape: Optional[Tuple[int, ...]] = None,
 ) -> nn.Module:
     """
     Instanciate a model from a settings file with Schema validation.
@@ -41,4 +46,6 @@ def load_from_settings_file(
         model_settings = model_kls.settings_kls.schema().loads(f.read())
 
     # instanciate the model
-    return model_kls(in_channels, out_channels, settings=model_settings)
+    return model_kls(
+        in_channels, out_channels, input_shape=input_shape, settings=model_settings
+    )

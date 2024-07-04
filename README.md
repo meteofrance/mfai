@@ -30,6 +30,12 @@ Each model we provide is a subclass of [torch.nn.Module](https://pytorch.org/doc
 - **settings_kls**: a class that defines the settings of the model (number of filters, kernel size, ...). It is used to instanciate the model with a specific configuration.
 - **onnx_supported**: a boolean that indicates if the model can be exported to onnx. Our CI validates that the model can be exported to onnx and reloaded for inference.
 
+```python
+class HalfUNet(nn.Module):
+    settings_kls = HalfUNetSettings
+    onnx_supported = True
+```
+
 Currently we support the following neural network architectures:
 
 | Model  | Research Paper  | Input Shape    | ONNX exportable ? | Notes | Use-Cases at MF | Maintainer(s) |

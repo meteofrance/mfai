@@ -12,7 +12,7 @@
 - [Neural Network Architectures](#neural-network-architectures)
     - deeplabv3/deeplabv3+
     - halfunet
-    - unet
+    - unet/customunet
     - segformer
     - swinunetr
     - unetr++

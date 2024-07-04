@@ -73,8 +73,19 @@ The [**NamedTensor**](../py4cast/datasets/base.py#L38) class is a wrapper around
 
 # Installation
 
+
+## From PYPI (NOT PUSHED YET)
+
 ```bash
 pip install mfai
+```
+
+## Cloning the repository
+
+```bash
+git clone https://github.com/meteofrance/mfai
+cd mfai
+pip install -e .
 ```
 
 # Usage

@@ -4,7 +4,6 @@ from typing import Tuple, Union
 import torch
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
-import torchvision.models as models
 from dataclasses_json import dataclass_json
 from torchvision.models.resnet import BasicBlock, Bottleneck, ResNet
 

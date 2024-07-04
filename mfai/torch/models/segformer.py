@@ -12,6 +12,8 @@ from dataclasses_json import dataclass_json
 from einops import rearrange
 from torch import einsum, nn
 
+from .base import ModelABC
+
 
 def exists(val):
     return val is not None
@@ -205,7 +207,7 @@ class MiT(nn.Module):
         return ret
 
 
-class Segformer(nn.Module):
+class Segformer(ModelABC, nn.Module):
     """
     Segformer architecture with extra
     upsampling in the decoder to match
@@ -214,6 +216,7 @@ class Segformer(nn.Module):
 
     onnx_supported = True
     settings_kls = SegformerSettings
+    input_spatial_dims = (2,)
 
     def __init__(
         self,

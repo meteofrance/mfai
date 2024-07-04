@@ -7,6 +7,8 @@ from monai.networks.blocks.dynunet_block import UnetResBlock
 from monai.networks.nets.swin_unetr import SwinUNETR as MonaiSwinUNETR
 from torch import nn
 
+from .base import ModelABC
+
 
 @dataclass_json
 @dataclass(slots=True)
@@ -56,7 +58,7 @@ class UpsampleBlock(nn.Module):
         return out
 
 
-class SwinUNETR(MonaiSwinUNETR):
+class SwinUNETR(ModelABC, MonaiSwinUNETR):
     """
     Wrapper around the SwinUNETR from MONAI.
     Instanciated in 2D for now, with a custom decoder.
@@ -64,8 +66,7 @@ class SwinUNETR(MonaiSwinUNETR):
 
     onnx_supported = False
     settings_kls = SwinUNETRSettings
-    input_dims: Tuple[str, ...] = ("batch", "height", "width", "features")
-    output_dims: Tuple[str, ...] = ("batch", "height", "width", "features")
+    input_spatial_dims = (2,)
 
     def __init__(
         self,

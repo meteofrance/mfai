@@ -26,9 +26,12 @@
 
 # Neural Network Architectures
 
-Each model we provide is a subclass of [torch.nn.Module](https://pytorch.org/docs/stable/generated/torch.nn.Module.html) and can be used in a PyTorch training loop. It has two **critical** class attributes:
+Each model we provide is a subclass of [torch.nn.Module](https://pytorch.org/docs/stable/generated/torch.nn.Module.html) and can be used in a PyTorch training loop. It has three **critical** class attributes:
 - **settings_kls**: a class that defines the settings of the model (number of filters, kernel size, ...). It is used to instanciate the model with a specific configuration.
 - **onnx_supported**: a boolean that indicates if the model can be exported to onnx. Our CI validates that the model can be exported to onnx and reloaded for inference.
+- **input_spatial_dims**: a tuple that describes the spatial dimensions of the input tensor supported by the model. A model that supports 2D spatial data will have **(2,)** as value. A model that supports 2d or 3d spatial data will have **(2, 3)** as value.
+
+The Python interface contract for our model is enforced using [Python ABC](https://docs.python.org/3/library/abc.html) and in our case [ModelABC](mfai/torch/models/base.py#L1) class.
 
 ```python
 @dataclass_json
@@ -41,9 +44,10 @@ class HalfUNetSettings:
     last_activation: str = "Identity"
     absolute_pos_embed: bool = False
 
-class HalfUNet(nn.Module):
+class HalfUNet(ModelABC, nn.Module):
     settings_kls = HalfUNetSettings
     onnx_supported = True
+    input_spatial_dims = (2,)
 ```
 
 Currently we support the following neural network architectures:
@@ -76,7 +80,7 @@ pip install mfai
 
 ## Instanciate a model
 
-Our [unit tests](tests/test_models.py#L39) provides an example of how to use the models in a PyTorch training loop. Our models are instanciated with 2 mandatory positional arguments: **in_channels** and **out_channels** respectively the number of input and output channels/features of the model. A third **input_shape** parameter is either mandatory (**UNETR++** or **HalfUNet wtih abs pos embedding**) or optional for the other models. It describes the shape of the input tensor along its spatial dimensions.
+Our [unit tests](tests/test_models.py#L39) provides an example of how to use the models in a PyTorch training loop. Our models are instanciated with 2 mandatory positional arguments: **in_channels** and **out_channels** respectively the number of input and output channels/features of the model. A third **input_shape** parameter is either mandatory (**UNETR++** or **HalfUNet with absolute pos embedding**) or optional for the other models. It describes the shape of the input tensor along its spatial dimensions.
 
 The last parameter is an instance of the model's settings class and is a keyword argument with a default value set to the default settings.
 
@@ -136,7 +140,7 @@ export_to_onnx(model, "model.onnx")
 output_tensor = onnx_load_and_infer("model.onnx", input_tensor)
 ```
 
-Check the code of [onnx_load_and_infer](mfai/torch/__init__.py#L35) if you wouls like to load the model once and make multiple inferences.
+Check the code of [onnx_load_and_infer](mfai/torch/__init__.py#L35) if you would like to load the model once and make multiple inferences.
 
 ## NamedTensors example
 

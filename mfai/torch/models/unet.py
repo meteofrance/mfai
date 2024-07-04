@@ -11,6 +11,7 @@ import torch
 from dataclasses_json import dataclass_json
 from torch import nn
 
+from .base import ModelABC
 from mfai.torch.models.encoders import get_encoder
 
 
@@ -58,7 +59,7 @@ class UnetSettings:
     init_features: int = 64
 
 
-class UNet(nn.Module):
+class UNet(ModelABC, nn.Module):
     """
     Returns a u_net architecture, with uninitialised weights, matching desired numbers of input and output channels.
 
@@ -67,6 +68,7 @@ class UNet(nn.Module):
 
     settings_kls = UnetSettings
     onnx_supported = True
+    input_spatial_dims = (2,)
 
     def __init__(
         self,

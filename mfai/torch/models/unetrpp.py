@@ -7,7 +7,9 @@ Added 2d support and Bilinear interpolation for upsampling.
 import math
 import warnings
 from dataclasses import dataclass
+import operator
 from typing import Sequence, Tuple, Union
+import functools
 
 import torch
 import torch.nn as nn
@@ -22,6 +24,8 @@ from monai.networks.blocks.dynunet_block import (
 )
 from monai.networks.layers.utils import get_norm_layer
 from monai.utils import optional_import
+
+from .base import ModelABC
 
 
 def _trunc_normal_(tensor, mean, std, a, b):
@@ -351,6 +355,7 @@ class UnetrPPEncoder(nn.Module):
                         num_heads=num_heads,
                         dropout_rate=transformer_dropout_rate,
                         pos_embed=True,
+                        spatial_dims=spatial_dims,
                     )
                 )
             self.stages.append(nn.Sequential(*stage_blocks))
@@ -474,6 +479,7 @@ class UnetrUpBlock(nn.Module):
                         num_heads=num_heads,
                         dropout_rate=0.1,
                         pos_embed=True,
+                        spatial_dims=spatial_dims,
                     )
                 )
             self.decoder_block.append(nn.Sequential(*stage_blocks))
@@ -509,7 +515,7 @@ class UNETRPPSettings:
     spatial_dims = 2
 
 
-class UNETRPP(nn.Module):
+class UNETRPP(ModelABC, nn.Module):
     """
     UNETR++ based on: "Shaker et al.,
     UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation"
@@ -517,6 +523,7 @@ class UNETRPP(nn.Module):
 
     settings_kls = UNETRPPSettings
     onnx_supported = True
+    input_spatial_dims = (2, 3)
 
     def __init__(
         self,
@@ -553,23 +560,22 @@ class UNETRPP(nn.Module):
                 f"Position embedding layer of type {settings.pos_embed} is not supported."
             )
 
-        if settings.spatial_dims == 2:
-            self.feat_size = (input_shape[0] // 32, input_shape[1] // 32)
-        else:
-            self.feat_size = (
-                input_shape[0] // 32,
-                input_shape[1] // 32,
-                input_shape[2] // 32,
-            )
+        subsampling_ratio = 2**settings.spatial_dims
+        self.feat_size = [x // 32 for x in input_shape]
 
         self.hidden_size = settings.hidden_size
         self.spatial_dims = settings.spatial_dims
-        no_pixels = (input_shape[0] * input_shape[1]) // 16
+
+        # Stem layer applies a 16->1 or 64->1 downsampling
+        no_pixels = functools.reduce(operator.mul, input_shape, 1) // (
+            4**settings.spatial_dims
+        )
+
         encoder_input_size = [
             no_pixels,
-            no_pixels // 4,
-            no_pixels // 16,
-            no_pixels // 64,
+            no_pixels // subsampling_ratio,
+            no_pixels // subsampling_ratio**2,
+            no_pixels // subsampling_ratio**3,
         ]
         h_size = settings.hidden_size
         self.unetr_pp_encoder = UnetrPPEncoder(
@@ -596,7 +602,7 @@ class UNETRPP(nn.Module):
             kernel_size=3,
             upsample_kernel_size=2,
             norm_name=settings.norm_name,
-            out_size=no_pixels // 16,
+            out_size=no_pixels // subsampling_ratio**2,
         )
         self.decoder4 = UnetrUpBlock(
             spatial_dims=settings.spatial_dims,
@@ -605,7 +611,7 @@ class UNETRPP(nn.Module):
             kernel_size=3,
             upsample_kernel_size=2,
             norm_name=settings.norm_name,
-            out_size=no_pixels // 4,
+            out_size=no_pixels // subsampling_ratio,
         )
         self.decoder3 = UnetrUpBlock(
             spatial_dims=settings.spatial_dims,
@@ -623,7 +629,7 @@ class UNETRPP(nn.Module):
             kernel_size=3,
             upsample_kernel_size=4,
             norm_name=settings.norm_name,
-            out_size=no_pixels * 16,
+            out_size=no_pixels * subsampling_ratio**2,
             conv_decoder=True,
         )
         self.out1 = UnetOutBlock(
@@ -644,18 +650,7 @@ class UNETRPP(nn.Module):
             )
 
     def proj_feat(self, x):
-        if self.spatial_dims == 2:
-            x = x.view(
-                x.size(0), self.feat_size[0], self.feat_size[1], self.hidden_size
-            )
-        else:
-            x = x.view(
-                x.size(0),
-                self.feat_size[0],
-                self.feat_size[1],
-                self.feat_size[2],
-                self.hidden_size,
-            )
+        x = x.view(x.size(0), *self.feat_size, self.hidden_size)
 
         if self.spatial_dims == 2:
             x = x.permute(0, 3, 1, 2).contiguous()

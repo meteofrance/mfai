@@ -8,12 +8,18 @@ Test our pure PyTorch models to make sure they can be :
 
 from pathlib import Path
 import tempfile
+from typing import Tuple
 
 from marshmallow.exceptions import ValidationError
 import torch
 import pytest
 from mfai.torch import export_to_onnx, onnx_load_and_infer
-from mfai.torch.models import all_nn_architectures, load_from_settings_file
+from mfai.torch.models import (
+    all_nn_architectures,
+    load_from_settings_file,
+    HalfUNet,
+    DeepLabV3Plus,
+)
 
 
 def to_numpy(tensor):
@@ -23,40 +29,23 @@ def to_numpy(tensor):
 
 
 class FakeSumDataset(torch.utils.data.Dataset):
-    def __init__(self, grid_height: int, grid_width: int, num_inputs: int):
-        self.grid_height = grid_height
-        self.grid_width = grid_width
-        self.num_inputs = num_inputs
+    def __init__(self, input_shape: Tuple[int, ...]):
+        self.input_shape = input_shape
         super().__init__()
 
     def __len__(self):
         return 4
 
     def __getitem__(self, idx: int):
-        x = torch.rand(self.num_inputs, self.grid_height, self.grid_width)
+        x = torch.rand(*self.input_shape)
         y = torch.sum(x, 0).unsqueeze(0)
         return x, y
 
 
-@pytest.mark.parametrize("model_kls", all_nn_architectures)
-def test_torch_training_loop(model_kls):
-    """
-    Checks that our models are trainable on a toy problem (sum).
-    """
-    GRID_WIDTH = 64
-    GRID_HEIGHT = 64
-    NUM_INPUTS = 2
-    NUM_OUTPUTS = 1
-
-    model = model_kls(
-        in_channels=NUM_INPUTS,
-        out_channels=NUM_OUTPUTS,
-        input_shape=(GRID_HEIGHT, GRID_WIDTH),
-    )
-
+def train_model(model: torch.nn.Module, num_inputs: int, input_shape: Tuple[int, ...]):
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     loss_fn = torch.nn.MSELoss()
-    ds = FakeSumDataset(GRID_HEIGHT, GRID_WIDTH, NUM_INPUTS)
+    ds = FakeSumDataset((num_inputs, *input_shape))
     training_loader = torch.utils.data.DataLoader(ds, batch_size=2)
 
     # Simulate 2 EPOCHS of training
@@ -82,14 +71,69 @@ def test_torch_training_loop(model_kls):
     model.eval()
     sample = ds[0][0].unsqueeze(0)
     model(sample)
+    return model
 
-    # We test if models claiming to be onnx exportable really are post training.
-    # See https://pytorch.org/tutorials/beginner/onnx/export_simple_model_to_onnx_tutorial.html
-    if model.onnx_supported:
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".onnx") as dst:
-            sample = torch.rand(1, NUM_INPUTS, GRID_HEIGHT, GRID_WIDTH)
-            export_to_onnx(model, sample, dst.name)
-            onnx_load_and_infer(dst.name, sample)
+
+@pytest.mark.parametrize("model_kls", all_nn_architectures)
+def test_torch_training_loop(model_kls):
+    """
+    Checks that our models are trainable on a toy problem (sum).
+    """
+    INPUT_SHAPE = (64, 64, 64)
+    NUM_INPUTS = 2
+    NUM_OUTPUTS = 1
+
+    # We test the model for all supported input spatial dimensions
+    for spatial_dims in model_kls.input_spatial_dims:
+        settings = model_kls.settings_kls()
+        if hasattr(settings, "spatial_dims"):
+            settings.spatial_dims = spatial_dims
+
+        model = model_kls(
+            in_channels=NUM_INPUTS,
+            out_channels=NUM_OUTPUTS,
+            input_shape=INPUT_SHAPE[:spatial_dims],
+            settings=settings,
+        )
+
+        model = train_model(model, NUM_INPUTS, INPUT_SHAPE[:spatial_dims])
+
+        # We test if models claiming to be onnx exportable really are post training.
+        # See https://pytorch.org/tutorials/beginner/onnx/export_simple_model_to_onnx_tutorial.html
+        if model.onnx_supported:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".onnx") as dst:
+                sample = torch.rand(1, NUM_INPUTS, *INPUT_SHAPE[:spatial_dims])
+                export_to_onnx(model, sample, dst.name)
+                onnx_load_and_infer(dst.name, sample)
+
+
+@pytest.mark.parametrize(
+    "model_and_settings",
+    [
+        (HalfUNet, HalfUNet.settings_kls(use_ghost=True, absolute_pos_embed=True)),
+        (HalfUNet, HalfUNet.settings_kls(use_ghost=False, absolute_pos_embed=True)),
+        (DeepLabV3Plus, DeepLabV3Plus.settings_kls(activation="sigmoid")),
+        (DeepLabV3Plus, DeepLabV3Plus.settings_kls(activation="softmax")),
+        (DeepLabV3Plus, DeepLabV3Plus.settings_kls(activation="tanh")),
+        (DeepLabV3Plus, DeepLabV3Plus.settings_kls(activation="logsoftmax")),
+    ],
+)
+def test_extra_models(model_and_settings):
+    """
+    Tests some extra models and settings.
+    """
+    INPUT_SHAPE = (64, 64, 64)
+    NUM_INPUTS = 2
+    NUM_OUTPUTS = 1
+    model_kls, settings = model_and_settings
+    for spatial_dims in model_kls.input_spatial_dims:
+        model = model_kls(
+            in_channels=NUM_INPUTS,
+            out_channels=NUM_OUTPUTS,
+            input_shape=INPUT_SHAPE[:2],
+            settings=settings,
+        )
+        train_model(model, NUM_INPUTS, INPUT_SHAPE[:spatial_dims])
 
 
 def test_load_model_by_name():

@@ -34,4 +34,4 @@ jobs:
         ruff check mfai
     - name: Test with pytest
       run: |
-        pytest --cov=mfai --cov-fail-under=80 tests/
+        pytest --cov=mfai --cov-fail-under=85 tests/

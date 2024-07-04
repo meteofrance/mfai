@@ -31,6 +31,16 @@ Each model we provide is a subclass of [torch.nn.Module](https://pytorch.org/doc
 - **onnx_supported**: a boolean that indicates if the model can be exported to onnx. Our CI validates that the model can be exported to onnx and reloaded for inference.
 
 ```python
+@dataclass_json
+@dataclass(slots=True)
+class HalfUNetSettings:
+    num_filters: int = 64
+    dilation: int = 1
+    bias: bool = False
+    use_ghost: bool = False
+    last_activation: str = "Identity"
+    absolute_pos_embed: bool = False
+
 class HalfUNet(nn.Module):
     settings_kls = HalfUNetSettings
     onnx_supported = True

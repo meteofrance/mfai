@@ -13,7 +13,6 @@ from mfai.torch.models.utils import AbsolutePosEmdebding
 @dataclass_json
 @dataclass(slots=True)
 class HalfUnetSettings:
-
     num_filters: int = 64
     dilation: int = 1
     bias: bool = False
@@ -75,7 +74,6 @@ class HalfUnet(nn.Module):
         *args,
         **kwargs,
     ):
-
         if settings.absolute_pos_embed and input_shape is None:
             raise ValueError(
                 "You must provide a grid_shape to use absolute_pos_embed in HalfUnet"
@@ -195,7 +193,6 @@ class HalfUnet(nn.Module):
         absolute_pos_embed: bool = False,
         grid_shape: Tuple[int, int] = None,
     ):
-
         if use_ghost:
             layers = nn.Sequential(
                 OrderedDict(
@@ -226,7 +223,6 @@ class HalfUnet(nn.Module):
                 )
             )
         else:
-
             layers = nn.Sequential(
                 OrderedDict(
                     [

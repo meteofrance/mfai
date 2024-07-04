@@ -46,7 +46,6 @@ class EncoderMixin:
         raise NotImplementedError
 
     def make_dilated(self, output_stride):
-
         if output_stride == 16:
             stage_list = [
                 5,
@@ -193,7 +192,6 @@ class ResNet50Settings:
 
 
 class ResNet50(torch.nn.Module):
-
     settings_kls = ResNet50Settings
 
     def __init__(
@@ -231,7 +229,6 @@ class GoogleNetSettings:
 
 
 class GoogleNet(torch.nn.Module):
-
     settings_kls = GoogleNetSettings
 
     def __init__(

@@ -49,7 +49,6 @@ class UpsampleBlock(nn.Module):
         )
 
     def forward(self, inp: torch.Tensor, skip: torch.Tensor) -> torch.Tensor:
-
         out = self.upsampler(inp)
         # concat along the channels/features dimension
         out = torch.cat((out, skip), dim=1)

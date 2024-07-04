@@ -1,6 +1,7 @@
 """
 A class based NamedTensor implementation for PyTorch, inspired from the unstable PyTorch namedtensors.
 """
+
 from copy import deepcopy
 from dataclasses import dataclass
 from itertools import chain
@@ -269,4 +270,3 @@ class NamedTensor(TensorWrapper):
     @property
     def device(self) -> torch.device:
         return self.tensor.device
-

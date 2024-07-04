@@ -6,4 +6,12 @@ from .unet import Unet
 from .unetrpp import UNETRPP
 
 
-all_nn_architectures = (DeepLabV3, DeepLabV3Plus, HalfUnet, Segformer, SwinUNETR, Unet, UNETRPP)
+all_nn_architectures = (
+    DeepLabV3,
+    DeepLabV3Plus,
+    HalfUnet,
+    Segformer,
+    SwinUNETR,
+    Unet,
+    UNETRPP,
+)

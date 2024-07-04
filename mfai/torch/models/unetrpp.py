@@ -490,7 +490,6 @@ class UnetrUpBlock(nn.Module):
             nn.init.constant_(m.weight, 1.0)
 
     def forward(self, inp, skip):
-
         out = self.transp_conv(inp)
         out = out + skip
         out = self.decoder_block[0](out)
@@ -513,7 +512,6 @@ class UNETRPPSettings:
 
 
 class UNETRPP(nn.Module):
-
     """
     UNETR++ based on: "Shaker et al.,
     UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation"
@@ -669,7 +667,6 @@ class UNETRPP(nn.Module):
         return x
 
     def forward(self, x_in):
-
         _, hidden_states = self.unetr_pp_encoder(x_in)
         convBlock = self.encoder1(x_in)
 

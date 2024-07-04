@@ -11,7 +11,6 @@ from .encoders import get_encoder
 
 class Activation(nn.Module):
     def __init__(self, name, **params):
-
         super().__init__()
 
         if name is None or name == "identity":
@@ -276,6 +275,7 @@ class DeepLabV3(torch.nn.Module):
         https://arxiv.org/abs/1706.05587
 
     """
+
     onnx_supported: bool = False
     settings_kls = DeepLabV3Settings
 
@@ -324,7 +324,6 @@ class DeepLabV3(torch.nn.Module):
 
     def initialize_decoder(self, module):
         for m in module.modules():
-
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_uniform_(m.weight, mode="fan_in", nonlinearity="relu")
                 if m.bias is not None:

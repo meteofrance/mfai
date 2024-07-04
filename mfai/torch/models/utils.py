@@ -25,7 +25,7 @@ def patch_first_conv(model, new_in_channels, default_in_channels=3, pretrained=T
             torch.Tensor(
                 module.out_channels,
                 new_in_channels // module.groups,
-                *module.kernel_size
+                *module.kernel_size,
             )
         )
         module.reset_parameters()

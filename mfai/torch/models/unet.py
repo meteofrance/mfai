@@ -2,6 +2,7 @@
 pytorch models wrapped
 for DSM/LabIA projects.
 """
+
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Tuple, Union
@@ -54,7 +55,6 @@ class DoubleConv(nn.Module):
 @dataclass_json
 @dataclass(slots=True)
 class UnetSettings:
-
     init_features: int = 64
 
 
@@ -186,7 +186,6 @@ class Unet(nn.Module):
 @dataclass_json
 @dataclass(slots=True)
 class CustomUnetSettings:
-
     encoder_name: str = "resnet18"
     encoder_depth: int = 5
     encoder_weights: bool = True

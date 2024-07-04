@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mfai"
+version = "1.0.0"
+authors = [
+  {name="Frank Guibert", email="frank.guibert@meteo.fr"},
+  {name="Theo Tournier", email="theo.tournier@meteo.fr"},
+  {name="Lea Berthomier", email="lea.berthomier@meteo.fr"},
+  {name="Bruno Pradel", email="bruno.pradel@meteo.fr"},
+]
+description = "Meteo-France's Artificial Intelligence Python Package"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache 2",
+    "Operating System :: OS Independent",
+]
+dynamic = ["dependencies"]
+license = {file = "LICENSE"}
+keywords = ["PyTorch", "Deep Learning", "Artificial Intelligence", "Meteo-France"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[project.urls]
+Homepage = "https://github.com/meteofrance/mfai"

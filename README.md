@@ -29,7 +29,7 @@
 | [unet](mfai/torch/models/unet.py#L1) | [arxiv link](https://arxiv.org/pdf/1505.04597.pdf) | (Batch, features, Height, Width)    | Yes | Vanilla U-Net | Radar image cleaning |  Theo Tournier / Frank Guibert |
 | [segformer](mfai/torch/models/segformer.py#L1) | [arxiv link](https://arxiv.org/abs/2105.15203)   | (Batch, features, Height, Width) | Yes | On par with u-net like on Deepsyg (MF internal), added an upsampling stage. Adapted from [Lucidrains' github](https://github.com/lucidrains/segformer-pytorch) | Segmentation tasks | Frank Guibert |
 | [swinunetr](mfai/torch/models/swinunetr.py#L1) | [arxiv link](https://arxiv.org/abs/2201.01266)   | (Batch, features, Height, Width)  | Yes | 2D Swin  Unet transformer (Pangu and archweather uses customised 3D versions of Swin Transformers). Plugged in from [MONAI](https://github.com/Project-MONAI/MONAI/). The decoders have been modified to use Bilinear2D + Conv2d instead of Conv2dTranspose to remove artefacts/checkerboard effects | Segmentation tasks  |  Frank Guibert |
-| [unetr++](mfai/torch/models/unetrpp.py#L1) | [arxiv link](https://arxiv.org/abs/2212.04497)  | (Batch, features, Height, Width)   | Yes | Adapted from [author's github](https://github.com/Amshaker/unetr_plus_plus). Modified to work both for 2d and 3d inputs | Front Detection | Frank Guibert |
+| [unetr++](mfai/torch/models/unetrpp.py#L1) | [arxiv link](https://arxiv.org/abs/2212.04497)  | (Batch, features, Height, Width)   | Yes | Vision transformer with a reduced GFLOPS footprint adapted from [author's github](https://github.com/Amshaker/unetr_plus_plus). Modified to work both with 2d and 3d inputs | Front Detection | Frank Guibert |
 
 # NamedTensors
 
@@ -94,6 +94,43 @@ Features:
 pip install mfai
 ```
 
+# Usage
+
+Our [unit tests](tests/test_models.py#L39) provides an example of how to use the models in a PyTorch training loop. Our models are instanciated with 2 mandatory positional arguments: **in_channels** and **out_channels** respectively the number of input and output channels of the model. The other parameter is an instance of the model's settings class. 
+
+Here is an example of how to instanciate the UNet model with a 3 channels input (like an RGB image) and 1 channel output with its default settings:
+
+```python
+from mfai.torch.models import UNet
+unet = UNet(in_channels=3, out_channels=1)
+```
+
+**_FEATURE:_** Once instanciated, the model (subclass of **nn.Module**) can be used like any standard [PyTorch model](https://pytorch.org/tutorials/beginner/introyt/trainingyt.html).
+
+In order to instanciate a HalfUNet model with a 2 channels inputs, 2 channels outputs and a custom settings (128 filters, ghost module):
+
+```python
+from mfai.torch.models import HalfUNet
+halfunet = HalfUNet(in_channels=2, out_channels=2, settings=HalfUNet.settings_kls(num_filters=128, use_ghost=True))
+```
+
+**_FEATURE:_**  Each model has its settings class available under the **settings_kls** attribute.
+
+You can use the **load_from_settings_file** function to instanciate a model with its settings from a json file:
+
+```python
+from pathlib import Path
+from mfai.torch.models import load_from_settings_file
+model = load_from_settings_file(
+    "HalfUNet",
+    2,
+    2,
+    Path(".") / "mfai" / "config" / "models" / "halfunet128.json",
+)
+```
+
+**_FEATURE:_**  Use the **load_from_settings_file** to have the strictest validation of the settings.
+
 # Running Tests
 
 Our tests are written using [pytest](https://docs.pytest.org). We check that:
@@ -112,5 +149,6 @@ We welcome contributions to this package. Our guidelines are the following:
 - Make sure the current tests pass and add new tests if necessary to cover the new features. Our CI will fail with a **test coverage below 80%**.
 - Make sure the code is formatted with [ruff](https://docs.astral.sh/ruff/)
 
+# Acknowledgements
 
-
+This package is maintained by the DSM/LabIA team at Météo-France. We would like to thank the authors of the papers and codes we used to implement the models (see [above links](#neural-network-architectures) to **arxiv** and **github**) and the authors of the libraries we use to build this package (see our [**requirements.txt**](requirements.txt)).

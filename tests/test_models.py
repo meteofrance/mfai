@@ -5,12 +5,15 @@ Test our pure PyTorch models to make sure they can be :
 3. onnx exported
 4. onnx loaded and used for inference
 """
+
+from pathlib import Path
 import tempfile
 
+from marshmallow.exceptions import ValidationError
 import torch
 import pytest
 from mfai.torch import export_to_onnx, onnx_load_and_infer
-from mfai.torch.models import all_nn_architectures
+from mfai.torch.models import all_nn_architectures, load_from_settings_file
 
 
 def to_numpy(tensor):
@@ -88,3 +91,28 @@ def test_torch_training_loop(model_kls):
             export_to_onnx(model, sample, dst.name)
             onnx_load_and_infer(dst.name, sample)
 
+
+def test_load_model_by_name():
+    with pytest.raises(ValueError):
+        load_from_settings_file("NotAValidModel", 2, 2, None)
+
+    # Should work: valid settings file for this model
+    load_from_settings_file(
+        "HalfUNet",
+        2,
+        2,
+        Path(__file__).parents[1] / "mfai" / "config" / "models" / "halfunet128.json",
+    )
+
+    # Should raise: invalid settings file for this model
+    with pytest.raises(ValidationError):
+        load_from_settings_file(
+            "UNETRPP",
+            2,
+            2,
+            Path(__file__).parents[1]
+            / "mfai"
+            / "config"
+            / "models"
+            / "halfunet128.json",
+        )

@@ -12,7 +12,7 @@ from mfai.torch.models.utils import AbsolutePosEmdebding
 
 @dataclass_json
 @dataclass(slots=True)
-class HalfUnetSettings:
+class HalfUNetSettings:
     num_filters: int = 64
     dilation: int = 1
     bias: bool = False
@@ -32,7 +32,6 @@ class GhostModule(nn.Module):
         dilation=1,
     ):
         super().__init__()
-        print(type(out_channels), out_channels)
 
         self.conv = nn.Conv2d(
             in_channels=in_channels,
@@ -61,8 +60,8 @@ class GhostModule(nn.Module):
         return self.relu(x)
 
 
-class HalfUnet(nn.Module):
-    settings_kls = HalfUnetSettings
+class HalfUNet(nn.Module):
+    settings_kls = HalfUNetSettings
     onnx_supported = True
 
     def __init__(
@@ -70,7 +69,7 @@ class HalfUnet(nn.Module):
         in_channels: int,
         out_channels: int,
         input_shape: Union[None, Tuple[int, int]] = None,
-        settings: HalfUnetSettings = HalfUnetSettings(),
+        settings: HalfUNetSettings = HalfUNetSettings(),
         *args,
         **kwargs,
     ):
@@ -80,6 +79,12 @@ class HalfUnet(nn.Module):
             )
 
         super().__init__(*args, **kwargs)
+
+        if settings.absolute_pos_embed:
+            if input_shape is None:
+                raise ValueError(
+                    "You must provide an input_shape to use absolute_pos_embed in HalfUnet"
+                )
 
         self.encoder1 = self._block(
             in_channels,
@@ -102,7 +107,7 @@ class HalfUnet(nn.Module):
             use_ghost=settings.use_ghost,
             dilation=settings.dilation,
             absolute_pos_embed=settings.absolute_pos_embed,
-            grid_shape=[x // 2 for x in input_shape],
+            grid_shape=[x // 2 for x in input_shape] if input_shape else None,
         )
         self.up2 = nn.UpsamplingBilinear2d(scale_factor=2)
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
@@ -115,7 +120,7 @@ class HalfUnet(nn.Module):
             use_ghost=settings.use_ghost,
             dilation=settings.dilation,
             absolute_pos_embed=settings.absolute_pos_embed,
-            grid_shape=[x // 4 for x in input_shape],
+            grid_shape=[x // 4 for x in input_shape] if input_shape else None,
         )
 
         self.up3 = nn.UpsamplingBilinear2d(scale_factor=4)
@@ -129,7 +134,7 @@ class HalfUnet(nn.Module):
             use_ghost=settings.use_ghost,
             dilation=settings.dilation,
             absolute_pos_embed=settings.absolute_pos_embed,
-            grid_shape=[x // 8 for x in input_shape],
+            grid_shape=[x // 8 for x in input_shape] if input_shape else None,
         )
         self.up4 = nn.UpsamplingBilinear2d(scale_factor=8)
         self.pool4 = nn.MaxPool2d(kernel_size=2, stride=2)
@@ -142,7 +147,7 @@ class HalfUnet(nn.Module):
             use_ghost=settings.use_ghost,
             dilation=settings.dilation,
             absolute_pos_embed=settings.absolute_pos_embed,
-            grid_shape=[x // 16 for x in input_shape],
+            grid_shape=[x // 16 for x in input_shape] if input_shape else None,
         )
         self.up5 = nn.UpsamplingBilinear2d(scale_factor=16)
 

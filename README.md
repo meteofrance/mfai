@@ -20,7 +20,7 @@
 - [Installation](#installation)
 - [Running tests](#tests)
 
-# Neural Network Architectures
+# Neural Network Architectures
 
 | Model  | Research Paper  | Input Shape    | ONNX exportable ? | Notes | Use-Cases at MF | Maintainer(s) |
 | :---:   | :---: | :---: | :---: | :---: | :---: | :---: |

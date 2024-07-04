@@ -277,7 +277,7 @@ class DeepLabV3(ModelABC, torch.nn.Module):
 
     """
 
-    onnx_supported: bool = False
+    onnx_supported: bool = True
     settings_kls = DeepLabV3Settings
     input_spatial_dims = (2,)
 

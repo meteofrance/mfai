@@ -193,8 +193,10 @@ class CustomUnetSettings:
     encoder_weights: bool = True
 
 
-class CustomUnet(nn.Module):
+class CustomUnet(ModelABC, nn.Module):
     settings_kls = CustomUnetSettings
+    onnx_supported = True
+    input_spatial_dims = (2,)
 
     def __init__(
         self,

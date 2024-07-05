@@ -73,12 +73,7 @@ The [**NamedTensor**](../py4cast/datasets/base.py#L38) class is a wrapper around
 
 # Installation
 
-
-## From PYPI (NOT PUSHED YET)
-
-```bash
-pip install mfai
-```
+We will soon push the package to PyPI. In the meantime, you can install it from the source code.
 
 ## Cloning the repository
 

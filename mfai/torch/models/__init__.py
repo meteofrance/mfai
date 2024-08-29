@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Literal
 from torch import nn
 from .deeplabv3 import DeepLabV3, DeepLabV3Plus
 from .half_unet import HalfUNet
@@ -19,6 +19,17 @@ all_nn_architectures = (
     CustomUnet,
     UNETRPP,
 )
+
+AvailableModels = Literal[
+    "DeepLabV3",
+    "DeepLabV3Plus",
+    "HalfUNet",
+    "Segformer",
+    "SwinUNETR",
+    "UNet",
+    "CustomUnet",
+    "UNETRPP"
+]
 
 
 def load_from_settings_file(

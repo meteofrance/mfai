@@ -1,0 +1,30 @@
+seed_everything: true
+trainer:
+  accelerator: auto
+  strategy: auto
+  devices: auto
+  num_nodes: 1
+  precision: null
+  logger: null
+  callbacks: null
+  max_epochs: 2
+  enable_checkpointing: true
+  enable_progress_bar: true
+  enable_model_summary: true
+  default_root_dir: null
+model:
+  arch: "HalfUNet"
+  size_imgs: [64, 64]
+  nb_input_channels: 2
+  nb_output_channels: 1
+  batch_size: 4
+  model_settings_path: "mfai/config/models/halfunet128.json"
+  type_segmentation: "binary"
+  loss: torch.nn.BCEWithLogitsLoss
+  activation: null
+data:
+  batch_size: 4
+optimizer:
+  class_path: torch.optim.AdamW
+  init_args:
+    lr: 0.001

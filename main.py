@@ -6,6 +6,7 @@ from mfai.segmentation_module import SegmentationLightningModule
 
 from torch.utils.data import DataLoader, Dataset
 import torch
+from mfai.torch.models import DeepLabV3, DeepLabV3Plus, HalfUNet, Segformer, SwinUNETR, UNet, CustomUnet, UNETRPP
 
 class DummyDataset(Dataset):
     def __init__(self, dim_x:int = 64, dim_y:int = 64, nb_input_channels: int = 2,

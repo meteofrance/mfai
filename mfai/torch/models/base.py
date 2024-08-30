@@ -7,6 +7,7 @@ from typing import Tuple
 
 
 class ModelABC(ABC):
+
     @abstractproperty
     def onnx_supported(self) -> bool:
         """
@@ -26,3 +27,9 @@ class ModelABC(ABC):
         A model supporting 2d tensors should return (2,).
         A model supporting 2d and 3d tensors should return (2, 3).
         """
+
+    def check_required_attributes(self):
+        required_attrs = ["in_channels", "out_channels", "input_shape"]
+        for attr in required_attrs:
+            if not hasattr(self, attr):
+                raise AttributeError(f"Missing required attribute : {attr}")

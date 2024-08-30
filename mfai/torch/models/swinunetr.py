@@ -85,6 +85,10 @@ class SwinUNETR(ModelABC, MonaiSwinUNETR):
             **settings.to_dict(),
         )
 
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.input_shape = input_shape
+
         # We replace the decoders by UpsamplingBilinear2d + Conv2d
         # because ConvTranspose2d introduced checkerboard artifacts
 
@@ -122,3 +126,5 @@ class SwinUNETR(ModelABC, MonaiSwinUNETR):
             kernel_size=3,
             norm_name=settings.norm_name,
         )
+
+        self.check_required_attributes()

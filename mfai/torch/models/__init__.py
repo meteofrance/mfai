@@ -20,18 +20,6 @@ all_nn_architectures = (
     UNETRPP,
 )
 
-AvailableModels = Literal[
-    "DeepLabV3",
-    "DeepLabV3Plus",
-    "HalfUNet",
-    "Segformer",
-    "SwinUNETR",
-    "UNet",
-    "CustomUnet",
-    "UNETRPP"
-]
-
-
 def load_from_settings_file(
     model_name: str,
     in_channels: int,

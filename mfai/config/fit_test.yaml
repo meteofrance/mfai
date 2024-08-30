@@ -1,11 +1,15 @@
 seed_everything: true
 model:
-  arch: "HalfUNet"
-  size_imgs: [64, 64]
-  nb_input_channels: 2
-  nb_output_channels: 1
-  batch_size: 4
-  model_settings_path: "mfai/config/models/halfunet128.json"
+  model:
+    class_path: mfai.torch.models.Segformer
+    init_args:
+      in_channels: 2
+      out_channels: 1
+      input_shape: [64, 64]
+      settings:
+        num_layers: 2
+        decoder_dim: 256
+        num_downsampling_chans: 32
   type_segmentation: "binary"
   loss: torch.nn.BCEWithLogitsLoss
 data:
@@ -15,6 +19,11 @@ optimizer:
   init_args:
     lr: 0.001
 trainer:
+  logger:
+    class_path: lightning.pytorch.loggers.TensorBoardLogger
+    init_args:
+      save_dir: logs
+      name: mf_ai_project_n1
   accelerator: auto
   strategy: auto
   devices: auto
@@ -26,10 +35,4 @@ trainer:
   enable_progress_bar: true
   enable_model_summary: true
   default_root_dir: null
-  logger:
-    class_path: lightning.pytorch.loggers.TensorBoardLogger
-    init_args:
-      save_dir: logs
-      name: mf_ai_project_n1
-      version: super_idea
 

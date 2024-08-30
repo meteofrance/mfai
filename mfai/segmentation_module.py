@@ -6,51 +6,33 @@ import torchmetrics as tm
 from torch import optim
 
 # from mfai.torch.hparams import SegmentationHyperParameters
-from mfai.torch.models import load_from_settings_file, AvailableModels
+from mfai.torch.models import load_from_settings_file
 from typing import Tuple, Literal, Callable
 from pathlib import Path
+from mfai.torch.models.base import ModelABC
 
 
 class SegmentationLightningModule(pl.LightningModule):
     def __init__(
             self,
-            arch: AvailableModels,
-            size_imgs: Tuple[int, int],
-            nb_input_channels: int,
-            nb_output_channels: int,
-            batch_size: int,
-            model_settings_path: Path,
+            model: ModelABC,
             type_segmentation: Literal["binary", "multiclass", "multilabel", "regression"],
             loss: Callable,
             ) -> None:
         """A lightning module adapted for segmentation of weather images.
 
         Args:
-            arch (AvailableModels): Neural network architecture
-            size_imgs (Tuple[int, int]): Size of the images (width x height)
-            nb_input_channels (int): Number of input channels
-            nb_output_channels (int): Number of output channels
-            batch_size (int): Batch size
-            model_settings_path (Path): JSON Config file of the model
+            model (ModelABC): Torch neural network model in [DeepLabV3, DeepLabV3Plus, HalfUNet, Segformer, SwinUNETR, UNet, CustomUnet, UNETRPP]
             type_segmentation (Literal["binary", "multiclass", "multilabel", "regression"]): Type of segmentation we want to do"
             loss (Callable): Loss function
         """
         super().__init__()
-
-        self.arch = arch
-        self.size_imgs = size_imgs
-        self.nb_input_channels = nb_input_channels
-        self.nb_output_channels = nb_output_channels
-        self.batch_size = batch_size
-        self.model_settings_path = model_settings_path
-        self.type_segmentation = type_segmentation
-        self.loss = loss
-        self.channels_last = (self.nb_input_channels == 3)
-
-        self.model = self.create_model()
+        self.model = model
+        self.channels_last = (self.model.in_channels == 3)
         if self.channels_last:  # Optimizes computation for RGB images
             self.model = self.model.to(memory_format=torch.channels_last)
-
+        self.type_segmentation = type_segmentation
+        self.loss = loss
         self.metrics, _ = self.get_metrics()
 
         # TODO :
@@ -59,24 +41,13 @@ class SegmentationLightningModule(pl.LightningModule):
         self.validation_step_outputs = []
         self.test_metrics = {}
 
-        self.save_hyperparameters(ignore=['loss'])
+        self.save_hyperparameters(ignore=['loss', 'model'])
         # TODO : log hyper params at start
 
         # example array to get input / output size in model summary and graph of model:
         self.example_input_array = torch.Tensor(
-            self.batch_size, self.nb_input_channels, size_imgs[0], size_imgs[1]
+            8, self.model.in_channels, self.model.input_shape[0], self.model.input_shape[1]
         )
-
-    def create_model(self):
-        """Creates a model with the config file (.json) if available."""
-        model = load_from_settings_file(
-            self.arch,
-            self.nb_input_channels,
-            self.nb_output_channels,
-            self.model_settings_path,
-            input_shape=(self.size_imgs[0], self.size_imgs[1]),
-        )
-        return model
 
     def get_metrics(self):
         """Defines the metrics that will be computed during valid and test steps."""
@@ -243,4 +214,6 @@ class SegmentationLightningModule(pl.LightningModule):
 # TODO :
 # - log images
 # - log metrics following lightning guide
-# - set model settings through CLI ou yaml file
+# - tester sur GPU
+# - documentation : readme commands
+# - tests integration

@@ -229,6 +229,10 @@ class Segformer(ModelABC, nn.Module):
     ):
         super().__init__(*args, **kwargs)
 
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.input_shape = input_shape
+
         dims, heads, ff_expansion, reduction_ratio, num_layers = map(
             partial(cast_tuple, depth=4),
             (
@@ -296,6 +300,7 @@ class Segformer(ModelABC, nn.Module):
             nn.UpsamplingBilinear2d(scale_factor=2),
             nn.Conv2d(dim_out // 4, out_channels, kernel_size=3, padding=1),
         )
+        self.check_required_attributes()
 
     def forward(self, x):
         x = self.downsampler(x)

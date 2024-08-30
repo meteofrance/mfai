@@ -290,6 +290,10 @@ class DeepLabV3(ModelABC, torch.nn.Module):
     ):
         super().__init__()
 
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.input_shape = input_shape
+
         self.encoder = get_encoder(
             settings.encoder_name,
             in_channels=in_channels,
@@ -317,6 +321,8 @@ class DeepLabV3(ModelABC, torch.nn.Module):
             )
         else:
             self.classification_head = None
+        
+        self.check_required_attributes()
 
     def initialize(self):
         self.initialize_decoder(self.decoder)
@@ -484,6 +490,10 @@ class DeepLabV3Plus(DeepLabV3):
     ):
         super().__init__(in_channels, out_channels, input_shape, settings)
 
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.input_shape = input_shape
+
         self.encoder = get_encoder(
             settings.encoder_name,
             in_channels=in_channels,
@@ -498,3 +508,5 @@ class DeepLabV3Plus(DeepLabV3):
             atrous_rates=settings.decoder_atrous_rates,
             output_stride=settings.encoder_output_stride,
         )
+
+        self.check_required_attributes()

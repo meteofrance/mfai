@@ -549,6 +549,10 @@ class UNETRPP(ModelABC, nn.Module):
 
         super().__init__()
 
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.input_shape = input_shape
+
         self.do_ds = settings.do_ds
         self.conv_op = getattr(nn, settings.conv_op)
         self.num_classes = out_channels
@@ -648,6 +652,8 @@ class UNETRPP(ModelABC, nn.Module):
                 in_channels=settings.hidden_size // 4,
                 out_channels=out_channels,
             )
+
+        self.check_required_attributes()
 
     def proj_feat(self, x):
         x = x.view(x.size(0), *self.feat_size, self.hidden_size)

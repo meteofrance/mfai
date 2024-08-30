@@ -19,18 +19,19 @@ optimizer:
   init_args:
     lr: 0.001
 trainer:
+  max_epochs: 5
   logger:
     class_path: lightning.pytorch.loggers.TensorBoardLogger
     init_args:
       save_dir: logs
       name: mf_ai_project_n1
+      log_every_n_steps: 1
   accelerator: auto
   strategy: auto
   devices: auto
   num_nodes: 1
   precision: null
   callbacks: null
-  max_epochs: 2
   enable_checkpointing: true
   enable_progress_bar: true
   enable_model_summary: true

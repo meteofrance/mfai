@@ -136,10 +136,9 @@ class SegmentationLightningModule(pl.LightningModule):
         x, y = batch
         _, loss = self._shared_forward_step(x, y)
         # batch_dict = {"loss": loss}
-        # self.log(
-        #     "loss_step", loss, on_step=True, prog_bar=True, logger=True, sync_dist=True
-        # )
-        # self.training_step_outputs.append(batch_dict)
+        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
+        #self.log("train_loss", loss, on_epoch=True)
+        #self.training_step_outputs.append(batch_dict)
         return loss
 
     # def on_train_epoch_end(self):
@@ -163,10 +162,10 @@ class SegmentationLightningModule(pl.LightningModule):
         x, y = batch
         y_hat, loss = self._shared_forward_step(x, y)
         # batch_dict = self._shared_metrics_step(loss, x, y, y_hat)
-        # self.log("val_loss", loss, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log("val_loss", loss, on_epoch=True, prog_bar=True, sync_dist=True)
         # self.validation_step_outputs.append(batch_dict)
         # if not self.hyparams.dev_mode:
-        #     self.val_plot_step(batch_idx, y, y_hat)
+        self.val_plot_step(batch_idx, y, y_hat)
         return loss
 
     # def on_validation_epoch_end(self):
@@ -212,8 +211,9 @@ class SegmentationLightningModule(pl.LightningModule):
         return y_hat
 
 # TODO :
-# - log images
 # - log metrics following lightning guide
 # - tester sur GPU
+# - checkpointing, callbacks, lr scheduler
+# - reorganiser l'arboresence des fichiers
 # - documentation : readme commands
-# - tests integration
+# - tests integratio

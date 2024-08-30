@@ -12,9 +12,6 @@ from pathlib import Path
 
 
 class SegmentationLightningModule(pl.LightningModule):
-    """A lightning module adapted for segmentation of weather images.
-    Logging is managed with tensorboard."""
-
     def __init__(
             self,
             arch: AvailableModels,
@@ -23,9 +20,8 @@ class SegmentationLightningModule(pl.LightningModule):
             nb_output_channels: int,
             batch_size: int,
             model_settings_path: Path,
-            type_segmentation: Literal["binary", "multiclass", "multilabel"],
+            type_segmentation: Literal["binary", "multiclass", "multilabel", "regression"],
             loss: Callable,
-            activation: Literal["sigmoid", "relu", "softmax2d", "None", None] = None
             ) -> None:
         """A lightning module adapted for segmentation of weather images.
 
@@ -36,9 +32,8 @@ class SegmentationLightningModule(pl.LightningModule):
             nb_output_channels (int): Number of output channels
             batch_size (int): Batch size
             model_settings_path (Path): JSON Config file of the model
-            type_segmentation (Literal[&quot;binary&quot;, &quot;multiclass&quot;, &quot;multilabel&quot;]): Type of segmentation we want to do in "binary", "multiclass", "multilabel"
+            type_segmentation (Literal["binary", "multiclass", "multilabel", "regression"]): Type of segmentation we want to do"
             loss (Callable): Loss function
-            activation (Literal[&quot;sigmoid&quot;, &quot;relu&quot;, &quot;softmax2d&quot;, &quot;None&quot;, None], optional): Last activation function of the model. Defaults to None.
         """
         super().__init__()
 
@@ -50,7 +45,6 @@ class SegmentationLightningModule(pl.LightningModule):
         self.model_settings_path = model_settings_path
         self.type_segmentation = type_segmentation
         self.loss = loss
-        self.activation = activation
         self.channels_last = (self.nb_input_channels == 3)
 
         self.model = self.create_model()
@@ -59,6 +53,7 @@ class SegmentationLightningModule(pl.LightningModule):
 
         self.metrics, _ = self.get_metrics()
 
+        # TODO :
         # class variables to log metrics during training
         self.training_step_outputs = []
         self.validation_step_outputs = []
@@ -74,7 +69,6 @@ class SegmentationLightningModule(pl.LightningModule):
 
     def create_model(self):
         """Creates a model with the config file (.json) if available."""
-        # TODO : what to do with last activation ?
         model = load_from_settings_file(
             self.arch,
             self.nb_input_channels,
@@ -86,39 +80,47 @@ class SegmentationLightningModule(pl.LightningModule):
 
     def get_metrics(self):
         """Defines the metrics that will be computed during valid and test steps."""
-        metrics_kwargs = {"task": self.type_segmentation}
-        acc_kwargs = {"task": self.type_segmentation}
 
-        if self.type_segmentation == "multiclass":
-            metrics_kwargs["num_classes"] = self.nb_output_channels
-            acc_kwargs["num_classes"] = self.nb_output_channels
-            # see https://www.evidentlyai.com/classification-metrics/multi-class-metrics
-            # with micro and multiclass f1 = recall = acc = precision
-            metrics_kwargs["average"] = "macro"
-            acc_kwargs["average"] = "micro"
+        if self.type_segmentation == "regression":
+            metrics_dict = torch.nn.ModuleDict(
+                {
+                    "rmse": tm.MeanSquaredError(squared=False),
+                    "mae": tm.MeanAbsoluteError(),
+                    "r2": tm.R2Score(),
+                    "mape": tm.MeanAbsolutePercentageError(),
+                }
+            )
+        else:
+            metrics_kwargs = {"task": self.type_segmentation}
+            acc_kwargs = {"task": self.type_segmentation}
 
-        elif self.type_segmentation == "multilabel":
-            metrics_kwargs["num_labels"] = self.nb_output_channels
-            acc_kwargs["num_labels"] = self.nb_output_channels
+            if self.type_segmentation == "multiclass":
+                metrics_kwargs["num_classes"] = self.nb_output_channels
+                acc_kwargs["num_classes"] = self.nb_output_channels
+                # see https://www.evidentlyai.com/classification-metrics/multi-class-metrics
+                # with micro and multiclass f1 = recall = acc = precision
+                metrics_kwargs["average"] = "macro"
+                acc_kwargs["average"] = "micro"
 
-        metrics_dict = {
-            "acc": tm.Accuracy(**acc_kwargs),
-            "f1": tm.F1Score(**metrics_kwargs),
-            "recall_pod": tm.Recall(**metrics_kwargs),
-            "precision": tm.Precision(**metrics_kwargs),  # Precision = 1 - FAR
-        }
+            elif self.type_segmentation == "multilabel":
+                metrics_kwargs["num_labels"] = self.nb_output_channels
+                acc_kwargs["num_labels"] = self.nb_output_channels
+
+            metrics_dict = {
+                "acc": tm.Accuracy(**acc_kwargs),
+                "f1": tm.F1Score(**metrics_kwargs),
+                "recall_pod": tm.Recall(**metrics_kwargs),
+                "precision": tm.Precision(**metrics_kwargs),  # Precision = 1 - FAR
+            }
         return torch.nn.ModuleDict(metrics_dict), metrics_kwargs
 
     def forward(self, inputs):
         """Runs data through the model. Separate from training step."""
         if self.channels_last:
             inputs = inputs.to(memory_format=torch.channels_last)
-
-        # TODO :
-        # With smp lib losses, last activation function included in loss and not in model.
-        # We need to apply last activation manually here.
+        # We prefer when the last activation function is included in the loss and not in the model.
+        # Consequently, we need to apply the last activation manually here, to get the real output.
         y_hat = self.model(inputs)
-        # apply activation if needed
         y_hat = self.last_activation(y_hat)
         return y_hat
 
@@ -128,10 +130,8 @@ class SegmentationLightningModule(pl.LightningModule):
         if self.channels_last:
             x = x.to(memory_format=torch.channels_last)
             y = y.to(memory_format=torch.channels_last)
-
-        # TODO :
-        # With smp lib, last activation function included in loss and not in model.
-        # With smp losses, we keep activation=None and apply logsigmoid after loss
+        # We prefer when the last activation function is included in the loss and not in the model.
+        # Consequently, we need to apply the last activation manually here, to get the real output.
         y_hat = self.model(x)
         loss = self.loss(y_hat, y)
         y_hat = self.last_activation(y_hat)
@@ -176,16 +176,17 @@ class SegmentationLightningModule(pl.LightningModule):
     #     self._shared_epoch_end(outputs, "train")
     #     self.training_step_outputs.clear()  # free memory
 
-    # def val_plot_step(self, batch_idx, y, y_hat):
-    #     """Plots images on first batch of validation and log them in tensorboard."""
-    #     if batch_idx == 0:
-    #         tb = self.logger.experiment
-    #         step = self.current_epoch
-    #         dformat = "HW" if self.hyparams.type_segmentation == "multiclass" else "CHW"
-    #         if step == 0:
-    #             tb.add_image("val_plots/true_image", y[0], dataformats=dformat)
-    #         y_hat = self.probabilities_to_classes(y_hat)
-    #         tb.add_image("val_plots/test_image", y_hat[0], step, dataformats=dformat)
+    def val_plot_step(self, batch_idx, y, y_hat):
+        """Plots images on first batch of validation and log them in tensorboard.
+        Should be overwrited for each specific project, with matplotlib plots."""
+        if batch_idx == 0:
+            tb = self.logger.experiment
+            step = self.current_epoch
+            dformat = "HW" if self.type_segmentation in ["multiclass", "regression"] else "CHW"
+            if step == 0:
+                tb.add_image("val_plots/true_image", y[0], dataformats=dformat)
+            y_hat = self.probabilities_to_classes(y_hat)
+            tb.add_image("val_plots/test_image", y_hat[0], step, dataformats=dformat)
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
@@ -222,99 +223,24 @@ class SegmentationLightningModule(pl.LightningModule):
     #     hparams["loss"] = str(hparams["loss"])
     #     self.logger.log_hyperparams(hparams, metrics=metrics)
 
-    # def use_lr_scheduler(self, optimizer):
-    #     lr = self.hyparams.learning_rate
-    #     if self.hyparams.reduce_lr_plateau:
-    #         lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, "min")
-    #         return {
-    #             "optimizer": optimizer,
-    #             "lr_scheduler": {
-    #                 "scheduler": lr_scheduler,
-    #                 "monitor": "val_loss",
-    #             },
-    #         }
-    #     elif self.hyparams.cyclic_lr:
-    #         lr_scheduler = optim.lr_scheduler.CyclicLR(
-    #             optimizer, base_lr=lr, max_lr=10 * lr, cycle_momentum=False
-    #         )
-    #         return {
-    #             "optimizer": optimizer,
-    #             "lr_scheduler": {"scheduler": lr_scheduler},
-    #         }
-    #     else:
-    #         return None
-
-    # def configure_optimizers(self):
-    #     return optim.Adam(self.parameters(), lr=0.001)
-
-    # def configure_optimizers(self):
-    #     optimizer = optim.Adam(self.parameters(), lr=self.hyparams.learning_rate)
-    #     if self.hyparams.reduce_lr_plateau or self.hyparams.cyclic_lr:
-    #         return self.use_lr_scheduler(optimizer)
-    #     else:
-    #         return optimizer
+    def last_activation(self, y_hat):
+        """Applies appropriate activation according to task."""
+        if self.type_segmentation == "multiclass":
+            y_hat = y_hat.log_softmax(dim=1).exp()
+        elif self.type_segmentation in ["binary", "multilabel"]:
+            y_hat = torch.nn.functional.logsigmoid(y_hat).exp()
+        return y_hat
 
     def probabilities_to_classes(self, y_hat):
         """Transfrom probalistics predictions to discrete classes"""
         if self.type_segmentation == "multiclass":
             y_hat = y_hat.argmax(dim=1)
         elif self.type_segmentation in ["binary", "multilabel"]:
+            # Default detection threshold = 0.5
             y_hat = (y_hat > 0.5).int()
         return y_hat
 
-    def last_activation(self, y_hat):
-        """Applies appropriate activation according to task if activation is None."""
-        if self.activation is None:
-            if self.type_segmentation == "multiclass":
-                y_hat = y_hat.log_softmax(dim=1).exp()
-            elif self.type_segmentation in ["binary", "multilabel"]:
-                y_hat = torch.nn.functional.logsigmoid(y_hat).exp()
-        return y_hat
-
-
-# class SegmentationRegressorLightningModule(SegmentationLightningModule):
-#     """
-#     A lightning module adapted for classification problem of segmentation.
-#     Computes metrics and manages logging in tensorboard.
-#     """
-
-#     def __init__(self, hparams: SegmentationHyperParameters):
-#         super().__init__(hparams)
-
-#     def _shared_forward_step(self, x, y):
-#         """Computes forward pass and loss for a batch.
-#         Step shared by training, validation and test steps"""
-#         # With smp lib, last activation function included in loss and not in model.
-#         # With smp losses, we keep activation=None and apply logsigmoid after loss
-#         y_hat = self.model(x)
-#         y_hat = self.last_activation(y_hat)
-#         loss = self.hyparams.loss(y_hat.float(), y)
-#         return y_hat, loss
-
-#     def get_metrics(self) -> dict:
-#         """Defines the metrics that will be computed during valid and test steps."""
-#         metrics_dict = torch.nn.ModuleDict(
-#             {
-#                 "rmse": tm.MeanSquaredError(squared=False),
-#                 "mae": tm.MeanAbsoluteError(),
-#                 "r2": tm.R2Score(),
-#                 "mape": tm.MeanAbsolutePercentageError(),
-#             }
-#         )
-#         return metrics_dict
-
-#     def val_plot_step(self, batch_idx, y, y_hat):
-#         """Plots images on first batch of validation and log them in tensorboard."""
-#         if batch_idx == 0:
-#             tb = self.logger.experiment
-#             step = self.current_epoch
-#             dformat = "HW"
-#             if step == 0:
-#                 tb.add_image("val_plots/true_image", y[0], dataformats=dformat)
-#             tb.add_image("val_plots/test_image", y_hat[0], step, dataformats=dformat)
-
-#     def last_activation(self, y_hat):
-#         """If activation is None, then apply appropirate activation according to task"""
-#         if self.activation is None:
-#             y_hat = torch.nn.ReLU()(y_hat)
-#         return y_hat
+# TODO :
+# - log images
+# - log metrics following lightning guide
+# - set model settings through CLI ou yaml file

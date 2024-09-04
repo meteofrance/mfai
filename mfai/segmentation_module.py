@@ -4,12 +4,23 @@ import lightning.pytorch as pl
 import torch
 import torchmetrics as tm
 from torch import optim
+import pandas as pd
 
 # from mfai.torch.hparams import SegmentationHyperParameters
 from mfai.torch.models import load_from_settings_file
 from typing import Tuple, Literal, Callable
 from pathlib import Path
 from mfai.torch.models.base import ModelABC
+
+from pytorch_lightning.utilities.rank_zero import rank_zero_debug
+from pytorch_lightning.utilities import rank_zero_only
+
+# define custom scalar in tensorboard, to have 2 lines on same graph
+layout = {
+    "Check Overfit": {
+        "loss": ["Multiline", ["loss/train", "loss/validation"]],
+    },
+}
 
 
 class SegmentationLightningModule(pl.LightningModule):
@@ -35,14 +46,12 @@ class SegmentationLightningModule(pl.LightningModule):
         self.loss = loss
         self.metrics, _ = self.get_metrics()
 
-        # TODO :
-        # class variables to log metrics during training
-        self.training_step_outputs = []
-        self.validation_step_outputs = []
+        # class variables to log metrics for each sample during train/test step
         self.test_metrics = {}
+        self.training_loss = []
+        self.validation_loss = []
 
         self.save_hyperparameters(ignore=['loss', 'model'])
-        # TODO : log hyper params at start
 
         # example array to get input / output size in model summary and graph of model:
         self.example_input_array = torch.Tensor(
@@ -108,43 +117,34 @@ class SegmentationLightningModule(pl.LightningModule):
         y_hat = self.last_activation(y_hat)
         return y_hat, loss
 
-    # def _shared_metrics_step(self, loss, x, y, y_hat):
-    #     """Computes metrics for a batch.
-    #     Step shared by validation and test steps."""
-    #     batch_dict = {"loss": loss}
-    #     y_hat = self.probabilities_to_classes(y_hat)
+    def on_train_start(self):
+        """Setup custom scalars panel on tensorboard and log hparams.
+        Useful to easily compare train and valid loss and detect overtfitting."""
+        print(f"Logs will be saved in \033[96m{self.logger.log_dir}\033[0m")
+        self.logger.experiment.add_custom_scalars(layout)
+        hparams = dict(self.hparams)
+        hparams["loss"] = self.loss.__class__.__name__
+        hparams["model"] = self.model.__class__.__name__
+        self.logger.log_hyperparams(hparams, {"val_loss":0, "val_f1":0})
 
-    #     for metric_name, metric in self.metrics.items():
-    #         metric.update(y_hat, y)
-    #         batch_dict[metric_name] = metric.compute()
-    #         metric.reset()
-    #     return batch_dict
-
-    # def _shared_epoch_end(self, outputs, label):
-    #     """Computes and logs the averaged metrics at the end of an epoch.
-    #     Step shared by training and validation epochs.
-    #     """
-    #     avg_loss = torch.stack([x["loss"] for x in outputs]).mean()
-    #     tb = self.logger.experiment
-    #     tb.add_scalar(f"loss/{label}", avg_loss, self.current_epoch)
-    #     if label == "validation":
-    #         for metric in self.metrics:
-    #             avg_m = torch.stack([x[metric] for x in outputs]).mean()
-    #             tb.add_scalar(f"metrics/{label}_{metric}", avg_m, self.current_epoch)
+    def _shared_epoch_end(self, outputs, label):
+        """Computes and logs the averaged loss at the end of an epoch on custom layout.
+        Step shared by training and validation epochs.
+        """
+        avg_loss = torch.stack(outputs).mean()
+        tb = self.logger.experiment
+        tb.add_scalar(f"loss/{label}", avg_loss, self.current_epoch)
 
     def training_step(self, batch, batch_idx):
         x, y = batch
         _, loss = self._shared_forward_step(x, y)
-        # batch_dict = {"loss": loss}
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
-        #self.log("train_loss", loss, on_epoch=True)
-        #self.training_step_outputs.append(batch_dict)
+        self.training_loss.append(loss)
         return loss
 
-    # def on_train_epoch_end(self):
-    #     outputs = self.training_step_outputs
-    #     self._shared_epoch_end(outputs, "train")
-    #     self.training_step_outputs.clear()  # free memory
+    def on_train_epoch_end(self):
+        self._shared_epoch_end(self.training_loss, "train")
+        self.training_loss.clear()  # free memory
 
     def val_plot_step(self, batch_idx, y, y_hat):
         """Plots images on first batch of validation and log them in tensorboard.
@@ -161,37 +161,60 @@ class SegmentationLightningModule(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         x, y = batch
         y_hat, loss = self._shared_forward_step(x, y)
-        # batch_dict = self._shared_metrics_step(loss, x, y, y_hat)
-        self.log("val_loss", loss, on_epoch=True, prog_bar=True, sync_dist=True)
-        # self.validation_step_outputs.append(batch_dict)
-        # if not self.hyparams.dev_mode:
+        self.log("val_loss", loss, on_epoch=True, sync_dist=True)
+        self.validation_loss.append(loss)
+        y_hat = self.probabilities_to_classes(y_hat)
+        for metric in self.metrics.values():
+            metric.update(y_hat, y)
         self.val_plot_step(batch_idx, y, y_hat)
         return loss
 
-    # def on_validation_epoch_end(self):
-    #     outputs = self.validation_step_outputs
-    #     self._shared_epoch_end(outputs, "validation")
-    #     self.validation_step_outputs.clear()  # free memory
+    def on_validation_epoch_end(self):
+        self._shared_epoch_end(self.validation_loss, "validation")
+        self.validation_loss.clear()  # free memory
+        for metric_name, metric in self.metrics.items():
+            tb = self.logger.experiment
+            # Use add scalar to log at step=current_epoch
+            tb.add_scalar(f'val_{metric_name}', metric.compute(), self.current_epoch)
+            metric.reset()
 
-    # def test_step(self, batch, batch_idx):
-    #     """Computes metrics for each sample, at the end of the run."""
-    #     x, y, name = batch
-    #     y_hat, loss = self._shared_forward_step(x, y)
-    #     batch_dict = self._shared_metrics_step(loss, x, y, y_hat)
-    #     self.test_metrics[name[0]] = batch_dict
+    def test_step(self, batch, batch_idx):
+        """Computes metrics for each sample, at the end of the run."""
+        x, y, name = batch
+        y_hat, loss = self._shared_forward_step(x, y)
+        y_hat = self.probabilities_to_classes(y_hat)
 
-    # def on_test_epoch_end(self):
-    #     """Logs metrics in tensorboard hparams view, at the end of run."""
-    #     metrics = {}
-    #     list_metrics = list(self.test_metrics.values())[0].keys()
-    #     for metric_name in list_metrics:
-    #         data = []
-    #         for metrics_dict in self.test_metrics.values():
-    #             data.append(metrics_dict[metric_name])
-    #         metrics[metric_name] = torch.stack(data).mean().item()
-    #     hparams = asdict(self.hparams.hparams)
-    #     hparams["loss"] = str(hparams["loss"])
-    #     self.logger.log_hyperparams(hparams, metrics=metrics)
+        # Save metrics values for each sample
+        batch_dict = {"loss": loss}
+        for metric_name, metric in self.metrics.items():
+            metric.update(y_hat, y)
+            batch_dict[metric_name] = metric.compute()
+            metric.reset()
+        name = name[0].item()
+        self.test_metrics[name] = batch_dict
+
+    def build_metrics_dataframe(self) -> pd.DataFrame:
+        data = []
+        first_sample = list(self.test_metrics.keys())[0]
+        metrics = list(self.test_metrics[first_sample].keys())
+        for name_sample, metrics_dict in self.test_metrics.items():
+            data.append([name_sample] + [metrics_dict[m].item() for m in metrics])
+        return pd.DataFrame(data, columns=["Name"] + metrics)
+
+    @rank_zero_only
+    def save_test_metrics_as_csv(self, df:pd.DataFrame)-> None:
+        path_csv = Path(self.logger.log_dir) / "metrics_test_set.csv"
+        df.to_csv(path_csv, index=False)
+        print(
+            f"--> Metrics for all samples saved in \033[91m\033[1m{path_csv}\033[0m"
+        )
+
+    def on_test_epoch_end(self):
+        """Logs metrics in tensorboard hparams view, at the end of run."""
+        df = self.build_metrics_dataframe()
+        self.save_test_metrics_as_csv(df)
+        df = df.drop("Name", axis=1)
+
 
     def last_activation(self, y_hat):
         """Applies appropriate activation according to task."""
@@ -211,9 +234,10 @@ class SegmentationLightningModule(pl.LightningModule):
         return y_hat
 
 # TODO :
-# - log metrics following lightning guide
+# - difference test & validate, launch just after train
 # - tester sur GPU
-# - checkpointing, callbacks, lr scheduler
+# - lr scheduler
 # - reorganiser l'arboresence des fichiers
 # - documentation : readme commands
-# - tests integratio
+# - tests integration
+# - passer à MLFlow ?

@@ -173,11 +173,6 @@ class CSINeighborood(Metric):
         for channel in range(num_channels):
             channel_preds = preds[:, channel, :, :]
             channel_targets = targets[:, channel, :, :]
-            print(f"------- {channel} ------")
-            print(" ")
-            print(channel_preds)
-            print(" ")
-            print(channel_targets)
             tp, fp, fn = compute_sub_results(channel_preds, channel_targets)
             self.true_positives[channel] += tp
             self.false_positives[channel] += fp

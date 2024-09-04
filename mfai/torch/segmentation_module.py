@@ -234,9 +234,5 @@ class SegmentationLightningModule(pl.LightningModule):
         return y_hat
 
 # TODO :
-# - tester sur GPU
-# - lr scheduler
-# - reorganiser l'arboresence des fichiers
 # - documentation : readme commands
 # - tests integration
-# - passer à MLFlow ?

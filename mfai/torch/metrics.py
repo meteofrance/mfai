@@ -67,8 +67,8 @@ class PR_AUC(Metric):
 
 class CSINeighborood(Metric):
     """
-    Compute Criticall Sucess Index (or Threat Score) over a neighborood to avoid the phenomenon
-    of double punishment. So a forecast is considered as a true positive if there is a positive
+    Compute Critical Sucess Index (or Threat Score) over a neighborhood to avoid the phenomenon
+    of double penalty. So a forecast is considered as a true positive if there is a positive
     observation in the neighborood (define here by the number of neighbors num_ngb) of a positive
     prediction.
 

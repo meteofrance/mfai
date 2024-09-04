@@ -234,7 +234,6 @@ class SegmentationLightningModule(pl.LightningModule):
         return y_hat
 
 # TODO :
-# - difference test & validate, launch just after train
 # - tester sur GPU
 # - lr scheduler
 # - reorganiser l'arboresence des fichiers

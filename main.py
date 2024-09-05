@@ -1,22 +1,11 @@
 from lightning.pytorch.cli import LightningCLI
 
-from mfai.torch.segmentation_module import SegmentationLightningModule
-
-from mfai.torch.models import (
-    DeepLabV3,
-    DeepLabV3Plus,
-    HalfUNet,
-    Segformer,
-    SwinUNETR,
-    UNet,
-    CustomUnet,
-    UNETRPP,
-)
 from mfai.torch.dummy_dataset import DummyDataModule
+from mfai.torch.segmentation_module import SegmentationLightningModule
 
 
 def cli_main():
-    cli = LightningCLI(SegmentationLightningModule, DummyDataModule)
+    cli = LightningCLI(SegmentationLightningModule, DummyDataModule)  # noqa: F841
 
 
 if __name__ == "__main__":

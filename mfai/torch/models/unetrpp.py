@@ -4,12 +4,12 @@ Adapted from https://github.com/Amshaker/unetr_plus_plus
 Added 2d support and Bilinear interpolation for upsampling.
 """
 
+import functools
 import math
+import operator
 import warnings
 from dataclasses import dataclass
-import operator
 from typing import Sequence, Tuple, Union
-import functools
 
 import torch
 import torch.nn as nn

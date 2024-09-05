@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import numpy
 import onnx
 import onnxruntime

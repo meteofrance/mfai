@@ -1,13 +1,13 @@
+from pathlib import Path
+from typing import Callable, Literal
+
 import lightning.pytorch as pl
+import pandas as pd
 import torch
 import torchmetrics as tm
-import pandas as pd
-
-from typing import Literal, Callable
-from pathlib import Path
-from mfai.torch.models.base import ModelABC
-
 from pytorch_lightning.utilities import rank_zero_only
+
+from mfai.torch.models.base import ModelABC
 
 # define custom scalar in tensorboard, to have 2 lines on same graph
 layout = {
@@ -230,4 +230,3 @@ class SegmentationLightningModule(pl.LightningModule):
             # Default detection threshold = 0.5
             y_hat = (y_hat > 0.5).int()
         return y_hat
-

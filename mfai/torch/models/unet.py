@@ -11,8 +11,9 @@ import torch
 from dataclasses_json import dataclass_json
 from torch import nn
 
-from .base import ModelABC
 from mfai.torch.models.encoders import get_encoder
+
+from .base import ModelABC
 
 
 class DoubleConv(nn.Module):

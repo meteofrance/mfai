@@ -107,16 +107,9 @@ def test_csi_multiclass(num_neighbors: int, expected_value: torch.Tensor):
         )
     )
 
-    print(y_hat.shape)
-
     csi = CSINeighborood(num_neighbors, "multiclass", 4)
     csi.update(preds=y_hat, targets=y_true)
     csi_score = torch.round(csi.compute(), decimals=2).float()
-
-    print(csi.true_positives)
-    print(csi.false_positives)
-    print(csi.false_negatives)
-    print(csi_score)
 
     assert pytest.approx(csi_score, 0.001) == expected_value
 

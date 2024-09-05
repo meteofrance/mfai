@@ -8,3 +8,4 @@ torch==2.3.1
 torchvision
 tabulate==0.9.0
 lightning[pytorch-extra]
+pandas==2.2.2

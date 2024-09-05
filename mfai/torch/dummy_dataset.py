@@ -4,8 +4,14 @@ from torch.utils.data import DataLoader, Dataset
 
 
 class DummyDataset(Dataset):
-    def __init__(self, split:str, dim_x:int = 64, dim_y:int = 64, nb_input_channels: int = 2,
-            nb_output_channels: int = 1):
+    def __init__(
+        self,
+        split: str,
+        dim_x: int = 64,
+        dim_y: int = 64,
+        nb_input_channels: int = 2,
+        nb_output_channels: int = 1,
+    ):
         self.split = split
         self.dim_x = dim_x
         self.dim_y = dim_y
@@ -18,10 +24,13 @@ class DummyDataset(Dataset):
 
     def __getitem__(self, index):
         x = torch.randn((self.nb_input_channels, self.dim_x, self.dim_y)).float()
-        y = torch.randint(0, 1, (self.nb_output_channels, self.dim_x, self.dim_y)).float()
+        y = torch.randint(
+            0, 1, (self.nb_output_channels, self.dim_x, self.dim_y)
+        ).float()
         if self.split == "test":
             return x, y, index  # return name of sample for test step
         return x, y
+
 
 class DummyDataModule(LightningDataModule):
     def __init__(self, batch_size: int = 2):

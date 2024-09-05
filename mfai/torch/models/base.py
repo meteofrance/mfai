@@ -7,7 +7,6 @@ from typing import Tuple
 
 
 class ModelABC(ABC):
-
     @abstractproperty
     def onnx_supported(self) -> bool:
         """

@@ -20,6 +20,7 @@ all_nn_architectures = (
     UNETRPP,
 )
 
+
 def load_from_settings_file(
     model_name: str,
     in_channels: int,

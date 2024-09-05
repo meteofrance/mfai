@@ -25,11 +25,11 @@ layout = {
 
 class SegmentationLightningModule(pl.LightningModule):
     def __init__(
-            self,
-            model: ModelABC,
-            type_segmentation: Literal["binary", "multiclass", "multilabel", "regression"],
-            loss: Callable,
-            ) -> None:
+        self,
+        model: ModelABC,
+        type_segmentation: Literal["binary", "multiclass", "multilabel", "regression"],
+        loss: Callable,
+    ) -> None:
         """A lightning module adapted for segmentation of weather images.
 
         Args:
@@ -39,7 +39,7 @@ class SegmentationLightningModule(pl.LightningModule):
         """
         super().__init__()
         self.model = model
-        self.channels_last = (self.model.in_channels == 3)
+        self.channels_last = self.model.in_channels == 3
         if self.channels_last:  # Optimizes computation for RGB images
             self.model = self.model.to(memory_format=torch.channels_last)
         self.type_segmentation = type_segmentation
@@ -51,11 +51,14 @@ class SegmentationLightningModule(pl.LightningModule):
         self.training_loss = []
         self.validation_loss = []
 
-        self.save_hyperparameters(ignore=['loss', 'model'])
+        self.save_hyperparameters(ignore=["loss", "model"])
 
         # example array to get input / output size in model summary and graph of model:
         self.example_input_array = torch.Tensor(
-            8, self.model.in_channels, self.model.input_shape[0], self.model.input_shape[1]
+            8,
+            self.model.in_channels,
+            self.model.input_shape[0],
+            self.model.input_shape[1],
         )
 
     def get_metrics(self):
@@ -125,7 +128,7 @@ class SegmentationLightningModule(pl.LightningModule):
         hparams = dict(self.hparams)
         hparams["loss"] = self.loss.__class__.__name__
         hparams["model"] = self.model.__class__.__name__
-        self.logger.log_hyperparams(hparams, {"val_loss":0, "val_f1":0})
+        self.logger.log_hyperparams(hparams, {"val_loss": 0, "val_f1": 0})
 
     def _shared_epoch_end(self, outputs, label):
         """Computes and logs the averaged loss at the end of an epoch on custom layout.
@@ -152,7 +155,11 @@ class SegmentationLightningModule(pl.LightningModule):
         if batch_idx == 0:
             tb = self.logger.experiment
             step = self.current_epoch
-            dformat = "HW" if self.type_segmentation in ["multiclass", "regression"] else "CHW"
+            dformat = (
+                "HW"
+                if self.type_segmentation in ["multiclass", "regression"]
+                else "CHW"
+            )
             if step == 0:
                 tb.add_image("val_plots/true_image", y[0], dataformats=dformat)
             y_hat = self.probabilities_to_classes(y_hat)
@@ -175,7 +182,7 @@ class SegmentationLightningModule(pl.LightningModule):
         for metric_name, metric in self.metrics.items():
             tb = self.logger.experiment
             # Use add scalar to log at step=current_epoch
-            tb.add_scalar(f'val_{metric_name}', metric.compute(), self.current_epoch)
+            tb.add_scalar(f"val_{metric_name}", metric.compute(), self.current_epoch)
             metric.reset()
 
     def test_step(self, batch, batch_idx):
@@ -202,19 +209,16 @@ class SegmentationLightningModule(pl.LightningModule):
         return pd.DataFrame(data, columns=["Name"] + metrics)
 
     @rank_zero_only
-    def save_test_metrics_as_csv(self, df:pd.DataFrame)-> None:
+    def save_test_metrics_as_csv(self, df: pd.DataFrame) -> None:
         path_csv = Path(self.logger.log_dir) / "metrics_test_set.csv"
         df.to_csv(path_csv, index=False)
-        print(
-            f"--> Metrics for all samples saved in \033[91m\033[1m{path_csv}\033[0m"
-        )
+        print(f"--> Metrics for all samples saved in \033[91m\033[1m{path_csv}\033[0m")
 
     def on_test_epoch_end(self):
         """Logs metrics in tensorboard hparams view, at the end of run."""
         df = self.build_metrics_dataframe()
         self.save_test_metrics_as_csv(df)
         df = df.drop("Name", axis=1)
-
 
     def last_activation(self, y_hat):
         """Applies appropriate activation according to task."""
@@ -233,6 +237,8 @@ class SegmentationLightningModule(pl.LightningModule):
             y_hat = (y_hat > 0.5).int()
         return y_hat
 
+
 # TODO :
 # - documentation : readme commands
 # - tests integration
+# - linting : runai exec ruff format

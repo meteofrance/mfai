@@ -321,7 +321,7 @@ class DeepLabV3(ModelABC, torch.nn.Module):
             )
         else:
             self.classification_head = None
-        
+
         self.check_required_attributes()
 
     def initialize(self):

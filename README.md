@@ -78,10 +78,10 @@ The [**NamedTensor**](../py4cast/datasets/base.py#L38) class is a wrapper around
 # Metrics
 
 In addition to metrics available in [**torchmetrics**](https://lightning.ai/docs/torchmetrics/stable/), we implement :
-- Criticall Sucess Index (CSI) is given by: TP / (TP+FP+FN). This metric, usefull in meteorology, takes into account both false alarms and missed events in a neighborhood to avoid the phenomenon of double punishment.
+- Criticall Sucess Index (CSI) is given by: TP / (TP+FP+FN). This metric, usefull in meteorology, takes into account both false alarms and missed events in a neighborhood to avoid the phenomenon of double penalty.
 - False Alarm Rate (FAR) is given by: FP / (FP + TP).
 - False Negative Rate (FNR) is given by: FN / (FN + TP).
-- Precision-Recall Area Under the Curve (PR AUC). This metric summarize the overall performance of a model without depending on a threshold.
+- Precision-Recall Area Under the Curve (PR AUC). This metric summarize the overall performance of a model without depending on a threshold. It can be used in place of the Area Under ROC Curve when the dataset is too unbalanced.
 
 # Installation
 
@@ -163,7 +163,7 @@ Check the code of [onnx_load_and_infer](mfai/torch/__init__.py#L35) if you would
 
 ## Metrics
 
-As our metrics are subclass of the [torchmetrics.Metric](https://lightning.ai/docs/torchmetrics/stable/references/metric.html#torchmetrics.Metric) class, you could both use them in a Pytorch or Pytorch Lightning model. Here is an example of how to set up a metric:
+As our metrics are subclasses of the [torchmetrics.Metric](https://lightning.ai/docs/torchmetrics/stable/references/metric.html#torchmetrics.Metric) class, you can both use them in a Pytorch or Pytorch Lightning model. Here is an example of how to set up a metric:
 
 ```python
 import torch

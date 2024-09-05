@@ -1,5 +1,6 @@
 from typing import Literal, Optional
 
+from einops import rearrange
 import torch
 import torch.nn.functional as F
 from torchmetrics import Metric, Precision, PrecisionRecallCurve
@@ -98,23 +99,21 @@ class CSINeighborood(Metric):
         self.average = average
 
         if torch.cuda.is_available():
-            self.device_csi = torch.device("cuda")
-        else:
-            self.device_csi = torch.device("cpu")
+            self._device = torch.device("cuda")
 
         self.add_state(
             "true_positives",
-            default=torch.zeros(self.num_classes).to(device=self.device_csi),
+            default=torch.zeros(self.num_classes).to(device=self.device),
             dist_reduce_fx="sum",
         )
         self.add_state(
             "false_positives",
-            default=torch.zeros(self.num_classes).to(device=self.device_csi),
+            default=torch.zeros(self.num_classes).to(device=self.device),
             dist_reduce_fx="sum",
         )
         self.add_state(
             "false_negatives",
-            default=torch.zeros(self.num_classes).to(device=self.device_csi),
+            default=torch.zeros(self.num_classes).to(device=self.device),
             dist_reduce_fx="sum",
         )
 
@@ -143,34 +142,47 @@ class CSINeighborood(Metric):
         return output_tensor
 
     def update(self, preds: torch.Tensor, targets: torch.Tensor):
-        """Tensors of shape (B,C,H,W)
-        If multiclass, takes int value in [0, nb_output_channels] interval
+        """
+        preds and targets are torch.Tensors of shape (H, w) or (B,C,H,W).
+        If multiclass, takes int value in [0, nb_output_channels] interval.
         """
 
         def compute_sub_results(preds, targets):
-            exp_targets = targets.type(torch.FloatTensor).to(device=self.device_csi)
+            exp_targets = targets.type(torch.FloatTensor).to(device=self.device)
             targets_extend = self.binary_dilation_(exp_targets)
             true_positives = torch.sum((preds == 1) & (targets_extend == 1))
             false_positives = torch.sum((preds == 1) & (targets_extend == 0))
             false_negatives = torch.sum((preds == 0) & (targets == 1))
             return true_positives, false_positives, false_negatives
 
-        if preds.device != self.device_csi:
-            preds = preds.to(device=self.device_csi)
-        if targets.device != self.device_csi:
-            targets = targets.to(device=self.device_csi)
+        if preds.shape != targets.shape:
+            raise ValueError(
+                f"The prediction and the targets doesn't have the same shape. Got {preds.shape} for preds and {targets.shape} for targets."
+            )
+
+        if len(preds.shape) == 2:
+            preds = rearrange(preds, "h w -> 1 1 h w")
+            targets = rearrange(targets, "h w -> 1 1 h w")
+
+        if preds.device != self.device:
+            preds = preds.to(device=self.device)
+        if targets.device != self.device:
+            targets = targets.to(device=self.device)
 
         # first step set preds & targets to binary tensor of shape (B,C,H,W)
         # mutlilabel and binary case: shapes already ok
         if self.task == "multiclass":
-            preds, targets = preds[:, 0], targets[:, 0]
-            preds = torch.movedim(F.one_hot(preds, num_classes=self.num_classes), -1, 1)
+            if preds.shape[1] != 1:
+                raise ValueError(
+                    f"The channel size sould be equal to 1 in multiclass mode. Expect ({preds.shape[0]}, 1, {preds.shape[2]}, {preds.shape[2]}), got {preds.shape[1]}."
+                )
+            preds = F.one_hot(preds.long(), num_classes=self.num_classes)
+            preds = rearrange(preds, "b 1 h w n_classes -> b n_classes h w")
             targets = F.one_hot(targets.long(), num_classes=self.num_classes)
-            targets = torch.movedim(targets, -1, 1)
+            targets = rearrange(targets, "b 1 h w n_classes -> b n_classes h w")
 
         # loop over channels
-        num_channels = preds.shape[1]
-        for channel in range(num_channels):
+        for channel in range(preds.shape[1]):
             channel_preds = preds[:, channel, :, :]
             channel_targets = targets[:, channel, :, :]
             tp, fp, fn = compute_sub_results(channel_preds, channel_targets)

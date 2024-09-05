@@ -9,7 +9,7 @@ from torchmetrics.utilities.compute import _auc_compute
 
 class FAR(Metric):
     """
-    False Alarm Ratio.
+    False Alarm Rate.
 
     FAR = FP / (TP + FP) = 1 - (TP / (TP + FP)) = 1 - Precision
     """
@@ -28,7 +28,7 @@ class FAR(Metric):
 
 class FNR(Metric):
     """
-    False Negatives Ratio.
+    False Negatives Rate.
 
     FNR = FN / (TP + FN) = 1 - (TP / (TP + FN)) = 1 - Sensitivity
     torchmetrics.Sensitivity is not available yet so we implement the calculation.

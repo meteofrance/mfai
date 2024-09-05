@@ -1,18 +1,12 @@
-from dataclasses import asdict
-
 import lightning.pytorch as pl
 import torch
 import torchmetrics as tm
-from torch import optim
 import pandas as pd
 
-# from mfai.torch.hparams import SegmentationHyperParameters
-from mfai.torch.models import load_from_settings_file
-from typing import Tuple, Literal, Callable
+from typing import Literal, Callable
 from pathlib import Path
 from mfai.torch.models.base import ModelABC
 
-from pytorch_lightning.utilities.rank_zero import rank_zero_debug
 from pytorch_lightning.utilities import rank_zero_only
 
 # define custom scalar in tensorboard, to have 2 lines on same graph
@@ -237,8 +231,3 @@ class SegmentationLightningModule(pl.LightningModule):
             y_hat = (y_hat > 0.5).int()
         return y_hat
 
-
-# TODO :
-# - documentation : readme commands
-# - tests integration
-# - linting : runai exec ruff format

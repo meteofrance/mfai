@@ -29,9 +29,10 @@ def test_cli():
             "--model.model=Segformer",
             "--model.type_segmentation=binary",
             "--model.loss=torch.nn.BCEWithLogitsLoss",
-            "--in_channels=2",
-            "--out_channels=1",
-            "--input_shape=[64, 64]",
+            "--model.model.in_channels=2",
+            "--model.model.out_channels=1",
+            "--model.model.input_shape=[64, 64]",
+            "--optimizer=AdamW",
             "--trainer.fast_dev_run=True",
         ]
     )
@@ -39,3 +40,7 @@ def test_cli():
 
 def test_cli_with_config_file():
     cli_main(["--config=mfai/config/cli_fit_test.yaml", "--trainer.fast_dev_run=True"])
+
+
+if __name__=="__main__":
+    test_cli()

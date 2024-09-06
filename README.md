@@ -219,7 +219,7 @@ Then launch your experiment with:
 `python main.py {fit, validate, test, predict} YOUR_MODEL_AND_TRAINER_ARGUMENTS`
 
 For instance:
-`python main.py fit --model.model=Segformer --model.type_segmentation=binary --model.loss=torch.nn.BCEWithLogitsLoss --in_channels=2 --out_channels=1 --input_shape=[64, 64] --trainer.fast_dev_run=True`
+`python main.py fit --model.model=Segformer --model.type_segmentation=binary --model.loss=torch.nn.BCEWithLogitsLoss --model.model.in_channels=2 --model.model.out_channels=1 --model.model.input_shape=[64, 64] --optimizer=AdamW --trainer.fast_dev_run=True`
 
 `python main.py test --ckpt_path logs/best.ckpt`
 

@@ -38,7 +38,7 @@ class SegmentationLightningModule(pl.LightningModule):
             self.model = self.model.to(memory_format=torch.channels_last)
         self.type_segmentation = type_segmentation
         self.loss = loss
-        self.metrics, _ = self.get_metrics()
+        self.metrics = self.get_metrics()
 
         # class variables to log metrics for each sample during train/test step
         self.test_metrics = {}
@@ -63,7 +63,6 @@ class SegmentationLightningModule(pl.LightningModule):
                 {
                     "rmse": tm.MeanSquaredError(squared=False),
                     "mae": tm.MeanAbsoluteError(),
-                    "r2": tm.R2Score(),
                     "mape": tm.MeanAbsolutePercentageError(),
                 }
             )
@@ -89,7 +88,7 @@ class SegmentationLightningModule(pl.LightningModule):
                 "recall_pod": tm.Recall(**metrics_kwargs),
                 "precision": tm.Precision(**metrics_kwargs),  # Precision = 1 - FAR
             }
-        return torch.nn.ModuleDict(metrics_dict), metrics_kwargs
+        return torch.nn.ModuleDict(metrics_dict)
 
     def forward(self, inputs: torch.Tensor):
         """Runs data through the model. Separate from training step."""
@@ -148,11 +147,7 @@ class SegmentationLightningModule(pl.LightningModule):
         if batch_idx == 0:
             tb = self.logger.experiment
             step = self.current_epoch
-            dformat = (
-                "HW"
-                if self.type_segmentation in ["multiclass", "regression"]
-                else "CHW"
-            )
+            dformat = "HW" if self.type_segmentation == "multiclass" else "CHW"
             if step == 0:
                 tb.add_image("val_plots/true_image", y[0], dataformats=dformat)
             tb.add_image("val_plots/pred_image", y_hat[0], step, dataformats=dformat)

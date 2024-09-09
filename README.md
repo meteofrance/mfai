@@ -83,7 +83,7 @@ The module provides:
 
 # Lightning CLI
 
-[Lightning CLI](https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.html#lightning-cli) is a convinient way to easily configure your DL experiments and reduce the number of lines of code in your project.
+[Lightning CLI](https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.html#lightning-cli) is a convenient way to easily configure your DL experiments and reduce the number of lines of code in your project.
 
 We provide an example of usage of the Lightning CLI with our lightning module and an exemple of config file to launch an experiment.
 
@@ -199,6 +199,8 @@ model(x)
 ```
 
 The script `examples/train_oxford_pets.py` provides an example of how to instantiate the ligthning module and the lightning Trainer and use them to train and test a model on the [Oxford-IIIT Pet Dataset](https://www.robots.ox.ac.uk/~vgg/data/pets/).
+
+You can also look at our unit tests in `tests/test_lightning.py` for example of usage.
 
 See [pytorch lightning documentation](https://lightning.ai/docs/overview/getting-started) for how to configure the Trainer and customize the module to suit your needs.
 

@@ -17,17 +17,25 @@ IMG_SIZE = 64
 
 class GetClass(object):
     """Retrieves target values for Oxford Pets classification task."""
+
     def __call__(self, y):
         return (y * 255 - 1).long()
 
 
-transform = T.Compose([T.ToTensor(), T.Resize((IMG_SIZE,IMG_SIZE))])
-target_transform = T.Compose([T.ToTensor(), GetClass(), T.Resize((IMG_SIZE, IMG_SIZE)), torch.squeeze])
+transform = T.Compose([T.ToTensor(), T.Resize((IMG_SIZE, IMG_SIZE))])
+target_transform = T.Compose(
+    [T.ToTensor(), GetClass(), T.Resize((IMG_SIZE, IMG_SIZE)), torch.squeeze]
+)
 
 # Oxford IIIT Pets Segmentation dataset loaded via torchvision.
-path_train = BASE_PATH /'trainval'
+path_train = BASE_PATH / "trainval"
 trainval_dataset = torchvision.datasets.OxfordIIITPet(
-    path_train, "trainval", "segmentation", transform=transform, target_transform=target_transform, download=True
+    path_train,
+    "trainval",
+    "segmentation",
+    transform=transform,
+    target_transform=target_transform,
+    download=True,
 )
 
 # Split train and valid and define data loaders
@@ -53,7 +61,8 @@ model = SegmentationLightningModule(arch, "multiclass", loss)
 # Define logger, callbacks and lightning Trainer
 tblogger = TensorBoardLogger(save_dir="logs/")
 checkpointer = ModelCheckpoint(
-    monitor="val_loss", filename="ckpt-{epoch:02d}-{val_loss:.2f}",
+    monitor="val_loss",
+    filename="ckpt-{epoch:02d}-{val_loss:.2f}",
 )
 trainer = L.Trainer(logger=tblogger, max_epochs=1, callbacks=[checkpointer])
 

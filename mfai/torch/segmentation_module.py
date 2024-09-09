@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Callable, Literal
+from typing import Callable, Literal, Tuple
 
 import lightning.pytorch as pl
 import pandas as pd
@@ -74,8 +74,8 @@ class SegmentationLightningModule(pl.LightningModule):
             if self.type_segmentation == "multiclass":
                 metrics_kwargs["num_classes"] = self.nb_output_channels
                 acc_kwargs["num_classes"] = self.nb_output_channels
-                # see https://www.evidentlyai.com/classification-metrics/multi-class-metrics
-                # with micro and multiclass f1 = recall = acc = precision
+                # by default, average="micro" and when task="multiclass", f1 = recall = acc = precision
+                # consequently, we put average="macro" for other metrics
                 metrics_kwargs["average"] = "macro"
                 acc_kwargs["average"] = "micro"
 
@@ -132,7 +132,7 @@ class SegmentationLightningModule(pl.LightningModule):
         tb = self.logger.experiment
         tb.add_scalar(f"loss/{label}", avg_loss, self.current_epoch)
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch: Tuple[torch.tensor, torch.tensor], batch_idx: int):
         x, y = batch
         _, loss = self._shared_forward_step(x, y)
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
@@ -159,7 +159,7 @@ class SegmentationLightningModule(pl.LightningModule):
             y_hat = self.probabilities_to_classes(y_hat)
             tb.add_image("val_plots/test_image", y_hat[0], step, dataformats=dformat)
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch: Tuple[torch.tensor, torch.tensor], batch_idx: int):
         x, y = batch
         y_hat, loss = self._shared_forward_step(x, y)
         self.log("val_loss", loss, on_epoch=True, sync_dist=True)
@@ -179,7 +179,7 @@ class SegmentationLightningModule(pl.LightningModule):
             tb.add_scalar(f"val_{metric_name}", metric.compute(), self.current_epoch)
             metric.reset()
 
-    def test_step(self, batch, batch_idx):
+    def test_step(self, batch: Tuple[torch.tensor, torch.tensor], batch_idx: int):
         """Computes metrics for each sample, at the end of the run."""
         x, y, name = batch
         y_hat, loss = self._shared_forward_step(x, y)

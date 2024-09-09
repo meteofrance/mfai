@@ -42,5 +42,5 @@ def test_cli_with_config_file():
     cli_main(["--config=mfai/config/cli_fit_test.yaml", "--trainer.fast_dev_run=True"])
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     test_cli()

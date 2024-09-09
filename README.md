@@ -78,7 +78,7 @@ The module provides:
 
 # Lightning CLI
 
-Lightning CLI is a convinient way to easily configure your DL experiments and reduce the number of lines of code in your project.
+[Lightning CLI](https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.html#lightning-cli) is a convinient way to easily configure your DL experiments and reduce the number of lines of code in your project.
 
 We provide an example of usage of the Lightning CLI with our lightning module and an exemple of config file to launch an experiment.
 
@@ -174,6 +174,10 @@ Check the code of [onnx_load_and_infer](mfai/torch/__init__.py#L35) if you would
 The lightning module can be instantiated and used in a forward pass as follows:
 
 ```python
+import torch
+from mfai.torch.models import UNet
+from mfai.torch.segmentation_module import SegmentationLightningModule
+
 arch = UNet(in_channels=1, out_channels=1, input_shape=[64, 64])
 loss = torch.nn.MSELoss()
 model = SegmentationLightningModule(arch, "binary", loss)
@@ -181,24 +185,13 @@ x = torch.randn((1, 1, 64, 64)).float()
 model(x)
 ```
 
-To train the model:
-```python
-from mfai.torch.dummy_dataset import DummyDataset
-
-dataset = DummyDataset("train")
-dataloader = DataLoader(dataset)
-arch = UNet(in_channels=1, out_channels=1, input_shape=[64, 64])
-loss = torch.nn.MSELoss()
-model = SegmentationLightningModule(arch, "binary", loss)
-trainer = L.Trainer()
-trainer.fit(model=model, train_dataloaders=dataloader)
-```
+The script `examples/train_oxford_pets.py` provides an example of how to instantiate the ligthning module and the lightning Trainer and use them to train and test a model on the [Oxford-IIIT Pet Dataset](https://www.robots.ox.ac.uk/~vgg/data/pets/).
 
 See [pytorch lightning documentation](https://lightning.ai/docs/overview/getting-started) for how to configure the Trainer and customize the module to suit your needs.
 
 ## Lightning CLI
 
-Setting up lightning CLI is as easy as our `main.py` script:
+Setting up lightning CLI is as easy as our `examples/main_cli_dummy.py` script:
 
 ```python
 from lightning.pytorch.cli import LightningCLI
@@ -216,12 +209,12 @@ if __name__ == "__main__":
 ```
 
 Then launch your experiment with:
-`python main.py {fit, validate, test, predict} YOUR_MODEL_AND_TRAINER_ARGUMENTS`
+`python examples/main_cli_dummy.py {fit, validate, test, predict} YOUR_MODEL_AND_TRAINER_ARGUMENTS`
 
 For instance:
-`python main.py fit --model.model=Segformer --model.type_segmentation=binary --model.loss=torch.nn.BCEWithLogitsLoss --model.model.in_channels=2 --model.model.out_channels=1 --model.model.input_shape=[64, 64] --optimizer=AdamW --trainer.fast_dev_run=True`
+`python examples/main_cli_dummy.py fit --model.model=Segformer --model.type_segmentation=binary --model.loss=torch.nn.BCEWithLogitsLoss --model.model.in_channels=2 --model.model.out_channels=1 --model.model.input_shape=[64, 64] --optimizer=AdamW --trainer.fast_dev_run=True`
 
-`python main.py test --ckpt_path logs/best.ckpt`
+`python examples/main_cli_dummy.py test --ckpt_path logs/best.ckpt`
 
 To avoid very very long command lines, you can use a config file to setup your experiment:
 
@@ -251,17 +244,17 @@ optimizer:
 ```
 
 Then you can pass your config file as argument to the CLI:
-`python main.py fit --config mfai/config/cli_fit_test.yaml`
+`python examples/main_cli_dummy.py fit --config mfai/config/cli_fit_test.yaml`
 
 You can override arguments of the config file or add new ones in the CLI:
-`python main.py fit --config mfai/config/cli_fit_test.yaml --optimizer.lr 0.0001 --trainer.fast_dev_run True`
+`python examples/main_cli_dummy.py fit --config mfai/config/cli_fit_test.yaml --optimizer.lr 0.0001 --trainer.fast_dev_run True`
 
 ------------
 
 Don't be shy about using the CLI help tool! It can save you a lot of time:
 
 <details>
-<summary>runai python main.py fit --help (click to expand)</summary>
+<summary>runai python examples/main_cli_dummy.py fit --help (click to expand)</summary>
 
 ```bash
 usage: main.py [options] fit [-h] [-c CONFIG] [--print_config[=flags]] [--seed_everything SEED_EVERYTHING] [--trainer CONFIG]
@@ -326,7 +319,7 @@ Customize every aspect of training via flags:
 
 
 <details>
-<summary>runai python main.py fit  --model.model.help mfai.torch.models.Segformer (click to expand)</summary>
+<summary>runai python examples/main_cli_dummy.py fit  --model.model.help mfai.torch.models.Segformer (click to expand)</summary>
 
 ```bash
 usage: main.py --model.model.in_channels IN_CHANNELS --model.model.out_channels OUT_CHANNELS
@@ -371,7 +364,7 @@ SegformerSettings(dims: Tuple[int, ...] = (32, 64, 160, 256), heads: Tuple[int, 
 To help you write correctly your config file, use `--print_config`:
 
 <details>
-<summary>runai python main.py fit  --model.model mfai.torch.models.Segformer --print_config (click to expand)</summary>
+<summary>runai python examples/main_cli_dummy.py fit  --model.model mfai.torch.models.Segformer --print_config (click to expand)</summary>
 
 ```bash
 model:

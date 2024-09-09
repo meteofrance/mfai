@@ -4,6 +4,11 @@ from torch.utils.data import DataLoader, Dataset
 
 
 class DummyDataset(Dataset):
+    """
+    A dummy segmentation dataset to test our training modules.
+    X is a random float tensor of chosen size. Y is a random binary tensor of chosen
+    size. X and Y share the same height and width.
+    """
     def __init__(
         self,
         split: str,
@@ -27,12 +32,14 @@ class DummyDataset(Dataset):
         y = torch.randint(
             0, 1, (self.nb_output_channels, self.dim_x, self.dim_y)
         ).float()
-        if self.split == "test":
-            return x, y, index  # return name of sample for test step
         return x, y
 
 
 class DummyDataModule(LightningDataModule):
+    """
+    A Lightning DataModule wrapping our dummy dataset.
+    It defines the train/valid/test/predict datasets and their dataloaders.
+    """
     def __init__(self, batch_size: int = 2):
         super().__init__()
         self.batch_size = batch_size

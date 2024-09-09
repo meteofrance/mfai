@@ -72,16 +72,16 @@ class SegmentationLightningModule(pl.LightningModule):
             acc_kwargs = {"task": self.type_segmentation}
 
             if self.type_segmentation == "multiclass":
-                metrics_kwargs["num_classes"] = self.nb_output_channels
-                acc_kwargs["num_classes"] = self.nb_output_channels
+                metrics_kwargs["num_classes"] = self.model.out_channels
+                acc_kwargs["num_classes"] = self.model.out_channels
                 # by default, average="micro" and when task="multiclass", f1 = recall = acc = precision
                 # consequently, we put average="macro" for other metrics
                 metrics_kwargs["average"] = "macro"
                 acc_kwargs["average"] = "micro"
 
             elif self.type_segmentation == "multilabel":
-                metrics_kwargs["num_labels"] = self.nb_output_channels
-                acc_kwargs["num_labels"] = self.nb_output_channels
+                metrics_kwargs["num_labels"] = self.model.out_channels
+                acc_kwargs["num_labels"] = self.model.out_channels
 
             metrics_dict = {
                 "acc": tm.Accuracy(**acc_kwargs),
@@ -106,7 +106,6 @@ class SegmentationLightningModule(pl.LightningModule):
         Step shared by training, validation and test steps"""
         if self.channels_last:
             x = x.to(memory_format=torch.channels_last)
-            y = y.to(memory_format=torch.channels_last)
         # We prefer when the last activation function is included in the loss and not in the model.
         # Consequently, we need to apply the last activation manually here, to get the real output.
         y_hat = self.model(x)
@@ -156,8 +155,7 @@ class SegmentationLightningModule(pl.LightningModule):
             )
             if step == 0:
                 tb.add_image("val_plots/true_image", y[0], dataformats=dformat)
-            y_hat = self.probabilities_to_classes(y_hat)
-            tb.add_image("val_plots/test_image", y_hat[0], step, dataformats=dformat)
+            tb.add_image("val_plots/pred_image", y_hat[0], step, dataformats=dformat)
 
     def validation_step(self, batch: Tuple[torch.tensor, torch.tensor], batch_idx: int):
         x, y = batch
@@ -181,7 +179,7 @@ class SegmentationLightningModule(pl.LightningModule):
 
     def test_step(self, batch: Tuple[torch.tensor, torch.tensor], batch_idx: int):
         """Computes metrics for each sample, at the end of the run."""
-        x, y, name = batch
+        x, y = batch
         y_hat, loss = self._shared_forward_step(x, y)
         y_hat = self.probabilities_to_classes(y_hat)
 
@@ -191,8 +189,7 @@ class SegmentationLightningModule(pl.LightningModule):
             metric.update(y_hat, y)
             batch_dict[metric_name] = metric.compute()
             metric.reset()
-        name = name[0].item()
-        self.test_metrics[name] = batch_dict
+        self.test_metrics[batch_idx] = batch_dict
 
     def build_metrics_dataframe(self) -> pd.DataFrame:
         data = []
@@ -230,3 +227,6 @@ class SegmentationLightningModule(pl.LightningModule):
             # Default detection threshold = 0.5
             y_hat = (y_hat > 0.5).int()
         return y_hat
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=0.001)

@@ -18,6 +18,11 @@
     - unetr++
 - [SegmentationLightningModule](#segmentationlightningmodule)
 - [NamedTensors](#namedtensors)
+- [Metrics](#metrics)
+    - Critical Sucess Index
+    - False Alarm Rate
+    - False Negative Rate
+    - Precision-Recall Area Under Curve
 - [Installation](#installation)
 - [Usage](#usage)
     - [Instanciate a model](#instanciate-a-model)
@@ -90,6 +95,13 @@ NamedTensors are a way to give names to dimensions of tensors and to keep track 
 
 The [**NamedTensor**](../py4cast/datasets/base.py#L38) class is a wrapper around a PyTorch tensor, it allows us to pass consistent object linking data and metadata with extra utility methods (concat along features dimension, flatten in place, ...). See the implementation [here](../py4cast/datasets/base.py#L38) and usage for plots [here](../py4cast/observer.py)
 
+# Metrics
+
+In addition to metrics available in [**torchmetrics**](https://lightning.ai/docs/torchmetrics/stable/), we implement :
+- Criticall Sucess Index (CSI) is given by: TP / (TP+FP+FN). This metric, usefull in meteorology, takes into account both false alarms and missed events in a neighborhood to avoid the phenomenon of double penalty.
+- False Alarm Rate (FAR) is given by: FP / (FP + TP).
+- False Negative Rate (FNR) is given by: FN / (FN + TP).
+- Precision-Recall Area Under the Curve (PR AUC). This metric summarize the overall performance of a model without depending on a threshold. It can be used in place of the Area Under ROC Curve when the dataset is too unbalanced.
 
 # Installation
 
@@ -168,6 +180,7 @@ output_tensor = onnx_load_and_infer("model.onnx", input_tensor)
 ```
 
 Check the code of [onnx_load_and_infer](mfai/torch/__init__.py#L35) if you would like to load the model once and make multiple inferences.
+
 
 ## SegmentationLightningModule
 
@@ -410,6 +423,24 @@ model:
 ```
 
 </details>
+
+
+## Metrics
+
+As our metrics are subclasses of the [torchmetrics.Metric](https://lightning.ai/docs/torchmetrics/stable/references/metric.html#torchmetrics.Metric) class, you can both use them in a Pytorch or Pytorch Lightning model. Here is an example of how to set up a metric:
+
+```python
+import torch
+from mfai.torch.metrics import CSINeighborood
+
+preds = torch.rand(2, 2).softmax(dim=-1)
+target = torch.randint(2, (2, 2))
+
+csi_metric = CSINeighborood(task="multiclass", num_classes=2, num_neighbors=0)
+csi = csi_metric(preds, target)
+```
+
+
 
 ## NamedTensors example
 

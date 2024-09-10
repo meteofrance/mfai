@@ -1,0 +1,50 @@
+seed_everything: true
+model:
+  model:
+    class_path: mfai.torch.models.Segformer
+    init_args:
+      in_channels: 2
+      out_channels: 1
+      input_shape: [64, 64]
+      settings:
+        num_layers: 2
+        decoder_dim: 256
+        num_downsampling_chans: 32
+  type_segmentation: "binary"
+  loss: torch.nn.BCEWithLogitsLoss
+data:
+  batch_size: 4
+optimizer:
+  class_path: torch.optim.AdamW
+  init_args:
+    lr: 0.001
+lr_scheduler:
+  class_path: torch.optim.lr_scheduler.CosineAnnealingLR
+  init_args:
+    T_max: 30
+trainer:
+  max_epochs: 5
+  logger:
+    class_path: lightning.pytorch.loggers.TensorBoardLogger
+    init_args:
+      default_hp_metric: false
+      save_dir: logs
+      name: mf_ai_project_n1
+  accelerator: auto
+  strategy: auto
+  devices: auto
+  num_nodes: 1
+  precision: null
+  callbacks:
+    - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+      init_args:
+        monitor: "val_loss"
+        filename: "ckpt-{epoch:02d}-{val_loss:.2f}"
+    - class_path: lightning.pytorch.callbacks.LearningRateMonitor
+      init_args:
+        logging_interval: 'epoch'
+  enable_checkpointing: true
+  enable_progress_bar: true
+  enable_model_summary: true
+  default_root_dir: null
+

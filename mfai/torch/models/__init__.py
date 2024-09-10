@@ -1,13 +1,14 @@
 from pathlib import Path
 from typing import Optional, Tuple
+
 from torch import nn
+
 from .deeplabv3 import DeepLabV3, DeepLabV3Plus
 from .half_unet import HalfUNet
 from .segformer import Segformer
 from .swinunetr import SwinUNETR
-from .unet import UNet, CustomUnet
+from .unet import CustomUnet, UNet
 from .unetrpp import UNETRPP
-
 
 all_nn_architectures = (
     DeepLabV3,

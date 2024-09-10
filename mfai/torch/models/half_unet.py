@@ -82,6 +82,10 @@ class HalfUNet(ModelABC, nn.Module):
 
         super().__init__(*args, **kwargs)
 
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.input_shape = input_shape
+
         if settings.absolute_pos_embed:
             if input_shape is None:
                 raise ValueError(
@@ -172,6 +176,8 @@ class HalfUNet(ModelABC, nn.Module):
         )
 
         self.activation = getattr(nn, settings.last_activation)()
+
+        self.check_required_attributes()
 
     def forward(self, x):
         enc1 = self.encoder1(x)

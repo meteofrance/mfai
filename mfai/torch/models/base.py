@@ -26,3 +26,11 @@ class ModelABC(ABC):
         A model supporting 2d tensors should return (2,).
         A model supporting 2d and 3d tensors should return (2, 3).
         """
+
+    def check_required_attributes(self):
+        # we check that the model has defined the following attributes.
+        # this must be called at the end of the __init__ of each subclass.
+        required_attrs = ["in_channels", "out_channels", "input_shape"]
+        for attr in required_attrs:
+            if not hasattr(self, attr):
+                raise AttributeError(f"Missing required attribute : {attr}")

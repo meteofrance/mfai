@@ -1,5 +1,6 @@
-import torch
 import pytest
+import torch
+
 from mfai.torch.namedtensor import NamedTensor
 
 

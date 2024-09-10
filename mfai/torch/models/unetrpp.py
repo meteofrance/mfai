@@ -4,12 +4,12 @@ Adapted from https://github.com/Amshaker/unetr_plus_plus
 Added 2d support and Bilinear interpolation for upsampling.
 """
 
+import functools
 import math
+import operator
 import warnings
 from dataclasses import dataclass
-import operator
 from typing import Sequence, Tuple, Union
-import functools
 
 import torch
 import torch.nn as nn
@@ -549,6 +549,10 @@ class UNETRPP(ModelABC, nn.Module):
 
         super().__init__()
 
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.input_shape = input_shape
+
         self.do_ds = settings.do_ds
         self.conv_op = getattr(nn, settings.conv_op)
         self.num_classes = out_channels
@@ -648,6 +652,8 @@ class UNETRPP(ModelABC, nn.Module):
                 in_channels=settings.hidden_size // 4,
                 out_channels=out_channels,
             )
+
+        self.check_required_attributes()
 
     def proj_feat(self, x):
         x = x.view(x.size(0), *self.feat_size, self.hidden_size)

@@ -11,8 +11,9 @@ import torch
 from dataclasses_json import dataclass_json
 from torch import nn
 
-from .base import ModelABC
 from mfai.torch.models.encoders import get_encoder
+
+from .base import ModelABC
 
 
 class DoubleConv(nn.Module):
@@ -79,6 +80,10 @@ class UNet(ModelABC, nn.Module):
     ):
         super(UNet, self).__init__()
 
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.input_shape = input_shape
+
         features = settings.init_features
 
         self.max_pool = nn.MaxPool2d(kernel_size=2, stride=2)
@@ -107,6 +112,8 @@ class UNet(ModelABC, nn.Module):
         self.decoder1 = UNet._block(features * 2, features, name="dec1")
 
         self.conv = nn.Conv2d(features, out_channels, kernel_size=1)
+
+        self.check_required_attributes()
 
     def forward(self, x):
         """

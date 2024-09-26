@@ -28,7 +28,7 @@
     - [Instanciate a model](#instanciate-a-model)
     - [Export to onnx](#export-to-onnx)
     - [NamedTensors](#namedtensors-example)
-- [Running tests](#tests)
+- [Running tests](#running-tests)
 
 # Neural Network Architectures
 

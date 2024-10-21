@@ -4,9 +4,7 @@ Adapted from https://github.com/Amshaker/unetr_plus_plus
 Added 2d support and Bilinear interpolation for upsampling.
 """
 
-import functools
 import math
-import operator
 import warnings
 from dataclasses import dataclass
 from typing import Sequence, Tuple, Union
@@ -24,6 +22,7 @@ from monai.networks.blocks.dynunet_block import (
 )
 from monai.networks.layers.utils import get_norm_layer
 from monai.utils import optional_import
+from torch.nn.functional import scaled_dot_product_attention
 
 from .base import ModelABC
 
@@ -127,21 +126,22 @@ class TransformerBlock(nn.Module):
         self,
         input_size: int,
         hidden_size: int,
-        proj_size: int,
         num_heads: int,
         dropout_rate: float = 0.0,
         pos_embed=False,
         spatial_dims=2,
+        proj_size: int = 64,
+        attention_code: str = "torch",
     ) -> None:
         """
         Args:
             input_size: the size of the input for each stage.
             hidden_size: dimension of hidden layer.
-            proj_size: projection size for keys and values in the spatial attention module.
             num_heads: number of attention heads.
             dropout_rate: faction of the input units to drop.
             pos_embed: bool argument to determine if positional embedding is used.
-
+            proj_size: size of the projection space for Spatial Attention.
+            attention_code: type of attention implementation to use. See EPA for more details.
         """
 
         super().__init__()
@@ -150,6 +150,8 @@ class TransformerBlock(nn.Module):
             raise ValueError("dropout_rate should be between 0 and 1.")
 
         if hidden_size % num_heads != 0:
+            print("Hidden size is ", hidden_size)
+            print("Num heads is ", num_heads)
             raise ValueError("hidden_size should be divisible by num_heads.")
 
         self.norm = nn.LayerNorm(hidden_size)
@@ -157,10 +159,11 @@ class TransformerBlock(nn.Module):
         self.epa_block = EPA(
             input_size=input_size,
             hidden_size=hidden_size,
-            proj_size=proj_size,
             num_heads=num_heads,
             channel_attn_drop=dropout_rate,
             spatial_attn_drop=dropout_rate,
+            proj_size=proj_size,
+            attention_code=attention_code,
         )
         self.conv51 = UnetResBlock(
             spatial_dims,
@@ -219,22 +222,41 @@ class EPA(nn.Module):
     """
     Efficient Paired Attention Block, based on: "Shaker et al.,
     UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation"
+    Modifications :
+    - adds compatibility with 2d inputs
+    - adds an option to use torch's scaled dot product instead of the original implementation
+    This should enable the use of flash attention in the future.
     """
 
     def __init__(
         self,
         input_size,
         hidden_size,
-        proj_size,
         num_heads=4,
         qkv_bias=False,
         channel_attn_drop=0.1,
         spatial_attn_drop=0.1,
+        proj_size: int = 64,
+        attention_code: str = "torch",
     ):
         super().__init__()
         self.num_heads = num_heads
-        self.temperature = nn.Parameter(torch.ones(num_heads, 1, 1))
-        self.temperature2 = nn.Parameter(torch.ones(num_heads, 1, 1))
+
+        if attention_code not in ["torch", "flash", "manual"]:
+            raise NotImplementedError(
+                "Attention code should be one of 'torch', 'flash' or 'manual'"
+            )
+        self.attention_code = attention_code
+        if attention_code == "flash":
+            from flash_attn import flash_attn_func
+
+            self.attn_func = flash_attn_func
+            self.use_scaled_dot_product_CA = True
+        elif attention_code == "torch":
+            self.attn_func = scaled_dot_product_attention
+            self.use_scaled_dot_product_CA = True
+        else:
+            self.use_scaled_dot_product_CA = False
 
         # qkvv are 4 linear layers (query_shared, key_shared, value_spatial, value_channel)
         self.qkvv = nn.Linear(hidden_size, hidden_size * 4, bias=qkv_bias)
@@ -243,16 +265,27 @@ class EPA(nn.Module):
         # keys and values from HWD-dimension to P-dimension
         self.EF = nn.Parameter(init_(torch.zeros(input_size, proj_size)))
 
+        self.temperature2 = nn.Parameter(torch.ones(num_heads, 1, 1))
+
+        if not self.use_scaled_dot_product_CA:
+            self.temperature = nn.Parameter(torch.ones(num_heads, 1, 1))
+
         self.attn_drop = nn.Dropout(channel_attn_drop)
         self.attn_drop_2 = nn.Dropout(spatial_attn_drop)
 
     def forward(self, x):
+        # TODO: fully optimize this function for each attention code
         B, N, C = x.shape
 
         qkvv = self.qkvv(x).reshape(B, N, 4, self.num_heads, C // self.num_heads)
+
+        # Matrix index, Batch, Head, Dimensions, Features
         qkvv = qkvv.permute(2, 0, 3, 1, 4)
+
+        # Batch, Head, Dimensions, Features
         q_shared, k_shared, v_CA, v_SA = qkvv[0], qkvv[1], qkvv[2], qkvv[3]
 
+        # Batch, Head, Features, Dimensions
         q_shared = q_shared.transpose(-2, -1)
         k_shared = k_shared.transpose(-2, -1)
         v_CA = v_CA.transpose(-2, -1)
@@ -263,24 +296,49 @@ class EPA(nn.Module):
             zip((k_shared, v_SA), (self.EF, self.EF)),
         )
 
-        q_shared = torch.nn.functional.normalize(q_shared, dim=-1)
-        k_shared = torch.nn.functional.normalize(k_shared, dim=-1)
+        q_shared = torch.nn.functional.normalize(q_shared, dim=-1).type_as(q_shared)
+        k_shared = torch.nn.functional.normalize(k_shared, dim=-1).type_as(k_shared)
+        if self.use_scaled_dot_product_CA:
+            if self.attention_code == "torch":
+                x_CA = self.attn_func(
+                    q_shared, k_shared, v_CA, dropout_p=self.attn_drop.p
+                )
+            elif self.attention_code == "flash":
+                # flash attention expects inputs of shape (batch_size, seqlen, nheads, headdim)
+                # so we need to permute the dimensions from (batch, head, channels, spatial_dim)
+                # to (batch, channels, head, spatial_dim)
+                q_shared = q_shared.permute(0, 2, 1, 3)
+                k_shared = k_shared.permute(0, 2, 1, 3)
+                v_CA = v_CA.permute(0, 2, 1, 3)
 
-        attn_CA = (q_shared @ k_shared.transpose(-2, -1)) * self.temperature
-        attn_CA = attn_CA.softmax(dim=-1)
-        attn_CA = self.attn_drop(attn_CA)
-        x_CA = (attn_CA @ v_CA).permute(0, 3, 1, 2).reshape(B, N, C)
+                x_CA = self.attn_func(
+                    q_shared, k_shared, v_CA, dropout_p=self.attn_drop.p
+                )
+
+                # flash attention returns the output in the same shape as the input
+                # so we need to permute it back
+                x_CA = x_CA.permute(0, 2, 1, 3)
+
+                # we permute back the inputs
+                q_shared = q_shared.permute(0, 2, 1, 3)
+                k_shared = k_shared.permute(0, 2, 1, 3)
+
+        else:
+            attn_CA = (q_shared @ k_shared.transpose(-2, -1)) * self.temperature
+            attn_CA = attn_CA.softmax(dim=-1)
+            attn_CA = self.attn_drop(attn_CA)
+            x_CA = attn_CA @ v_CA
+
+        x_CA = x_CA.permute(0, 3, 1, 2).reshape(B, N, C)
 
         attn_SA = (
             q_shared.permute(0, 1, 3, 2) @ k_shared_projected
         ) * self.temperature2
+
         attn_SA = attn_SA.softmax(dim=-1)
         attn_SA = self.attn_drop_2(attn_SA)
-        x_SA = (
-            (attn_SA @ v_SA_projected.transpose(-2, -1))
-            .permute(0, 3, 1, 2)
-            .reshape(B, N, C)
-        )
+        x_SA = attn_SA @ v_SA_projected.transpose(-2, -1)
+        x_SA = x_SA.permute(0, 3, 1, 2).reshape(B, N, C)
 
         return x_CA + x_SA
 
@@ -297,14 +355,15 @@ class UnetrPPEncoder(nn.Module):
         self,
         input_size=[32 * 32 * 32, 16 * 16 * 16, 8 * 8 * 8, 4 * 4 * 4],
         dims=[32, 64, 128, 256],
-        proj_size=[64, 64, 64, 32],
         depths=[3, 3, 3, 3],
         num_heads=4,
         spatial_dims=2,
         in_channels=4,
         dropout=0.0,
         transformer_dropout_rate=0.1,
-        **kwargs,
+        downsampling_rate: int = 4,
+        proj_sizes: Tuple[int, ...] = (64, 64, 64, 32),
+        attention_code: str = "torch",
     ):
         super().__init__()
 
@@ -316,8 +375,8 @@ class UnetrPPEncoder(nn.Module):
                 spatial_dims,
                 in_channels,
                 dims[0],
-                kernel_size=4,
-                stride=4,
+                kernel_size=downsampling_rate,
+                stride=downsampling_rate,
                 dropout=dropout,
                 conv_only=True,
             ),
@@ -346,15 +405,16 @@ class UnetrPPEncoder(nn.Module):
         )  # 4 feature resolution stages, each consisting of multiple Transformer blocks
         for i in range(4):
             stage_blocks = []
-            for j in range(depths[i]):
+            for _ in range(depths[i]):
                 stage_blocks.append(
                     TransformerBlock(
                         input_size=input_size[i],
                         hidden_size=dims[i],
-                        proj_size=proj_size[i],
                         num_heads=num_heads,
                         dropout_rate=transformer_dropout_rate,
                         pos_embed=True,
+                        proj_size=proj_sizes[i],
+                        attention_code=attention_code,
                         spatial_dims=spatial_dims,
                     )
                 )
@@ -405,11 +465,13 @@ class UnetrUpBlock(nn.Module):
         kernel_size: Union[Sequence[int], int],
         upsample_kernel_size: Union[Sequence[int], int],
         norm_name: Union[Tuple, str],
-        proj_size: int = 64,
         num_heads: int = 4,
         out_size: int = 0,
         depth: int = 3,
         conv_decoder: bool = False,
+        linear_upsampling: bool = False,
+        proj_size: int = 64,
+        attention_code: str = "torch",
     ) -> None:
         """
         Args:
@@ -419,7 +481,6 @@ class UnetrUpBlock(nn.Module):
             kernel_size: convolution kernel size.
             upsample_kernel_size: convolution kernel size for transposed convolution layers.
             norm_name: feature normalization type and arguments.
-            proj_size: projection size for keys and values in the spatial attention module.
             num_heads: number of heads inside each EPA module.
             out_size: spatial size for each decoder.
             depth: number of blocks for the current decoder stage.
@@ -428,29 +489,45 @@ class UnetrUpBlock(nn.Module):
         super().__init__()
         padding = get_padding(upsample_kernel_size, upsample_kernel_size)
         if spatial_dims == 2:
-            self.transp_conv = nn.ConvTranspose2d(
-                in_channels,
-                out_channels,
-                kernel_size=upsample_kernel_size,
-                stride=upsample_kernel_size,
-                padding=padding,
-                output_padding=get_output_padding(
-                    upsample_kernel_size, upsample_kernel_size, padding
-                ),
-                dilation=1,
-            )
+            if linear_upsampling:
+                self.transp_conv = nn.Sequential(
+                    nn.UpsamplingBilinear2d(scale_factor=upsample_kernel_size),
+                    nn.Conv2d(
+                        in_channels, out_channels, kernel_size=kernel_size, padding=1
+                    ),
+                )
+            else:
+                self.transp_conv = nn.ConvTranspose2d(
+                    in_channels,
+                    out_channels,
+                    kernel_size=upsample_kernel_size,
+                    stride=upsample_kernel_size,
+                    padding=padding,
+                    output_padding=get_output_padding(
+                        upsample_kernel_size, upsample_kernel_size, padding
+                    ),
+                    dilation=1,
+                )
         else:
-            self.transp_conv = nn.ConvTranspose3d(
-                in_channels,
-                out_channels,
-                kernel_size=upsample_kernel_size,
-                stride=upsample_kernel_size,
-                padding=padding,
-                output_padding=get_output_padding(
-                    upsample_kernel_size, upsample_kernel_size, padding
-                ),
-                dilation=1,
-            )
+            if linear_upsampling:
+                self.transp_conv = nn.Sequential(
+                    nn.Upsample(scale_factor=upsample_kernel_size, mode="trilinear"),
+                    nn.Conv3d(
+                        in_channels, out_channels, kernel_size=kernel_size, padding=1
+                    ),
+                )
+            else:
+                self.transp_conv = nn.ConvTranspose3d(
+                    in_channels,
+                    out_channels,
+                    kernel_size=upsample_kernel_size,
+                    stride=upsample_kernel_size,
+                    padding=padding,
+                    output_padding=get_output_padding(
+                        upsample_kernel_size, upsample_kernel_size, padding
+                    ),
+                    dilation=1,
+                )
 
         # 4 feature resolution stages, each consisting of multiple residual blocks
         self.decoder_block = nn.ModuleList()
@@ -470,15 +547,16 @@ class UnetrUpBlock(nn.Module):
             )
         else:
             stage_blocks = []
-            for j in range(depth):
+            for _ in range(depth):
                 stage_blocks.append(
                     TransformerBlock(
                         input_size=out_size,
                         hidden_size=out_channels,
-                        proj_size=proj_size,
                         num_heads=num_heads,
                         dropout_rate=0.1,
                         pos_embed=True,
+                        proj_size=proj_size,
+                        attention_code=attention_code,
                         spatial_dims=spatial_dims,
                     )
                 )
@@ -493,9 +571,15 @@ class UnetrUpBlock(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
-    def forward(self, inp, skip):
+    def forward(self, inp, skip=None):
+        """
+        Forward pass:
+        1. Upsampling using bi/tri-linear OR Conv{2,3}dTranspose
+        2. Adds skip connection if available
+        3. Conv or Transformer block
+        """
         out = self.transp_conv(inp)
-        out = out + skip
+        out = out + skip if skip is not None else out
         out = self.decoder_block[0](out)
 
         return out
@@ -505,7 +589,8 @@ class UnetrUpBlock(nn.Module):
 @dataclass
 class UNETRPPSettings:
     hidden_size: int = 256
-    num_heads: int = 4
+    num_heads_encoder: int = 4
+    num_heads_decoder: int = 4
     pos_embed: str = "perceptron"
     norm_name: Union[Tuple, str] = "instance"
     dropout_rate: float = 0.0
@@ -513,6 +598,19 @@ class UNETRPPSettings:
     conv_op: str = "Conv2d"
     do_ds = False
     spatial_dims = 2
+    linear_upsampling: bool = False
+    downsampling_rate: int = 4
+    decoder_proj_size: int = 64
+    encoder_proj_sizes: Tuple[int, ...] = (64, 64, 64, 32)
+    # Adds skip connection between encoder layers outputs
+    # and corresponding decoder layers inputs
+    add_skip_connections: bool = True
+
+    # Specify the attention implementation to use
+    # Options: "torch" : scaled_dot_product_attention from torch.nn.functional
+    #          "flash" : flash_attention from flash_attn (loose dependency imported only if needed)
+    #          "manual" : manual implementation from the original paper
+    attention_code: str = "torch"
 
 
 class UNETRPP(ModelABC, nn.Module):
@@ -521,9 +619,9 @@ class UNETRPP(ModelABC, nn.Module):
     UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation"
     """
 
-    settings_kls = UNETRPPSettings
-    onnx_supported = True
+    onnx_supported = False
     input_spatial_dims = (2, 3)
+    settings_kls = UNETRPPSettings
 
     def __init__(
         self,
@@ -552,8 +650,8 @@ class UNETRPP(ModelABC, nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.input_shape = input_shape
-
         self.do_ds = settings.do_ds
+        self.add_skip_connections = settings.add_skip_connections
         self.conv_op = getattr(nn, settings.conv_op)
         self.num_classes = out_channels
         if not (0 <= settings.dropout_rate <= 1):
@@ -563,18 +661,36 @@ class UNETRPP(ModelABC, nn.Module):
             raise KeyError(
                 f"Position embedding layer of type {settings.pos_embed} is not supported."
             )
-
-        subsampling_ratio = 2**settings.spatial_dims
-        self.feat_size = [x // 32 for x in input_shape]
+        # we have first a stem layer with stride=subsampling_rate and k_size=subsampling_rate
+        # followed by 3 successive downsampling layer (k=2, stride=2)
+        dim_divider = (2**3) * settings.downsampling_rate
+        if settings.spatial_dims == 2:
+            self.feat_size = (
+                input_shape[0] // dim_divider,
+                input_shape[1] // dim_divider,
+            )
+        else:
+            self.feat_size = (
+                input_shape[0] // dim_divider,
+                input_shape[1] // dim_divider,
+                input_shape[2] // dim_divider,
+            )
 
         self.hidden_size = settings.hidden_size
         self.spatial_dims = settings.spatial_dims
+        # Number of pixels after stem layer
+        if settings.spatial_dims == 2:
+            no_pixels = (input_shape[0] * input_shape[1]) // (
+                settings.downsampling_rate**2
+            )
+        else:
+            no_pixels = (input_shape[0] * input_shape[1] * input_shape[2]) // (
+                settings.downsampling_rate**3
+            )
 
-        # Stem layer applies a 16->1 or 64->1 downsampling
-        no_pixels = functools.reduce(operator.mul, input_shape, 1) // (
-            4**settings.spatial_dims
-        )
-
+        # after the stem layer, the input is spatially downsampled
+        # 3 times by a factor of 2 along each spatial dimension
+        subsampling_ratio = 2**settings.spatial_dims
         encoder_input_size = [
             no_pixels,
             no_pixels // subsampling_ratio,
@@ -582,13 +698,22 @@ class UNETRPP(ModelABC, nn.Module):
             no_pixels // subsampling_ratio**3,
         ]
         h_size = settings.hidden_size
+
         self.unetr_pp_encoder = UnetrPPEncoder(
             input_size=encoder_input_size,
-            dims=(h_size // 8, h_size // 4, h_size // 2, h_size),
+            dims=(
+                h_size // 8,
+                h_size // 4,
+                h_size // 2,
+                h_size,
+            ),
             depths=settings.depths,
-            num_heads=settings.num_heads,
+            num_heads=settings.num_heads_encoder,
             spatial_dims=settings.spatial_dims,
             in_channels=in_channels,
+            downsampling_rate=settings.downsampling_rate,
+            proj_sizes=settings.encoder_proj_sizes,
+            attention_code=settings.attention_code,
         )
 
         self.encoder1 = UnetResBlock(
@@ -607,6 +732,10 @@ class UNETRPP(ModelABC, nn.Module):
             upsample_kernel_size=2,
             norm_name=settings.norm_name,
             out_size=no_pixels // subsampling_ratio**2,
+            linear_upsampling=settings.linear_upsampling,
+            proj_size=settings.decoder_proj_size,
+            attention_code=settings.attention_code,
+            num_heads=settings.num_heads_decoder,
         )
         self.decoder4 = UnetrUpBlock(
             spatial_dims=settings.spatial_dims,
@@ -616,6 +745,10 @@ class UNETRPP(ModelABC, nn.Module):
             upsample_kernel_size=2,
             norm_name=settings.norm_name,
             out_size=no_pixels // subsampling_ratio,
+            linear_upsampling=settings.linear_upsampling,
+            proj_size=settings.decoder_proj_size,
+            attention_code=settings.attention_code,
+            num_heads=settings.num_heads_decoder,
         )
         self.decoder3 = UnetrUpBlock(
             spatial_dims=settings.spatial_dims,
@@ -625,16 +758,24 @@ class UNETRPP(ModelABC, nn.Module):
             upsample_kernel_size=2,
             norm_name=settings.norm_name,
             out_size=no_pixels,
+            linear_upsampling=settings.linear_upsampling,
+            proj_size=settings.decoder_proj_size,
+            attention_code=settings.attention_code,
+            num_heads=settings.num_heads_decoder,
         )
         self.decoder2 = UnetrUpBlock(
             spatial_dims=settings.spatial_dims,
             in_channels=settings.hidden_size // 8,
             out_channels=settings.hidden_size // 16,
             kernel_size=3,
-            upsample_kernel_size=4,
+            upsample_kernel_size=settings.downsampling_rate,
             norm_name=settings.norm_name,
-            out_size=no_pixels * subsampling_ratio**2,
+            out_size=no_pixels * (settings.downsampling_rate**2),
             conv_decoder=True,
+            linear_upsampling=settings.linear_upsampling,
+            proj_size=settings.decoder_proj_size,
+            attention_code=settings.attention_code,
+            num_heads=settings.num_heads_decoder,
         )
         self.out1 = UnetOutBlock(
             spatial_dims=settings.spatial_dims,
@@ -652,11 +793,21 @@ class UNETRPP(ModelABC, nn.Module):
                 in_channels=settings.hidden_size // 4,
                 out_channels=out_channels,
             )
-
-        self.check_required_attributes()
+            self.check_required_attributes()
 
     def proj_feat(self, x):
-        x = x.view(x.size(0), *self.feat_size, self.hidden_size)
+        if self.spatial_dims == 2:
+            x = x.view(
+                x.size(0), self.feat_size[0], self.feat_size[1], self.hidden_size
+            )
+        else:
+            x = x.view(
+                x.size(0),
+                self.feat_size[0],
+                self.feat_size[1],
+                self.feat_size[2],
+                self.hidden_size,
+            )
 
         if self.spatial_dims == 2:
             x = x.permute(0, 3, 1, 2).contiguous()
@@ -677,14 +828,29 @@ class UNETRPP(ModelABC, nn.Module):
 
         # Four decoders
         dec4 = self.proj_feat(enc4)
-        dec3 = self.decoder5(dec4, enc3)
-        dec2 = self.decoder4(dec3, enc2)
-        dec1 = self.decoder3(dec2, enc1)
+        dec3 = (
+            self.decoder5(dec4, enc3)
+            if self.add_skip_connections
+            else self.decoder5(dec4)
+        )
+        dec2 = (
+            self.decoder4(dec3, enc2)
+            if self.add_skip_connections
+            else self.decoder4(dec3)
+        )
+        dec1 = (
+            self.decoder3(dec2, enc1)
+            if self.add_skip_connections
+            else self.decoder3(dec2)
+        )
 
-        out = self.decoder2(dec1, convBlock)
+        out = (
+            self.decoder2(dec1, convBlock)
+            if self.add_skip_connections
+            else self.decoder2(dec1)
+        )
         if self.do_ds:
             logits = [self.out1(out), self.out2(dec1), self.out3(dec2)]
         else:
             logits = self.out1(out)
-
         return logits

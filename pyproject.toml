@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mfai"
-version = "1.0.0"
+dynamic = ["version"]
 authors = [
   {name="Frank Guibert", email="frank.guibert@meteo.fr"},
   {name="Theo Tournier", email="theo.tournier@meteo.fr"},
@@ -25,6 +25,7 @@ keywords = ["PyTorch", "Deep Learning", "Artificial Intelligence", "Meteo-France
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
+version = {file = "version.txt"}
 
 [project.urls]
 Homepage = "https://github.com/meteofrance/mfai"

@@ -8,7 +8,7 @@ if [ -n "$(git status --porcelain)" ]; then
     exit 1
 fi
 
-# Fetch the latest tags from the remote
+# Fetch the latest tags from the remote and throw an error if the tag does not exist
 git fetch --tags && git ls-remote --tags origin | grep -q "refs/tags/$git_tag" || { echo "Error: Tag '$git_tag' does not exist on the remote."; exit 1; }
 
 runai exec python -m build

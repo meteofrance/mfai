@@ -7,7 +7,6 @@ if [ -n "$(git status --porcelain)" ]; then
     echo "Error: You are on a git tag but there are local modifications. Please stash them or commit, push and tag your modifications."
     exit 1
 fi
-echo $git_tag > version.txt
 
 runai exec python -m build
 # Use first arg if provided, otherwise use testpypi

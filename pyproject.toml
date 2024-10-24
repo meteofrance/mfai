@@ -25,7 +25,7 @@ keywords = ["PyTorch", "Deep Learning", "Artificial Intelligence", "Meteo-France
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
-version = {file = "version.txt"}
+version = {file = ["version.txt"]}
 
 [project.urls]
 Homepage = "https://github.com/meteofrance/mfai"

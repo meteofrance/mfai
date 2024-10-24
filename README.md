@@ -105,14 +105,20 @@ In addition to metrics available in [**torchmetrics**](https://lightning.ai/docs
 
 # Installation
 
-We will soon push the package to PyPI. In the meantime, you can install it from the source code.
-
 ## Cloning the repository
 
 ```bash
 git clone https://github.com/meteofrance/mfai
 cd mfai
 pip install -e .
+```
+
+## Using pip (experimental)
+
+We have a first release on testpypi, you can install it with:
+
+```bash
+pip install --index-url https://test.pypi.org/simple/ mfai
 ```
 
 # Usage
@@ -510,6 +516,34 @@ We welcome contributions to this package. Our guidelines are the following:
 - Submit a PR with a clear description of the changes and the motivation behind them.
 - Make sure the current tests pass and add new tests if necessary to cover the new features. Our CI will fail with a **test coverage below 80%**.
 - Make sure the code is formatted with [ruff](https://docs.astral.sh/ruff/) : `ruff format` and `ruff check`
+
+# Publishing
+
+We provide a script **build_and_publish.sh** to build the package and publish it to PyPI (**TestPyPI** by default). For now it uses Docker and our private/internal wrapper runai.
+
+The full process is as follows (adjust the tag name and message to your needs):
+
+```bash
+git tag -a v0.1.0 -m "First release"
+```
+or
+```bash
+git tag v0.1.0
+```
+
+```bash
+git push origin v0.1.0
+./build_and_publish.sh
+```
+
+If you don't create and push a tag, the script will return an error.
+
+In order to publish to pypi passes the argument **pypi**:
+```bash
+./build_and_publish.sh pypi
+```
+
+See the [Python Packaging User Guide](https://packaging.python.org/en/latest/guides/using-testpypi/) for more information on how to publish a package to PyPI.
 
 # Acknowledgements
 

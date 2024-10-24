@@ -513,11 +513,17 @@ We welcome contributions to this package. Our guidelines are the following:
 
 # Publishing
 
-We provide a script **build_and_publish.sh** to build the package and publish it to PyPI (TestPyPI by default). For now it uses Docker and our private/internal wrapper runai.
+We provide a script **build_and_publish.sh** to build the package and publish it to PyPI (**TestPyPI** by default). For now it uses Docker and our private/internal wrapper runai.
+
+The full process is as follows (adjust the tag name and message to your needs):
 
 ```bash
+git tag -a v0.1.0 -m "First release"
+git push origin v0.1.0
 ./build_and_publish.sh
 ```
+
+If you don't create and push a tag, the script will return an error.
 
 In order to publish to pypi passes the argument **pypi**:
 ```bash

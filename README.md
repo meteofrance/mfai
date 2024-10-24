@@ -511,6 +511,19 @@ We welcome contributions to this package. Our guidelines are the following:
 - Make sure the current tests pass and add new tests if necessary to cover the new features. Our CI will fail with a **test coverage below 80%**.
 - Make sure the code is formatted with [ruff](https://docs.astral.sh/ruff/) : `ruff format` and `ruff check`
 
+# Publishing
+
+We provide a script **build_and_publish.sh** to build the package and publish it to PyPI (TestPyPI by default). For now it uses Docker and our private/internal wrapper runai.
+
+```bash
+./build_and_publish.sh
+```
+
+In order to publish to pypi passes the argument **pypi**:
+```bash
+./build_and_publish.sh pypi
+```
+
 # Acknowledgements
 
 This package is maintained by the DSM/LabIA team at Météo-France. We would like to thank the authors of the papers and codes we used to implement the models (see [above links](#neural-network-architectures) to **arxiv** and **github**) and the authors of the libraries we use to build this package (see our [**requirements.txt**](requirements.txt)).

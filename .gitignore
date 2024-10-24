@@ -167,6 +167,3 @@ logs/
 # Meteo France certificates
 matplotlibrc
 mf.crt
-
-# Our dynamic files
-version.txt

@@ -105,14 +105,20 @@ In addition to metrics available in [**torchmetrics**](https://lightning.ai/docs
 
 # Installation
 
-We will soon push the package to PyPI. In the meantime, you can install it from the source code.
-
 ## Cloning the repository
 
 ```bash
 git clone https://github.com/meteofrance/mfai
 cd mfai
 pip install -e .
+```
+
+## Using pip (experimental)
+
+We have a first release on testpypi, you can install it with:
+
+```bash
+pip install --index-url https://test.pypi.org/simple/ mfai
 ```
 
 # Usage

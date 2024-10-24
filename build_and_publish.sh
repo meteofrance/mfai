@@ -8,6 +8,9 @@ if [ -n "$(git status --porcelain)" ]; then
     exit 1
 fi
 
+# Fetch the latest tags from the remote
+git fetch --tags && git ls-remote --tags origin | grep -q "refs/tags/$git_tag" || { echo "Error: Tag '$git_tag' does not exist on the remote."; exit 1; }
+
 runai exec python -m build
 # Use first arg if provided, otherwise use testpypi
 runai exec python -m twine upload --verbose --repository ${1:-"testpypi"} dist/*

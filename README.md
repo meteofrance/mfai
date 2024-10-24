@@ -524,6 +524,8 @@ In order to publish to pypi passes the argument **pypi**:
 ./build_and_publish.sh pypi
 ```
 
+See the [Python Packaging User Guide](https://packaging.python.org/en/latest/guides/using-testpypi/) for more information on how to publish a package to PyPI.
+
 # Acknowledgements
 
 This package is maintained by the DSM/LabIA team at Météo-France. We would like to thank the authors of the papers and codes we used to implement the models (see [above links](#neural-network-architectures) to **arxiv** and **github**) and the authors of the libraries we use to build this package (see our [**requirements.txt**](requirements.txt)).

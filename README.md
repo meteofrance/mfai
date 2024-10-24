@@ -519,6 +519,13 @@ The full process is as follows (adjust the tag name and message to your needs):
 
 ```bash
 git tag -a v0.1.0 -m "First release"
+```
+or
+```bash
+git tag v0.1.0
+```
+
+```bash
 git push origin v0.1.0
 ./build_and_publish.sh
 ```

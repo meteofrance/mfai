@@ -152,7 +152,7 @@ def test_named_tensor():
     assert nt_stack.names == ["timesteps", "lat", "lon", "level", "features"]
 
     # test collate of multiple NamedTensors
-    nt_collate = NamedTensor.collate([nt10, nt11, nt12])
+    nt_collate = NamedTensor.collate_fn([nt10, nt11, nt12])
     assert nt_collate.tensor.shape == (3, 3, 256, 256, 10)
     assert nt_collate.feature_names == [f"feature_{i}" for i in range(10)]
     assert nt_collate.names == ["batch", "timesteps", "lat", "lon", "features"]

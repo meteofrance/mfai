@@ -158,6 +158,35 @@ class NamedTensor(TensorWrapper):
                 list(chain.from_iterable(nt.feature_names for nt in nts)),
             )
 
+    @staticmethod
+    def stack(nts: List["NamedTensor"], dim_name:str, dim: int=0) -> "NamedTensor":
+        """
+        Stack a list of NamedTensors along a new dimension.
+        """
+        if len(nts) == 0:
+            raise ValueError("Cannot stack an empty list of NamedTensors")
+        if len(nts) == 1:
+            return nts[0].clone()
+        else:
+            # Check features names are identical between the n named tensors
+            if not all(nt.feature_names == nts[0].feature_names for nt in nts):
+                raise ValueError(
+                    "NamedTensors must have the same feature names to stack"
+                )
+
+            # Check that all named tensors have the same dim names
+            if not all(nt.names == nts[0].names for nt in nts):
+                raise ValueError(
+                    "NamedTensors must have the same dimension names to stack"
+                )
+
+            # define new list of dim names, with new dim name inserted at dim
+            names = nts[0].names.copy()
+            names.insert(dim, dim_name)
+
+            new_tensor = torch.stack([nt.tensor for nt in nts], dim=dim)
+            return NamedTensor(new_tensor, names, nts[0].feature_names.copy())
+
     def clone(self):
         return NamedTensor(
             tensor=deepcopy(self.tensor).to(self.tensor.device),
@@ -271,3 +300,10 @@ class NamedTensor(TensorWrapper):
     @property
     def device(self) -> torch.device:
         return self.tensor.device
+
+    @staticmethod
+    def collate_fn(batch: List["NamedTensor"]) -> "NamedTensor":
+        """
+        Collate a list of NamedTensors into a single NamedTensor.
+        """
+        return NamedTensor.stack(batch, dim_name="batch", dim=0)

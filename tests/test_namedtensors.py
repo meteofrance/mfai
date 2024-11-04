@@ -129,3 +129,30 @@ def test_named_tensor():
         f"v_{i}" for i in range(10)
     ] + [f"u_{i}" for i in range(10)]
     assert nt_cat.names == ["batch", "lat", "lon", "features"]
+
+    # test stack of multiple NamedTensors
+    nt10 = NamedTensor(
+        torch.rand(3, 256, 256, 10),
+        names=["timesteps", "lat", "lon", "features"],
+        feature_names=[f"feature_{i}" for i in range(10)],
+    )
+    nt11 = NamedTensor(
+        torch.rand(3, 256, 256, 10),
+        names=["timesteps", "lat", "lon", "features"],
+        feature_names=[f"feature_{i}" for i in range(10)],
+    )
+    nt12 = NamedTensor(
+        torch.rand(3, 256, 256, 10),
+        names=["timesteps", "lat", "lon", "features"],
+        feature_names=[f"feature_{i}" for i in range(10)],
+    )
+    nt_stack = NamedTensor.stack([nt10, nt11, nt12], "level", dim=3)
+    assert nt_stack.tensor.shape == (3, 256, 256, 3, 10)
+    assert nt_stack.feature_names == [f"feature_{i}" for i in range(10)]
+    assert nt_stack.names == ["timesteps", "lat", "lon", "level", "features"]
+
+    # test collate of multiple NamedTensors
+    nt_collate = NamedTensor.collate([nt10, nt11, nt12])
+    assert nt_collate.tensor.shape == (3, 3, 256, 256, 10)
+    assert nt_collate.feature_names == [f"feature_{i}" for i in range(10)]
+    assert nt_collate.names == ["batch", "timesteps", "lat", "lon", "features"]

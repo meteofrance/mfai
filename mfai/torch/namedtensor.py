@@ -5,7 +5,6 @@ A class based NamedTensor implementation for PyTorch, inspired from the unstable
 from copy import deepcopy
 from collections.abc import Iterable
 from dataclasses import dataclass
-from functools import cached_property
 from itertools import chain
 from typing import List, Union
 

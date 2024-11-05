@@ -49,6 +49,7 @@ def test_named_tensor():
         torch.rand(3, 256, 256, 50),
         names=["batch", "lat", "lon", "levels"],
         feature_names=[f"feature_{i}" for i in range(50)],
+        feature_dim_name="levels",
     )
     assert nt4.spatial_dim_idx == [1, 2]
     with pytest.raises(ValueError):
@@ -57,8 +58,9 @@ def test_named_tensor():
     # different number of dims => ValueError
     nt5 = NamedTensor(
         torch.rand(3, 256, 50),
-        names=["batch", "lat", "lon"],
+        names=["batch", "lat", "levels"],
         feature_names=[f"feature_{i}" for i in range(50)],
+        feature_dim_name="levels",
     )
     with pytest.raises(ValueError):
         nt | nt5
@@ -156,3 +158,32 @@ def test_named_tensor():
     assert nt_collate.tensor.shape == (3, 3, 256, 256, 10)
     assert nt_collate.feature_names == [f"feature_{i}" for i in range(10)]
     assert nt_collate.names == ["batch", "timesteps", "lat", "lon", "features"]
+
+    # test a features dim in the middle of the tensor (not last dim)
+
+    nt13 = NamedTensor(
+        torch.rand(3, 50, 256, 256),
+        names=["batch", "features", "lat", "lon"],
+        feature_names=[f"feature_{i}" for i in range(50)],
+        feature_dim_name="features",
+    )
+
+    # Now concat with another tensor with the same feature dim name and dim index
+    nt14 = NamedTensor(
+        torch.rand(3, 50, 256, 256),
+        names=["batch", "features", "lat", "lon"],
+        feature_names=[f"feature_k{i}" for i in range(50)],
+        feature_dim_name="features",
+    )
+
+    nt_cat = nt13 | nt14
+    assert nt_cat.tensor.shape == (3, 100, 256, 256)
+    assert nt_cat.feature_names == [f"feature_{i}" for i in range(50)] + [
+        f"feature_k{i}" for i in range(50)
+    ]
+    assert nt_cat.names == ["batch", "features", "lat", "lon"]
+    assert nt_cat.spatial_dim_idx == [2, 3]
+    assert nt_cat.feature_dim_name == "features"
+
+    feature_tensor = nt_cat["feature_0"]
+    assert feature_tensor.shape == (3, 1, 256, 256)

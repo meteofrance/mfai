@@ -200,3 +200,67 @@ def test_named_tensor():
         assert tensor.shape == (256, 256, 50)
 
     assert i == 2
+    
+    nt7 = NamedTensor(
+        torch.rand(3, 256, 256, 10),
+        names=["batch", "lat", "lon", "features"],
+        feature_names=[f"feature_{i}" for i in range(10)],
+    )
+    nt8 = NamedTensor(
+        torch.rand(3, 256, 256, 10),
+        names=["batch", "lat", "lon", "features"],
+        feature_names=[f"v_{i}" for i in range(10)],
+    )
+    nt9 = NamedTensor(
+        torch.rand(3, 256, 256, 10),
+        names=["batch", "lat", "lon", "features"],
+        feature_names=[f"u_{i}" for i in range(10)],
+    )
+    nt_cat = NamedTensor.concat([nt7, nt8, nt9])
+    assert nt_cat.tensor.shape == (3, 256, 256, 30)
+    assert nt_cat.feature_names == [f"feature_{i}" for i in range(10)] + [
+        f"v_{i}" for i in range(10)
+    ] + [f"u_{i}" for i in range(10)]
+    assert nt_cat.names == ["batch", "lat", "lon", "features"]
+
+    # test unsqueeze_
+    nt_cat.unsqueeze_("new_dim", 1)
+    assert nt_cat.tensor.shape == (3, 1, 256, 256, 30)
+    assert nt_cat.names == ["batch", "new_dim", "lat", "lon", "features"]
+
+    # test squeeze_
+    nt_cat.squeeze_("new_dim")
+    assert nt_cat.tensor.shape == (3, 256, 256, 30)
+    assert nt_cat.names == ["batch", "lat", "lon", "features"]
+
+    # test select_dim along the features dim
+    t = nt_cat.select_dim("features", 0)
+    assert t.shape == (3, 256, 256)
+
+    # test select_dim along the lat dim
+    t = nt_cat.select_dim("lat", 128)
+    assert t.shape == (3, 256, 30)
+
+    # test index_select_dim
+    t = nt_cat.index_select_dim("features", [0, 1, 2])
+    assert t.shape == (3, 256, 256, 3)
+
+    # test select_dim when returning NamedTensor
+    with pytest.raises(ValueError):
+        t = nt_cat.select_dim("features", 0, bare_tensor=False)
+    t = nt_cat.select_dim("lon", 0, bare_tensor=False)
+    assert t.tensor.shape == (3, 256, 30)
+    assert t.feature_names == nt_cat.feature_names
+    assert t.names == ["batch", "lat", "features"]
+
+    # test index_select_dim when returning NamedTensor
+    t = nt_cat.index_select_dim("features", [0, 1, 2], bare_tensor=False)
+    assert t.tensor.shape == (3, 256, 256, 3)
+    assert t.feature_names == nt_cat.feature_names[:3]
+    assert t.names == ["batch", "lat", "lon", "features"]
+
+    # test dim_size
+    assert nt_cat.dim_size("features") == 30
+
+    # test dim_index
+    assert nt_cat.dim_index("features") == 3

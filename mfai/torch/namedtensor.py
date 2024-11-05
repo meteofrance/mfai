@@ -381,6 +381,15 @@ class NamedTensor(TensorWrapper):
 
             self.tensor = self.tensor.expand(*expander)
 
+    def iter_dim(
+        self, dim_name: str, bare_tensor: bool = True
+    ) -> Iterable[torch.Tensor]:
+        """
+        Iterate over the tensor along a given dimension.
+        """
+        for i in range(self.dim_size(dim_name)):
+            yield self.select_dim(dim_name, i, bare_tensor=bare_tensor)
+
     @staticmethod
     def new_like(tensor: torch.Tensor, other: "NamedTensor") -> "NamedTensor":
         """

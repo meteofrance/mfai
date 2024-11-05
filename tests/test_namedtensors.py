@@ -187,3 +187,16 @@ def test_named_tensor():
 
     feature_tensor = nt_cat["feature_0"]
     assert feature_tensor.shape == (3, 1, 256, 256)
+
+    # Test iteration on batch dimension with bare_tensor=False
+    for i, nt_dim in enumerate(nt.iter_dim("batch", bare_tensor=False)):
+        assert nt_dim.tensor.shape == (256, 256, 50)
+        assert nt_dim.names == ["lat", "lon", "features"]
+
+    assert i == 2
+
+    # Test iteration on batch dimension with bare_tensor=True
+    for i, tensor in enumerate(nt.iter_dim("batch", bare_tensor=True)):
+        assert tensor.shape == (256, 256, 50)
+
+    assert i == 2

@@ -282,7 +282,7 @@ class NamedTensor(TensorWrapper):
             self.names.remove(name)
 
     def unsqueeze_(self, dim_name: str, dim_index: int):
-        """ "
+        """
         Insert a new dimension dim_name of size 1 at dim_index
         """
         self.tensor = torch.unsqueeze(self.tensor, dim_index)
@@ -432,6 +432,12 @@ class NamedTensor(TensorWrapper):
     @staticmethod
     def collate_fn(batch: List["NamedTensor"]) -> "NamedTensor":
         """
-        Collate a list of NamedTensors into a single NamedTensor.
+        Collate a list of NamedTensors into a batched single NamedTensor.
         """
+        if len(batch) == 0:
+            raise ValueError("Cannot collate an empty list of NamedTensors")
+        if len(batch) == 1:
+            # add batch dim to the single namedtensor (in place operation)
+            batch[0].unsqueeze_(dim_name="batch", dim_index=0)
+            return batch[0]
         return NamedTensor.stack(batch, dim_name="batch", dim=0)

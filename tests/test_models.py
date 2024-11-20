@@ -18,9 +18,13 @@ from mfai.torch import export_to_onnx, onnx_load_and_infer
 from mfai.torch.models import (
     DeepLabV3Plus,
     HalfUNet,
+    UNet,
+    HalfUNet,
     all_nn_architectures,
     load_from_settings_file,
 )
+from mfai.torch.models.unet import CustomUnet
+from mfai.torch.utils import input_utils
 
 
 def to_numpy(tensor):
@@ -161,3 +165,24 @@ def test_load_model_by_name():
             / "models"
             / "halfunet128.json",
         )
+     
+@pytest.mark.parametrize("model_class", [UNet, 
+                                         CustomUnet,
+                                         HalfUNet])   
+def test_input_shape_validation(model_class):
+    B, C, W, H = 32,3,64,65
+    
+    input_data = torch.randn(B,C,W,H)
+    net = model_class(in_channels=C, out_channels=1)
+    # assert it fails before padding
+    with pytest.raises(RuntimeError):
+        net(input_data)
+        
+    valid_shape, new_shape = net.validate_input_shape(input_data.shape[-2:])
+    
+    assert not valid_shape
+    
+    # assert it does not fail after padding 
+    input_data_pad = input_utils.pad_batch(batch=input_data, new_shape=new_shape, pad_value=0)
+    net(input_data_pad)
+    

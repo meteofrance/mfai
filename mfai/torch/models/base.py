@@ -2,8 +2,10 @@
 Interface contract for our models.
 """
 
-from abc import ABC, abstractproperty
+from abc import ABC, abstractproperty, abstractmethod
 from typing import Tuple
+from torch import Size
+import warnings
 
 
 class ModelABC(ABC):
@@ -26,6 +28,27 @@ class ModelABC(ABC):
         A model supporting 2d tensors should return (2,).
         A model supporting 2d and 3d tensors should return (2, 3).
         """
+        
+    def validate_input_shape(self, input_shape: Size) -> Tuple[bool, Size]:
+        """ Given an input shape, verifies whether the inputs fit with the 
+            calling model's specifications. 
+
+        Args:
+            input_shape (Size): The shape of the input data, excluding any batch dimension and channel dimension.  
+                                For example, for a batch of 2D tensors of shape [B,C,W,H], [W,H] should be passed.
+                                For 3D data instead of shape [B,C,W,H,D], instead, [W,H,D] should be passed. 
+
+        Returns:
+            Tuple[bool, Size]: Returns a tuple where the first element is a boolean signaling whether the given input shape 
+                                already fits the model's requirements. If that value is False, the second element contains the closest 
+                                shape that fits the model, otherwise it will be None.
+        """
+        warnings.warn(
+            f"{self.__class__.__name__} has not overridden the {self.validate_input_shape.__name__} method. The correctness is not guaranteed.",
+            UserWarning
+        )
+        
+        return True, input_shape
 
     def check_required_attributes(self):
         # we check that the model has defined the following attributes.

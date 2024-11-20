@@ -7,6 +7,9 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Tuple, Union
 
+import re 
+import inspect
+
 import torch
 from dataclasses_json import dataclass_json
 from torch import nn
@@ -190,6 +193,30 @@ class UNet(ModelABC, nn.Module):
                 ]
             )
         )
+        
+    def validate_input_shape(self, input_shape: torch.Size) -> Tuple[bool | torch.Size]:
+        number_pool_layers = self._num_pool_layers
+    
+        ceil = lambda x: int(x) if x == int(x) else int(x) + 1
+        # The UNet has M max pooling layers of size 2x2 with stride 2, each of which halves the 
+        # dimensions. For the residual connections to match shape, the input dimensions should 
+        # be divisible by 2^N
+        d = 2**number_pool_layers
+        
+        
+        new_shape = [d * ceil(input_shape[i]/d)  for i in range(len(input_shape))]
+        new_shape = torch.Size(new_shape)
+
+
+        return new_shape == input_shape, new_shape
+    
+    @property
+    def _num_pool_layers(self):
+        # introspective, looks at the code of forword and 
+        # counts the number of max pool calls
+        source_code = inspect.getsource(self.forward)
+        return len(re.findall(r'max_pool\(', source_code))
+
 
 
 @dataclass_json
@@ -221,6 +248,8 @@ class CustomUnet(ModelABC, nn.Module):
             weights=settings.encoder_weights,
         )
 
+        self.settings = settings
+        
         decoder_channels = self.encoder.out_channels[
             ::-1
         ]  # Reverse the order to be the same index of the decoder
@@ -259,3 +288,15 @@ class CustomUnet(ModelABC, nn.Module):
             x = decoder(x)
 
         return self.final_conv(x)
+    
+    def validate_input_shape(self, input_shape: torch.Size) -> Tuple[bool | torch.Size]:
+        number_pool_layers = self.settings.encoder_depth
+        ceil = lambda x: int(x) if x == int(x) else int(x) + 1
+        print(number_pool_layers)
+        d = 2**number_pool_layers
+                
+        new_shape = [d * ceil(input_shape[i]/d)  for i in range(len(input_shape))]
+        new_shape = torch.Size(new_shape)
+
+
+        return new_shape == input_shape, new_shape

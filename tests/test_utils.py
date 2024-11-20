@@ -21,7 +21,6 @@ def test_pad(dims):
     # test undo padding 
     
     padded_data_undone = input_utils.undo_padding(padded_data, old_shape=tensor_shape[-dims:])
-    if dims == 3:
-        print('ciao')
+
     assert (padded_data_undone == data).all()
     

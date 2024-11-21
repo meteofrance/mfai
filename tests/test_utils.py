@@ -2,7 +2,7 @@ import pytest
 import torch
 import random 
 
-from mfai.torch.utils import input_utils
+from mfai.torch.padding import pad_batch, undo_padding
 
 @pytest.mark.parametrize("dims", [2, 3])   
 def test_pad(dims):
@@ -14,13 +14,13 @@ def test_pad(dims):
     new_delta = [random.randint(5, 25) for _ in range(dims)]
     new_shape = torch.Size([a + b for a, b in zip(tensor_shape[-dims:], new_delta)])
     # pad the data 
-    padded_data = input_utils.pad_batch(batch=data, new_shape=new_shape, pad_value=0)
+    padded_data = pad_batch(batch=data, new_shape=new_shape, pad_value=0)
 
     assert padded_data.shape[-len(new_shape):] == new_shape
     
     # test undo padding 
     
-    padded_data_undone = input_utils.undo_padding(padded_data, old_shape=tensor_shape[-dims:])
+    padded_data_undone = undo_padding(padded_data, old_shape=tensor_shape[-dims:])
 
     assert (padded_data_undone == data).all()
     

@@ -24,7 +24,7 @@ from mfai.torch.models import (
     load_from_settings_file,
 )
 from mfai.torch.models.unet import CustomUnet
-from mfai.torch.utils import input_utils
+from mfai.torch import padding
 
 
 def to_numpy(tensor):
@@ -183,6 +183,6 @@ def test_input_shape_validation(model_class):
     assert not valid_shape
     
     # assert it does not fail after padding 
-    input_data_pad = input_utils.pad_batch(batch=input_data, new_shape=new_shape, pad_value=0)
+    input_data_pad = padding.pad_batch(batch=input_data, new_shape=new_shape, pad_value=0)
     net(input_data_pad)
     

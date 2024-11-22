@@ -2,7 +2,7 @@
 Interface contract for our models.
 """
 
-from abc import ABC, abstractproperty, abstractmethod
+from abc import ABC, abstractproperty
 from typing import Tuple
 from torch import Size
 import warnings

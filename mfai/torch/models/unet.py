@@ -6,6 +6,7 @@ for DSM/LabIA projects.
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Tuple, Union
+from math import ceil
 
 import re 
 import inspect
@@ -197,7 +198,6 @@ class UNet(ModelABC, nn.Module):
     def validate_input_shape(self, input_shape: torch.Size) -> Tuple[bool | torch.Size]:
         number_pool_layers = self._num_pool_layers
     
-        ceil = lambda x: int(x) if x == int(x) else int(x) + 1
         # The UNet has M max pooling layers of size 2x2 with stride 2, each of which halves the 
         # dimensions. For the residual connections to match shape, the input dimensions should 
         # be divisible by 2^N
@@ -291,7 +291,6 @@ class CustomUnet(ModelABC, nn.Module):
     
     def validate_input_shape(self, input_shape: torch.Size) -> Tuple[bool | torch.Size]:
         number_pool_layers = self.settings.encoder_depth
-        ceil = lambda x: int(x) if x == int(x) else int(x) + 1
         print(number_pool_layers)
         d = 2**number_pool_layers
                 

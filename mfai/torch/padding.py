@@ -82,10 +82,10 @@ def undo_padding(batch: torch.Tensor, old_shape: torch.Size, inplace=True):
     assert all(o <= n for o, n in zip(old_shape, new_shape))
     
     if len(old_shape) == 2: 
-        l,r,t,b = _get_2D_padding(new_shape=new_shape, old_shape=old_shape)
+        left, right, top, bottom = _get_2D_padding(new_shape=new_shape, old_shape=old_shape)
         if inplace:
-            return batch[..., t:batch.shape[-2]-b, l:batch.shape[-1]-r]
-        return batch[..., t:batch.shape[-2]-b, l:batch.shape[-1]-r].copy()
+            return batch[..., top:batch.shape[-2]-bottom, left:batch.shape[-1]-right]
+        return batch[..., top:batch.shape[-2]-bottom, left:batch.shape[-1]-right].copy()
     elif len(old_shape) == 3: 
         left, right, top, bottom, front, back = _get_3D_padding(new_shape=new_shape,
                                                                 old_shape=old_shape)

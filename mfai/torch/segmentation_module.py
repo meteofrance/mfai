@@ -6,8 +6,10 @@ import pandas as pd
 import torch
 import torchmetrics as tm
 from pytorch_lightning.utilities import rank_zero_only
+import warnings
 
 from mfai.torch.models.base import ModelABC
+from mfai.torch.padding import pad_batch, undo_padding
 
 # define custom scalar in tensorboard, to have 2 lines on same graph
 layout = {
@@ -23,6 +25,7 @@ class SegmentationLightningModule(pl.LightningModule):
         model: ModelABC,
         type_segmentation: Literal["binary", "multiclass", "multilabel", "regression"],
         loss: Callable,
+        padding_strategy: Literal['none', 'apply', 'apply_and_undo'] = 'none'
     ) -> None:
         """A lightning module adapted for segmentation of weather images.
 
@@ -30,6 +33,9 @@ class SegmentationLightningModule(pl.LightningModule):
             model (ModelABC): Torch neural network model in [DeepLabV3, DeepLabV3Plus, HalfUNet, Segformer, SwinUNETR, UNet, CustomUnet, UNETRPP]
             type_segmentation (Literal["binary", "multiclass", "multilabel", "regression"]): Type of segmentation we want to do"
             loss (Callable): Loss function
+            padding_stratey (Literal['none', 'apply', 'apply_and_undo']): Defines the padding strategy to use. With 'none', it's is up to the user to
+                make sure that the input shapes fit the underlying model. With 'apply', padding is applied and reflected in the output shape.
+                With 'apply_and_undo', padding is applied for the forward pass, but it is undone before returning the output. 
         """
         super().__init__()
         self.model = model
@@ -54,6 +60,11 @@ class SegmentationLightningModule(pl.LightningModule):
             self.model.input_shape[0],
             self.model.input_shape[1],
         )
+        
+        self.padding_strategy = padding_strategy
+        if not self.model.auto_padding_supported and padding_strategy != 'none':
+            warnings.warn(f"{self.model.__class__.__name__} does not support autopadding and will not be used.",
+                          UserWarning)
 
     def get_metrics(self):
         """Defines the metrics that will be computed during valid and test steps."""
@@ -96,8 +107,10 @@ class SegmentationLightningModule(pl.LightningModule):
             inputs = inputs.to(memory_format=torch.channels_last)
         # We prefer when the last activation function is included in the loss and not in the model.
         # Consequently, we need to apply the last activation manually here, to get the real output.
+        inputs, old_shape = self._maybe_padding(data_tensor=inputs)
         y_hat = self.model(inputs)
         y_hat = self.last_activation(y_hat)
+        y_hat = self._maybe_unpadding(y_hat, old_shape=old_shape)
         return y_hat
 
     def _shared_forward_step(self, x: torch.Tensor, y: torch.Tensor):
@@ -107,10 +120,29 @@ class SegmentationLightningModule(pl.LightningModule):
             x = x.to(memory_format=torch.channels_last)
         # We prefer when the last activation function is included in the loss and not in the model.
         # Consequently, we need to apply the last activation manually here, to get the real output.
+        x, old_shape = self._maybe_padding(x)
         y_hat = self.model(x)
+        y, _ = self._maybe_padding(y)
         loss = self.loss(y_hat, y)
         y_hat = self.last_activation(y_hat)
+        self._maybe_unpadding(y_hat, old_shape=old_shape)
         return y_hat, loss
+    
+    def _maybe_padding(self, data_tensor):
+        if self.padding_strategy == 'none' or not self.model.auto_padding_supported:
+            return data_tensor, None
+        
+        old_shape = data_tensor.shape[-len(self.model.input_shape):]
+        valid_shape, new_shape = self.model.validate_input_shape(data_tensor.shape[-len(self.model.input_shape):])
+        if not valid_shape:
+            return pad_batch(batch=data_tensor, new_shape=new_shape, pad_value=0), old_shape
+        return data_tensor, None
+    
+    def _maybe_unpadding(self, data_tensor, old_shape):
+        if self.padding_strategy == 'apply_and_undo' and old_shape is not None:
+            return undo_padding(data_tensor, old_shape=old_shape)
+        return data_tensor
+        
 
     def on_train_start(self):
         """Setup custom scalars panel on tensorboard and log hparams.

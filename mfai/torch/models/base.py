@@ -2,7 +2,7 @@
 Interface contract for our models.
 """
 
-from abc import ABC, abstractproperty
+from abc import ABC, abstractproperty, abstractmethod
 from typing import Tuple
 from torch import Size
 import warnings
@@ -29,7 +29,25 @@ class ModelABC(ABC):
         A model supporting 2d and 3d tensors should return (2, 3).
         """
         
-    def validate_input_shape(self, input_shape: Size) -> Tuple[bool, Size]:
+    @property
+    def auto_padding_supported(self) -> bool:
+        """
+        Indicates whether the model supports automatic padding.
+        """
+        return isinstance(self, AutoPaddingModel)
+    
+    def check_required_attributes(self):
+        # we check that the model has defined the following attributes.
+        # this must be called at the end of the __init__ of each subclass.
+        required_attrs = ["in_channels", "out_channels", "input_shape"]
+        for attr in required_attrs:
+            if not hasattr(self, attr):
+                raise AttributeError(f"Missing required attribute : {attr}")
+
+
+class AutoPaddingModel(ABC):
+    @abstractmethod
+    def validate_input_shape(self, input_shape: Size) -> Tuple[bool | Size]:
         """ Given an input shape, verifies whether the inputs fit with the 
             calling model's specifications. 
 
@@ -43,17 +61,3 @@ class ModelABC(ABC):
                                 already fits the model's requirements. If that value is False, the second element contains the closest 
                                 shape that fits the model, otherwise it will be None.
         """
-        warnings.warn(
-            f"{self.__class__.__name__} has not overridden the {self.validate_input_shape.__name__} method. The correctness is not guaranteed.",
-            UserWarning
-        )
-        
-        return True, input_shape
-
-    def check_required_attributes(self):
-        # we check that the model has defined the following attributes.
-        # this must be called at the end of the __init__ of each subclass.
-        required_attrs = ["in_channels", "out_channels", "input_shape"]
-        for attr in required_attrs:
-            if not hasattr(self, attr):
-                raise AttributeError(f"Missing required attribute : {attr}")

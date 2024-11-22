@@ -17,7 +17,7 @@ from torch import nn
 
 from mfai.torch.models.encoders import get_encoder
 
-from .base import ModelABC
+from .base import ModelABC, AutoPaddingModel
 
 
 class DoubleConv(nn.Module):
@@ -64,7 +64,7 @@ class UnetSettings:
     init_features: int = 64
 
 
-class UNet(ModelABC, nn.Module):
+class UNet(ModelABC, nn.Module, AutoPaddingModel):
     """
     Returns a u_net architecture, with uninitialised weights, matching desired numbers of input and output channels.
 
@@ -227,7 +227,7 @@ class CustomUnetSettings:
     encoder_weights: bool = True
 
 
-class CustomUnet(ModelABC, nn.Module):
+class CustomUnet(ModelABC, nn.Module, AutoPaddingModel):
     settings_kls = CustomUnetSettings
     onnx_supported = True
     input_spatial_dims = (2,)

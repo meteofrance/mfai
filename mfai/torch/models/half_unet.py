@@ -8,7 +8,7 @@ import torch
 from dataclasses_json import dataclass_json
 from torch import nn
 
-from mfai.torch.models.base import ModelABC
+from mfai.torch.models.base import ModelABC, AutoPaddingModel
 from mfai.torch.models.utils import AbsolutePosEmdebding
 
 
@@ -62,7 +62,7 @@ class GhostModule(nn.Module):
         return self.relu(x)
 
 
-class HalfUNet(ModelABC, nn.Module):
+class HalfUNet(ModelABC, nn.Module, AutoPaddingModel):
     settings_kls = HalfUNetSettings
     onnx_supported = True
     input_spatial_dims = (2,)

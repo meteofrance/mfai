@@ -13,6 +13,7 @@ from typing import Tuple
 import pytest
 import torch
 from marshmallow.exceptions import ValidationError
+from mfai.torch.models.base import AutoPaddingModel
 
 from mfai.torch import export_to_onnx, onnx_load_and_infer
 from mfai.torch.models import (
@@ -166,10 +167,12 @@ def test_load_model_by_name():
             / "halfunet128.json",
         )
      
-@pytest.mark.parametrize("model_class", [UNet, 
-                                         CustomUnet,
-                                         HalfUNet])   
+@pytest.mark.parametrize("model_class", all_nn_architectures)   
 def test_input_shape_validation(model_class):
+    
+    if not issubclass(model_class, AutoPaddingModel):
+        return 
+    
     B, C, W, H = 32,3,64,65
     
     input_data = torch.randn(B,C,W,H)

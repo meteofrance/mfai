@@ -1,8 +1,8 @@
 import torch.nn.functional as F
 import torch
-from typing import Tuple 
+from typing import Tuple, Optional
 
-def pad_batch(batch: torch.Tensor, new_shape: torch.Size, pad_value: float=0) -> torch.Tensor:
+def pad_batch(batch: torch.Tensor, new_shape: torch.Size, mode: str = "constant", pad_value: Optional[float] = 0) -> torch.Tensor:
     """ Given batch of 2D or 3D data and a shape new_shape, 
         pads the tensor with the given pad_value.  
 
@@ -16,6 +16,9 @@ def pad_batch(batch: torch.Tensor, new_shape: torch.Size, pad_value: float=0) ->
     """
 
     fits = batch.shape[-len(new_shape):] == new_shape
+    
+    if mode != 'constant':
+        pad_value = None
 
     if fits:
         return batch
@@ -23,11 +26,11 @@ def pad_batch(batch: torch.Tensor, new_shape: torch.Size, pad_value: float=0) ->
     if len(new_shape) == 2:        
         left, right, top, bottom = _get_2D_padding(new_shape=new_shape, old_shape=batch.shape[-len(new_shape):])
 
-        return F.pad(batch, (left, right, top, bottom), mode='constant', value=pad_value)
+        return F.pad(batch, (left, right, top, bottom), mode=mode, value=pad_value)
     elif len(new_shape) == 3:
         left, right, top, bottom, front, back = _get_3D_padding(new_shape=new_shape, old_shape=batch.shape[-len(new_shape):])
 
-        return F.pad(batch, (left, right, top, bottom, front, back), mode='constant', value=pad_value)
+        return F.pad(batch, (left, right, top, bottom, front, back), mode=mode, value=pad_value)
     
     return ValueError("new_shape must be a torch.Size of length 2 or 3.")
 

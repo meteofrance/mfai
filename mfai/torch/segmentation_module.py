@@ -25,7 +25,7 @@ class SegmentationLightningModule(pl.LightningModule):
         model: ModelABC,
         type_segmentation: Literal["binary", "multiclass", "multilabel", "regression"],
         loss: Callable,
-        padding_strategy: Literal['none', 'apply', 'apply_and_undo'] = 'none'
+        padding_strategy: Literal['none', 'apply_and_undo'] = 'none'
     ) -> None:
         """A lightning module adapted for segmentation of weather images.
 
@@ -33,8 +33,8 @@ class SegmentationLightningModule(pl.LightningModule):
             model (ModelABC): Torch neural network model in [DeepLabV3, DeepLabV3Plus, HalfUNet, Segformer, SwinUNETR, UNet, CustomUnet, UNETRPP]
             type_segmentation (Literal["binary", "multiclass", "multilabel", "regression"]): Type of segmentation we want to do"
             loss (Callable): Loss function
-            padding_stratey (Literal['none', 'apply', 'apply_and_undo']): Defines the padding strategy to use. With 'none', it's is up to the user to
-                make sure that the input shapes fit the underlying model. With 'apply', padding is applied and reflected in the output shape.
+            padding_stratey (Literal['none', 'apply_and_undo']): Defines the padding strategy to use. With 'none', it's is up to the user to
+                make sure that the input shapes fit the underlying model.
                 With 'apply_and_undo', padding is applied for the forward pass, but it is undone before returning the output. 
         """
         super().__init__()
@@ -122,15 +122,18 @@ class SegmentationLightningModule(pl.LightningModule):
         # Consequently, we need to apply the last activation manually here, to get the real output.
         x, old_shape = self._maybe_padding(x)
         y_hat = self.model(x)
-        y, _ = self._maybe_padding(y)
+        y_hat = self._maybe_unpadding(y_hat, old_shape=old_shape)
+
         loss = self.loss(y_hat, y)
         y_hat = self.last_activation(y_hat)
-        self._maybe_unpadding(y_hat, old_shape=old_shape)
+
         return y_hat, loss
     
     def _maybe_padding(self, data_tensor):
         if self.padding_strategy == 'none' or not self.model.auto_padding_supported:
             return data_tensor, None
+        if self.padding_strategy != 'apply_and_undo':
+            raise ValueError()
         
         old_shape = data_tensor.shape[-len(self.model.input_shape):]
         valid_shape, new_shape = self.model.validate_input_shape(data_tensor.shape[-len(self.model.input_shape):])

@@ -5,7 +5,6 @@ Interface contract for our models.
 from abc import ABC, abstractproperty, abstractmethod
 from typing import Tuple
 from torch import Size
-import warnings
 
 
 class ModelABC(ABC):

@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from itertools import chain
 from typing import List, Union
 
+import einops
 import torch
 from tabulate import tabulate
 
@@ -388,6 +389,22 @@ class NamedTensor(TensorWrapper):
         """
         for i in range(self.dim_size(dim_name)):
             yield self.select_dim(dim_name, i, bare_tensor=bare_tensor)
+
+    def rearrange_(self, einops_str: str):
+        """
+        Rearrange in place the underlying tensor dimensions using einops syntax.
+        For now only supports re-ordering of dimensions.
+        """
+        old_dims, new_dims = einops_str.split("->")
+        old_dims = old_dims.split(" ")[:-1]
+        new_dims = new_dims.split(" ")[1:]
+        # check that the number of dims and dim names match
+        if not set(self.names) == set(old_dims) == set(new_dims):
+            raise ValueError(
+                f"Dimensions in rearrange_ {old_dims} do not match tensor dimensions {self.names}"
+            )
+        self.tensor = einops.rearrange(self.tensor, einops_str)
+        self.names = new_dims
 
     @staticmethod
     def new_like(tensor: torch.Tensor, other: "NamedTensor") -> "NamedTensor":

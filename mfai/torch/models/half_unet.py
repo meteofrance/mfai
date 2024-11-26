@@ -2,12 +2,13 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from functools import reduce
 from typing import Tuple, Union
+from math import ceil
 
 import torch
 from dataclasses_json import dataclass_json
 from torch import nn
 
-from mfai.torch.models.base import ModelABC
+from mfai.torch.models.base import ModelABC, AutoPaddingModel
 from mfai.torch.models.utils import AbsolutePosEmdebding
 
 
@@ -61,7 +62,7 @@ class GhostModule(nn.Module):
         return self.relu(x)
 
 
-class HalfUNet(ModelABC, nn.Module):
+class HalfUNet(ModelABC, nn.Module, AutoPaddingModel):
     settings_kls = HalfUNetSettings
     onnx_supported = True
     input_spatial_dims = (2,)
@@ -277,3 +278,19 @@ class HalfUNet(ModelABC, nn.Module):
                 *layers,
             )
         return layers
+    
+    def validate_input_shape(self, input_shape: torch.Size) -> Tuple[bool | torch.Size]:
+
+        number_pool_layers = sum(1 for layer in self.modules() if isinstance(layer, nn.MaxPool2d))
+    
+        # The UNet has M max pooling layers of size 2x2 with stride 2, each of which halves the 
+        # dimensions. For the residual connections to match shape, the input dimensions should 
+        # be divisible by 2^N
+        d = 2**number_pool_layers
+        
+        
+        new_shape = [d * ceil(input_shape[i]/d)  for i in range(len(input_shape))]
+        new_shape = torch.Size(new_shape)
+
+
+        return new_shape == input_shape, new_shape

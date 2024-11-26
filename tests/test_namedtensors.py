@@ -200,7 +200,7 @@ def test_named_tensor():
         assert tensor.shape == (256, 256, 50)
 
     assert i == 2
-    
+
     nt7 = NamedTensor(
         torch.rand(3, 256, 256, 10),
         names=["batch", "lat", "lon", "features"],
@@ -264,3 +264,16 @@ def test_named_tensor():
 
     # test dim_index
     assert nt_cat.dim_index("features") == 3
+
+    # test rearrange_
+    nt_cat.rearrange_("batch lat lon features -> batch features lat lon")
+    assert nt_cat.names == ["batch", "features", "lat", "lon"]
+    assert nt_cat.tensor.shape == (3, 30, 256, 256)
+
+    # test rearrange_ raises ValueError if wrong rearrangement
+    with pytest.raises(ValueError):
+        nt_cat.rearrange_("batch lat lon features -> batch features lat")
+    
+    # test rearrange_ raises ValueError if non existing dim is supplied
+    with pytest.raises(ValueError):
+        nt_cat.rearrange_("batch lat nodim features -> batch features lat lon")

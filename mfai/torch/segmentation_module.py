@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Callable, Literal, Tuple
+from typing import Callable, Literal, Tuple, Optional
 
 import lightning.pytorch as pl
 import pandas as pd
@@ -129,7 +129,22 @@ class SegmentationLightningModule(pl.LightningModule):
 
         return y_hat, loss
     
-    def _maybe_padding(self, data_tensor):
+    def _maybe_padding(self, data_tensor: torch.Tensor)-> Tuple[torch.Tensor, Optional[torch.Size]]:
+        """ Performs an optional padding to ensure that the data tensor can be fed 
+            to the underlying model. Padding will happen if the underlying model 
+            supports it and if self.padding_strategy is set to 'apply_and_undo'.
+
+        Args:
+            data_tensor (torch.Tensor): the input data to be potentially padded. 
+
+        Raises:
+            ValueError: if the padding strategy is not valid, an error is raised. 
+
+        Returns:
+            Tuple[torch.Tensor, Optional[torch.Size]]: the padded tensor, where the original data is found in the center, 
+            and the old size if padding was possible. If not possible or the shape is already fine, 
+            the data is returned untouched and the second return value will be none. 
+        """
         if self.padding_strategy == 'none' or not self.model.auto_padding_supported:
             return data_tensor, None
         if self.padding_strategy != 'apply_and_undo':
@@ -141,7 +156,19 @@ class SegmentationLightningModule(pl.LightningModule):
             return pad_batch(batch=data_tensor, new_shape=new_shape, pad_value=0), old_shape
         return data_tensor, None
     
-    def _maybe_unpadding(self, data_tensor, old_shape):
+    def _maybe_unpadding(self, data_tensor: torch.Tensor, old_shape: torch.Size)-> torch.Tensor:
+        """Potentially removes the padding previously added to the given tensor. This action 
+           is only carried out if self.padding_strategy is set to 'apply_and_undo' and old_shape 
+           is not None.
+
+        Args:
+            data_tensor (torch.Tensor): The data tensor from which padding is to be removed. 
+            old_shape (torch.Size): The previous shape of the data tensor. It can either be 
+            [W,H] or [W,H,D] for 2D and 3D data respectively. old_shape is returned by self._maybe_padding.
+
+        Returns:
+            torch.Tensor: The data tensor with the padding removed, if possible.
+        """
         if self.padding_strategy == 'apply_and_undo' and old_shape is not None:
             return undo_padding(data_tensor, old_shape=old_shape)
         return data_tensor

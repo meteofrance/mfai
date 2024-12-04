@@ -67,7 +67,7 @@ def test_csi_binary(num_neighbors: int, expected_value: float):
     csi.update(preds=y_hat, targets=y_true)
     csi_score = torch.round(csi.compute(), decimals=2).float()
 
-    assert pytest.approx(csi_score, 0.001) == expected_value
+    assert pytest.approx(csi_score.cpu(), 0.001) == expected_value
 
 
 @pytest.mark.parametrize("num_neighbors,expected_value", [(0, 0.43), (1, 0.79)])
@@ -111,7 +111,7 @@ def test_csi_multiclass(num_neighbors: int, expected_value: torch.Tensor):
     csi.update(preds=y_hat, targets=y_true)
     csi_score = torch.round(csi.compute(), decimals=2).float()
 
-    assert pytest.approx(csi_score, 0.001) == expected_value
+    assert pytest.approx(csi_score.cpu(), 0.001) == expected_value
 
 
 @pytest.mark.parametrize("num_neighbors,expected_value", [(0, 0.36), (1, 0.81)])
@@ -183,7 +183,7 @@ def test_csi_multilabel(num_neighbors: int, expected_value: torch.Tensor):
     csi.update(preds=y_hat, targets=y_true)
     csi_score = torch.round(csi.compute(), decimals=2).float()
 
-    assert pytest.approx(csi_score, 0.001) == expected_value
+    assert pytest.approx(csi_score.cpu(), 0.001) == expected_value
 
 
 def test_pr_auc():
@@ -196,7 +196,7 @@ def test_pr_auc():
     far.update(preds, targets)
     auc_value = far.compute()
     expected_value = 0.125
-    assert pytest.approx(auc_value, 0.001) == expected_value
+    assert pytest.approx(auc_value.cpu(), 0.001) == expected_value
 
 
 def test_far():
@@ -209,7 +209,7 @@ def test_far():
     far.update(preds, targets)
     auc_value = far.compute()
     expected_value = 0.5
-    assert pytest.approx(auc_value, 0.001) == expected_value
+    assert pytest.approx(auc_value.cpu(), 0.001) == expected_value
 
 
 def test_fnr():
@@ -222,4 +222,4 @@ def test_fnr():
     fnr.update(preds, targets)
     auc_value = fnr.compute()
     expected_value = 0.5
-    assert pytest.approx(auc_value, 0.001) == expected_value
+    assert pytest.approx(auc_value.cpu(), 0.001) == expected_value

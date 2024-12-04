@@ -65,8 +65,8 @@ Currently we support the following neural network architectures:
 | [UNet](mfai/torch/models/unet.py#L1) | [arxiv link](https://arxiv.org/pdf/1505.04597.pdf) | (Batch, features, Height, Width)    | Yes | Vanilla U-Net | Radar image cleaning |  Theo Tournier / Frank Guibert |
 | [CustomUnet](mfai/torch/models/unet.py#L1) | [arxiv link](https://arxiv.org/pdf/1505.04597.pdf) | (Batch, features, Height, Width)    | Yes | U-Net like architecture with a variety of resnet encoder choices | Radar image cleaning |  Theo Tournier |
 | [Segformer](mfai/torch/models/segformer.py#L1) | [arxiv link](https://arxiv.org/abs/2105.15203)   | (Batch, features, Height, Width) | Yes | On par with u-net like on Deepsyg (MF internal), added an upsampling stage. Adapted from [Lucidrains' github](https://github.com/lucidrains/segformer-pytorch) | Segmentation tasks | Frank Guibert |
-| [SwinUNETR](mfai/torch/models/swinunetr.py#L1) | [arxiv link](https://arxiv.org/abs/2201.01266)   | (Batch, features, Height, Width)  | No | 2D Swin  Unet transformer (Pangu and archweather uses customised 3D versions of Swin Transformers). Plugged in from [MONAI](https://github.com/Project-MONAI/MONAI/). The decoders have been modified to use Bilinear2D + Conv2d instead of Conv2dTranspose to remove artefacts/checkerboard effects | Segmentation tasks  |  Frank Guibert |
-| [UNETRPP](mfai/torch/models/unetrpp.py#L1) | [arxiv link](https://arxiv.org/abs/2212.04497)  | (Batch, features, Height, Width) or  (Batch, features, Height, Width, Depth) | Yes | Vision transformer with a reduced GFLOPS footprint adapted from [author's github](https://github.com/Amshaker/unetr_plus_plus). Modified to work both with 2d and 3d inputs | Front Detection | Frank Guibert |
+| [SwinUNETR](mfai/torch/models/swinunetr.py#L1) | [arxiv link](https://arxiv.org/abs/2201.01266)   | (Batch, features, Height, Width)  | No | 2D Swin  Unet transformer (Pangu and archweather uses customised 3D versions of Swin Transformers). Plugged in from [MONAI](https://github.com/Project-MONAI/MONAI/). The decoders use Bilinear2D + Conv2d instead of Conv2dTranspose to remove artefacts/checkerboard effects | Segmentation tasks  |  Frank Guibert |
+| [UNETRPP](mfai/torch/models/unetrpp.py#L1) | [arxiv link](https://arxiv.org/abs/2212.04497)  | (Batch, features, Height, Width) or  (Batch, features, Height, Width, Depth) | Yes | Vision transformer with a reduced GFLOPS footprint adapted from [author's github](https://github.com/Amshaker/unetr_plus_plus). Modified to work both with 2d and 3d inputs. The decoders use Bilinear2D + Conv2d instead of Conv2dTranspose to remove artefacts/checkerboard effects  | Front Detection, LAM Weather Forecasting | Frank Guibert |
 
 # SegmentationLightningModule
 
@@ -93,7 +93,56 @@ PyTorch provides an experimental feature called [**named tensors**](https://pyto
 
 NamedTensors are a way to give names to dimensions of tensors and to keep track of the names of the physical/weather parameters along the features dimension.
 
-The [**NamedTensor**](../py4cast/datasets/base.py#L38) class is a wrapper around a PyTorch tensor, it allows us to pass consistent object linking data and metadata with extra utility methods (concat along features dimension, flatten in place, ...). See the implementation [here](../py4cast/datasets/base.py#L38) and usage for plots [here](../py4cast/observer.py)
+The [**NamedTensor**](mfai/torch/namedtensor.py#L28) class is a wrapper around a PyTorch tensor with additionnal attributes and methods, it allows us to pass consistent object linking data and metadata with extra utility methods (concat along features dimension, flatten in place, ...). 
+
+An example of NamedTensor usage for gridded data on a 256x256 grid:
+
+```python
+
+tensor = torch.rand(4, 256, 256, 3)
+
+nt = NamedTensor(
+    tensor,
+    names=["batch", "lat", "lon", "features"],
+    feature_names=["u", "v", "t2m"],
+)
+
+print(nt.dim_size("lat"))
+# 256
+
+nt2 = NamedTensor(
+    torch.rand(4, 256, 256, 1),
+    names=["batch", "lat", "lon", "features"],
+    feature_names=["q"],
+)
+
+# concat along the features dimension
+nt3 = nt | nt2
+
+# index by feature name
+nt3["u"]
+
+# Create a new NamedTensor with the same names but different data (useful for autoregressive models)
+nt4 = NamedTensor.new_like(torch.rand(4, 256, 256, 4), nt3)
+
+# Flatten in place the lat and lon dimensions and rename the new dim to 'ngrid'
+# this is typically to feed our gridded data to GNNs
+nt3.flatten_("ngrid", 1, 2)
+
+# str representation of the NamedTensor yields useful statistics
+>>> print(nt)
+--- NamedTensor ---
+Names: ['batch', 'lat', 'lon', 'features']
+Tensor Shape: torch.Size([4, 256, 256, 3]))
+Features:
+┌────────────────┬─────────────┬──────────┐
+│ Feature name   │         Min │      Max │
+├────────────────┼─────────────┼──────────┤
+│ u              │ 1.3113e-06  │ 0.999996 │
+│ v              │ 8.9407e-07  │ 0.999997 │
+│ t2m            │ 5.06639e-06 │ 0.999995 │
+
+```
 
 # Metrics
 
@@ -128,7 +177,6 @@ pip install --index-url https://test.pypi.org/simple/ mfai
 Our [unit tests](tests/test_models.py#L39) provides an example of how to use the models in a PyTorch training loop. Our models are instanciated with 2 mandatory positional arguments: **in_channels** and **out_channels** respectively the number of input and output channels/features of the model. A third **input_shape** parameter is either mandatory (**UNETR++** or **HalfUNet with absolute pos embedding**) or optional for the other models. It describes the shape of the input tensor along its spatial dimensions.
 
 The last parameter is an instance of the model's settings class and is a keyword argument with a default value set to the default settings.
-
 
 
 Here is an example of how to instanciate the UNet model with a 3 channels input (like an RGB image) and 1 channel output with its default settings:
@@ -440,62 +488,6 @@ target = torch.randint(2, (2, 2))
 csi_metric = CSINeighborood(task="multiclass", num_classes=2, num_neighbors=0)
 csi = csi_metric(preds, target)
 ```
-
-
-
-## NamedTensors example
-
-We use **NamedTensor** instances to keep the link between our torch tensors and our physical/weather feature names (for plotting, for specific losses weights on given features, ...).
-
-Some examples of NamedTensors usage, here for gridded data on a 256x256 grid:
-
-```python
-
-tensor = torch.rand(4, 256, 256, 3)
-
-nt = NamedTensor(
-    tensor,
-    names=["batch", "lat", "lon", "features"],
-    feature_names=["u", "v", "t2m"],
-)
-
-print(nt.dim_size("lat"))
-# 256
-
-nt2 = NamedTensor(
-    torch.rand(4, 256, 256, 1),
-    names=["batch", "lat", "lon", "features"],
-    feature_names=["q"],
-)
-
-# concat along the features dimension
-nt3 = nt | nt2
-
-# index by feature name
-nt3["u"]
-
-# Create a new NamedTensor with the same names but different data (useful for autoregressive models)
-nt4 = NamedTensor.new_like(torch.rand(4, 256, 256, 4), nt3)
-
-# Flatten in place the lat and lon dimensions and rename the new dim to 'ngrid'
-# this is typically to feed our gridded data to GNNs
-nt3.flatten_("ngrid", 1, 2)
-
-# str representation of the NamedTensor yields useful statistics
->>> print(nt)
---- NamedTensor ---
-Names: ['batch', 'lat', 'lon', 'features']
-Tensor Shape: torch.Size([4, 256, 256, 3]))
-Features:
-┌────────────────┬─────────────┬──────────┐
-│ Feature name   │         Min │      Max │
-├────────────────┼─────────────┼──────────┤
-│ u              │ 1.3113e-06  │ 0.999996 │
-│ v              │ 8.9407e-07  │ 0.999997 │
-│ t2m            │ 5.06639e-06 │ 0.999995 │
-
-```
-
 
 # Running Tests
 

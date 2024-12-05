@@ -6,7 +6,7 @@ import torch.nn as nn
 from dataclasses_json import dataclass_json
 from torch.nn import functional as F
 
-from .base import ModelABC
+from .base import ModelABC, ModelType
 from .encoders import get_encoder
 
 
@@ -279,7 +279,10 @@ class DeepLabV3(ModelABC, torch.nn.Module):
 
     onnx_supported: bool = True
     settings_kls = DeepLabV3Settings
-    input_spatial_dims = (2,)
+    supported_num_spatial_dims = (2,)
+    features_last: bool = False
+    model_type: int = ModelType.CONVOLUTIONNAL
+    num_spatial_dims: int = 2
 
     def __init__(
         self,
@@ -293,6 +296,7 @@ class DeepLabV3(ModelABC, torch.nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.input_shape = input_shape
+        self._settings = settings
 
         self.encoder = get_encoder(
             settings.encoder_name,
@@ -323,6 +327,13 @@ class DeepLabV3(ModelABC, torch.nn.Module):
             self.classification_head = None
 
         self.check_required_attributes()
+
+    @property
+    def settings(self) -> DeepLabV3Settings:
+        """
+        Returns the settings instance used to configure the model.
+        """
+        return self._settings
 
     def initialize(self):
         self.initialize_decoder(self.decoder)
@@ -510,3 +521,10 @@ class DeepLabV3Plus(DeepLabV3):
         )
 
         self.check_required_attributes()
+
+    @property
+    def settings(self) -> DeepLabV3PlusSettings:
+        """
+        Returns the settings instance used to configure the model.
+        """
+        return self._settings

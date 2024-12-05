@@ -7,7 +7,7 @@ import torch
 from dataclasses_json import dataclass_json
 from torch import nn
 
-from mfai.torch.models.base import ModelABC
+from mfai.torch.models.base import ModelABC, ModelType
 from mfai.torch.models.utils import AbsolutePosEmdebding
 
 
@@ -63,8 +63,11 @@ class GhostModule(nn.Module):
 
 class HalfUNet(ModelABC, nn.Module):
     settings_kls = HalfUNetSettings
-    onnx_supported = True
-    input_spatial_dims = (2,)
+    onnx_supported: bool = True
+    supported_num_spatial_dims = (2,)
+    num_spatial_dims: int = 2
+    features_last: bool = False
+    model_type: int = ModelType.CONVOLUTIONNAL
 
     def __init__(
         self,
@@ -85,6 +88,7 @@ class HalfUNet(ModelABC, nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.input_shape = input_shape
+        self._settings = settings
 
         if settings.absolute_pos_embed:
             if input_shape is None:
@@ -178,6 +182,10 @@ class HalfUNet(ModelABC, nn.Module):
         self.activation = getattr(nn, settings.last_activation)()
 
         self.check_required_attributes()
+
+    @property
+    def settings(self) -> HalfUNetSettings:
+        return self._settings
 
     def forward(self, x):
         enc1 = self.encoder1(x)

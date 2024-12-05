@@ -13,12 +13,12 @@ from torch import nn
 
 from mfai.torch.models.encoders import get_encoder
 
-from .base import ModelABC
+from .base import ModelABC, ModelType
 
 
 class DoubleConv(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, name: str):
-        super(DoubleConv, self).__init__()
+        super().__init__()
         self.double_conv = nn.Sequential(
             OrderedDict(
                 [
@@ -69,7 +69,10 @@ class UNet(ModelABC, nn.Module):
 
     settings_kls = UnetSettings
     onnx_supported = True
-    input_spatial_dims = (2,)
+    supported_num_spatial_dims = (2,)
+    features_last = False
+    model_type = ModelType.CONVOLUTIONNAL
+    num_spatial_dims: int = 2
 
     def __init__(
         self,
@@ -78,11 +81,12 @@ class UNet(ModelABC, nn.Module):
         input_shape: Union[None, Tuple[int, int]] = None,
         settings: UnetSettings = UnetSettings(),
     ):
-        super(UNet, self).__init__()
+        super().__init__()
 
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.input_shape = input_shape
+        self._settings = settings
 
         features = settings.init_features
 
@@ -114,6 +118,10 @@ class UNet(ModelABC, nn.Module):
         self.conv = nn.Conv2d(features, out_channels, kernel_size=1)
 
         self.check_required_attributes()
+
+    @property
+    def settings(self) -> UnetSettings:
+        return self._settings
 
     def forward(self, x):
         """
@@ -203,7 +211,10 @@ class CustomUnetSettings:
 class CustomUnet(ModelABC, nn.Module):
     settings_kls = CustomUnetSettings
     onnx_supported = True
-    input_spatial_dims = (2,)
+    supported_num_spatial_dims = (2,)
+    features_last = False
+    model_type = ModelType.CONVOLUTIONNAL
+    num_spatial_dims: int = 2
 
     def __init__(
         self,
@@ -212,7 +223,11 @@ class CustomUnet(ModelABC, nn.Module):
         input_shape: Union[None, Tuple[int, int]] = None,
         settings: CustomUnetSettings = CustomUnetSettings(),
     ):
-        super(CustomUnet, self).__init__()
+        super().__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.input_shape = input_shape
+        self._settings = settings
 
         self.encoder = get_encoder(
             settings.encoder_name,
@@ -241,6 +256,11 @@ class CustomUnet(ModelABC, nn.Module):
 
         # Final convolutional layer for segmentation map
         self.final_conv = nn.Conv2d(decoder_out_channel, out_channels, kernel_size=1)
+        self.check_required_attributes()
+
+    @property
+    def settings(self) -> CustomUnetSettings:
+        return self._settings
 
     def forward(self, x):
         # Encoder part

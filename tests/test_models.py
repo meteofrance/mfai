@@ -85,7 +85,7 @@ def test_torch_training_loop(model_kls):
     NUM_OUTPUTS = 1
 
     # We test the model for all supported input spatial dimensions
-    for spatial_dims in model_kls.input_spatial_dims:
+    for spatial_dims in model_kls.supported_num_spatial_dims:
         settings = model_kls.settings_kls()
         if hasattr(settings, "spatial_dims"):
             settings.spatial_dims = spatial_dims
@@ -127,7 +127,7 @@ def test_extra_models(model_and_settings):
     NUM_INPUTS = 2
     NUM_OUTPUTS = 1
     model_kls, settings = model_and_settings
-    for spatial_dims in model_kls.input_spatial_dims:
+    for spatial_dims in model_kls.supported_num_spatial_dims:
         model = model_kls(
             in_channels=NUM_INPUTS,
             out_channels=NUM_OUTPUTS,

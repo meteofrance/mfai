@@ -142,6 +142,8 @@ Features:
 │ v              │ 8.9407e-07  │ 0.999997 │
 │ t2m            │ 5.06639e-06 │ 0.999995 │
 
+# rearrange in place using einops like syntax
+nt3.rearrange_("batch ngrid features -> batch features ngrid")
 ```
 
 # Metrics

@@ -71,7 +71,7 @@ class UNet(ModelABC, nn.Module):
     onnx_supported = True
     supported_num_spatial_dims = (2,)
     features_last = False
-    model_type = ModelType.CONVOLUTIONNAL
+    model_type = ModelType.CONVOLUTIONAL
     num_spatial_dims: int = 2
 
     def __init__(
@@ -213,7 +213,7 @@ class CustomUnet(ModelABC, nn.Module):
     onnx_supported = True
     supported_num_spatial_dims = (2,)
     features_last = False
-    model_type = ModelType.CONVOLUTIONNAL
+    model_type = ModelType.CONVOLUTIONAL
     num_spatial_dims: int = 2
 
     def __init__(

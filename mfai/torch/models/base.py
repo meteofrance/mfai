@@ -13,7 +13,7 @@ class ModelType(Enum):
     """
 
     GRAPH = 1
-    CONVOLUTIONNAL = 2
+    CONVOLUTIONAL = 2
     VISION_TRANSFORMER = 3
     LLM = 4
     MULTIMODAL_LLM = 5

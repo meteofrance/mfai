@@ -281,7 +281,7 @@ class DeepLabV3(ModelABC, torch.nn.Module):
     settings_kls = DeepLabV3Settings
     supported_num_spatial_dims = (2,)
     features_last: bool = False
-    model_type: int = ModelType.CONVOLUTIONNAL
+    model_type: int = ModelType.CONVOLUTIONAL
     num_spatial_dims: int = 2
 
     def __init__(

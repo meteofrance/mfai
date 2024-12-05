@@ -67,7 +67,7 @@ class HalfUNet(ModelABC, nn.Module):
     supported_num_spatial_dims = (2,)
     num_spatial_dims: int = 2
     features_last: bool = False
-    model_type: int = ModelType.CONVOLUTIONNAL
+    model_type: int = ModelType.CONVOLUTIONAL
 
     def __init__(
         self,

@@ -1,6 +1,7 @@
 import math
 from typing import Tuple
 
+import einops
 import torch
 import torch.nn as nn
 
@@ -92,3 +93,17 @@ def init_(tensor: torch.Tensor, dim_idx=-1):
     std = 1 / math.sqrt(dim)
     tensor.uniform_(-std, std)
     return tensor
+
+
+def features_last_to_second(x: torch.Tensor) -> torch.Tensor:
+    """
+    Moves features from the last dimension to the second dimension.
+    """
+    return einops.rearrange(x, "b x y n -> b n x y").contiguous()
+
+
+def features_second_to_last(y: torch.Tensor) -> torch.Tensor:
+    """
+    Moves features from the second dimension to the last dimension.
+    """
+    return einops.rearrange(y, "b n x y -> b x y n").contiguous()

@@ -12,7 +12,7 @@ from dataclasses_json import dataclass_json
 from einops import rearrange
 from torch import einsum, nn
 
-from .base import ModelABC
+from .base import ModelABC, ModelType
 
 
 def exists(val):
@@ -216,7 +216,10 @@ class Segformer(ModelABC, nn.Module):
 
     onnx_supported = True
     settings_kls = SegformerSettings
-    input_spatial_dims = (2,)
+    supported_num_spatial_dims = (2,)
+    features_last = False
+    model_type = ModelType.VISION_TRANSFORMER
+    num_spatial_dims: int = 2
 
     def __init__(
         self,
@@ -232,6 +235,7 @@ class Segformer(ModelABC, nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.input_shape = input_shape
+        self._settings = settings
 
         dims, heads, ff_expansion, reduction_ratio, num_layers = map(
             partial(cast_tuple, depth=4),
@@ -301,6 +305,10 @@ class Segformer(ModelABC, nn.Module):
             nn.Conv2d(dim_out // 4, out_channels, kernel_size=3, padding=1),
         )
         self.check_required_attributes()
+
+    @property
+    def settings(self) -> SegformerSettings:
+        return self._settings
 
     def forward(self, x):
         x = self.downsampler(x)

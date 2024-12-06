@@ -9,6 +9,7 @@ from .segformer import Segformer
 from .swinunetr import SwinUNETR
 from .unet import CustomUnet, UNet
 from .unetrpp import UNETRPP
+from .nlam import GraphLAM, HiLAM
 
 all_nn_architectures = (
     DeepLabV3,
@@ -19,6 +20,8 @@ all_nn_architectures = (
     UNet,
     CustomUnet,
     UNETRPP,
+    GraphLAM,
+    HiLAM,
 )
 
 

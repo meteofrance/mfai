@@ -1,3 +1,4 @@
+import tempfile
 import torch
 from lightning.pytorch.cli import ArgsType, LightningCLI
 import pytest
@@ -37,23 +38,24 @@ def test_lightning_training_loop(config):
     datamodule = DummyDataModule(task, 2, IMG_SIZE, IMG_SIZE, in_channels, out_channels)
     datamodule.setup()
 
-    # Define logger, callbacks and lightning Trainer
-    tblogger = TensorBoardLogger(save_dir="logs/")
-    checkpointer = ModelCheckpoint(
-        monitor="val_loss",
-        filename="ckpt-{epoch:02d}-{val_loss:.2f}",
-    )
-    trainer = L.Trainer(
-        logger=tblogger,
-        max_epochs=1,
-        callbacks=[checkpointer],
-        limit_train_batches=2,
-        limit_val_batches=2,
-        limit_test_batches=2,
-    )
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Define logger, callbacks and lightning Trainer
+        tblogger = TensorBoardLogger(save_dir=tmpdir, name="logs")
+        checkpointer = ModelCheckpoint(
+            monitor="val_loss",
+            filename="ckpt-{epoch:02d}-{val_loss:.2f}",
+        )
+        trainer = L.Trainer(
+            logger=tblogger,
+            max_epochs=1,
+            callbacks=[checkpointer],
+            limit_train_batches=2,
+            limit_val_batches=2,
+            limit_test_batches=2,
+        )
 
-    trainer.fit(model, datamodule.train_dataloader(), datamodule.val_dataloader())
-    trainer.test(model, datamodule.test_dataloader(), ckpt_path="best")
+        trainer.fit(model, datamodule.train_dataloader(), datamodule.val_dataloader())
+        trainer.test(model, datamodule.test_dataloader(), ckpt_path="best")
 
 
 def cli_main(args: ArgsType = None):

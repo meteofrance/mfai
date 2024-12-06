@@ -7,7 +7,7 @@ from monai.networks.blocks.dynunet_block import UnetResBlock
 from monai.networks.nets.swin_unetr import SwinUNETR as MonaiSwinUNETR
 from torch import nn
 
-from .base import ModelABC
+from .base import ModelABC, ModelType
 
 
 @dataclass_json
@@ -66,7 +66,10 @@ class SwinUNETR(ModelABC, MonaiSwinUNETR):
 
     onnx_supported = False
     settings_kls = SwinUNETRSettings
-    input_spatial_dims = (2,)
+    supported_num_spatial_dims = (2,)
+    features_last = False
+    model_type = ModelType.VISION_TRANSFORMER
+    num_spatial_dims: int = 2
 
     def __init__(
         self,
@@ -88,6 +91,7 @@ class SwinUNETR(ModelABC, MonaiSwinUNETR):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.input_shape = input_shape
+        self._settings = settings
 
         # We replace the decoders by UpsamplingBilinear2d + Conv2d
         # because ConvTranspose2d introduced checkerboard artifacts
@@ -128,3 +132,7 @@ class SwinUNETR(ModelABC, MonaiSwinUNETR):
         )
 
         self.check_required_attributes()
+
+    @property
+    def settings(self) -> SwinUNETRSettings:
+        return self._settings

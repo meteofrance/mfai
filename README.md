@@ -184,13 +184,21 @@ cd mfai
 pip install -e .
 ```
 
-## Using pip (experimental)
+## Using pip
 
-We have a first release on testpypi, you can install it with:
+You can install using pip trageting the main branch:
 
 ```bash
-pip install --index-url https://test.pypi.org/simple/ mfai
+pip install git+https://github.com/meteofrance/mfai
 ```
+
+If you want to target a specific tag/version or branch:
+
+```bash
+pip install git+https://github.com/meteofrance/mfai@v1.0.1
+```
+
+We do not provide wheel on pypi for now.
 
 # Usage
 

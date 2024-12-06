@@ -6,10 +6,12 @@ Test our pure PyTorch models to make sure they can be :
 4. onnx loaded and used for inference
 """
 
+import numpy as np
 import tempfile
 from pathlib import Path
 from typing import Tuple
 
+from mfai.torch.models.base import ModelType
 import pytest
 import torch
 from marshmallow.exceptions import ValidationError
@@ -43,10 +45,12 @@ class FakeSumDataset(torch.utils.data.Dataset):
         return x, y
 
 
-def train_model(model: torch.nn.Module, num_inputs: int, input_shape: Tuple[int, ...]):
+def train_model(model: torch.nn.Module, input_shape: Tuple[int, ...]):
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     loss_fn = torch.nn.MSELoss()
-    ds = FakeSumDataset((num_inputs, *input_shape))
+
+    ds = FakeSumDataset(input_shape)
+
     training_loader = torch.utils.data.DataLoader(ds, batch_size=2)
 
     # Simulate 2 EPOCHS of training
@@ -75,6 +79,13 @@ def train_model(model: torch.nn.Module, num_inputs: int, input_shape: Tuple[int,
     return model
 
 
+def meshgrid(grid_width: int, grid_height: int):
+    x = np.arange(0, grid_width, 1)
+    y = np.arange(0, grid_height, 1)
+    xx, yy = np.meshgrid(x, y)
+    return torch.from_numpy(np.asarray([xx, yy]))
+
+
 @pytest.mark.parametrize("model_kls", all_nn_architectures)
 def test_torch_training_loop(model_kls):
     """
@@ -84,28 +95,48 @@ def test_torch_training_loop(model_kls):
     NUM_INPUTS = 2
     NUM_OUTPUTS = 1
 
-    # We test the model for all supported input spatial dimensions
-    for spatial_dims in model_kls.supported_num_spatial_dims:
-        settings = model_kls.settings_kls()
-        if hasattr(settings, "spatial_dims"):
-            settings.spatial_dims = spatial_dims
+    settings = model_kls.settings_kls()
+
+    # for GNN models we test them with a fake 2d regular grid
+    if model_kls.model_type == ModelType.GRAPH:
+        if hasattr(model_kls, "rank_zero_setup"):
+            model_kls.rank_zero_setup(settings, meshgrid(64, 64))
+
+        if model_kls.features_last:
+            input_shape = (64 * 64, NUM_INPUTS)
+        else:
+            input_shape = (NUM_INPUTS, 64 * 64)
 
         model = model_kls(
             in_channels=NUM_INPUTS,
             out_channels=NUM_OUTPUTS,
-            input_shape=INPUT_SHAPE[:spatial_dims],
+            input_shape=input_shape,
             settings=settings,
         )
 
-        model = train_model(model, NUM_INPUTS, INPUT_SHAPE[:spatial_dims])
+        model = train_model(model, input_shape)
 
-        # We test if models claiming to be onnx exportable really are post training.
-        # See https://pytorch.org/tutorials/beginner/onnx/export_simple_model_to_onnx_tutorial.html
-        if model.onnx_supported:
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".onnx") as dst:
-                sample = torch.rand(1, NUM_INPUTS, *INPUT_SHAPE[:spatial_dims])
-                export_to_onnx(model, sample, dst.name)
-                onnx_load_and_infer(dst.name, sample)
+    else:
+        # We test the model for all supported input spatial dimensions
+        for spatial_dims in model_kls.supported_num_spatial_dims:
+            if hasattr(settings, "spatial_dims"):
+                settings.spatial_dims = spatial_dims
+
+            model = model_kls(
+                in_channels=NUM_INPUTS,
+                out_channels=NUM_OUTPUTS,
+                input_shape=INPUT_SHAPE[:spatial_dims],
+                settings=settings,
+            )
+            model = train_model(model, (NUM_INPUTS, *INPUT_SHAPE[:spatial_dims]))
+
+            # We test if models claiming to be onnx exportable really are post training.
+            # See https://pytorch.org/tutorials/beginner/onnx/export_simple_model_to_onnx_tutorial.html
+            if model.onnx_supported:
+                with tempfile.NamedTemporaryFile(mode="w", suffix=".onnx") as dst:
+                    sample = torch.rand(1, NUM_INPUTS, *INPUT_SHAPE[:spatial_dims])
+                    export_to_onnx(model, sample, dst.name)
+                    onnx_load_and_infer(dst.name, sample)
 
 
 @pytest.mark.parametrize(
@@ -134,7 +165,7 @@ def test_extra_models(model_and_settings):
             input_shape=INPUT_SHAPE[:2],
             settings=settings,
         )
-        train_model(model, NUM_INPUTS, INPUT_SHAPE[:spatial_dims])
+        train_model(model, (NUM_INPUTS, *INPUT_SHAPE[:spatial_dims]))
 
 
 def test_load_model_by_name():

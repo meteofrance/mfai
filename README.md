@@ -37,30 +37,6 @@
 
 # Neural Network Architectures
 
-Each model we provide is a subclass of [torch.nn.Module](https://pytorch.org/docs/stable/generated/torch.nn.Module.html) and can be used in a PyTorch training loop. It has three **critical** class attributes:
-- **settings_kls**: a class that defines the settings of the model (number of filters, kernel size, ...). It is used to instanciate the model with a specific configuration.
-- **onnx_supported**: a boolean that indicates if the model can be exported to onnx. Our CI validates that the model can be exported to onnx and reloaded for inference.
-- **input_spatial_dims**: a tuple that describes the spatial dimensions of the input tensor supported by the model. A model that supports 2D spatial data will have **(2,)** as value. A model that supports 2d or 3d spatial data will have **(2, 3)** as value.
-
-The Python interface contract for our model is enforced using [Python ABC](https://docs.python.org/3/library/abc.html) and in our case [ModelABC](mfai/torch/models/base.py#L1) class.
-
-```python
-@dataclass_json
-@dataclass(slots=True)
-class HalfUNetSettings:
-    num_filters: int = 64
-    dilation: int = 1
-    bias: bool = False
-    use_ghost: bool = False
-    last_activation: str = "Identity"
-    absolute_pos_embed: bool = False
-
-class HalfUNet(ModelABC, nn.Module):
-    settings_kls = HalfUNetSettings
-    onnx_supported = True
-    input_spatial_dims = (2,)
-```
-
 Currently we support the following neural network architectures:
 
 
@@ -87,6 +63,42 @@ Currently we support the following neural network architectures:
 | Model  | Research Paper  | Input Shape    | ONNX exportable ? | Notes | Use-Cases at MF |
 | :---:   | :---: | :---: | :---: | :---: | :---: |
 | [hilam, graphlam](mfai/torch/models/nlam/__init__.py) | [arxiv link](https://arxiv.org/abs/2309.17370)  | (Batch, graph_node_id, features)   | Imported and adapted from [Joel's github](https://github.com/joeloskarsson/neural-lam) |
+
+<details>
+<summary>Details about our models</summary>
+
+Each model we provide is a subclass of [torch.nn.Module](https://pytorch.org/docs/stable/generated/torch.nn.Module.html) and can be used in a PyTorch training loop. It has multiple class attributes to facilitate model usage in a project:
+- **settings_kls**: a class that defines the settings of the model (number of filters, kernel size, ...). It is used to instanciate the model with a specific configuration.
+- **onnx_supported**: a boolean that indicates if the model can be exported to onnx. Our CI validates that the model can be exported to onnx and reloaded for inference.
+- **supported_num_spatial_dims**: a tuple that describes the spatial dimensions of the input tensor supported by the model. A model that supports 2D spatial data will have **(2,)** as value. A model that supports 2d or 3d spatial data will have **(2, 3)** as value.
+- **num_spatial_dims**: an integer that describes the number of spatial dimensions of the input/output tensor expected by the instance of the model, must be a value in **supported_num_spatial_dims**.
+- **settings**: a runtime property returns the settings instance used to instanciate the model.
+- **model_type**: an Enum describing the type of model: CONVOLUTIONAL, VISION_TRANSFORMER, GRAPH, LLM, MLLM.
+- **features_last**: a boolean that indicates if the features dimension is the last dimension of the input/output tensor. If False, the features dimension is the second dimension of the input/output tensor.
+
+The Python interface contract for our model is enforced using [Python ABC](https://docs.python.org/3/library/abc.html) and in our case [ModelABC](mfai/torch/models/base.py#L1) class.
+
+```python
+@dataclass_json
+@dataclass(slots=True)
+class HalfUNetSettings:
+    num_filters: int = 64
+    dilation: int = 1
+    bias: bool = False
+    use_ghost: bool = False
+    last_activation: str = "Identity"
+    absolute_pos_embed: bool = False
+
+class HalfUNet(ModelABC, nn.Module):
+    settings_kls = HalfUNetSettings
+    onnx_supported: bool = True
+    supported_num_spatial_dims = (2,)
+    num_spatial_dims: int = 2
+    features_last: bool = False
+    model_type: int = ModelType.CONVOLUTIONAL
+```
+</details>
+
 
 # SegmentationLightningModule
 

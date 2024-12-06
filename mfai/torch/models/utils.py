@@ -107,3 +107,12 @@ def features_second_to_last(y: torch.Tensor) -> torch.Tensor:
     Moves features from the second dimension to the last dimension.
     """
     return einops.rearrange(y, "b n x y -> b x y n").contiguous()
+
+
+def expand_to_batch(x: torch.Tensor, batch_size: int):
+    """
+    Expand tensor with initial batch dimension
+    """
+    # In order to be generic (for 1D or 2D grid)
+    sizes = [batch_size] + [-1 for _ in x.shape]
+    return x.unsqueeze(0).expand(*sizes)

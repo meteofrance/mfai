@@ -198,7 +198,7 @@ If you want to target a specific tag/version or branch:
 pip install git+https://github.com/meteofrance/mfai@v1.0.1
 ```
 
-We do not provide wheel on pypi for now.
+This syntax also work in **requirements.txt**. We do not provide wheel on pypi for now.
 
 # Usage
 

@@ -283,6 +283,7 @@ class DeepLabV3(ModelABC, torch.nn.Module):
     features_last: bool = False
     model_type: int = ModelType.CONVOLUTIONAL
     num_spatial_dims: int = 2
+    register: bool = True
 
     def __init__(
         self,

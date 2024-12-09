@@ -22,6 +22,10 @@ class ModelType(Enum):
 
 
 class ModelABC(ABC):
+    # concrete subclasses shoudl set register to True
+    # to be included in the registry of available models.
+    register: bool = False
+
     @property
     @abstractmethod
     def onnx_supported(self) -> bool:

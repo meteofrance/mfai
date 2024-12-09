@@ -624,6 +624,7 @@ class UNETRPP(ModelABC, nn.Module):
     settings_kls = UNETRPPSettings
     model_type = ModelType.VISION_TRANSFORMER
     features_last: bool = False
+    register: bool = True
 
     def __init__(
         self,

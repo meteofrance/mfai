@@ -75,6 +75,7 @@ Each model we provide is a subclass of [torch.nn.Module](https://pytorch.org/doc
 - **settings**: a runtime property returns the settings instance used to instanciate the model.
 - **model_type**: an Enum describing the type of model: CONVOLUTIONAL, VISION_TRANSFORMER, GRAPH, LLM, MLLM.
 - **features_last**: a boolean that indicates if the features dimension is the last dimension of the input/output tensor. If False, the features dimension is the second dimension of the input/output tensor.
+- **register**: a boolean that indicates if the model should be registered in the **MODELS** registry. By default, it is set to False which allows the creation of intermediate subclasses not meant for direct use.
 
 The Python interface contract for our model is enforced using [Python ABC](https://docs.python.org/3/library/abc.html) and in our case [ModelABC](mfai/torch/models/base.py#L1) class.
 
@@ -96,6 +97,7 @@ class HalfUNet(ModelABC, nn.Module):
     num_spatial_dims: int = 2
     features_last: bool = False
     model_type: int = ModelType.CONVOLUTIONAL
+    register: bool = True
 ```
 </details>
 

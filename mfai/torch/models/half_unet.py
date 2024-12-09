@@ -68,6 +68,7 @@ class HalfUNet(ModelABC, nn.Module):
     num_spatial_dims: int = 2
     features_last: bool = False
     model_type: int = ModelType.CONVOLUTIONAL
+    register: bool = True
 
     def __init__(
         self,

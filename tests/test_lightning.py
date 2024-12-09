@@ -5,7 +5,7 @@ import pytest
 import lightning.pytorch as L
 
 from mfai.torch.dummy_dataset import DummyDataModule
-from mfai.torch.models import UNet
+from mfai.torch.models.unet import UNet
 from mfai.torch.segmentation_module import SegmentationLightningModule
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint

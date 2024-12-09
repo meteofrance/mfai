@@ -10,6 +10,8 @@ from typing import Any, Tuple
 class ModelType(Enum):
     """
     Enum to classify the models depending on their architecture family.
+    Having the model expose this as an attributee facilitates top level code:
+    reshaping input tensors, iterating only on a subset of models, etc.
     """
 
     GRAPH = 1

@@ -44,7 +44,7 @@ def load_from_settings_file(
 
     if model_kls is None:
         raise ValueError(
-            f"Model {model_name} not found in available architectures: {[x for x in registry]}"
+            f"Model {model_name} not found in available architectures: {[x for x in registry]}. Make sure the model's `registry` attribute is set to True (default is False)."
         )
 
     # load the settings

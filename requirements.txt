@@ -12,3 +12,6 @@ pandas==2.2.3
 torchmetrics==1.6.0
 torch-geometric==2.6.1
 scipy==1.14.1
+sentencepiece==0.2.0
+tiktoken==0.8.0
+huggingface_hub==0.26.5

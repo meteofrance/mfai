@@ -3,9 +3,8 @@ import torch.nn as nn
 
 """ Adapted from https://github.com/eladrich/pixel2style2pixel/tree/master/criteria/lpips"""
 
-from criteria.perceptual_loss.lpips.networks import LinLayers
-from criteria.perceptual_loss.lpips.utils import get_state_dict
-from criteria.perceptual_loss.perceptual_loss import PerceptualLoss
+from criteria.perceptual_loss.lpips.networks import LinLayers, get_state_dict
+from criteria.perceptual_loss.perceptual import PerceptualLoss
 
 class LPIPS(nn.Module):
     r"""Creates a criterion that measures
@@ -21,17 +20,9 @@ class LPIPS(nn.Module):
 
         self.config = config
         self.perceptual_loss = PerceptualLoss(config, device, multi_scale)
-        if self.config.network_type == 'alexnet':
-            net_type='alex'
-            n_channels_list = [64, 192, 384, 256, 256]
-        elif self.config.network_type == 'squeezenet1_1':
-            net_type = 'squeeze'
-            n_channels_list = [64, 128, 256, 384, 384, 512, 512]
-        elif self.config.network_type == 'vgg16':
-            net_type = 'vgg'
-            n_channels_list = [64, 128, 256, 512, 512]
-        else:
-            raise NotImplementedError('choose net_type from [alex, squeeze, vgg].')
+        
+        net_type = 'vgg'
+        n_channels_list = [64, 128, 256, 512, 512]
         
         # linear layers
         self.lin = LinLayers(n_channels_list).to("cuda")

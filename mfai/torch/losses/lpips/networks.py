@@ -1,20 +1,37 @@
 from typing import Sequence
-
+from collections import OrderedDict
+import torch
 from itertools import chain
-
 import torch
 import torch.nn as nn
 from torchvision import models
 
-from inversion.perceptual_loss.lpips.utils import normalize_activation
 
+
+def normalize_activation(x, eps=1e-10):
+    norm_factor = torch.sqrt(torch.sum(x ** 2, dim=1, keepdim=True))
+    return x / (norm_factor + eps)
+
+
+def get_state_dict(dir, net_type: str = 'alex'):
+
+    old_state_dict = torch.load(
+        dir+f'lpips/{net_type}.pth',
+        map_location=None if torch.cuda.is_available() else torch.device('cpu')
+    )
+
+    # rename keys
+    new_state_dict = OrderedDict()
+    for key, val in old_state_dict.items():
+        new_key = key
+        new_key = new_key.replace('lin', '')
+        new_key = new_key.replace('model.', '')
+        new_state_dict[new_key] = val
+
+    return new_state_dict
 
 def get_network(net_type: str):
-    if net_type == 'alex':
-        return AlexNet()
-    elif net_type == 'squeeze':
-        return SqueezeNet()
-    elif net_type == 'vgg':
+    if net_type == 'vgg':
         return VGG16()
     else:
         raise NotImplementedError('choose net_type from [alex, squeeze, vgg].')
@@ -61,29 +78,6 @@ class BaseNet(nn.Module):
             if len(output) == len(self.target_layers):
                 break
         return output
-
-
-class SqueezeNet(BaseNet):
-    def __init__(self):
-        super(SqueezeNet, self).__init__()
-
-        self.layers = models.squeezenet1_1(True).features
-        self.target_layers = [2, 5, 8, 10, 11, 12, 13]
-        self.n_channels_list = [64, 128, 256, 384, 384, 512, 512]
-
-        self.set_requires_grad(False)
-
-
-class AlexNet(BaseNet):
-    def __init__(self):
-        super(AlexNet, self).__init__()
-
-        self.layers = models.alexnet(True).features
-        self.target_layers = [2, 5, 8, 10, 12]
-        self.n_channels_list = [64, 192, 384, 256, 256]
-
-        self.set_requires_grad(False)
-
 
 class VGG16(BaseNet):
     def __init__(self):

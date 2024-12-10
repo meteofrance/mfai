@@ -19,8 +19,14 @@
       - swinunetr
       - unetr++
     - Graph Neural Networks:
-      - hilam
-      - graphlam
+      - HiLAM
+      - GraphLAM
+    - Large Language Models:
+      - GPT2
+      - LLama2
+    - Multimodal Language Models:
+      - A custom Fuyu inspired model
+  
 - [SegmentationLightningModule](#segmentationlightningmodule)
 - [NamedTensors](#namedtensors)
 - [Metrics](#metrics)
@@ -62,12 +68,25 @@ Currently we support the following neural network architectures:
 
 | Model  | Research Paper  | Input Shape    | ONNX exportable ? | Notes | Use-Cases at MF |
 | :---:   | :---: | :---: | :---: | :---: | :---: |
-| [hilam, graphlam](mfai/torch/models/nlam/__init__.py) | [arxiv link](https://arxiv.org/abs/2309.17370)  | (Batch, graph_node_id, features)   | Imported and adapted from [Joel's github](https://github.com/joeloskarsson/neural-lam) |
+| [HiLAM, GraphLAM](mfai/torch/models/nlam/__init__.py) | [arxiv link](https://arxiv.org/abs/2309.17370)  | (Batch, graph_node_id, features)   | No | Imported and adapted from [Joel's github](https://github.com/joeloskarsson/neural-lam) |
+
+## Large Language Models
+
+| Model  | Research Paper  | Input Shape    | ONNX exportable ? | Notes | Use-Cases at MF |
+| :---:   | :---: | :---: | :---: | :---: | :---: |
+| [GPT2](mfai/torch/models/llms/__init__.py#L182) | [openai paper](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf)  | (Batch, token_id) | No   | Imported and adapted from [Sebastian Raschka's book and github](https://github.com/rasbt/LLMs-from-scratch/) |
+| [Llama2](mfai/torch/models/llms/__init__.py#L432) | [arxiv link](https://arxiv.org/abs/2307.09288)  | (Batch, token_id) | No  | Imported and adapted from [Sebastian Raschka's book and github](https://github.com/rasbt/LLMs-from-scratch/) |
+
+## Multimodal Language Models
+
+| Model  | Research Paper  | Input Shape    | ONNX exportable ? | Notes | Use-Cases at MF |
+| :---:   | :---: | :---: | :---: | :---: | :---: |
+|[Custom Fuyu Like Model](mfai/torch/models/llms/multimodal.py#L37)| [arxiv link](https://arxiv.org/abs/2307.09288)  | (Batch, token_id) for text, (Batch, Lat, Lon, Timestep, Features) for weather inputs | No | Inspired from [Adept AI blog post](https://www.adept.ai/blog/fuyu-8b)  and [Sebastian Raschka's blog](https://magazine.sebastianraschka.com/p/understanding-multimodal-llms) | Marine text product generation |
 
 <details>
 <summary>Details about our models</summary>
 
-Each model we provide is a subclass of [torch.nn.Module](https://pytorch.org/docs/stable/generated/torch.nn.Module.html) and can be used in a PyTorch training loop. It has multiple class attributes to facilitate model usage in a project:
+Except for LLMs and MLLMs, each model we provide is a subclass of [torch.nn.Module](https://pytorch.org/docs/stable/generated/torch.nn.Module.html) and can be used in a PyTorch training loop. It has multiple class attributes to facilitate model usage in a project:
 - **settings_kls**: a class that defines the settings of the model (number of filters, kernel size, ...). It is used to instanciate the model with a specific configuration.
 - **onnx_supported**: a boolean that indicates if the model can be exported to onnx. Our CI validates that the model can be exported to onnx and reloaded for inference.
 - **supported_num_spatial_dims**: a tuple that describes the spatial dimensions of the input tensor supported by the model. A model that supports 2D spatial data will have **(2,)** as value. A model that supports 2d or 3d spatial data will have **(2, 3)** as value.

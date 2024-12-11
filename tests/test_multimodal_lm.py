@@ -1,3 +1,4 @@
+from typing import Union
 import pytest
 import torch
 from torch import nn, Tensor
@@ -11,7 +12,7 @@ def generate_text_simple(
     idx: Tensor,
     max_new_tokens: int,
     context_size: int,
-    vision_input: NamedTensor,
+    vision_input: Union[None, NamedTensor] = None,
 ) -> Tensor:
     # idx is (B, T) array of indices in the current context
     for _ in range(max_new_tokens):
@@ -22,7 +23,10 @@ def generate_text_simple(
 
         # Get the predictions
         with torch.no_grad():
-            logits = model(idx_cond, vision_input)
+            if vision_input:
+                logits = model(idx_cond, vision_input)
+            else:
+                logits = model(idx_cond)
 
         # Focus only on the last time step
         # (batch, n_token, vocab_size) becomes (batch, vocab_size)

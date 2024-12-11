@@ -1,10 +1,9 @@
+from functools import partial
 import pytest
 import torch
 from torch import Tensor, nn
 from mfai.torch.models.llms import Llama2Settings, Llama2, GPT2, GPT2Settings
 from mfai.tokenizers import LlamaTokenizer, GPT2Tokenizer
-
-torch.manual_seed(999)
 
 
 def generate_text_simple(
@@ -38,19 +37,21 @@ def generate_text_simple(
     "model_target_tokenizer",
     [
         (
-            GPT2(GPT2Settings()),
-            "Hello, I am CH commemor talent Container GPL dab OpenGL unsuccessful formallymits",
+            partial(GPT2, GPT2Settings()),
+            "Hello, I am CHrazinosaur hypothesized Masonic Helen Stef convin emerged Lexington",
             GPT2Tokenizer(),
         ),
         (
-            Llama2(Llama2Settings()),
-            "Hello, I am Federation ontobatonce Gr usefulfecategories representations alten",
+            partial(Llama2, Llama2Settings()),
+            "Hello, I am LCCN entertain fielGB surface деревняA proposeDid嘉",
             LlamaTokenizer(),
         ),
     ],
 )
 def test_llms(model_target_tokenizer):
+    torch.manual_seed(999)
     model, target, tokenizer = model_target_tokenizer
+    model = model()
     start_context = "Hello, I am"
     encoded = tokenizer.encode(start_context)
     encoded_tensor = torch.tensor(encoded).unsqueeze(0)

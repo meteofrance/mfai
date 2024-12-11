@@ -6,9 +6,6 @@ from mfai.torch.models.llms.multimodal import MultiModalLMSettings, MultiModalLM
 from mfai.torch.namedtensor import NamedTensor
 
 
-torch.manual_seed(999)
-
-
 def generate_text_simple(
     model: nn.Module,
     idx: Tensor,
@@ -49,11 +46,12 @@ def generate_text_simple(
         ),
         (
             "gpt2",
-            "Sustine et abstine É Raleigh moon comparing oct iOSiazep deflation Yuan Bridges",
+            "Sustine et abstinegreg LXamm Local addition Immun GlassrikeFal Resurrection",
         ),
     ],
 )
 def test_multimodal_llm(backend_target):
+    torch.manual_seed(999)
     backend, target = backend_target
     tokenizer = GPT2Tokenizer()
     model = MultiModalLM(

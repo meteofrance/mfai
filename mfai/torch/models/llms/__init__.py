@@ -9,6 +9,7 @@ from torch import nn
 from torch import Tensor
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
+from mfai.torch.models.base import ModelType
 
 
 ##########################################################################################################
@@ -187,6 +188,7 @@ class GPT2(nn.Module):
     """
 
     settings_kls = GPT2Settings
+    model_type = ModelType.LLM
 
     def __init__(self, settings: GPT2Settings, vocab_size: int = 50257):
         super().__init__()
@@ -437,6 +439,7 @@ class Llama2(nn.Module):
     """
 
     settings_kls = Llama2Settings
+    model_type = ModelType.LLM
 
     def __init__(self, settings: Llama2Settings, vocab_size: int = 32000):
         super().__init__()

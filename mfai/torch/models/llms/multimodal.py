@@ -5,6 +5,7 @@ from dataclasses import dataclass, asdict
 from dataclasses_json import dataclass_json
 import math
 from mfai.torch.models.llms import GPT2, Llama2
+from mfai.torch.models.base import ModelType
 from mfai.torch.namedtensor import NamedTensor
 
 
@@ -39,6 +40,9 @@ class MultiModalLM(nn.Module):
     A multimodal LLM : vision/weather and txt façon Fuyu.
     Can use GPT2 or Llama2 as its LLM backend.
     """
+
+    settings_kls = MultiModalLMSettings
+    model_type: ModelType.MULTIMODAL_LLM
 
     def __init__(
         self,

@@ -21,7 +21,7 @@ class PerceptualLoss(torch.nn.Module):
                  alpha_feature: float = 1,
         ):
         r''' Class that computes the Perceptual Loss based on selected Network.
-        
+
         Arguments :
                 device: (str) - Device where to store the Neural Network (default = 'cuda')
                 multi_scale: (bool) - Multi Scale mode to compute Perceptual Loss at different scales (default = False)
@@ -374,9 +374,9 @@ class LPIPS(nn.Module):
         
         # linear layers
         self.lin = LinLayers(n_channels_list).to("cuda")
-        self.lin.load_state_dict(self.get_state_dict())
+        self.lin.load_state_dict(self.__get_state_dict())
 
-    def get_state_dict(self, net_type: str = 'vgg16', version: str = '0.1'):
+    def __get_state_dict(self, net_type: str = 'vgg16', version: str = '0.1'):
         # build url
         url = 'https://raw.githubusercontent.com/richzhang/PerceptualSimilarity/' \
             + f'master/lpips/weights/v{version}/{net_type}.pth'

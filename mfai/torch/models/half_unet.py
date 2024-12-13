@@ -12,6 +12,7 @@ from mfai.torch.models.base import ModelABC, AutoPaddingModel
 from mfai.torch.models.utils import AbsolutePosEmdebding
 
 
+
 @dataclass_json
 @dataclass(slots=True)
 class HalfUNetSettings:
@@ -21,6 +22,7 @@ class HalfUNetSettings:
     use_ghost: bool = False
     last_activation: str = "Identity"
     absolute_pos_embed: bool = False
+    autopad_enabled: bool = False
 
 
 class GhostModule(nn.Module):
@@ -86,6 +88,7 @@ class HalfUNet(ModelABC, nn.Module, AutoPaddingModel):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.input_shape = input_shape
+        self.autopad_enabled = settings.autopad_enabled
 
         if settings.absolute_pos_embed:
             if input_shape is None:
@@ -179,8 +182,10 @@ class HalfUNet(ModelABC, nn.Module, AutoPaddingModel):
         self.activation = getattr(nn, settings.last_activation)()
 
         self.check_required_attributes()
-
+        
     def forward(self, x):
+        x, old_shape = self._maybe_padding(data_tensor=x)
+        
         enc1 = self.encoder1(x)
         enc2 = self.encoder2(self.pool1(enc1))
         enc3 = self.encoder3(self.pool2(enc2))
@@ -193,7 +198,9 @@ class HalfUNet(ModelABC, nn.Module, AutoPaddingModel):
             torch.zeros_like(enc1),
         )
         dec = self.decoder(summed)
-        return self.activation(self.outconv(dec))
+        out = self.activation(self.outconv(dec))
+        
+        return self._maybe_unpadding(out, old_shape=old_shape)
 
     @staticmethod
     def _block(

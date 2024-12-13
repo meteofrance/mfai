@@ -62,6 +62,7 @@ class DoubleConv(nn.Module):
 @dataclass(slots=True)
 class UnetSettings:
     init_features: int = 64
+    autopad_enabled: bool = False
 
 
 class UNet(ModelABC, nn.Module, AutoPaddingModel):
@@ -87,6 +88,7 @@ class UNet(ModelABC, nn.Module, AutoPaddingModel):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.input_shape = input_shape
+        self.autopad_enabled = settings.autopad_enabled
 
         features = settings.init_features
 
@@ -141,6 +143,8 @@ class UNet(ModelABC, nn.Module, AutoPaddingModel):
         are applied to a layer with an even x- and y-size.
         """
 
+        x, old_shape = self._maybe_padding(data_tensor=x)
+        
         enc1 = self.encoder1(x)
         enc2 = self.encoder2(self.max_pool(enc1))
         enc3 = self.encoder3(self.max_pool(enc2))
@@ -160,7 +164,9 @@ class UNet(ModelABC, nn.Module, AutoPaddingModel):
         dec1 = self.upconv1(dec2)
         dec1 = torch.cat((dec1, enc1), dim=1)
         dec1 = self.decoder1(dec1)
-        return self.conv(dec1)
+        out = self.conv(dec1)
+        
+        return self._maybe_unpadding(out, old_shape=old_shape)
 
     @staticmethod
     def _block(in_channels, features, name):
@@ -225,6 +231,7 @@ class CustomUnetSettings:
     encoder_name: str = "resnet18"
     encoder_depth: int = 5
     encoder_weights: bool = True
+    autopad_enabled: bool = False
 
 
 class CustomUnet(ModelABC, nn.Module, AutoPaddingModel):
@@ -249,6 +256,8 @@ class CustomUnet(ModelABC, nn.Module, AutoPaddingModel):
         )
 
         self.settings = settings
+        self.autopad_enabled = settings.autopad_enabled
+        self.input_shape = input_shape
         
         decoder_channels = self.encoder.out_channels[
             ::-1
@@ -272,6 +281,8 @@ class CustomUnet(ModelABC, nn.Module, AutoPaddingModel):
         self.final_conv = nn.Conv2d(decoder_out_channel, out_channels, kernel_size=1)
 
     def forward(self, x):
+        
+        x, old_shape = self._maybe_padding(data_tensor=x)
         # Encoder part
         encoder_outputs = self.encoder(x)
         encoder_outputs = encoder_outputs[
@@ -287,7 +298,8 @@ class CustomUnet(ModelABC, nn.Module, AutoPaddingModel):
             x = torch.cat([x, skip], dim=1)
             x = decoder(x)
 
-        return self.final_conv(x)
+        out = self.final_conv(x)
+        return self._maybe_unpadding(out, old_shape=old_shape)
     
     def validate_input_shape(self, input_shape: torch.Size) -> Tuple[bool | torch.Size]:
         number_pool_layers = self.settings.encoder_depth

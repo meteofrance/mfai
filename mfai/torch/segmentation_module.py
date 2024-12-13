@@ -1,15 +1,13 @@
 from pathlib import Path
-from typing import Callable, Literal, Tuple, Optional
+from typing import Callable, Literal, Tuple
 
 import lightning.pytorch as pl
 import pandas as pd
 import torch
 import torchmetrics as tm
 from pytorch_lightning.utilities import rank_zero_only
-import warnings
 
 from mfai.torch.models.base import ModelABC
-from mfai.torch.padding import pad_batch, undo_padding
 
 # define custom scalar in tensorboard, to have 2 lines on same graph
 layout = {
@@ -25,7 +23,6 @@ class SegmentationLightningModule(pl.LightningModule):
         model: ModelABC,
         type_segmentation: Literal["binary", "multiclass", "multilabel", "regression"],
         loss: Callable,
-        padding_strategy: Literal['none', 'apply_and_undo'] = 'none'
     ) -> None:
         """A lightning module adapted for segmentation of weather images.
 
@@ -33,9 +30,6 @@ class SegmentationLightningModule(pl.LightningModule):
             model (ModelABC): Torch neural network model in [DeepLabV3, DeepLabV3Plus, HalfUNet, Segformer, SwinUNETR, UNet, CustomUnet, UNETRPP]
             type_segmentation (Literal["binary", "multiclass", "multilabel", "regression"]): Type of segmentation we want to do"
             loss (Callable): Loss function
-            padding_stratey (Literal['none', 'apply_and_undo']): Defines the padding strategy to use. With 'none', it's is up to the user to
-                make sure that the input shapes fit the underlying model.
-                With 'apply_and_undo', padding is applied for the forward pass, but it is undone before returning the output. 
         """
         super().__init__()
         self.model = model
@@ -60,11 +54,6 @@ class SegmentationLightningModule(pl.LightningModule):
             self.model.input_shape[0],
             self.model.input_shape[1],
         )
-        
-        self.padding_strategy = padding_strategy
-        if not self.model.auto_padding_supported and padding_strategy != 'none':
-            warnings.warn(f"{self.model.__class__.__name__} does not support autopadding and will not be used.",
-                          UserWarning)
 
     def get_metrics(self):
         """Defines the metrics that will be computed during valid and test steps."""
@@ -107,12 +96,10 @@ class SegmentationLightningModule(pl.LightningModule):
             inputs = inputs.to(memory_format=torch.channels_last)
         # We prefer when the last activation function is included in the loss and not in the model.
         # Consequently, we need to apply the last activation manually here, to get the real output.
-        inputs, old_shape = self._maybe_padding(data_tensor=inputs)
-        y_hat = self.model(inputs)
-        y_hat = self.last_activation(y_hat)
-        y_hat = self._maybe_unpadding(y_hat, old_shape=old_shape)
-        return y_hat
 
+        y_hat = self.model(inputs)
+        return self.last_activation(y_hat)
+    
     def _shared_forward_step(self, x: torch.Tensor, y: torch.Tensor):
         """Computes forward pass and loss for a batch.
         Step shared by training, validation and test steps"""
@@ -120,58 +107,11 @@ class SegmentationLightningModule(pl.LightningModule):
             x = x.to(memory_format=torch.channels_last)
         # We prefer when the last activation function is included in the loss and not in the model.
         # Consequently, we need to apply the last activation manually here, to get the real output.
-        x, old_shape = self._maybe_padding(x)
         y_hat = self.model(x)
-        y_hat = self._maybe_unpadding(y_hat, old_shape=old_shape)
-
         loss = self.loss(y_hat, y)
         y_hat = self.last_activation(y_hat)
 
         return y_hat, loss
-    
-    def _maybe_padding(self, data_tensor: torch.Tensor)-> Tuple[torch.Tensor, Optional[torch.Size]]:
-        """ Performs an optional padding to ensure that the data tensor can be fed 
-            to the underlying model. Padding will happen if the underlying model 
-            supports it and if self.padding_strategy is set to 'apply_and_undo'.
-
-        Args:
-            data_tensor (torch.Tensor): the input data to be potentially padded. 
-
-        Raises:
-            ValueError: if the padding strategy is not valid, an error is raised. 
-
-        Returns:
-            Tuple[torch.Tensor, Optional[torch.Size]]: the padded tensor, where the original data is found in the center, 
-            and the old size if padding was possible. If not possible or the shape is already fine, 
-            the data is returned untouched and the second return value will be none. 
-        """
-        if self.padding_strategy == 'none' or not self.model.auto_padding_supported:
-            return data_tensor, None
-        if self.padding_strategy != 'apply_and_undo':
-            raise ValueError()
-        
-        old_shape = data_tensor.shape[-len(self.model.input_shape):]
-        valid_shape, new_shape = self.model.validate_input_shape(data_tensor.shape[-len(self.model.input_shape):])
-        if not valid_shape:
-            return pad_batch(batch=data_tensor, new_shape=new_shape, pad_value=0), old_shape
-        return data_tensor, None
-    
-    def _maybe_unpadding(self, data_tensor: torch.Tensor, old_shape: torch.Size)-> torch.Tensor:
-        """Potentially removes the padding previously added to the given tensor. This action 
-           is only carried out if self.padding_strategy is set to 'apply_and_undo' and old_shape 
-           is not None.
-
-        Args:
-            data_tensor (torch.Tensor): The data tensor from which padding is to be removed. 
-            old_shape (torch.Size): The previous shape of the data tensor. It can either be 
-            [W,H] or [W,H,D] for 2D and 3D data respectively. old_shape is returned by self._maybe_padding.
-
-        Returns:
-            torch.Tensor: The data tensor with the padding removed, if possible.
-        """
-        if self.padding_strategy == 'apply_and_undo' and old_shape is not None:
-            return undo_padding(data_tensor, old_shape=old_shape)
-        return data_tensor
         
 
     def on_train_start(self):

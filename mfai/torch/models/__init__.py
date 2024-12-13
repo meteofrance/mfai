@@ -1,8 +1,11 @@
 from pathlib import Path
 from typing import Optional, Tuple
+from inspect import getmembers, isclass
+import sys
 
 from torch import nn
 
+from .base import AutoPaddingModel
 from .deeplabv3 import DeepLabV3, DeepLabV3Plus
 from .half_unet import HalfUNet
 from .segformer import Segformer
@@ -20,6 +23,10 @@ all_nn_architectures = (
     CustomUnet,
     UNETRPP,
 )
+
+
+autopad_nn_architectures = {obj[1] for obj in getmembers(sys.modules[__name__], isclass) 
+                 if issubclass(obj[1], AutoPaddingModel) and obj[0] != 'AutoPaddingModel'}
 
 
 def load_from_settings_file(

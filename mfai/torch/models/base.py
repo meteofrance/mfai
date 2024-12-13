@@ -3,9 +3,11 @@ Interface contract for our models.
 """
 
 from abc import ABC, abstractproperty, abstractmethod
-from typing import Tuple
+from typing import Tuple, Optional
 from torch import Size
+import torch
 
+from mfai.torch.padding import pad_batch, undo_padding
 
 class ModelABC(ABC):
     @abstractproperty
@@ -28,12 +30,6 @@ class ModelABC(ABC):
         A model supporting 2d and 3d tensors should return (2, 3).
         """
         
-    @property
-    def auto_padding_supported(self) -> bool:
-        """
-        Indicates whether the model supports automatic padding.
-        """
-        return isinstance(self, AutoPaddingModel)
     
     def check_required_attributes(self):
         # we check that the model has defined the following attributes.
@@ -60,3 +56,41 @@ class AutoPaddingModel(ABC):
                                 already fits the model's requirements. If that value is False, the second element contains the closest 
                                 shape that fits the model, otherwise it will be None.
         """
+        
+    def _maybe_padding(self, data_tensor: torch.Tensor)-> Tuple[torch.Tensor, Optional[torch.Size]]:
+        """ Performs an optional padding to ensure that the data tensor can be fed 
+            to the underlying model. Padding will happen if if 
+            autopadding was enabled via the settings.
+
+        Args:
+            data_tensor (torch.Tensor): the input data to be potentially padded. 
+
+        Returns:
+            Tuple[torch.Tensor, Optional[torch.Size]]: the padded tensor, where the original data is found in the center, 
+            and the old size if padding was possible. If not possible or the shape is already fine, 
+            the data is returned untouched and the second return value will be none. 
+        """
+        if not self.autopad_enabled:
+            return data_tensor, None
+        
+        old_shape = data_tensor.shape[-len(self.input_shape):]
+        valid_shape, new_shape = self.validate_input_shape(data_tensor.shape[-len(self.input_shape):])
+        if not valid_shape:
+            return pad_batch(batch=data_tensor, new_shape=new_shape, pad_value=0), old_shape
+        return data_tensor, None
+    
+    def _maybe_unpadding(self, data_tensor: torch.Tensor, old_shape: torch.Size)-> torch.Tensor:
+        """Potentially removes the padding previously added to the given tensor. This action 
+           is only carried out if autopadding was enabled via the settings.
+
+        Args:
+            data_tensor (torch.Tensor): The data tensor from which padding is to be removed. 
+            old_shape (torch.Size): The previous shape of the data tensor. It can either be 
+            [W,H] or [W,H,D] for 2D and 3D data respectively. old_shape is returned by self._maybe_padding.
+
+        Returns:
+            torch.Tensor: The data tensor with the padding removed, if possible.
+        """
+        if self.autopad_enabled and old_shape is not None:
+            return undo_padding(data_tensor, old_shape=old_shape)
+        return data_tensor

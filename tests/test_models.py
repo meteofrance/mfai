@@ -13,7 +13,6 @@ from typing import Tuple
 import pytest
 import torch
 from marshmallow.exceptions import ValidationError
-from mfai.torch.models.base import AutoPaddingModel
 
 from mfai.torch import export_to_onnx, onnx_load_and_infer
 from mfai.torch.models import (
@@ -22,6 +21,7 @@ from mfai.torch.models import (
     UNet,
     HalfUNet,
     all_nn_architectures,
+    autopad_nn_architectures,
     load_from_settings_file,
 )
 from mfai.torch.models.unet import CustomUnet
@@ -167,11 +167,9 @@ def test_load_model_by_name():
             / "halfunet128.json",
         )
      
-@pytest.mark.parametrize("model_class", all_nn_architectures)   
+@pytest.mark.parametrize("model_class", autopad_nn_architectures)   
 def test_input_shape_validation(model_class):
     
-    if not issubclass(model_class, AutoPaddingModel):
-        return 
     
     B, C, W, H = 32,3,64,65
     
@@ -189,3 +187,14 @@ def test_input_shape_validation(model_class):
     input_data_pad = padding.pad_batch(batch=input_data, new_shape=new_shape, pad_value=0)
     net(input_data_pad)
     
+    
+@pytest.mark.parametrize("model_class", autopad_nn_architectures)
+def test_autopad_models(model_class):
+    B, C, W, H = 32,3,64,65 # invalid [W,H] 
+    
+    input_data = torch.randn(B,C,W,H)
+    settings = model_class.settings_kls()
+    settings.autopad_enabled = True # enable autopad
+    net = model_class(in_channels=C, out_channels=1, input_shape=(64,65), settings=settings)
+    
+    net(input_data) # assert it does not fail

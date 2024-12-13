@@ -55,49 +55,7 @@ def test_lightning_training_loop(config):
     trainer.fit(model, datamodule.train_dataloader(), datamodule.val_dataloader())
     trainer.test(model, datamodule.test_dataloader(), ckpt_path="best")
     
-@pytest.mark.parametrize(
-    "config",
-    [
-        ("binary", 1, 1),
-        ("multiclass", 3, 3),
-        ("multilabel", 2, 4),
-        ("regression", 2, 1),
-    ],
-)
-def test_lightning_training_loop_autopad(tmp_path, config):
-    IMG_SIZE_x = 64
-    IMG_SIZE_y = 65
-    task, in_channels, out_channels = config
-    arch = UNet(
-        in_channels=in_channels,
-        out_channels=out_channels,
-        input_shape=[IMG_SIZE_x, IMG_SIZE_y],
-    )
 
-    loss = torch.nn.CrossEntropyLoss() if task == "multiclass" else torch.nn.MSELoss()
-    # Test that the module can handle inputs with a shape that would normally generate errors, 
-    # while the user does not need to handle anything but the 'padding_strategy' 
-    model = SegmentationLightningModule(arch, task, loss, padding_strategy='apply_and_undo')
-    
-    datamodule = DummyDataModule(task, 2, IMG_SIZE_x, IMG_SIZE_y, in_channels, out_channels)
-    datamodule.setup()
-    
-    tblogger = TensorBoardLogger(save_dir=tmp_path)
-    checkpointer = ModelCheckpoint(
-        monitor="val_loss",
-        filename="ckpt-{epoch:02d}-{val_loss:.2f}",
-    )
-    trainer = L.Trainer(
-        logger=tblogger,
-        max_epochs=1,
-        callbacks=[checkpointer],
-        limit_train_batches=2,
-        limit_val_batches=2,
-        limit_test_batches=2,
-    )
-
-    trainer.fit(model, datamodule.train_dataloader(), datamodule.val_dataloader())
-    trainer.test(model, datamodule.test_dataloader(), ckpt_path="best")
     
 
 def cli_main(args: ArgsType = None):

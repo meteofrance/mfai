@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 import torch
-import torchvision
+from typing import Sequence
+from collections import OrderedDict
 import torch
-import torch.nn as nn 
+from itertools import chain
+import torch.nn as nn
+from torchvision import models
 
 class PerceptualLoss(torch.nn.Module):
     def __init__(self,
@@ -34,6 +37,8 @@ class PerceptualLoss(torch.nn.Module):
         self.set_network()
 
         self.device=device
+        if 'cuda' in device and not torch.cuda.is_available() : 
+            self.device = 'cpu'
         
         # Iteration over channels for perceptual loss
         self.channel_iterative_mode = channel_iterative_mode # whether to iterates over the channel for perceptual loss
@@ -93,7 +98,7 @@ class PerceptualLoss(torch.nn.Module):
     def set_network(self):
         # Trained version obtained : "https://download.pytorch.org/models/vgg16-397923af.pth"
         self.size_resize=[224,224]
-        self.network = torchvision.models.vgg16(pretrained=self.pre_trained).to(self.device)
+        self.network = models.vgg16(pretrained=self.pre_trained).to(self.device)
         
         blocks =  self.set_blocks()
 
@@ -272,3 +277,130 @@ class PerceptualLoss(torch.nn.Module):
 
             
         return perceptual_loss
+
+
+
+class LPIPS(nn.Module):
+    r"""Creates a criterion that measures
+    Learned Perceptual Image Patch Similarity (LPIPS).
+    Arguments:
+        config (dict)
+
+        device (str)
+
+    """
+    def __init__(self, config, device, multi_scale):
+        super(LPIPS, self).__init__()
+
+        self.config = config
+        self.perceptual_loss = PerceptualLoss(config, device, multi_scale)
+        
+        net_type = 'vgg'
+        n_channels_list = [64, 128, 256, 512, 512]
+        
+        # linear layers
+        self.lin = LinLayers(n_channels_list).to("cuda")
+        self.lin.load_state_dict(get_state_dict(dir=self.config.network_dir,net_type=net_type))
+
+    def forward(self, x: torch.Tensor, y: torch.Tensor):
+        feat_x = self.perceptual_loss.compute_perceptual_features(x, return_features=True)
+        feat_y = self.perceptual_loss.compute_perceptual_features(y, return_features=True)
+        
+        feat_x_list = []
+        for xs in feat_x[0]:
+            for x in xs:
+                feat_x_list.append(x)
+        
+        feat_y_list = []
+        for xs in feat_y[0]:
+            for x in xs:
+                feat_y_list.append(x)
+
+        diff = [(fx - fy) ** 2 for fx, fy in zip(feat_x_list, feat_y_list)]
+        res = [l(d).mean((2, 3), True) for d, l in zip(diff, self.lin)]
+
+        return torch.sum(torch.cat(res, 0)) / x.shape[0]
+
+
+
+
+def normalize_activation(x, eps=1e-10):
+    norm_factor = torch.sqrt(torch.sum(x ** 2, dim=1, keepdim=True))
+    return x / (norm_factor + eps)
+
+
+def get_state_dict(dir, net_type: str = 'alex'):
+
+    old_state_dict = torch.load(
+        dir+f'lpips/{net_type}.pth',
+        map_location=None if torch.cuda.is_available() else torch.device('cpu')
+    )
+
+    # rename keys
+    new_state_dict = OrderedDict()
+    for key, val in old_state_dict.items():
+        new_key = key
+        new_key = new_key.replace('lin', '')
+        new_key = new_key.replace('model.', '')
+        new_state_dict[new_key] = val
+
+    return new_state_dict
+
+def get_network(net_type: str):
+    if net_type == 'vgg':
+        return VGG16()
+    else:
+        raise NotImplementedError('choose net_type from [alex, squeeze, vgg].')
+
+
+class LinLayers(nn.ModuleList):
+    def __init__(self, n_channels_list: Sequence[int]):
+        super(LinLayers, self).__init__([
+            nn.Sequential(
+                nn.Identity(),
+                nn.Conv2d(nc, 1, 1, 1, 0, bias=False)
+            ) for nc in n_channels_list
+        ])
+
+        for param in self.parameters():
+            param.requires_grad = False
+
+
+class BaseNet(nn.Module):
+    def __init__(self):
+        super(BaseNet, self).__init__()
+
+        # register buffer
+        self.register_buffer(
+            'mean', torch.Tensor([-.030, -.088, -.188])[None, :, None, None])
+        self.register_buffer(
+            'std', torch.Tensor([.458, .448, .450])[None, :, None, None])
+
+    def set_requires_grad(self, state: bool):
+        for param in chain(self.parameters(), self.buffers()):
+            param.requires_grad = state
+
+    def z_score(self, x: torch.Tensor):
+        return (x - self.mean) / self.std
+
+    def forward(self, x: torch.Tensor):
+        x = self.z_score(x)
+
+        output = []
+        for i, (_, layer) in enumerate(self.layers._modules.items(), 1):
+            x = layer(x)
+            if i in self.target_layers:
+                output.append(normalize_activation(x))
+            if len(output) == len(self.target_layers):
+                break
+        return output
+
+class VGG16(BaseNet):
+    def __init__(self):
+        super(VGG16, self).__init__()
+
+        self.layers = models.vgg16(True).features
+        self.target_layers = [4, 9, 16, 23, 30]
+        self.n_channels_list = [64, 128, 256, 512, 512]
+
+        self.set_requires_grad(False)

@@ -265,15 +265,15 @@ def test_named_tensor():
     # test dim_index
     assert nt_cat.dim_index("features") == 3
 
-    # test rearrange_
+    # test rearrange_
     nt_cat.rearrange_("batch lat lon features -> batch features lat lon")
     assert nt_cat.names == ["batch", "features", "lat", "lon"]
     assert nt_cat.tensor.shape == (3, 30, 256, 256)
 
-    # test rearrange_ raises ValueError if wrong rearrangement
+    # test rearrange_ raises ValueError if wrong rearrangement
     with pytest.raises(ValueError):
         nt_cat.rearrange_("batch lat lon features -> batch features lat")
-    
-    # test rearrange_ raises ValueError if non existing dim is supplied
+
+    # test rearrange_ raises ValueError if non existing dim is supplied
     with pytest.raises(ValueError):
         nt_cat.rearrange_("batch lat nodim features -> batch features lat lon")

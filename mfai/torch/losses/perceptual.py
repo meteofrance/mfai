@@ -11,12 +11,14 @@ class PerceptualLoss(torch.nn.Module):
     def __init__(self,
                  device: str = 'cuda',
                  multi_scale: bool = False,
-                 channel_iterative_mode: bool = False,
-                 in_channels: int = 1,
+                 channel_iterative_mode: bool = True,
+                 in_channels: int = 3,
                  pre_trained: bool = False,
                  resize_input: bool = False,
                  style_layer_ids: list = [],
+                 style_block_ids: list = [],
                  feature_layer_ids: list = [4,9,16,23,30],
+                 feature_block_ids: list = [0,1,2,3,4],
                  alpha_style: float = 0,
                  alpha_feature: float = 1,
         ):
@@ -36,8 +38,6 @@ class PerceptualLoss(torch.nn.Module):
          '''
         super(PerceptualLoss, self).__init__()
 
-        self.__set_network()
-
         self.device=device
         if 'cuda' in device and not torch.cuda.is_available() : 
             self.device = 'cpu'
@@ -54,6 +54,8 @@ class PerceptualLoss(torch.nn.Module):
 
         # Style layer
         self.style_layer_ids = style_layer_ids
+        self.style_block_ids=style_block_ids
+        self.feature_block_ids=feature_block_ids
         self.alpha_style = alpha_style
 
         # Features layers
@@ -66,6 +68,8 @@ class PerceptualLoss(torch.nn.Module):
         if multi_scale :
             for i in range(3):
                 self.scaling_factor.append(2**i)
+        
+        self.__set_network()
 
     def __set_blocks(self):
         r''' Set the blocks of layers from the neural network 
@@ -75,7 +79,7 @@ class PerceptualLoss(torch.nn.Module):
         '''
         blocks = []
         
-        if not self.channel_iterative_mode :
+        if not self.channel_iterative_mode and self.in_channels != 3:
             # The VGG16 is adapted so that the first layer can receive the required number of channels.
             layers = [nn.Conv2d(in_channels=self.in_channels, out_channels=64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)).eval()]
 
@@ -88,6 +92,7 @@ class PerceptualLoss(torch.nn.Module):
                 blocks.append(self.network.features[self.feature_layer_ids[id]:self.feature_layer_ids[id+1]].eval())
 
         else :
+            blocks.append(self.network.features[:self.feature_layer_ids[0]].eval())
             for id in range(len(self.feature_layer_ids)-1):
                 blocks.append(self.network.features[self.feature_layer_ids[id]:self.feature_layer_ids[id+1]].eval())
 
@@ -148,15 +153,15 @@ class PerceptualLoss(torch.nn.Module):
         
         if self.resize_input:
             x = torch.nn.functional.interpolate(x, mode='bilinear', size=self.size_resize, align_corners=False)
-            
+
         features = []
         styles= []
 
         for i, block in enumerate(self.blocks):
             x = block(x)
-            if i in self.feature_layer_ids:
+            if i in self.feature_block_ids:
                 features.append(x)
-            if i in self.style_layer_ids: 
+            if i in self.style_block_ids: 
                 act_x = x.reshape(x.shape[0], x.shape[1], -1)
                 gram_x = act_x @ act_x.permute(0, 2, 1)
                 styles.append(gram_x)
@@ -219,12 +224,12 @@ class PerceptualLoss(torch.nn.Module):
 
         loss = 0.0
         for i, _ in enumerate(self.blocks):
-            if i in self.feature_layer_ids:
+            if i in self.feature_block_ids:
                 x = features_x[i]
                 y = features_y[i]
                 loss_features = torch.nn.functional.l1_loss(x, y)
                 loss += self.alpha_feature*loss_features
-            if i in self.style_layer_ids: 
+            if i in self.style_block_ids: 
                 gram_x = styles_x[i]
                 gram_y = styles_y[i]
                 loss_style = torch.nn.functional.l1_loss(gram_x, gram_y)
@@ -303,7 +308,7 @@ class PerceptualLoss(torch.nn.Module):
                         else :
                             styles_y=None
                         perceptual_loss += self.__perceptual_loss_given_features_and_target(
-                            target_img=x[:, channel_id, :, :],
+                            x=x[:, channel_id, :, :],
                             features_y=features_y, 
                             styles_y=styles_y
                         )
@@ -317,7 +322,7 @@ class PerceptualLoss(torch.nn.Module):
                         styles_y=None
 
                     perceptual_loss += self.__perceptual_loss_given_features_and_target(
-                        target_img=x,
+                        x=x,
                         features_y=features_y, 
                         styles_y=styles_y,
                     )
@@ -350,7 +355,9 @@ class LPIPS(nn.Module):
                  pre_trained: bool = False,
                  resize_input: bool = False,
                  style_layer_ids: list = [],
+                 style_block_ids: list = [],
                  feature_layer_ids: list = [4,9,16,23,30],
+                 feature_block_ids: list = [0,1,2,3,4],
                  alpha_style: float = 0,
                  alpha_feature: float = 1
         ):
@@ -365,7 +372,9 @@ class LPIPS(nn.Module):
             pre_trained=pre_trained,
             resize_input=resize_input,
             style_layer_ids=style_layer_ids,
+            style_block_ids=style_block_ids,
             feature_layer_ids=feature_layer_ids,
+            feature_block_ids=feature_block_ids,
             alpha_style=alpha_style,
             alpha_feature=alpha_feature
         )

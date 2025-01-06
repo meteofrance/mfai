@@ -24,7 +24,7 @@ from monai.networks.layers.utils import get_norm_layer
 from monai.utils import optional_import
 from torch.nn.functional import scaled_dot_product_attention
 
-from .base import ModelABC
+from .base import ModelABC, ModelType
 
 
 def _trunc_normal_(tensor, mean, std, a, b):
@@ -620,8 +620,11 @@ class UNETRPP(ModelABC, nn.Module):
     """
 
     onnx_supported = False
-    input_spatial_dims = (2, 3)
+    supported_num_spatial_dims = (2, 3)
     settings_kls = UNETRPPSettings
+    model_type = ModelType.VISION_TRANSFORMER
+    features_last: bool = False
+    register: bool = True
 
     def __init__(
         self,
@@ -650,6 +653,8 @@ class UNETRPP(ModelABC, nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.input_shape = input_shape
+        self._settings = settings
+
         self.do_ds = settings.do_ds
         self.add_skip_connections = settings.add_skip_connections
         self.conv_op = getattr(nn, settings.conv_op)
@@ -794,6 +799,14 @@ class UNETRPP(ModelABC, nn.Module):
                 out_channels=out_channels,
             )
             self.check_required_attributes()
+
+    @property
+    def settings(self) -> UNETRPPSettings:
+        return self._settings
+
+    @property
+    def num_spatial_dims(self) -> int:
+        return self.settings.spatial_dims
 
     def proj_feat(self, x):
         if self.spatial_dims == 2:

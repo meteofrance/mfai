@@ -17,12 +17,12 @@ from torch import nn
 
 from mfai.torch.models.encoders import get_encoder
 
-from .base import ModelABC, AutoPaddingModel
+from .base import ModelABC, AutoPaddingModel, ModelType
 
 
 class DoubleConv(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, name: str):
-        super(DoubleConv, self).__init__()
+        super().__init__()
         self.double_conv = nn.Sequential(
             OrderedDict(
                 [
@@ -74,7 +74,11 @@ class UNet(ModelABC, nn.Module, AutoPaddingModel):
 
     settings_kls = UnetSettings
     onnx_supported = True
-    input_spatial_dims = (2,)
+    supported_num_spatial_dims = (2,)
+    features_last = False
+    model_type = ModelType.CONVOLUTIONAL
+    num_spatial_dims: int = 2
+    register: bool = True
 
     def __init__(
         self,
@@ -83,12 +87,13 @@ class UNet(ModelABC, nn.Module, AutoPaddingModel):
         input_shape: Union[None, Tuple[int, int]] = None,
         settings: UnetSettings = UnetSettings(),
     ):
-        super(UNet, self).__init__()
+        super().__init__()
 
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.input_shape = input_shape
         self.autopad_enabled = settings.autopad_enabled
+        self._settings = settings
 
         features = settings.init_features
 
@@ -120,6 +125,10 @@ class UNet(ModelABC, nn.Module, AutoPaddingModel):
         self.conv = nn.Conv2d(features, out_channels, kernel_size=1)
 
         self.check_required_attributes()
+
+    @property
+    def settings(self) -> UnetSettings:
+        return self._settings
 
     def forward(self, x):
         """
@@ -237,7 +246,11 @@ class CustomUnetSettings:
 class CustomUnet(ModelABC, nn.Module, AutoPaddingModel):
     settings_kls = CustomUnetSettings
     onnx_supported = True
-    input_spatial_dims = (2,)
+    supported_num_spatial_dims = (2,)
+    features_last = False
+    model_type = ModelType.CONVOLUTIONAL
+    num_spatial_dims: int = 2
+    register: bool = True
 
     def __init__(
         self,
@@ -246,7 +259,11 @@ class CustomUnet(ModelABC, nn.Module, AutoPaddingModel):
         input_shape: Union[None, Tuple[int, int]] = None,
         settings: CustomUnetSettings = CustomUnetSettings(),
     ):
-        super(CustomUnet, self).__init__()
+        super().__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.input_shape = input_shape
+        self._settings = settings
 
         self.encoder = get_encoder(
             settings.encoder_name,
@@ -279,6 +296,11 @@ class CustomUnet(ModelABC, nn.Module, AutoPaddingModel):
 
         # Final convolutional layer for segmentation map
         self.final_conv = nn.Conv2d(decoder_out_channel, out_channels, kernel_size=1)
+        self.check_required_attributes()
+
+    @property
+    def settings(self) -> CustomUnetSettings:
+        return self._settings
 
     def forward(self, x):
         

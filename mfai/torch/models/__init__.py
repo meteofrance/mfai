@@ -1,28 +1,33 @@
+import importlib
+import pkgutil
 from pathlib import Path
 from typing import Optional, Tuple
 from inspect import getmembers, isclass
 import sys
 
 from torch import nn
+from .base import AutoPaddingModel, ModelABC
 
-from .base import AutoPaddingModel
-from .deeplabv3 import DeepLabV3, DeepLabV3Plus
-from .half_unet import HalfUNet
-from .segformer import Segformer
-from .swinunetr import SwinUNETR
-from .unet import CustomUnet, UNet
-from .unetrpp import UNETRPP
 
-all_nn_architectures = (
-    DeepLabV3,
-    DeepLabV3Plus,
-    HalfUNet,
-    Segformer,
-    SwinUNETR,
-    UNet,
-    CustomUnet,
-    UNETRPP,
-)
+# Load all models from the torch.models package
+# which are ModelABC subclasses and have the register attribute set to True
+registry = dict()
+package = importlib.import_module("mfai.torch.models")
+for _, name, _ in pkgutil.walk_packages(package.__path__, package.__name__ + "."):
+    module = importlib.import_module(name)
+    for object_name, kls in module.__dict__.items():
+        if (
+            isinstance(kls, type)
+            and issubclass(kls, ModelABC)
+            and kls != ModelABC
+            and kls.register
+        ):
+            if kls.__name__ in registry:
+                raise ValueError(
+                    f"Model {kls.__name__} from plugin {object_name} already exists in the registry."
+                )
+            registry[kls.__name__] = kls
+all_nn_architectures = list(registry.values())
 
 
 autopad_nn_architectures = {obj[1] for obj in getmembers(sys.modules[__name__], isclass) 
@@ -41,13 +46,11 @@ def load_from_settings_file(
     """
 
     # pick the class matching the supplied name
-    model_kls = next(
-        (kls for kls in all_nn_architectures if kls.__name__ == model_name), None
-    )
+    model_kls = registry.get(model_name, None)
 
     if model_kls is None:
         raise ValueError(
-            f"Model {model_name} not found in available architectures: {[x.__name__ for x in all_nn_architectures]}"
+            f"Model {model_name} not found in available architectures: {[x for x in registry]}. Make sure the model's `registry` attribute is set to True (default is False)."
         )
 
     # load the settings

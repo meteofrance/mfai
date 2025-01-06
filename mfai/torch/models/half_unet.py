@@ -64,7 +64,7 @@ class GhostModule(nn.Module):
         return self.relu(x)
 
 
-class HalfUNet(ModelABC, nn.Module, AutoPaddingModel):
+class HalfUNet(ModelABC, AutoPaddingModel, nn.Module):
     settings_kls = HalfUNetSettings
     onnx_supported: bool = True
     supported_num_spatial_dims = (2,)

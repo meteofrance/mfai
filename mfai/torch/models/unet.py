@@ -5,6 +5,7 @@ for DSM/LabIA projects.
 
 from collections import OrderedDict
 from dataclasses import dataclass
+from functools import cached_property
 from typing import Tuple, Union
 from math import ceil
 
@@ -65,7 +66,7 @@ class UnetSettings:
     autopad_enabled: bool = False
 
 
-class UNet(ModelABC, nn.Module, AutoPaddingModel):
+class UNet(ModelABC, AutoPaddingModel, nn.Module):
     """
     Returns a u_net architecture, with uninitialised weights, matching desired numbers of input and output channels.
 
@@ -225,7 +226,7 @@ class UNet(ModelABC, nn.Module, AutoPaddingModel):
 
         return new_shape == input_shape, new_shape
     
-    @property
+    @cached_property 
     def _num_pool_layers(self):
         # introspective, looks at the code of forword and 
         # counts the number of max pool calls
@@ -243,7 +244,7 @@ class CustomUnetSettings:
     autopad_enabled: bool = False
 
 
-class CustomUnet(ModelABC, nn.Module, AutoPaddingModel):
+class CustomUnet(ModelABC, AutoPaddingModel, nn.Module):
     settings_kls = CustomUnetSettings
     onnx_supported = True
     supported_num_spatial_dims = (2,)

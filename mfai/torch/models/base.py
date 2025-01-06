@@ -5,9 +5,10 @@ Interface contract for our models.
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Optional, Tuple
-
 from torch import Size
+import torch
 
+from mfai.torch.padding import pad_batch, undo_padding
 
 class ModelType(Enum):
     """
@@ -22,8 +23,6 @@ class ModelType(Enum):
     LLM = 4
     MULTIMODAL_LLM = 5
 
-import torch
-from mfai.torch.padding import pad_batch, undo_padding
 
 class ModelABC(ABC):
     # concrete subclasses shoudl set register to True

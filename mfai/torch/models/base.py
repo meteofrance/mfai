@@ -22,7 +22,7 @@ class ModelType(Enum):
     LLM = 4
     MULTIMODAL_LLM = 5
 
-from mfai import torch
+import torch
 from mfai.torch.padding import pad_batch, undo_padding
 
 class ModelABC(ABC):

@@ -272,7 +272,6 @@ class CustomUnet(ModelABC, nn.Module, AutoPaddingModel):
             weights=settings.encoder_weights,
         )
 
-        self.settings = settings
         self.autopad_enabled = settings.autopad_enabled
         self.input_shape = input_shape
         
@@ -324,7 +323,7 @@ class CustomUnet(ModelABC, nn.Module, AutoPaddingModel):
         return self._maybe_unpadding(out, old_shape=old_shape)
     
     def validate_input_shape(self, input_shape: torch.Size) -> Tuple[bool | torch.Size]:
-        number_pool_layers = self.settings.encoder_depth
+        number_pool_layers = self._settings.encoder_depth
         print(number_pool_layers)
         d = 2**number_pool_layers
                 

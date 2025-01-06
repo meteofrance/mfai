@@ -30,8 +30,8 @@ for _, name, _ in pkgutil.walk_packages(package.__path__, package.__name__ + "."
 all_nn_architectures = list(registry.values())
 
 
-autopad_nn_architectures = {obj[1] for obj in getmembers(sys.modules[__name__], isclass) 
-                 if issubclass(obj[1], AutoPaddingModel) and obj[0] != 'AutoPaddingModel'}
+autopad_nn_architectures = {obj for obj in all_nn_architectures
+                 if issubclass(obj, AutoPaddingModel) and obj != 'AutoPaddingModel'}
 
 
 def load_from_settings_file(

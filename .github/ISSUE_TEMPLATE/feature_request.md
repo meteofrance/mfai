@@ -8,7 +8,7 @@ assignees: ''
 ---
 
 ## **Overview**
-Provide a high-level summary of the feature. Explain what the feature is and why it would be valuable for the library.
+Provide a high-level summary of the feature.
 
 ---
 

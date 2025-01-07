@@ -93,7 +93,6 @@ class UNet(ModelABC, AutoPaddingModel, nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.input_shape = input_shape
-        self.autopad_enabled = settings.autopad_enabled
         self._settings = settings
 
         features = settings.init_features
@@ -273,7 +272,6 @@ class CustomUnet(ModelABC, AutoPaddingModel, nn.Module):
             weights=settings.encoder_weights,
         )
 
-        self.autopad_enabled = settings.autopad_enabled
         self.input_shape = input_shape
         
         decoder_channels = self.encoder.out_channels[

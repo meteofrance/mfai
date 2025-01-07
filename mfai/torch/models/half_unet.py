@@ -92,7 +92,6 @@ class HalfUNet(ModelABC, AutoPaddingModel, nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.input_shape = input_shape
-        self.autopad_enabled = settings.autopad_enabled
         self._settings = settings
 
         if settings.absolute_pos_embed:

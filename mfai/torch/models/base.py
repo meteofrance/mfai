@@ -126,7 +126,7 @@ class AutoPaddingModel(ABC):
             and the old size if padding was possible. If not possible or the shape is already fine, 
             the data is returned untouched and the second return value will be none. 
         """
-        if not self.autopad_enabled:
+        if not self._settings.autopad_enabled:
             return data_tensor, None
         
         old_shape = data_tensor.shape[-len(self.input_shape):]
@@ -147,6 +147,6 @@ class AutoPaddingModel(ABC):
         Returns:
             torch.Tensor: The data tensor with the padding removed, if possible.
         """
-        if self.autopad_enabled and old_shape is not None:
+        if self._settings.autopad_enabled and old_shape is not None:
             return undo_padding(data_tensor, old_shape=old_shape)
         return data_tensor

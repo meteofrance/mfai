@@ -57,6 +57,7 @@ def test_lightning_training_loop(config):
         trainer.fit(model, datamodule.train_dataloader(), datamodule.val_dataloader())
         trainer.test(model, datamodule.test_dataloader(), ckpt_path="best")
 
+    
 
 def cli_main(args: ArgsType = None):
     cli = LightningCLI(

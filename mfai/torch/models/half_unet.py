@@ -2,13 +2,15 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from functools import reduce
 from typing import Tuple, Union
+from math import ceil
 
 import torch
 from dataclasses_json import dataclass_json
 from torch import nn
 
-from mfai.torch.models.base import ModelABC, ModelType
+from mfai.torch.models.base import ModelABC, AutoPaddingModel, ModelType
 from mfai.torch.models.utils import AbsolutePosEmdebding
+
 
 
 @dataclass_json
@@ -20,6 +22,7 @@ class HalfUNetSettings:
     use_ghost: bool = False
     last_activation: str = "Identity"
     absolute_pos_embed: bool = False
+    autopad_enabled: bool = False
 
 
 class GhostModule(nn.Module):
@@ -61,7 +64,7 @@ class GhostModule(nn.Module):
         return self.relu(x)
 
 
-class HalfUNet(ModelABC, nn.Module):
+class HalfUNet(ModelABC, AutoPaddingModel, nn.Module):
     settings_kls = HalfUNetSettings
     onnx_supported: bool = True
     supported_num_spatial_dims = (2,)
@@ -189,6 +192,8 @@ class HalfUNet(ModelABC, nn.Module):
         return self._settings
 
     def forward(self, x):
+        x, old_shape = self._maybe_padding(data_tensor=x)
+        
         enc1 = self.encoder1(x)
         enc2 = self.encoder2(self.pool1(enc1))
         enc3 = self.encoder3(self.pool2(enc2))
@@ -201,7 +206,9 @@ class HalfUNet(ModelABC, nn.Module):
             torch.zeros_like(enc1),
         )
         dec = self.decoder(summed)
-        return self.activation(self.outconv(dec))
+        out = self.activation(self.outconv(dec))
+        
+        return self._maybe_unpadding(out, old_shape=old_shape)
 
     @staticmethod
     def _block(
@@ -286,3 +293,19 @@ class HalfUNet(ModelABC, nn.Module):
                 *layers,
             )
         return layers
+    
+    def validate_input_shape(self, input_shape: torch.Size) -> Tuple[bool | torch.Size]:
+
+        number_pool_layers = sum(1 for layer in self.modules() if isinstance(layer, nn.MaxPool2d))
+    
+        # The UNet has M max pooling layers of size 2x2 with stride 2, each of which halves the 
+        # dimensions. For the residual connections to match shape, the input dimensions should 
+        # be divisible by 2^N
+        d = 2**number_pool_layers
+        
+        
+        new_shape = [d * ceil(input_shape[i]/d)  for i in range(len(input_shape))]
+        new_shape = torch.Size(new_shape)
+
+
+        return new_shape == input_shape, new_shape

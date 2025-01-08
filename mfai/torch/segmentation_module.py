@@ -96,10 +96,10 @@ class SegmentationLightningModule(pl.LightningModule):
             inputs = inputs.to(memory_format=torch.channels_last)
         # We prefer when the last activation function is included in the loss and not in the model.
         # Consequently, we need to apply the last activation manually here, to get the real output.
-        y_hat = self.model(inputs)
-        y_hat = self.last_activation(y_hat)
-        return y_hat
 
+        y_hat = self.model(inputs)
+        return self.last_activation(y_hat)
+    
     def _shared_forward_step(self, x: torch.Tensor, y: torch.Tensor):
         """Computes forward pass and loss for a batch.
         Step shared by training, validation and test steps"""
@@ -110,7 +110,9 @@ class SegmentationLightningModule(pl.LightningModule):
         y_hat = self.model(x)
         loss = self.loss(y_hat, y)
         y_hat = self.last_activation(y_hat)
+
         return y_hat, loss
+        
 
     def on_train_start(self):
         """Setup custom scalars panel on tensorboard and log hparams.

@@ -20,17 +20,6 @@ def test_perceptual_loss_on_same_img():
     loss = perceptual_loss.forward(input, input)
     assert pytest.approx(loss, 0.001) == 0
 
-    # # Pre-Trained VGG16 
-    # perceptual_loss = PerceptualLoss(
-    #     device='cpu',
-    #     multi_scale=False,
-    #     channel_iterative_mode=False,
-    #     pre_trained=True,
-    #     resize_input=False
-    # )
-    # loss = perceptual_loss.forward(input, input)
-    # assert pytest.approx(loss, 0.001) == 0
-
 
 def test_perceptual_loss_on_different_img():
     """
@@ -48,18 +37,6 @@ def test_perceptual_loss_on_different_img():
     )
     loss = perceptual_loss.forward(input, preds)
     assert pytest.approx(loss, 0.001) != 0
-
-    # # Pre-Trained VGG16 
-    # perceptual_loss = PerceptualLoss(
-    #     device='cpu',
-    #     multi_scale=False,
-    #     channel_iterative_mode=False,
-    #     pre_trained=True,
-    #     resize_input=False
-    # )
-    # loss = perceptual_loss.forward(input, preds)
-    # assert pytest.approx(loss, 0.001) != 0
-
 
 def test_feature_computation():
     """

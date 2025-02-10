@@ -6,6 +6,7 @@ from dataclasses_json import dataclass_json
 import math
 from mfai.torch.models.llms import GPT2, Llama2
 from mfai.torch.models.base import ModelType
+from mfai.torch.models.half_unet import HalfUNet, HalfUNetSettings
 from mfai.torch.namedtensor import NamedTensor
 
 
@@ -33,6 +34,9 @@ class MultiModalLMSettings:
         10,
     )  # lat_dim, lon_dim, timestep_dim, features_dim
     layer_norm_vis: bool = True
+    
+    # Option to add a tiny HalfUnet encoder to the vision input
+    use_halfunet_vis: bool = False
 
 
 class MultiModalLM(nn.Module):
@@ -101,6 +105,15 @@ class MultiModalLM(nn.Module):
                 for _ in range(settings.vision_input_shape[3])
             ]
         )
+        
+        self.use_halfunet_vis = settings.use_halfunet_vis
+        if settings.use_halfunet_vis:
+            self.hu_encoders = nn.ModuleList(
+                [
+                    HalfUNet(in_channels=settings.vision_input_shape[3], out_channels=settings.vision_input_shape[3], settings=HalfUNetSettings(num_filters=settings.vision_input_shape[3], autopad_enabled=True))
+                    for _ in range(settings.vision_input_shape[2])
+                ]
+            )
 
         self.layer_norm_vis = settings.layer_norm_vis
         if settings.layer_norm_vis:
@@ -125,13 +138,18 @@ class MultiModalLM(nn.Module):
             # batch, lat, lon, features
             # rearrange to batch, features, lat, lon
             timestep_nt.rearrange_("batch lat lon features -> batch features lat lon")
-
+            
+            if self.use_halfunet_vis:
+                timestep_nt = NamedTensor.new_like(self.hu_encoders[i](timestep_nt.tensor), timestep_nt)
+            
             for i in range(timestep_nt.dim_size("features")):
                 timestep_tensor = timestep_nt.select_dim("features", i)
                 timestep_tensor = self.downsampler(timestep_tensor)
+
                 timestep_tensor = timestep_tensor.flatten(1, 2)
                 if self.layer_norm_vis:
                     timestep_tensor = self.vis_layer_norms[i](timestep_tensor)
+
                 timestep_embed.append(self.linear_vis_projs[i](timestep_tensor))
 
             timestep_embed = torch.stack(timestep_embed, dim=1)

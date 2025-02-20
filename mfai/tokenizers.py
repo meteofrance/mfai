@@ -12,6 +12,11 @@ import sentencepiece as spm
 
 
 class Tokenizer(ABC):
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        pass
+
     @abstractmethod
     def encode(self, text: str, *args, **kwargs) -> torch.Tensor:
         pass
@@ -39,6 +44,9 @@ class Tokenizer(ABC):
 class GPT2Tokenizer(Tokenizer):
     def __init__(self):
         self.tokenizer = tiktoken.get_encoding("gpt2")
+
+    def name(self) -> str:
+        return "gpt2"
 
     def encode(self, text: str, *args, **kwargs) -> torch.Tensor:
         return self.tokenizer.encode(text, allowed_special={"<|endoftext|>"})
@@ -77,6 +85,9 @@ class LlamaTokenizer(Tokenizer):
         sp.load(tokenizer_file)
         self.tokenizer = sp
 
+    def name(self) -> str:
+        return "llama"
+    
     def encode(self, text: str, *args, **kwargs) -> torch.Tensor:
         return self.tokenizer.encode_as_ids(text)
 

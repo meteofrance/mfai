@@ -3,12 +3,14 @@ Module with various LLM tokenizers wrapped in a common interface.
 """
 
 from abc import ABC, abstractmethod
+from pathlib import Path
+
+import sentencepiece as spm
 import tiktoken
 import torch
-from pathlib import Path
-from huggingface_hub import hf_hub_download
-from huggingface_hub import login
-import sentencepiece as spm
+from huggingface_hub import hf_hub_download, login
+
+from mfai.encoding import get_tiktoken_encoding
 
 
 class Tokenizer(ABC):
@@ -38,7 +40,7 @@ class Tokenizer(ABC):
 
 class GPT2Tokenizer(Tokenizer):
     def __init__(self):
-        self.tokenizer = tiktoken.get_encoding("gpt2")
+        self.tokenizer = get_tiktoken_encoding("gpt2")
 
     def encode(self, text: str, *args, **kwargs) -> torch.Tensor:
         return self.tokenizer.encode(text, allowed_special={"<|endoftext|>"})

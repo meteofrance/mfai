@@ -6,7 +6,6 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 import sentencepiece as spm
-import tiktoken
 import torch
 from huggingface_hub import hf_hub_download, login
 

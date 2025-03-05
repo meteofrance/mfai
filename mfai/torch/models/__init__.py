@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 from torch import nn
-from .base import ModelABC
+from .base import AutoPaddingModel, ModelABC
 
 
 # Load all models from the torch.models package
@@ -26,6 +26,10 @@ for _, name, _ in pkgutil.walk_packages(package.__path__, package.__name__ + "."
                 )
             registry[kls.__name__] = kls
 all_nn_architectures = list(registry.values())
+
+
+autopad_nn_architectures = {obj for obj in all_nn_architectures
+                 if issubclass(obj, AutoPaddingModel) and obj != 'AutoPaddingModel'}
 
 
 def load_from_settings_file(

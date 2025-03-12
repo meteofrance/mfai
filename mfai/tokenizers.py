@@ -138,6 +138,9 @@ class MiniTokenizer(Tokenizer):
             self.token_to_id[self.base_tokenizer.eot_token] = new_id
             self.id_to_token[new_id] = self.base_tokenizer.eot_token
 
+    def name(self) -> str:
+        return "mini_" + self.base_tokenizer.name()
+
     def encode(self, text: str, *args, **kwargs) -> torch.Tensor:
         base_token_ids = self.base_tokenizer.encode(text)
         if self.token_to_id is not None:

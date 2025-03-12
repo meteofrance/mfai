@@ -47,43 +47,47 @@ def generate_text_simple(
         (
             "llama2",
             "Sustine et abstine condolences % contracted Expressku LookingOriginally laughable gathered redesign",
+            "Sustine et abstine objections Sanskrit hormavin 25 noting carbs contamination chatting caramel",
         ),
         (
             "gpt2",
             "Sustine et abstinegreg LXamm Local addition Immun GlassrikeFal Resurrection",
+            "Sustine et abstineohoorphLE546 Chocobo galleries Iranian thinly showc Comp",
         ),
     ],
 )
 def test_multimodal_llm(backend_target):
     torch.manual_seed(999)
-    backend, target = backend_target
+    backend, target_false, target_true = backend_target
     tokenizer = GPT2Tokenizer()
-    model = MultiModalLM(
-        settings=MultiModalLMSettings(
-            vision_input_shape=(3, 3, 2, 1),
-            backend=backend,
-            n_heads=1,
-            n_layers=1,
-            emb_dim=32,
-            hidden_dim=32,
-            context_length=32,
+    for force_vision, target in ((False, target_false), (True, target_true)):
+        model = MultiModalLM(
+            settings=MultiModalLMSettings(
+                vision_input_shape=(3, 3, 2, 1),
+                backend=backend,
+                n_heads=1,
+                n_layers=1,
+                emb_dim=32,
+                hidden_dim=32,
+                context_length=32,
+                inject_vision_each_stage=force_vision, 
+            )
         )
-    )
-    vision_input = NamedTensor(
-        torch.randn(1, 3, 3, 2, 1),
-        names=("batch", "lat", "lon", "timestep", "features"),
-        feature_names=("u",),
-    )
-    encoded = tokenizer.encode("Sustine et abstine")
-    encoded_tensor = torch.tensor(encoded).unsqueeze(0)
+        vision_input = NamedTensor(
+            torch.randn(1, 3, 3, 2, 1),
+            names=("batch", "lat", "lon", "timestep", "features"),
+            feature_names=("u",),
+        )
+        encoded = tokenizer.encode("Sustine et abstine")
+        encoded_tensor = torch.tensor(encoded).unsqueeze(0)
 
-    out = generate_text_simple(
-        model=model,
-        idx=encoded_tensor,
-        max_new_tokens=10,
-        context_size=model.context_length,
-        vision_input=vision_input,
-    )
-    decoded_text = tokenizer.decode(out.squeeze(0).tolist())
+        out = generate_text_simple(
+            model=model,
+            idx=encoded_tensor,
+            max_new_tokens=10,
+            context_size=model.context_length,
+            vision_input=vision_input,
+        )
+        decoded_text = tokenizer.decode(out.squeeze(0).tolist())
 
-    assert decoded_text == target
+        assert decoded_text == target

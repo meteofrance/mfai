@@ -4,13 +4,14 @@ It is widely inspired by Sebastian Raschka's book and work
 https://github.com/rasbt/LLMs-from-scratch/
 """
 
-import torch
-from torch import nn
-from torch import Tensor
 from dataclasses import dataclass
-from dataclasses_json import dataclass_json
-from mfai.torch.models.base import ModelType
+from typing import Union
 
+import torch
+from dataclasses_json import dataclass_json
+from torch import Tensor, nn
+
+from mfai.torch.models.base import ModelType
 
 ##########################################################################################################
 #######################################         GPT2           ###########################################
@@ -204,12 +205,25 @@ class GPT2(nn.Module):
         self.final_norm = LayerNorm(settings.emb_dim)
         self.out_head = nn.Linear(settings.emb_dim, vocab_size, bias=False)
 
-    def forward_vectors(self, embeddings: Tensor) -> Tensor:
+    def forward_vectors(
+        self, embeddings: Tensor, first_embedding: Union[None, Tensor] = None
+    ) -> Tensor:
         """
         Process a batch of embeddings through the model.
+        If first_embedding is supplied the first tokens of each blocks are replaced
+        by the corresponding embeddings. Useful for multimodal models with injection of vision data
+        at each stage.
         """
+
         x = self.drop_emb(embeddings)
-        x = self.trf_blocks(x)
+
+        if first_embedding is not None:
+            for block in self.trf_blocks:
+                # replace the first token of x by the corresponding first_embedding
+                x = torch.cat([first_embedding, x[:, first_embedding.shape[0] :, :]], dim=1)
+                x = block(x)
+        else:
+            x = self.trf_blocks(x)
         x = self.final_norm(x)
         logits = self.out_head(x)
         return logits
@@ -456,8 +470,19 @@ class Llama2(nn.Module):
     def embed_tokens(self, tok_ids: Tensor) -> Tensor:
         return self.tok_emb(tok_ids)
 
-    def forward_vectors(self, embeddings: Tensor) -> Tensor:
-        x = self.trf_blocks(embeddings)
+    def forward_vectors(
+        self, embeddings: Tensor, first_embedding: Union[None, Tensor] = None
+    ) -> Tensor:
+        x = embeddings
+        if first_embedding is not None:
+            for block in self.trf_blocks:
+                # replace the first token of x by the corresponding first_embedding
+                embeddings = torch.cat(
+                    [first_embedding, x[:, first_embedding.shape[0] :, :]], dim=1
+                )
+                x = block(x)
+        else:
+            x = self.trf_blocks(embeddings)
         x = self.final_norm(x)
         logits = self.out_head(x)
         return logits

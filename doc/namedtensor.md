@@ -148,10 +148,10 @@ nt = NamedTensor(
 )
 
 # Return the tensor indexed along the dimension dim_name with the desired index. The given dimension is removed from the tensor.
-selected_tensor = nt.select("features", 0)
+selected_tensor = nt.select_dim("features", 0)
 
 # Return the tensor indexed along the dimension dim_name with the indices tensor. The returned tensor has the same number of dimensions as the original tensor (input). The dim_name dimension has the same size as the length of indices; other dimensions have the same size as in the original tensor.
-indexed_tensor = nt.index_select("features", torch.tensor([0, 2]))
+indexed_tensor = nt.index_select_dim("features", torch.tensor([0, 2]))
 ```
 
 ### Iteration

@@ -34,6 +34,7 @@ Table of Contents:
 - **`feature_names`**: A list of names for the features along the last dimension of the tensor.
 - **`feature_names_to_idx`**: A dictionary mapping feature names to their indices.
 - **`feature_dim_name`**: The name of the feature dimension.
+- **`tensor`**: The `torch.Tensor`.
 
 ## Methods
 

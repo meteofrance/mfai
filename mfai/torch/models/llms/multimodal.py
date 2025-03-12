@@ -118,6 +118,20 @@ class MultiModalLM(nn.Module):
     @property
     def context_length(self):
         return self.backend.context_length
+    
+    def freeze_llm(self):
+        """
+        Freeze the LLM layers (not the vision layers)
+        """
+        for param in self.backend.parameters():
+            param.requires_grad = False
+    
+    def unfreeze_llm(self):
+        """
+        Unfreeze the LLM layers
+        """
+        for param in self.backend.parameters():
+            param.requires_grad = True
 
     def forward(self, text_tokens: Tensor, vision_input: NamedTensor) -> Tensor:
         # Linear projection of weather input data

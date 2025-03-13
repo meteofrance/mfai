@@ -49,17 +49,17 @@ def generate_text_simple(
         (
             "llama2",
             {
-                "llama": "Sustine et abstine staff пописа sur Datenrefref equations Soundantalfs",
-                "gpt2": "Sustine et abstine objections Sanskrit hormavin 25 noting carbs contamination chatting caramel",
-                "mini_gpt2": "Sustine et abstinelined regener cannabinoidibus fictional makeshift Literary Abdullah Tree dozens",
+                "llama": "Sustine et abstineAlignment Геrace sqlwesten Loggerлага Bushに同",
+                "gpt2": "Sustine et abstine decom diagn duty Hiroshima fielding richerICE refuel dexterityfest",
+                "mini_gpt2": "Sustine et abstineCaptagi charts wielding worship sqor remain Drivers worksposium",
             },
         ),
         (
             "gpt2",
             {
-                "llama": "Sustine et abstinerefrefrefумrefnakeжёнfragmentrefwhy",
-                "gpt2": "Sustine et abstineohoorphLE updates� Oaks GD straight correlates Sir",
-                "mini_gpt2": "Sustine et abstine200 Qi heter Wallace revolution 1997 349ety PARK682",
+                "llama": "Sustine et abstine współ terrestführtrange지edتズ ownershipantal",
+                "gpt2": "Sustine et abstine outright Manila TraymoralNeitherTargetcylå Hue hello",
+                "mini_gpt2": "Sustine et abstine works Rowling Gum finite fallen DiveivingDavis Clarke Ronald",
             },
         ),
     ],
@@ -81,7 +81,8 @@ def test_multimodal_llm(backend_target):
                 emb_dim=32,
                 hidden_dim=32,
                 context_length=32,
-            )
+            ),
+            vocab_size=tokenizer.vocab_size,
         )
         vision_input = NamedTensor(
             torch.randn(1, 3, 3, 2, 1),
@@ -98,7 +99,6 @@ def test_multimodal_llm(backend_target):
             context_size=model.context_length,
             vision_input=vision_input,
         )
-        out = torch.where(out > tokenizer.vocab_size - 1, 999, out)
         decoded_text = tokenizer.decode(out.squeeze(0).tolist())
 
         assert decoded_text == target[tokenizer.name()]

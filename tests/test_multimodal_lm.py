@@ -57,9 +57,9 @@ def generate_text_simple(
         (
             "gpt2",
             {
-                "llama": ("Sustine et abstine współ terrestführtrange지edتズ ownershipantal", "Sustine et abstine Cot plug机ϵ VianéWebView intention dinast Grab"),
+                "llama": ("Sustine et abstine współ terrestführtrange지edتズ ownershipantal", "Sustine et abstine Cot plugniu named technology Stuart возможièresམ soil"),
                 "gpt2": ("Sustine et abstine outright Manila TraymoralNeitherTargetcylå Hue hello", "Sustine et abstine marineFamily comprehensiveBabySecureの� erroneous Hogan cour standalone"),
-                "mini_gpt2": ("Sustine et abstine works Rowling Gum finite fallen DiveivingDavis Clarke Ronald", "Sustine et abstineomingruit hindsight specialsIndependentneedparseeddyanderingRaw"),
+                "mini_gpt2": ("Sustine et abstine works Rowling Gum finite fallen DiveivingDavis Clarke Ronald", "Sustine et abstineomingruit hindsightasa manufacturer chronic Jets nort euphem weird"),
             },
         ),
     ],

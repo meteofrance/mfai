@@ -220,7 +220,7 @@ class GPT2(nn.Module):
         if first_embedding is not None:
             for block in self.trf_blocks:
                 # replace the first token of x by the corresponding first_embedding
-                x = torch.cat([first_embedding, x[:, first_embedding.shape[0] :, :]], dim=1)
+                x = torch.cat([first_embedding, x[:, first_embedding.shape[1] :, :]], dim=1)
                 x = block(x)
         else:
             x = self.trf_blocks(x)
@@ -478,7 +478,7 @@ class Llama2(nn.Module):
             for block in self.trf_blocks:
                 # replace the first token of x by the corresponding first_embedding
                 embeddings = torch.cat(
-                    [first_embedding, x[:, first_embedding.shape[0] :, :]], dim=1
+                    [first_embedding, x[:, first_embedding.shape[1] :, :]], dim=1
                 )
                 x = block(x)
         else:

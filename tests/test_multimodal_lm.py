@@ -1,9 +1,11 @@
 from typing import Union
+
 import pytest
 import torch
-from torch import nn, Tensor
+from torch import Tensor, nn
+
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, MiniTokenizer
-from mfai.torch.models.llms.multimodal import MultiModalLMSettings, MultiModalLM
+from mfai.torch.models.llms.multimodal import MultiModalLM, MultiModalLMSettings
 from mfai.torch.namedtensor import NamedTensor
 
 
@@ -50,7 +52,7 @@ def generate_text_simple(
                 "llama": "Sustine et abstine staff пописа sur Datenrefref equations Soundantalfs",
                 "gpt2": "Sustine et abstine objections Sanskrit hormavin 25 noting carbs contamination chatting caramel",
                 "mini_gpt2": "Sustine et abstinelined regener cannabinoidibus fictional makeshift Literary Abdullah Tree dozens",
-            }
+            },
         ),
         (
             "gpt2",
@@ -58,14 +60,18 @@ def generate_text_simple(
                 "llama": "Sustine et abstinerefrefrefумrefnakeжёнfragmentrefwhy",
                 "gpt2": "Sustine et abstineohoorphLE updates� Oaks GD straight correlates Sir",
                 "mini_gpt2": "Sustine et abstine200 Qi heter Wallace revolution 1997 349ety PARK682",
-            }
+            },
         ),
     ],
 )
 def test_multimodal_llm(backend_target):
     torch.manual_seed(999)
     backend, target = backend_target
-    for tokenizer in [LlamaTokenizer(), GPT2Tokenizer(), MiniTokenizer(GPT2Tokenizer())]:
+    for tokenizer in [
+        LlamaTokenizer(),
+        GPT2Tokenizer(),
+        MiniTokenizer(GPT2Tokenizer()),
+    ]:
         model = MultiModalLM(
             settings=MultiModalLMSettings(
                 vision_input_shape=(3, 3, 2, 1),
@@ -92,7 +98,7 @@ def test_multimodal_llm(backend_target):
             context_size=model.context_length,
             vision_input=vision_input,
         )
-        out = torch.where(out > tokenizer.vocab_size-1, 999, out)
+        out = torch.where(out > tokenizer.vocab_size - 1, 999, out)
         decoded_text = tokenizer.decode(out.squeeze(0).tolist())
 
         assert decoded_text == target[tokenizer.name()]

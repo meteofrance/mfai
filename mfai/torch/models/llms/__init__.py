@@ -473,6 +473,13 @@ class Llama2(nn.Module):
     def forward_vectors(
         self, embeddings: Tensor, first_embedding: Union[None, Tensor] = None
     ) -> Tensor:
+        """
+        Process a batch of embeddings through the model.
+        If first_embedding is supplied the first tokens of each blocks are replaced
+        by the corresponding embeddings. Useful for multimodal models with injection of vision data
+        at each stage.
+        """
+
         x = embeddings
         if first_embedding is not None:
             for block in self.trf_blocks:

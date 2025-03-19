@@ -1,0 +1,16 @@
+FROM pytorch/pytorch:2.4.1-cuda11.8-cudnn9-runtime
+
+ARG INJECT_MF_CERT
+COPY mf.crt /usr/local/share/ca-certificates/mf.crt
+RUN ( test $INJECT_MF_CERT -eq 1 && update-ca-certificates ) || echo "MF certificate not injected"
+ARG REQUESTS_CA_BUNDLE
+ARG CURL_CA_BUNDLE
+
+RUN apt -y update && apt -y install git
+WORKDIR /app
+COPY requirements.txt requirements.txt
+COPY requirements_dev.txt requirements_dev.txt
+RUN pip install --upgrade pip && pip install -r requirements.txt && pip install -r requirements_dev.txt
+RUN pip install --upgrade build twine
+ADD mfai /app/mfai
+ADD tests /app/tests

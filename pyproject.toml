@@ -29,3 +29,44 @@ dependencies = {file = ["requirements.txt"]}
 
 [project.urls]
 Homepage = "https://github.com/meteofrance/mfai"
+
+[tool.mypy]
+# [mypy configuration file doc](https://mypy.readthedocs.io/en/stable/config_file.html#config-file-format)
+# [Platform configuration](https://mypy.readthedocs.io/en/stable/command_line.html#platform-configuration)
+python_version = "3.11"
+
+# [Disallow dynamic typing](https://mypy.readthedocs.io/en/stable/command_line.html#disallow-dynamic-typing)
+disallow_any_decorated = true
+disallow_any_expr = true
+disallow_any_generics = true
+
+# [Untyped definitions and calls](https://mypy.readthedocs.io/en/stable/command_line.html#untyped-definitions-and-calls)
+disallow_untyped_defs = true
+disallow_untyped_decorators = true
+
+# [None and Optional handling](https://mypy.readthedocs.io/en/stable/command_line.html#none-and-optional-handling)
+implicit_optional = true
+
+# [Configuring warnings](https://mypy.readthedocs.io/en/stable/command_line.html#configuring-warnings)
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unreachable = true
+
+# [Miscellaneous strictness flags](https://mypy.readthedocs.io/en/stable/command_line.html#miscellaneous-strictness-flags)
+strict_equality = true
+
+# [Configuring error messages](https://mypy.readthedocs.io/en/stable/command_line.html#configuring-error-messages)
+show_error_context = true
+show_error_code_links = true
+show_error_codes = true
+pretty = true
+force_uppercase_builtins = true
+force_union_syntax = true
+
+
+exclude = [
+  '^mfai/config/*$',
+  '^mfai/tokenizer/*$',
+  '^mfai/torch/*$',
+]

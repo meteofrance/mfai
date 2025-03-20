@@ -1,13 +1,12 @@
 from dataclasses import dataclass
-from typing import Tuple, Union
+from typing import List, Tuple, Union
 
 import torch
 import torch.nn as nn
-import torch.utils.model_zoo as model_zoo
 from dataclasses_json import dataclass_json
-from torchvision.models.resnet import BasicBlock, Bottleneck, ResNet
+from torchvision.models.resnet import ResNet
 
-from . import utils
+from mfai.torch.models import get_vision_encoder, utils
 
 
 class EncoderMixin:
@@ -19,7 +18,7 @@ class EncoderMixin:
     _output_stride = 32
 
     @property
-    def out_channels(self):
+    def out_channels(self) -> int:
         """Return channels dimensions for each tensor of forward output of encoder"""
         return self._out_channels[: self._depth + 1]
 
@@ -27,7 +26,7 @@ class EncoderMixin:
     def output_stride(self):
         return min(self._output_stride, 2**self._depth)
 
-    def set_in_channels(self, in_channels, pretrained=True):
+    def set_in_channels(self, in_channels: int, pretrained: bool = True) -> None:
         """Change first convolution channels"""
         if in_channels == 3:
             return
@@ -44,14 +43,10 @@ class EncoderMixin:
         """Override it in your implementation"""
         raise NotImplementedError
 
-    def make_dilated(self, output_stride):
+    def make_dilated(self, output_stride: int) -> None:
         if output_stride == 16:
-            stage_list = [
-                5,
-            ]
-            dilation_list = [
-                2,
-            ]
+            stage_list = [5]
+            dilation_list = [2]
 
         elif output_stride == 8:
             stage_list = [4, 5]
@@ -73,7 +68,7 @@ class EncoderMixin:
 
 
 class ResNetEncoder(ResNet, EncoderMixin):
-    def __init__(self, out_channels, depth=5, **kwargs):
+    def __init__(self, out_channels: int, depth: int = 5, **kwargs):
         super().__init__(**kwargs)
         self._depth = depth
         self._out_channels = out_channels
@@ -82,7 +77,7 @@ class ResNetEncoder(ResNet, EncoderMixin):
         del self.fc
         del self.avgpool
 
-    def get_stages(self):
+    def get_stages(self) -> List[nn.Module]:
         return [
             nn.Identity(),
             nn.Sequential(self.conv1, self.bn1, self.relu),
@@ -92,7 +87,7 @@ class ResNetEncoder(ResNet, EncoderMixin):
             self.layer4,
         ]
 
-    def forward(self, x):
+    def forward(self, x) -> List[torch.Tensor]:
         stages = self.get_stages()
 
         features = []
@@ -102,84 +97,10 @@ class ResNetEncoder(ResNet, EncoderMixin):
 
         return features
 
-    def load_state_dict(self, state_dict, **kwargs):
+    def load_state_dict(self, state_dict, **kwargs) -> None:
         state_dict.pop("fc.bias", None)
         state_dict.pop("fc.weight", None)
         super().load_state_dict(state_dict, **kwargs)
-
-
-encoders = {
-    "resnet18": {
-        "encoder": ResNetEncoder,
-        "pretrained_url": "https://dl.fbaipublicfiles.com/semiweaksupervision/model_files/semi_supervised_resnet18-d92f0530.pth",  # noqa
-        "params": {
-            "out_channels": (3, 64, 64, 128, 256, 512),
-            "block": BasicBlock,
-            "layers": [2, 2, 2, 2],
-        },
-    },
-    "resnet34": {
-        "encoder": ResNetEncoder,
-        "pretrained_url": "https://download.pytorch.org/models/resnet34-b627a593.pth",
-        "params": {
-            "out_channels": (3, 64, 64, 128, 256, 512),
-            "block": BasicBlock,
-            "layers": [3, 4, 6, 3],
-        },
-    },
-    "resnet50": {
-        "encoder": ResNetEncoder,
-        "pretrained_url": "https://dl.fbaipublicfiles.com/semiweaksupervision/model_files/semi_supervised_resnet50-08389792.pth",  # noqa
-        "params": {
-            "out_channels": (3, 64, 256, 512, 1024, 2048),
-            "block": Bottleneck,
-            "layers": [3, 4, 6, 3],
-        },
-    },
-}
-
-
-def get_encoder(
-    name: str,
-    in_channels: int = 3,
-    depth: int = 5,
-    weights: bool = True,
-    output_stride: int = 32,
-    **kwargs,
-):
-    """
-    Return an encoder with pretrained weights or not.
-    """
-    try:
-        Encoder = encoders[name]["encoder"]
-    except KeyError:
-        raise KeyError(
-            "Wrong encoder name `{}`, supported encoders: {}".format(
-                name, list(encoders.keys())
-            )
-        )
-
-    params = encoders[name]["params"]
-    params.update(depth=depth)
-    encoder = Encoder(**params)
-
-    if weights:
-        url = encoders[name]["pretrained_url"]
-        pretrained = True
-        if url is None:
-            pretrained = False
-            raise KeyError(
-                f"No url is available for the pretrained encoder choosen ({name})."
-            )
-        encoder.load_state_dict(model_zoo.load_url(url))
-    else:
-        pretrained = False
-
-    encoder.set_in_channels(in_channels, pretrained=pretrained)
-    if output_stride != 32:
-        encoder.make_dilated(output_stride)
-
-    return encoder
 
 
 @dataclass_json
@@ -201,7 +122,7 @@ class ResNet50(torch.nn.Module):
         settings: ResNet50Settings = ResNet50Settings(),
     ):
         super().__init__()
-        self.encoder = get_encoder(
+        self.encoder = get_vision_encoder(
             name="resnet50",
             in_channels=num_channels,
             depth=settings.encoder_depth,

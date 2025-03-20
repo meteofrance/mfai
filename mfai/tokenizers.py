@@ -4,7 +4,7 @@ Module with various LLM tokenizers wrapped in a common interface.
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
+from typing import Any, List
 
 import sentencepiece as spm
 from huggingface_hub import hf_hub_download, login
@@ -18,7 +18,7 @@ class Tokenizer(ABC):
         pass
 
     @abstractmethod
-    def encode(self, text: str, *args: Any, **kwargs: Any) -> None:
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> List[int]:
         pass
 
     @abstractmethod
@@ -50,7 +50,7 @@ class GPT2Tokenizer(Tokenizer):
     def name(self) -> str:
         return "gpt2"
 
-    def encode(self, text: str, *args: Any, **kwargs: Any) -> None:
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> List[int]:
         return self.tokenizer.encode(text, allowed_special={"<|endoftext|>"})
 
     def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
@@ -90,7 +90,7 @@ class LlamaTokenizer(Tokenizer):
     def name(self) -> str:
         return "llama"
 
-    def encode(self, text: str, *args: Any, **kwargs: Any) -> None:
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> List[int]:
         return self.tokenizer.encode_as_ids(text)
 
     def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
@@ -142,7 +142,7 @@ class MiniTokenizer(Tokenizer):
     def name(self) -> str:
         return "mini_" + self.base_tokenizer.name()
 
-    def encode(self, text: str, *args: Any, **kwargs: Any) -> None:
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> List[int]:
         base_token_ids = self.base_tokenizer.encode(text)
         if self.token_to_id is not None:
             return [self.token_to_id[x] for x in base_token_ids]

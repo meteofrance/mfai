@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any
 
 import sentencepiece as spm
-import torch
 from huggingface_hub import hf_hub_download, login
 
 from mfai.encoding import get_tiktoken_encoding

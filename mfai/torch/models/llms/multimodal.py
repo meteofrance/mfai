@@ -33,9 +33,12 @@ class MultiModalLMSettings:
         10,
     )  # lat_dim, lon_dim, timestep_dim, features_dim
     layer_norm_vis: bool = True
-    
+
     # Inject vision tokens at each stage ?
     inject_vision_each_stage: bool = False
+
+    # Vision encoder type ? none, halfunet, unetrpp
+    vision_encoder: str = "none"
 
 
 class MultiModalLM(nn.Module):
@@ -115,17 +118,51 @@ class MultiModalLM(nn.Module):
                 ]
             )
 
+        # Init the vision encoder if not 'none'
+        # we have one encoder per timestep
+        if settings.vision_encoder == "halfunet":
+            from mfai.torch.models.half_unet import HalfUNet
+
+            self.vision_encoders = nn.ModuleList(
+                [
+                    HalfUNet(
+                        in_channels=settings.vision_input_shape[3],
+                        out_channels=settings.vision_input_shape[3],
+                        settings=HalfUNet.settings_kls(num_filters=16),
+                    )
+                    for _ in range(settings.vision_input_shape[2])
+                ]
+            )
+        elif settings.vision_encoder == "unetrpp":
+            from mfai.torch.models.unetrpp import UNETRPP
+
+            self.vision_encoders = nn.ModuleList(
+                [
+                    UNETRPP(
+                        in_channels=settings.vision_input_shape[3],
+                        out_channels=settings.vision_input_shape[3],
+                        input_shape=(
+                            settings.vision_input_shape[0],
+                            settings.vision_input_shape[1],
+                        ),
+                    )
+                    for _ in range(settings.vision_input_shape[2])
+                ]
+            )
+        else:
+            self.vision_encoders = None
+
     @property
     def context_length(self):
         return self.backend.context_length
-    
+
     def freeze_llm(self):
         """
         Freeze the LLM layers (not the vision layers)
         """
         for param in self.backend.parameters():
             param.requires_grad = False
-    
+
     def unfreeze_llm(self):
         """
         Unfreeze the LLM layers
@@ -137,11 +174,19 @@ class MultiModalLM(nn.Module):
         # Linear projection of weather input data
         vis_timesteps_embeds = []
 
-        for timestep_nt in vision_input.iter_dim("timestep", bare_tensor=False):
+        for timestep_idx, timestep_nt in enumerate(
+            vision_input.iter_dim("timestep", bare_tensor=False)
+        ):
             timestep_embed = []
-            # batch, lat, lon, features
+            # shape is batch, lat, lon, features
             # rearrange to batch, features, lat, lon
             timestep_nt.rearrange_("batch lat lon features -> batch features lat lon")
+
+            #  encode using vision encoder if any
+            if self.vision_encoders is not None:
+                timestep_t = self.vision_encoders[timestep_idx](timestep_nt.tensor)
+                # wrap into a named tensor
+                timestep_nt = NamedTensor.new_like(timestep_t, timestep_nt)
 
             for i in range(timestep_nt.dim_size("features")):
                 timestep_tensor = timestep_nt.select_dim("features", i)
@@ -173,7 +218,9 @@ class MultiModalLM(nn.Module):
 
         if self.settings.inject_vision_each_stage:
             # Inject vision tokens at each stage
-            logits = self.backend.forward_vectors(x, vis_txt_embeds[:, : vis_embeds.shape[1]])
+            logits = self.backend.forward_vectors(
+                x, vis_txt_embeds[:, : vis_embeds.shape[1]]
+            )
         else:
             logits = self.backend.forward_vectors(x)
 

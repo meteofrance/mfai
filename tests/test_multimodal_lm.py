@@ -44,22 +44,92 @@ def generate_text_simple(
 
 
 @pytest.mark.parametrize(
+    "backend",
+    [
+        "llama2",
+        "gpt2",
+    ],
+)
+def test_multimodal_llm_vit(backend):
+    """
+    Testing with Vit no assert on result
+    """
+    H, W, T, F = 64, 64, 2, 1
+    torch.manual_seed(999)
+    for force_vision in (False, True):
+        for tokenizer in [
+            LlamaTokenizer(),
+            GPT2Tokenizer(),
+            MiniTokenizer(GPT2Tokenizer()),
+        ]:
+            for vision_encoder in ("none", "halfunet", "unetrpp"):
+                model = MultiModalLM(
+                    settings=MultiModalLMSettings(
+                        vision_input_shape=(H, W, T, F),
+                        backend=backend,
+                        n_heads=1,
+                        n_layers=1,
+                        emb_dim=32,
+                        hidden_dim=32,
+                        context_length=32,
+                        inject_vision_each_stage=force_vision,
+                        vision_encoder=vision_encoder,
+                    ),
+                    vocab_size=tokenizer.vocab_size,
+                )
+                vision_input = NamedTensor(
+                    torch.randn(1, H, W, T, F),
+                    names=["batch", "lat", "lon", "timestep", "features"],
+                    feature_names=["u"],
+                )
+                encoded = tokenizer.encode("Sustine et abstine")
+                encoded_tensor = torch.tensor(encoded).unsqueeze(0)
+
+                out = generate_text_simple(
+                    model=model,
+                    idx=encoded_tensor,
+                    max_new_tokens=10,
+                    context_size=model.context_length,
+                    vision_input=vision_input,
+                )
+                tokenizer.decode(out.squeeze(0).tolist())
+
+
+@pytest.mark.parametrize(
     "backend_target",
     [
         (
             "llama2",
             {
-                "llama": ("Sustine et abstineAlignment Геrace sqlwesten Loggerлага Bushに同", "Sustine et abstinecalarote чу七egung rocequelle应arqu management"),
-                "gpt2": ("Sustine et abstine decom diagn duty Hiroshima fielding richerICE refuel dexterityfest", "Sustine et abstine BUTILLEWithin substancesly outfield Toriesfinals Jenny applied"),
-                "mini_gpt2": ("Sustine et abstineCaptagi charts wielding worship sqor remain Drivers worksposium", "Sustine et abstine Patrol reflexForest os piousShe bent investigations 1972 Corp"),
+                "llama": (
+                    "Sustine et abstineAlignment Геrace sqlwesten Loggerлага Bushに同",
+                    "Sustine et abstinecalarote чу七egung rocequelle应arqu management",
+                ),
+                "gpt2": (
+                    "Sustine et abstine decom diagn duty Hiroshima fielding richerICE refuel dexterityfest",
+                    "Sustine et abstine BUTILLEWithin substancesly outfield Toriesfinals Jenny applied",
+                ),
+                "mini_gpt2": (
+                    "Sustine et abstineCaptagi charts wielding worship sqor remain Drivers worksposium",
+                    "Sustine et abstine Patrol reflexForest os piousShe bent investigations 1972 Corp",
+                ),
             },
         ),
         (
             "gpt2",
             {
-                "llama": ("Sustine et abstine współ terrestführtrange지edتズ ownershipantal", "Sustine et abstine Cot plugniu named technology Stuart возможièresམ soil"),
-                "gpt2": ("Sustine et abstine outright Manila TraymoralNeitherTargetcylå Hue hello", "Sustine et abstine marineFamily comprehensiveBabySecureの� erroneous Hogan cour standalone"),
-                "mini_gpt2": ("Sustine et abstine works Rowling Gum finite fallen DiveivingDavis Clarke Ronald", "Sustine et abstineomingruit hindsightasa manufacturer chronic Jets nort euphem weird"),
+                "llama": (
+                    "Sustine et abstine współ terrestführtrange지edتズ ownershipantal",
+                    "Sustine et abstine Cot plugniu named technology Stuart возможièresམ soil",
+                ),
+                "gpt2": (
+                    "Sustine et abstine outright Manila TraymoralNeitherTargetcylå Hue hello",
+                    "Sustine et abstine marineFamily comprehensiveBabySecureの� erroneous Hogan cour standalone",
+                ),
+                "mini_gpt2": (
+                    "Sustine et abstine works Rowling Gum finite fallen DiveivingDavis Clarke Ronald",
+                    "Sustine et abstineomingruit hindsightasa manufacturer chronic Jets nort euphem weird",
+                ),
             },
         ),
     ],
@@ -103,4 +173,6 @@ def test_multimodal_llm(backend_target):
             )
             decoded_text = tokenizer.decode(out.squeeze(0).tolist())
 
-            assert decoded_text == target[tokenizer.name()][0 if not force_vision else 1]
+            assert (
+                decoded_text == target[tokenizer.name()][0 if not force_vision else 1]
+            )

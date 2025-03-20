@@ -99,7 +99,7 @@ class SegmentationLightningModule(pl.LightningModule):
 
         y_hat = self.model(inputs)
         return self.last_activation(y_hat)
-    
+
     def _shared_forward_step(self, x: torch.Tensor, y: torch.Tensor):
         """Computes forward pass and loss for a batch.
         Step shared by training, validation and test steps"""
@@ -112,7 +112,6 @@ class SegmentationLightningModule(pl.LightningModule):
         y_hat = self.last_activation(y_hat)
 
         return y_hat, loss
-        
 
     def on_train_start(self):
         """Setup custom scalars panel on tensorboard and log hparams.

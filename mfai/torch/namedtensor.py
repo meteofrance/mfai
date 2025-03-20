@@ -69,7 +69,7 @@ class NamedTensor(TensorWrapper):
         self.feature_names_to_idx = {
             feature_name: idx for idx, feature_name in enumerate(feature_names)
         }
-        self.feature_names = feature_names
+        self.feature_names = list(feature_names)
         self.feature_dim_name = feature_dim_name
 
     @property
@@ -404,7 +404,7 @@ class NamedTensor(TensorWrapper):
                 f"Dimensions in rearrange_ {old_dims} do not match tensor dimensions {self.names}"
             )
         self.tensor = einops.rearrange(self.tensor, einops_str)
-        self.names = new_dims
+        self.names = list(new_dims)
 
     @staticmethod
     def new_like(tensor: torch.Tensor, other: "NamedTensor") -> "NamedTensor":

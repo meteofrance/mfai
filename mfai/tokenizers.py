@@ -88,7 +88,7 @@ class LlamaTokenizer(Tokenizer):
 
     def name(self) -> str:
         return "llama"
-    
+
     def encode(self, text: str, *args, **kwargs) -> torch.Tensor:
         return self.tokenizer.encode_as_ids(text)
 

@@ -32,6 +32,9 @@ Homepage = "https://github.com/meteofrance/mfai"
 
 [tool.mypy]
 # [mypy configuration file doc](https://mypy.readthedocs.io/en/stable/config_file.html#config-file-format)
+# [Import discovery](https://mypy.readthedocs.io/en/stable/command_line.html#import-discovery)
+ignore_missing_imports = true
+
 # [Platform configuration](https://mypy.readthedocs.io/en/stable/command_line.html#platform-configuration)
 python_version = "3.11"
 
@@ -69,4 +72,5 @@ exclude = [
   '^mfai/config/*$',
   '^mfai/tokenizer/*$',
   '^mfai/torch/*$',
+  '^mfai/tokenizers.py$',
 ]

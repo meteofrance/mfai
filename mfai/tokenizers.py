@@ -15,25 +15,24 @@ from mfai.encoding import get_tiktoken_encoding
 
 class Tokenizer(ABC):
     @abstractmethod
-    @property
     def name(self) -> str:
         pass
 
     @abstractmethod
-    def encode(self, text: str, *args: Any, **kwargs: Any) -> torch.Tensor:
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> None:
         pass
 
     @abstractmethod
     def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
         pass
 
-    @abstractmethod
     @property
+    @abstractmethod
     def eot_token(self) -> int:
         pass
 
-    @abstractmethod
     @property
+    @abstractmethod
     def vocab_size(self) -> int:
         pass
 
@@ -49,14 +48,11 @@ class GPT2Tokenizer(Tokenizer):
     def __init__(self) -> None:
         self.tokenizer = get_tiktoken_encoding("gpt2")
 
-    @property
     def name(self) -> str:
         return "gpt2"
 
-    def encode(self, text: str, *args: Any, **kwargs: Any) -> torch.Tensor:
-        return torch.Tensor(
-            self.tokenizer.encode(text, allowed_special={"<|endoftext|>"})
-        )
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> None:
+        return self.tokenizer.encode(text, allowed_special={"<|endoftext|>"})
 
     def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
         return self.tokenizer.decode(tokens, *args, **kwargs)
@@ -92,11 +88,10 @@ class LlamaTokenizer(Tokenizer):
         sp.load(tokenizer_file)
         self.tokenizer = sp
 
-    @property
     def name(self) -> str:
         return "llama"
 
-    def encode(self, text: str, *args: Any, **kwargs: Any) -> torch.Tensor:
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> None:
         return self.tokenizer.encode_as_ids(text)
 
     def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
@@ -145,14 +140,13 @@ class MiniTokenizer(Tokenizer):
             self.token_to_id[self.base_tokenizer.eot_token] = new_id
             self.id_to_token[new_id] = self.base_tokenizer.eot_token
 
-    @property
     def name(self) -> str:
-        return "mini_" + self.base_tokenizer.name
+        return "mini_" + self.base_tokenizer.name()
 
-    def encode(self, text: str, *args: Any, **kwargs: Any) -> torch.Tensor:
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> None:
         base_token_ids = self.base_tokenizer.encode(text)
         if self.token_to_id is not None:
-            return torch.Tensor([self.token_to_id[x] for x in base_token_ids])
+            return [self.token_to_id[x] for x in base_token_ids]
         else:
             return base_token_ids
 

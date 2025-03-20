@@ -128,7 +128,11 @@ class MultiModalLM(nn.Module):
                     HalfUNet(
                         in_channels=settings.vision_input_shape[3],
                         out_channels=settings.vision_input_shape[3],
-                        settings=HalfUNet.settings_kls(num_filters=16),
+                        settings=HalfUNet.settings_kls(num_filters=64, autopad_enabled=True),
+                        input_shape=(
+                            settings.vision_input_shape[0],
+                            settings.vision_input_shape[1],
+                        ),
                     )
                     for _ in range(settings.vision_input_shape[2])
                 ]

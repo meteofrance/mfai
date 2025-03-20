@@ -31,46 +31,38 @@ dependencies = {file = ["requirements.txt"]}
 Homepage = "https://github.com/meteofrance/mfai"
 
 [tool.mypy]
-# [mypy configuration file doc](https://mypy.readthedocs.io/en/stable/config_file.html#config-file-format)
-# [Import discovery](https://mypy.readthedocs.io/en/stable/command_line.html#import-discovery)
-ignore_missing_imports = true
-
-# [Platform configuration](https://mypy.readthedocs.io/en/stable/command_line.html#platform-configuration)
-python_version = "3.11"
-
-# [Disallow dynamic typing](https://mypy.readthedocs.io/en/stable/command_line.html#disallow-dynamic-typing)
-disallow_any_decorated = true
-disallow_any_expr = true
-disallow_any_generics = true
-
-# [Untyped definitions and calls](https://mypy.readthedocs.io/en/stable/command_line.html#untyped-definitions-and-calls)
-disallow_untyped_defs = true
-disallow_untyped_decorators = true
-
-# [None and Optional handling](https://mypy.readthedocs.io/en/stable/command_line.html#none-and-optional-handling)
-implicit_optional = true
-
-# [Configuring warnings](https://mypy.readthedocs.io/en/stable/command_line.html#configuring-warnings)
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_return_any = true
-warn_unreachable = true
-
-# [Miscellaneous strictness flags](https://mypy.readthedocs.io/en/stable/command_line.html#miscellaneous-strictness-flags)
-strict_equality = true
-
-# [Configuring error messages](https://mypy.readthedocs.io/en/stable/command_line.html#configuring-error-messages)
-show_error_context = true
-show_error_code_links = true
-show_error_codes = true
-pretty = true
-force_uppercase_builtins = true
-force_union_syntax = true
-
-
+# [mypy configuration file doc](https://mypy.readthedocs.io/en/stable/config_file.html)
 exclude = [
   '^mfai/config/*$',
   '^mfai/tokenizer/*$',
   '^mfai/torch/*$',
-  '^mfai/tokenizers.py$',
 ]
+
+# Disallows defining functions without type annotations or with incomplete type annotations.
+# Use Any for *args and **kwargs
+disallow_untyped_defs = true
+
+# Causes mypy to treat parameters with a None default value as having an implicit optional type (T | None)
+# Allows `def foo(a: str = None)` instead of `def foo(a: str | None = None)` or `def foo(a: Union[str, None] = None)`
+implicit_optional = true
+
+# Warn when a `#type: ignore` silences a line that is not actually generating an error
+warn_unused_ignores = true
+
+# Shows a warning when encountering any code inferred to be unreachable or redundant after performing type analysis.
+warn_unreachable = true
+
+# Configure mypy output styling
+show_error_code_links = true
+show_error_codes = true
+pretty = true
+
+# Override mypy default value `ignore_missing_imports = false` to `true` for modules with no typing
+# Has the effect of silencing `import-untyped` error
+[[tool.mypy.overrides]]
+module = [
+  "tiktoken_ext",
+  "tiktoken_ext.openai_public",
+  "sentencepiece",
+]
+ignore_missing_imports = true

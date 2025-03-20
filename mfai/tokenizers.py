@@ -4,6 +4,7 @@ Module with various LLM tokenizers wrapped in a common interface.
 
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Any
 
 import sentencepiece as spm
 import torch
@@ -13,29 +14,31 @@ from mfai.encoding import get_tiktoken_encoding
 
 
 class Tokenizer(ABC):
-    @property
     @abstractmethod
+    @property
     def name(self) -> str:
         pass
 
     @abstractmethod
-    def encode(self, text: str, *args, **kwargs) -> torch.Tensor:
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> torch.Tensor:
         pass
 
     @abstractmethod
-    def decode(self, tokens: list, *args, **kwargs) -> str:
+    def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
         pass
 
     @abstractmethod
+    @property
     def eot_token(self) -> int:
         pass
 
     @abstractmethod
+    @property
     def vocab_size(self) -> int:
         pass
 
     @abstractmethod
-    def post_init(self, tokens: set):
+    def post_init(self, tokens: set) -> None:
         """
         Do any post init using the full set of tokens
         available in the dataset.
@@ -43,16 +46,19 @@ class Tokenizer(ABC):
 
 
 class GPT2Tokenizer(Tokenizer):
-    def __init__(self):
+    def __init__(self) -> None:
         self.tokenizer = get_tiktoken_encoding("gpt2")
 
+    @property
     def name(self) -> str:
         return "gpt2"
 
-    def encode(self, text: str, *args, **kwargs) -> torch.Tensor:
-        return self.tokenizer.encode(text, allowed_special={"<|endoftext|>"})
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> torch.Tensor:
+        return torch.Tensor(
+            self.tokenizer.encode(text, allowed_special={"<|endoftext|>"})
+        )
 
-    def decode(self, tokens: list, *args, **kwargs) -> str:
+    def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
         return self.tokenizer.decode(tokens, *args, **kwargs)
 
     @property
@@ -63,12 +69,12 @@ class GPT2Tokenizer(Tokenizer):
     def vocab_size(self) -> int:
         return self.tokenizer.n_vocab
 
-    def post_init(self, tokens: set):
+    def post_init(self, tokens: set) -> None:
         pass
 
 
 class LlamaTokenizer(Tokenizer):
-    def __init__(self):
+    def __init__(self) -> None:
         sp = spm.SentencePieceProcessor()
 
         folderpath = Path(__file__).parent / "tokenizer" / "Llama-2-7B"
@@ -86,13 +92,14 @@ class LlamaTokenizer(Tokenizer):
         sp.load(tokenizer_file)
         self.tokenizer = sp
 
+    @property
     def name(self) -> str:
         return "llama"
-    
-    def encode(self, text: str, *args, **kwargs) -> torch.Tensor:
+
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> torch.Tensor:
         return self.tokenizer.encode_as_ids(text)
 
-    def decode(self, tokens: list, *args, **kwargs) -> str:
+    def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
         return self.tokenizer.decode_pieces(tokens)
 
     @property
@@ -103,7 +110,7 @@ class LlamaTokenizer(Tokenizer):
     def vocab_size(self) -> int:
         return self.tokenizer.vocab_size()
 
-    def post_init(self, tokens: set):
+    def post_init(self, tokens: set) -> None:
         pass
 
 
@@ -118,10 +125,10 @@ class MiniTokenizer(Tokenizer):
         self.base_tokenizer = base_tokenizer
 
         # at this stage the lookup table are not initialised
-        self.token_to_id = None
-        self.id_to_token = None
+        self.token_to_id: dict[int, int] | None = None
+        self.id_to_token: dict[int, int] | None = None
 
-    def post_init(self, tokens: set):
+    def post_init(self, tokens: set) -> None:
         """
         Constructs the forward and backward lookup tables between base tokenizer tokens
         and reduced set of ids.
@@ -138,17 +145,18 @@ class MiniTokenizer(Tokenizer):
             self.token_to_id[self.base_tokenizer.eot_token] = new_id
             self.id_to_token[new_id] = self.base_tokenizer.eot_token
 
+    @property
     def name(self) -> str:
-        return "mini_" + self.base_tokenizer.name()
+        return "mini_" + self.base_tokenizer.name
 
-    def encode(self, text: str, *args, **kwargs) -> torch.Tensor:
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> torch.Tensor:
         base_token_ids = self.base_tokenizer.encode(text)
         if self.token_to_id is not None:
-            return [self.token_to_id[x] for x in base_token_ids]
+            return torch.Tensor([self.token_to_id[x] for x in base_token_ids])
         else:
             return base_token_ids
 
-    def decode(self, tokens: list, *args, **kwargs) -> str:
+    def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
         if self.id_to_token is not None:
             base_tokens = [self.id_to_token[x] for x in tokens]
             return self.base_tokenizer.decode(base_tokens)

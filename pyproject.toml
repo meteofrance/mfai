@@ -31,11 +31,14 @@ dependencies = {file = ["requirements.txt"]}
 Homepage = "https://github.com/meteofrance/mfai"
 
 [tool.mypy]
-# [mypy configuration file doc](https://mypy.readthedocs.io/en/stable/config_file.html)
+# [mypy configuration file doc](https://mypy.readthedocs.io/en/stable/config_file.html#confval-exclude)
 exclude = [
-  '^mfai/config/*$',
-  '^mfai/tokenizer/*$',
-  '^mfai/torch/*$',
+  '^mfai/torch/models/*$',
+  '^mfai/torch/dummy_dataset.py$',
+  '^mfai/torch/metrics.py$',
+  '^mfai/torch/namedtensor.py$',
+  '^mfai/torch/padding.py$',
+  '^mfai/torch/segmentation_module.py$',
 ]
 
 # Disallows defining functions without type annotations or with incomplete type annotations.
@@ -64,5 +67,6 @@ module = [
   "tiktoken_ext",
   "tiktoken_ext.openai_public",
   "sentencepiece",
+  "onnxruntime",
 ]
 ignore_missing_imports = true

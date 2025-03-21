@@ -32,9 +32,9 @@ jobs:
     - name: Lint with ruff
       run: |
         ruff check mfai
-    - name: Test with pytest
-      run: |
-        pytest --cov=mfai --cov-fail-under=85 tests/
     - name: Type hinting with mypy
       run: |
         mypy mfai/
+    - name: Test with pytest
+      run: |
+        pytest --cov=mfai --cov-fail-under=85 tests/

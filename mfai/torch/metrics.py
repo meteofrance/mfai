@@ -37,6 +37,8 @@ class FNR(Metric):
     def __init__(self) -> None:
         super().__init__()
         full_state_update = True  # noqa
+        self.true_positives: torch.Tensor
+        self.false_negatives: torch.Tensor
         self.add_state("true_positives", default=torch.tensor(0), dist_reduce_fx="sum")
         self.add_state("false_negatives", default=torch.tensor(0), dist_reduce_fx="sum")
 
@@ -101,6 +103,9 @@ class CSINeighborood(Metric):
         if torch.cuda.is_available():
             self._device = torch.device("cuda")
 
+        self.true_positives: torch.Tensor
+        self.false_positives: torch.Tensor
+        self.false_negatives: torch.Tensor
         self.add_state(
             "true_positives",
             default=torch.zeros(self.num_classes).to(device=self.device),

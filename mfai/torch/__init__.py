@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import numpy
 import onnx
@@ -11,14 +12,17 @@ def to_numpy(tensor: torch.Tensor) -> numpy.ndarray:
     return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
 
 
-def export_to_onnx(model: nn.Module, sample: torch.Tensor, filepath: Path) -> None:
+def export_to_onnx(model: nn.Module, sample: torch.Tensor | tuple[Any], filepath: Path) -> None:
     """
     Exports a model to ONNX format.
     """
+    if isinstance(sample, torch.Tensor):
+        sample = (sample,)
+
     torch.onnx.export(
-        model,  # model being run
-        sample,  # model input (or a tuple for multiple inputs)
-        filepath.as_posix(),  # where to save the model (can be a file or file-like object)
+        model=model,  # model being run
+        args=sample,  # model input (or a tuple for multiple inputs)
+        f=filepath.as_posix(),  # where to save the model (can be a file or file-like object)
         export_params=True,  # store the trained parameter weights inside the model file
         opset_version=12,  # the ONNX version to export the model to
         do_constant_folding=True,  # whether to execute constant folding for optimization

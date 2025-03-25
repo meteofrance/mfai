@@ -53,11 +53,11 @@ Returns the size of a dimension given its name.
 ### `__str__(self)`
 Returns a string representation of the **NamedTensor** with useful statistics.
 
-### `select(self, dim_name: str, index: int, bare_tensor: bool = True) -> Union[torch.Tensor, "NamedTensor"]`
-Returns the tensor indexed along the dimension `dim_name` with the desired index. The given dimension is removed from the tensor. If `bare_tensor` is `True`, a bare PyTorch tensor is returned; otherwise, a **NamedTensor** is returned.
+### `select(self, dim_name: str, index: int) -> "NamedTensor"`
+Returns the tensor indexed along the dimension `dim_name` with the desired index. The given dimension is removed from the tensor.
 
-### `index_select(self, dim_name: str, indices: torch.Tensor, bare_tensor: bool = True) -> Union[torch.Tensor, "NamedTensor"]`
-Returns the tensor indexed along the dimension `dim_name` with the indices tensor. The returned tensor has the same number of dimensions as the original tensor. The `dim_name` dimension has the same size as the length of `indices`; other dimensions have the same size as in the original tensor. If `bare_tensor` is `True`, a bare PyTorch tensor is returned; otherwise, a **NamedTensor** is returned.
+### `index_select(self, dim_name: str, indices: torch.Tensor) -> "NamedTensor"`
+Returns the tensor indexed along the dimension `dim_name` with the indices tensor. The returned tensor has the same number of dimensions as the original tensor. The `dim_name` dimension has the same size as the length of `indices`; other dimensions have the same size as in the original tensor.
 
 ### `new_like(cls, tensor: torch.Tensor, other: "NamedTensor") -> "NamedTensor"`
 Creates a new **NamedTensor** with the same names but different data.
@@ -77,8 +77,8 @@ Concatenates a list of **NamedTensor** instances along the features dimension.
 ### `stack(cls, tensors: List["NamedTensor"], dim_name: str, dim: int) -> "NamedTensor"`
 Stacks a list of **NamedTensor** instances along a new dimension.
 
-### `iter_dim(self, dim_name: str, bare_tensor: bool = True) -> Iterable[Union[torch.Tensor, "NamedTensor"]]`
-Iterates over the specified dimension, yielding either bare tensors or **NamedTensor** instances. If `bare_tensor` is `True`, bare PyTorch tensors are yielded; otherwise, **NamedTensor** instances are yielded.
+### `iter_dim(self, dim_name: str) -> Iterable["NamedTensor"]`
+Iterates over the specified dimension, yielding either bare tensors or **NamedTensor** instances.
 
 ### `type_(self, new_type)`
 Modifies the type of the underlying torch tensor by calling torch's `.type` method. This is an in-place operation for this class, the internal tensor is replaced by the new one.
@@ -164,12 +164,9 @@ nt = NamedTensor(
     feature_names=["u", "v", "t2m"],
 )
 
-# Iterate over the 'batch' dimension, yielding bare tensors
-for tensor in nt.iter_dim("batch", bare_tensor=True):
-    print(tensor.shape)
 
 # Iterate over the 'batch' dimension, yielding NamedTensor instances
-for named_tensor in nt.iter_dim("batch", bare_tensor=False):
+for named_tensor in nt.iter_dim("batch"):
     print(named_tensor)
 ```
 

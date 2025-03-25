@@ -137,7 +137,7 @@ class MultiModalLM(nn.Module):
         # Linear projection of weather input data
         vis_timesteps_embeds = []
 
-        for timestep_nt in vision_input.iter_dim("timestep", bare_tensor=False):
+        for timestep_nt in vision_input.iter_dim("timestep"):
             timestep_embed = []
             # batch, lat, lon, features
             # rearrange to batch, features, lat, lon

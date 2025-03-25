@@ -194,6 +194,7 @@ class GPT2(nn.Module):
     def __init__(self, settings: GPT2Settings, vocab_size: int = 50257):
         super().__init__()
         self.context_length = settings.context_length
+        self.emb_dim = settings.emb_dim
         self.tok_emb = nn.Embedding(vocab_size, settings.emb_dim)
         self.pos_emb = nn.Embedding(settings.context_length, settings.emb_dim)
         self.drop_emb = nn.Dropout(settings.drop_rate)
@@ -220,7 +221,9 @@ class GPT2(nn.Module):
         if first_embedding is not None:
             for block in self.trf_blocks:
                 # replace the first token of x by the corresponding first_embedding
-                x = torch.cat([first_embedding, x[:, first_embedding.shape[1] :, :]], dim=1)
+                x = torch.cat(
+                    [first_embedding, x[:, first_embedding.shape[1] :, :]], dim=1
+                )
                 x = block(x)
         else:
             x = self.trf_blocks(x)
@@ -457,14 +460,15 @@ class Llama2(nn.Module):
 
     def __init__(self, settings: Llama2Settings, vocab_size: int = 32000):
         super().__init__()
-        self.tok_emb = nn.Embedding(vocab_size, settings.emb_dim)
+        self.emb_dim = settings.emb_dim
+        self.tok_emb = nn.Embedding(vocab_size, self.emb_dim)
 
         self.trf_blocks = nn.Sequential(
             *[TransformerBlockLlama2(settings) for _ in range(settings.n_layers)]
         )
 
-        self.final_norm = RMSNorm(settings.emb_dim)
-        self.out_head = nn.Linear(settings.emb_dim, vocab_size, bias=False)
+        self.final_norm = RMSNorm(self.emb_dim)
+        self.out_head = nn.Linear(self.emb_dim, vocab_size, bias=False)
         self.context_length = settings.context_length
 
     def embed_tokens(self, tok_ids: Tensor) -> Tensor:

@@ -217,6 +217,7 @@ class ResNet50(torch.nn.Module):
         # https://github.com/aladdinpersson/Machine-Learning-Collection/blob/master/ML/Pytorch/CNN_architectures/pytorch_resnet.py
         self.avgpool = torch.nn.AdaptiveAvgPool2d((1, 1))
         self.fc = torch.nn.Linear(512 * 4, num_classes)
+        self.num_classes = num_classes
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         y_hat = self.encoder(x)[-1]

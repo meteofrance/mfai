@@ -511,7 +511,7 @@ Our tests are written using [pytest](https://docs.pytest.org). We check that:
 
 ```bash
 docker build . -f Dockerfile -t mfai
-docker run -it --rm mfai python -m pytest tests
+docker run -it --rm mfai python3 -m pytest tests
 ```
 
 # Running mypy

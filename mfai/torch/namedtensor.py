@@ -6,7 +6,7 @@ from copy import deepcopy
 from collections.abc import Iterable
 from dataclasses import dataclass
 from itertools import chain
-from typing import Any, List, Union
+from typing import List, Union
 
 import einops
 import torch
@@ -51,7 +51,7 @@ class NamedTensor(TensorWrapper):
         names: List[str],
         feature_names: List[str],
         feature_dim_name: str = "features",
-    ) -> None:
+    ):
         if len(tensor.shape) != len(names):
             raise ValueError(
                 f"Number of names ({len(names)}) must match number of dimensions ({len(tensor.shape)})"
@@ -73,34 +73,27 @@ class NamedTensor(TensorWrapper):
         self.feature_dim_name = feature_dim_name
 
     @property
-    def ndims(self) -> int:
+    def ndims(self):
         """
         Number of dimensions of the tensor.
         """
         return len(self.names)
 
     @property
-    def num_spatial_dims(self) -> int:
+    def num_spatial_dims(self):
         """
         Number of spatial dimensions of the tensor.
         """
         return len([x for x in self.names if x in self.SPATIAL_DIM_NAMES])
 
     @property
-    def feature_dim_idx(self) -> int:
+    def feature_dim_idx(self):
         """
         Index of the features dimension.
         """
         return self.names.index(self.feature_dim_name)
 
-    @property
-    def bare_tensor(self) -> torch.Tensor:
-        """
-        The torch tensor the NamedTensor is wrapping around
-        """
-        return self.tensor
-
-    def __str__(self) -> str:
+    def __str__(self):
         head = "--- NamedTensor ---\n"
         head += f"Names: {self.names}\nTensor Shape: {self.tensor.shape})\nFeatures:\n"
         table = [
@@ -174,35 +167,35 @@ class NamedTensor(TensorWrapper):
             return NamedTensor(new_tensor, names, nts[0].feature_names.copy())
 
     @staticmethod
-    def concat(named_tensors: List["NamedTensor"]) -> "NamedTensor":
+    def concat(nts: List["NamedTensor"]) -> "NamedTensor":
         """
         Safely concat a list of NamedTensors along the last dimension
         in one shot.
         """
-        if len(named_tensors) == 0:
+        if len(nts) == 0:
             raise ValueError("Cannot concatenate an empty list of NamedTensors")
-        if len(named_tensors) == 1:
-            return named_tensors[0].clone()
+        if len(nts) == 1:
+            return nts[0].clone()
         else:
             # Check features names are distinct between the n named tensors
-            feature_names: set[str] = set()
-            for named_tensor in named_tensors:
-                if feature_names & set(named_tensor.feature_names):
+            feature_names = set()
+            for nt in nts:
+                if feature_names & set(nt.feature_names):
                     raise ValueError(
                         f"Feature names must be distinct between the named tensors to concat\n"
-                        f"Found duplicates: {feature_names & set(named_tensor.feature_names)}"
+                        f"Found duplicates: {feature_names & set(nt.feature_names)}"
                     )
-                feature_names |= set(named_tensor.feature_names)
+                feature_names |= set(nt.feature_names)
 
             # Check that all named tensors have the same names
-            if not all(nt.names == named_tensors[0].names for nt in named_tensors[1:]):
+            if not all(nt.names == nts[0].names for nt in nts[1:]):
                 raise ValueError(
                     "NamedTensors must have the same dimension names to concatenate"
                 )
 
             # Check that all named tensors have the same feature dimension name
             if not all(
-                nt.feature_dim_name == named_tensors[0].feature_dim_name for nt in named_tensors[1:]
+                nt.feature_dim_name == nts[0].feature_dim_name for nt in nts[1:]
             ):
                 raise ValueError(
                     "NamedTensors must have the same feature dimension name to concatenate"
@@ -210,10 +203,10 @@ class NamedTensor(TensorWrapper):
 
             # Concat in one shot
             return NamedTensor(
-                torch.cat([nt.tensor for nt in named_tensors], dim=named_tensors[0].feature_dim_idx),
-                named_tensors[0].names.copy(),
-                list(chain.from_iterable(nt.feature_names for nt in named_tensors)),
-                feature_dim_name=named_tensors[0].feature_dim_name,
+                torch.cat([nt.tensor for nt in nts], dim=nts[0].feature_dim_idx),
+                nts[0].names.copy(),
+                list(chain.from_iterable(nt.feature_names for nt in nts)),
+                feature_dim_name=nts[0].feature_dim_name,
             )
 
     def dim_index(self, dim_name: str) -> int:
@@ -222,7 +215,7 @@ class NamedTensor(TensorWrapper):
         """
         return self.names.index(dim_name)
 
-    def clone(self) -> "NamedTensor":
+    def clone(self):
         return NamedTensor(
             tensor=deepcopy(self.tensor).to(self.tensor.device),
             names=self.names.copy(),
@@ -237,13 +230,13 @@ class NamedTensor(TensorWrapper):
         try:
             return self.select_dim(
                 self.feature_dim_name, self.feature_names_to_idx[feature_name]
-            ).bare_tensor.unsqueeze(self.names.index(self.feature_dim_name))
+            ).unsqueeze(self.names.index(self.feature_dim_name))
         except KeyError:
             raise ValueError(
                 f"Feature {feature_name} not found in {self.feature_names}"
             )
 
-    def type_(self, new_type: str) -> None:
+    def type_(self, new_type):
         """
         Modify the type of the underlying torch tensor
         by calling torch's .type method
@@ -253,7 +246,7 @@ class NamedTensor(TensorWrapper):
         """
         self.tensor = self.tensor.type(new_type)
 
-    def flatten_(self, flatten_dim_name: str, start_dim: int, end_dim: int) -> None:
+    def flatten_(self, flatten_dim_name: str, start_dim: int, end_dim: int):
         """
         Flatten the underlying tensor from start_dim to end_dim.
         Deletes flattened dimension names and insert
@@ -269,7 +262,7 @@ class NamedTensor(TensorWrapper):
 
     def unflatten_(
         self, dim: int, unflattened_size: torch.Size, unflatten_dim_name: List
-    ) -> None:
+    ):
         """
         Unflatten the dimension dim of the underlying tensor.
         Insert unflattened_size dimension instead
@@ -277,7 +270,7 @@ class NamedTensor(TensorWrapper):
         self.tensor = self.tensor.unflatten(dim, unflattened_size)
         self.names = self.names[:dim] + [*unflatten_dim_name] + self.names[dim + 1 :]
 
-    def squeeze_(self, dim_name: Union[List[str], str]) -> None:
+    def squeeze_(self, dim_name: Union[List[str], str]):
         """
         Squeeze the underlying tensor along the dimension(s)
         given its/their name(s).
@@ -289,31 +282,38 @@ class NamedTensor(TensorWrapper):
         for name in dim_name:
             self.names.remove(name)
 
-    def unsqueeze_(self, dim_name: str, dim_index: int) -> None:
+    def unsqueeze_(self, dim_name: str, dim_index: int):
         """
         Insert a new dimension dim_name of size 1 at dim_index
         """
         self.tensor = torch.unsqueeze(self.tensor, dim_index)
         self.names.insert(dim_index, dim_name)
 
-    def select_dim(self, dim_name: str, index: int) -> "NamedTensor":
+    def select_dim(
+        self, dim_name: str, index: int, bare_tensor: bool = True
+    ) -> Union["NamedTensor", torch.Tensor]:
         """
         Return the tensor indexed along the dimension dim_name
         with the index index.
         The given dimension is removed from the tensor.
         See https://pytorch.org/docs/stable/generated/torch.select.html
         """
-        # if they try to select the features it will break as
-        # the feature dimension is not present anymore
-        return NamedTensor(
-            self.select_dim(dim_name, index).bare_tensor,
-            self.names[: self.names.index(dim_name)]
-            + self.names[self.names.index(dim_name) + 1 :],
-            self.feature_names,
-            feature_dim_name=self.feature_dim_name,
-        )
+        if bare_tensor:
+            return self.tensor.select(self.names.index(dim_name), index)
+        else:
+            # if they try to select the features it will break as
+            # the feature dimension is not present anymore
+            return NamedTensor(
+                self.select_dim(dim_name, index, bare_tensor=True),
+                self.names[: self.names.index(dim_name)]
+                + self.names[self.names.index(dim_name) + 1 :],
+                self.feature_names,
+                feature_dim_name=self.feature_dim_name,
+            )
 
-    def index_select_dim(self, dim_name: str, indices: torch.Tensor) -> "NamedTensor":
+    def index_select_dim(
+        self, dim_name: str, indices: torch.Tensor, bare_tensor: bool = True
+    ) -> Union["NamedTensor", torch.Tensor]:
         """
         Return the tensor indexed along the dimension dim_name
         with the indices tensor.
@@ -322,16 +322,22 @@ class NamedTensor(TensorWrapper):
         the same size as in the original tensor.
         See https://pytorch.org/docs/stable/generated/torch.index_select.html
         """
-        return NamedTensor(
-            self.index_select_dim(dim_name, indices).bare_tensor,
-            self.names,
-            (
-                self.feature_names
-                if dim_name != self.feature_dim_name
-                else [self.feature_names[i] for i in indices]
-            ),
-            feature_dim_name=self.feature_dim_name,
-        )
+        if bare_tensor:
+            return self.tensor.index_select(
+                self.names.index(dim_name),
+                torch.Tensor(indices).type(torch.int64).to(self.device),
+            )
+        else:
+            return NamedTensor(
+                self.index_select_dim(dim_name, indices, bare_tensor=True),
+                self.names,
+                (
+                    self.feature_names
+                    if dim_name != self.feature_dim_name
+                    else [self.feature_names[i] for i in indices]
+                ),
+                feature_dim_name=self.feature_dim_name,
+            )
 
     def dim_size(self, dim_name: str) -> int:
         """
@@ -352,7 +358,7 @@ class NamedTensor(TensorWrapper):
             for name in set(self.SPATIAL_DIM_NAMES).intersection(set(self.names))
         )
 
-    def unsqueeze_and_expand_from_(self, other: "NamedTensor") -> None:
+    def unsqueeze_and_expand_from_(self, other: "NamedTensor"):
         """
         Unsqueeze and expand the tensor to have the same number of spatial dimensions
         as another NamedTensor.
@@ -375,21 +381,23 @@ class NamedTensor(TensorWrapper):
 
             self.tensor = self.tensor.expand(*expander)
 
-    def iter_dim(self, dim_name: str) -> Iterable[torch.Tensor]:
+    def iter_dim(
+        self, dim_name: str, bare_tensor: bool = True
+    ) -> Iterable[torch.Tensor]:
         """
         Iterate over the tensor along a given dimension.
         """
         for i in range(self.dim_size(dim_name)):
-            yield self.select_dim(dim_name, i).bare_tensor
+            yield self.select_dim(dim_name, i, bare_tensor=bare_tensor)
 
-    def rearrange_(self, einops_str: str) -> None:
+    def rearrange_(self, einops_str: str):
         """
         Rearrange in place the underlying tensor dimensions using einops syntax.
         For now only supports re-ordering of dimensions.
         """
-        old_dims_str, new_dims_str = einops_str.split("->")
-        old_dims: list[str] = old_dims_str.split(" ")[:-1]
-        new_dims: list[str] = new_dims_str.split(" ")[1:]
+        old_dims, new_dims = einops_str.split("->")
+        old_dims = old_dims.split(" ")[:-1]
+        new_dims = new_dims.split(" ")[1:]
         # check that the number of dims and dim names match
         if not set(self.names) == set(old_dims) == set(new_dims):
             raise ValueError(
@@ -426,13 +434,13 @@ class NamedTensor(TensorWrapper):
     def device(self) -> torch.device:
         return self.tensor.device
 
-    def pin_memory_(self) -> None:
+    def pin_memory_(self):
         """
         'In place' operation to pin the underlying tensor to memory.
         """
         self.tensor = self.tensor.pin_memory()
 
-    def to_(self, *args: Any, **kwargs: Any) -> None:
+    def to_(self, *args, **kwargs):
         """
         'In place' operation to call torch's 'to' method on the underlying tensor.
         """

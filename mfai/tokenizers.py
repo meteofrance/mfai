@@ -107,19 +107,18 @@ class LlamaTokenizer(Tokenizer):
         pass
 
 
-class MiniTokenizer(Tokenizer):
+class MiniTokenizer(Tokenizer, ABC):
     """
     A Tokenizer using a reduced set of tokens
     from a base/parent Tokenizer. Typical use case is for
     narrow vocab problems with only 1000 tokens out of a vocab of 50000.
     """
 
-    def __init__(self, base_tokenizer: Tokenizer):
-        self.base_tokenizer = base_tokenizer
-
-        # at this stage the lookup table are not initialised
-        self.token_to_id = None
-        self.id_to_token = None
+    @abstractmethod
+    def get_list_tokens(self) -> set:
+        """
+        Method that return a set of words to tokenize.
+        """
 
     def post_init(self, tokens: set):
         """

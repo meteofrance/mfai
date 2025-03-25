@@ -46,6 +46,14 @@ disallow_untyped_defs = true
 # Allows `def foo(a: str = None)` instead of `def foo(a: str | None = None)` or `def foo(a: Union[str, None] = None)`
 implicit_optional = true
 
+# Warn when a # type: ignore comment does not specify any error codes.
+# This clarifies the intent of the ignore and ensures that only the expected errors are silenced.
+# Ignore comments should contain the error code silenced:
+# a: str = 1  # type: ignore[assignment]
+enable_error_code = [
+  "ignore-without-code"
+]
+
 # Warn when a `#type: ignore` silences a line that is not actually generating an error
 warn_unused_ignores = true
 

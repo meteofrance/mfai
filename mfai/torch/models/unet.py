@@ -15,9 +15,8 @@ import torch
 from dataclasses_json import dataclass_json
 from torch import nn
 
-from mfai.torch.models import get_vision_encoder
-
 from .base import AutoPaddingModel, ModelABC, ModelType
+from .resnet import get_resnet_encoder
 
 
 class DoubleConv(nn.Module):
@@ -256,12 +255,13 @@ class CustomUnet(ModelABC, AutoPaddingModel, nn.Module):
         settings: CustomUnetSettings = CustomUnetSettings(),
     ):
         super().__init__()
+
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.input_shape = input_shape
         self._settings = settings
 
-        self.encoder = get_vision_encoder(
+        self.encoder = get_resnet_encoder(
             settings.encoder_name,
             in_channels=in_channels,
             depth=settings.encoder_depth,

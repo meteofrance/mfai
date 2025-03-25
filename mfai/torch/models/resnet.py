@@ -3,10 +3,15 @@ from typing import List, Tuple, Union
 
 import torch
 import torch.nn as nn
+import torch.utils.model_zoo as model_zoo
 from dataclasses_json import dataclass_json
-from torchvision.models.resnet import ResNet
+from torchvision.models.resnet import BasicBlock, Bottleneck, ResNet
 
-from mfai.torch.models import get_vision_encoder, utils
+from mfai.torch.models import utils
+
+##########################################################################################################
+######################################         Encoders           ########################################
+##########################################################################################################
 
 
 class EncoderMixin:
@@ -103,6 +108,84 @@ class ResNetEncoder(ResNet, EncoderMixin):
         super().load_state_dict(state_dict, **kwargs)
 
 
+ENCODERS_MAP = {
+    "resnet18": {
+        "encoder": ResNetEncoder,
+        "pretrained_url": "https://dl.fbaipublicfiles.com/semiweaksupervision/model_files/semi_supervised_resnet18-d92f0530.pth",  # noqa
+        "params": {
+            "out_channels": (3, 64, 64, 128, 256, 512),
+            "block": BasicBlock,
+            "layers": [2, 2, 2, 2],
+        },
+    },
+    "resnet34": {
+        "encoder": ResNetEncoder,
+        "pretrained_url": "https://download.pytorch.org/models/resnet34-b627a593.pth",
+        "params": {
+            "out_channels": (3, 64, 64, 128, 256, 512),
+            "block": BasicBlock,
+            "layers": [3, 4, 6, 3],
+        },
+    },
+    "resnet50": {
+        "encoder": ResNetEncoder,
+        "pretrained_url": "https://dl.fbaipublicfiles.com/semiweaksupervision/model_files/semi_supervised_resnet50-08389792.pth",  # noqa
+        "params": {
+            "out_channels": (3, 64, 256, 512, 1024, 2048),
+            "block": Bottleneck,
+            "layers": [3, 4, 6, 3],
+        },
+    },
+}
+
+
+def get_resnet_encoder(
+    name: str,
+    in_channels: int = 3,
+    depth: int = 5,
+    weights: bool = True,
+    output_stride: int = 32,
+):
+    """
+    Return an encoder with pretrained weights or not.
+    """
+    try:
+        Encoder = ENCODERS_MAP[name]["encoder"]
+    except KeyError:
+        raise KeyError(
+            "Wrong encoder name `{}`, supported ENCODERS_MAP: {}".format(
+                name, list(ENCODERS_MAP.keys())
+            )
+        )
+
+    params = ENCODERS_MAP[name]["params"]
+    params.update(depth=depth)
+    encoder = Encoder(**params)
+
+    if weights:
+        url = ENCODERS_MAP[name]["pretrained_url"]
+        pretrained = True
+        if url is None:
+            pretrained = False
+            raise KeyError(
+                f"No url is available for the pretrained encoder choosen ({name})."
+            )
+        encoder.load_state_dict(model_zoo.load_url(url))
+    else:
+        pretrained = False
+
+    encoder.set_in_channels(in_channels, pretrained=pretrained)
+    if output_stride != 32:
+        encoder.make_dilated(output_stride)
+
+    return encoder
+
+
+##########################################################################################################
+#######################################         ResNet           #########################################
+##########################################################################################################
+
+
 @dataclass_json
 @dataclass(slots=True)
 class ResNet50Settings:
@@ -122,7 +205,8 @@ class ResNet50(torch.nn.Module):
         settings: ResNet50Settings = ResNet50Settings(),
     ):
         super().__init__()
-        self.encoder = get_vision_encoder(
+
+        self.encoder = get_resnet_encoder(
             name="resnet50",
             in_channels=num_channels,
             depth=settings.encoder_depth,
@@ -134,7 +218,7 @@ class ResNet50(torch.nn.Module):
         self.avgpool = torch.nn.AdaptiveAvgPool2d((1, 1))
         self.fc = torch.nn.Linear(512 * 4, num_classes)
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         y_hat = self.encoder(x)[-1]
         y_hat = self.avgpool(y_hat)
         y_hat = y_hat.reshape(y_hat.shape[0], -1)

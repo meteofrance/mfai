@@ -235,12 +235,15 @@ class GPT2(nn.Module):
         """
         Embeds and pos encodes tokens.
         """
+        if tok_ids.shape[1] > self.context_length:
+            raise ValueError(f"The tokens shape ({tok_ids.shape[1]}) should be less than or equal to 'context_length' ({self.context_length}).")
         _, seq_len = tok_ids.shape
         tok_embeds = self.tok_emb(tok_ids)
         pos_embeds = self.pos_emb(torch.arange(seq_len, device=tok_ids.device))
         return tok_embeds + pos_embeds  # Shape [batch_size, num_tokens, emb_size]
 
     def forward(self, tok_ids: Tensor) -> Tensor:
+        tok_ids = tok_ids[:, -self.context_length:]  # Keep only the last context_length tokens
         x = self.embed_tokens(tok_ids)
         return self.forward_vectors(x)
 

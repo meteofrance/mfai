@@ -513,6 +513,16 @@ Our tests are written using [pytest](https://docs.pytest.org). We check that:
 docker build . -f Dockerfile -t mfai
 docker run -it --rm mfai python -m pytest tests
 ```
+
+# Running mypy
+Mypy is used to check the project type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
+
+To run mypy:
+```bash
+docker build . -f Dockerfile -t mfai
+docker run -it --rm mfai mypy mfai/
+```
+
 # Contributing
 
 We welcome contributions to this package. Our guidelines are the following:

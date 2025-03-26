@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:2.4.1-cuda11.8-cudnn9-runtime
+FROM ubuntu:22.04
 
 ARG INJECT_MF_CERT
 COPY mf.crt /usr/local/share/ca-certificates/mf.crt
@@ -6,9 +6,9 @@ RUN ( test $INJECT_MF_CERT -eq 1 && update-ca-certificates ) || echo "MF certifi
 ARG REQUESTS_CA_BUNDLE
 ARG CURL_CA_BUNDLE
 
-ENV MY_APT='apt -o "Acquire::https::Verify-Peer=false" -o "Acquire::AllowInsecureRepositories=true" -o "Acquire::AllowDowngradeToInsecureRepositories=true" -o "Acquire::https::Verify-Host=false"'
+ENV MY_APT='apt-get -o "Acquire::https::Verify-Peer=false" -o "Acquire::AllowInsecureRepositories=true" -o "Acquire::AllowDowngradeToInsecureRepositories=true" -o "Acquire::https::Verify-Host=false"'
 
-RUN $MY_APT update && $MY_APT install -y curl gcc g++ nano sudo libgeos-dev libeccodes-dev libeccodes-tools git vim libtiff5 openssh-server
+RUN $MY_APT update && $MY_APT install -y curl gcc g++ nano sudo libgeos-dev libeccodes-dev libeccodes-tools git vim openssh-server libtiff5
 
 RUN mkdir -p /run/sshd
 RUN curl -fsSL https://code-server.dev/install.sh | sh
@@ -28,6 +28,12 @@ RUN set -eux && groupadd --gid $USER_GUID $GROUPNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME \
     && echo "$USERNAME:$USERNAME" | chpasswd
 
+# Install python3.10
+RUN $MY_APT install software-properties-common -y
+RUN add-apt-repository ppa:deadsnakes/ppa -y
+RUN $MY_APT update
+RUN $MY_APT install python3.10 python3-pip -y
+
 RUN apt -y update && apt -y install git
 WORKDIR /app
 COPY requirements.txt requirements.txt
@@ -37,4 +43,3 @@ RUN pip install --upgrade build twine
 ADD mfai /app/mfai
 
 ADD tests /app/tests
-

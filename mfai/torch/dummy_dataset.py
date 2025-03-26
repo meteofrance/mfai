@@ -32,10 +32,10 @@ class DummyDataset(Dataset):
             )
         self.len = 20
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.len
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
         x = torch.randn((self.nb_input_channels, self.dim_x, self.dim_y)).float()
         if self.task == "multiclass":
             y = torch.randint(
@@ -75,7 +75,7 @@ class DummyDataModule(LightningDataModule):
         self.nb_input_channels = nb_input_channels
         self.nb_output_channels = nb_output_channels
 
-    def setup(self, stage: str = ""):
+    def setup(self, stage: str = "") -> None:
         self.dummy_train = DummyDataset(
             "train",
             self.task,
@@ -109,15 +109,15 @@ class DummyDataModule(LightningDataModule):
             self.nb_output_channels,
         )
 
-    def train_dataloader(self):
+    def train_dataloader(self) -> DataLoader:
         return DataLoader(self.dummy_train, self.batch_size, shuffle=True)
 
-    def val_dataloader(self):
+    def val_dataloader(self) -> DataLoader:
         return DataLoader(self.dummy_val, self.batch_size, shuffle=False)
 
-    def test_dataloader(self):
+    def test_dataloader(self) -> DataLoader:
         # for test, batch_size = 1 to log loss and metrics for each sample
         return DataLoader(self.dummy_test, 1, shuffle=False)
 
-    def predict_dataloader(self):
+    def predict_dataloader(self) -> DataLoader:
         return DataLoader(self.dummy_predict, self.batch_size, shuffle=False)

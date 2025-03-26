@@ -2,7 +2,7 @@ import torch.nn.functional as F
 import torch
 from typing import Tuple, Optional
 
-def pad_batch(batch: torch.Tensor, new_shape: torch.Size, mode: str = "constant", pad_value: Optional[float] = 0) -> torch.Tensor:
+def pad_batch(batch: torch.Tensor, new_shape: torch.Size, mode: str = "constant", pad_value: Optional[float] = 0) -> torch.Tensor | ValueError:
     """ Given batch of 2D or 3D data and a shape new_shape, 
         pads the tensor with the given pad_value.  
 
@@ -35,7 +35,7 @@ def pad_batch(batch: torch.Tensor, new_shape: torch.Size, mode: str = "constant"
     return ValueError("new_shape must be a torch.Size of length 2 or 3.")
 
 
-def _get_2D_padding(new_shape: torch.Size, old_shape: torch.Size) -> Tuple[int]:
+def _get_2D_padding(new_shape: torch.Size, old_shape: torch.Size) -> Tuple[int, int, int, int]:
     """ Returns the left, right, top, bottom paddings that needs to be added to a 
         2D tensor of shape old_shape to get new_shape as a new shape. 
 
@@ -56,7 +56,7 @@ def _get_2D_padding(new_shape: torch.Size, old_shape: torch.Size) -> Tuple[int]:
     
     return left, right, top, bottom
 
-def _get_3D_padding(new_shape: torch.Size, old_shape: torch.Size) -> Tuple[int]:
+def _get_3D_padding(new_shape: torch.Size, old_shape: torch.Size) -> Tuple[int, int, int, int, int, int]:
     diff_z = new_shape[0] - old_shape[-3]
     diff_y = new_shape[1] - old_shape[-2]
     diff_x = new_shape[2] - old_shape[-1]
@@ -68,7 +68,7 @@ def _get_3D_padding(new_shape: torch.Size, old_shape: torch.Size) -> Tuple[int]:
     return left, right, top, bottom, front, back
 
 
-def undo_padding(batch: torch.Tensor, old_shape: torch.Size, inplace=False):
+def undo_padding(batch: torch.Tensor, old_shape: torch.Size, inplace: bool=False) -> torch.Tensor | ValueError:
     """ Removes the padding added by pad_batch
 
     Args:

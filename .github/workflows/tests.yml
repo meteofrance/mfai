@@ -16,7 +16,7 @@ jobs:
   tests:
     env:
       PYTHONPATH: '.'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
     - uses: actions/checkout@v4
@@ -32,6 +32,9 @@ jobs:
     - name: Lint with ruff
       run: |
         ruff check mfai
+    - name: Type hinting with mypy
+      run: |
+        mypy mfai/
     - name: Test with pytest
       run: |
         pytest --cov=mfai --cov-fail-under=85 tests/

@@ -511,8 +511,18 @@ Our tests are written using [pytest](https://docs.pytest.org). We check that:
 
 ```bash
 docker build . -f Dockerfile -t mfai
-docker run -it --rm mfai python -m pytest tests
+docker run -it --rm mfai python3 -m pytest tests
 ```
+
+# Running mypy
+Mypy is used to check the project type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
+
+To run mypy:
+```bash
+docker build . -f Dockerfile -t mfai
+docker run -it --rm mfai mypy mfai/
+```
+
 # Contributing
 
 We welcome contributions to this package. Our guidelines are the following:
@@ -520,6 +530,7 @@ We welcome contributions to this package. Our guidelines are the following:
 - Submit a PR with a clear description of the changes and the motivation behind them.
 - Make sure the current tests pass and add new tests if necessary to cover the new features. Our CI will fail with a **test coverage below 80%**.
 - Make sure the code is formatted with [ruff](https://docs.astral.sh/ruff/) : `ruff format` and `ruff check`
+- Make sure the code respects our mypy type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
 
 # Publishing
 

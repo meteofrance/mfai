@@ -118,7 +118,7 @@ class MiniTokenizer(Tokenizer, ABC):
 
     def __init__(self, base_tokenizer: Tokenizer):
         self.base_tokenizer = base_tokenizer
-        tokens = self.get_list_tokens()
+        tokens = self.get_set_tokens()
 
         self.token_to_id: dict[int, int] = dict()
         self.id_to_token: dict[int, int] = dict()

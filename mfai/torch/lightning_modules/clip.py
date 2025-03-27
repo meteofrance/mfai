@@ -1,5 +1,7 @@
-from typing import Literal, Tuple, Union
-import warnings
+"""
+LightningModule used to train a Clip model.
+"""
+from typing import Literal, Tuple
 
 import lightning.pytorch as pl
 import torch

@@ -1,9 +1,11 @@
+"""
+Implementation of CLIP (Contrastive Langage-Image Pre-training) model. Based on the original https://arxiv.org/abs/2103.00020
+"""
 from dataclasses import dataclass
 from typing import Tuple, Union
 
 import torch
 
-# import torch.nn.functional as F
 import torch.nn as nn
 from dataclasses_json import dataclass_json
 

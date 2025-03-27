@@ -73,5 +73,6 @@ module = [
   "tiktoken_ext.openai_public",
   "sentencepiece",
   "onnxruntime",
+  "pl_bolts.*",
 ]
 ignore_missing_imports = true

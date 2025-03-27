@@ -118,7 +118,10 @@ class MiniTokenizer(Tokenizer, ABC):
     def __init__(self, base_tokenizer: Tokenizer):
         self.base_tokenizer = base_tokenizer
         tokens = self.get_list_tokens()
-        
+
+        self.token_to_id: dict[int, int] = dict()
+        self.id_to_token: dict[int, int] = dict()
+
         self.post_init(tokens)
 
     @abstractmethod
@@ -132,9 +135,6 @@ class MiniTokenizer(Tokenizer, ABC):
         Constructs the forward and backward lookup tables between base tokenizer tokens
         and reduced set of ids.
         """
-        self.token_to_id = dict()
-        self.id_to_token = dict()
-
         for idx, token_id in enumerate(tokens):
             self.token_to_id[token_id] = idx
             self.id_to_token[idx] = token_id
@@ -149,28 +149,28 @@ class MiniTokenizer(Tokenizer, ABC):
 
     def encode(self, text: str, *args: Any, **kwargs: Any) -> List[int]:
         base_token_ids = self.base_tokenizer.encode(text)
-        if self.token_to_id is not None:
-            return [self.token_to_id[x] for x in base_token_ids]
-        else:
-            return base_token_ids
+        # if self.token_to_id is not None:
+        #     return [self.token_to_id[x] for x in base_token_ids]
+        # else:
+        return base_token_ids
 
     def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
-        if self.id_to_token is not None:
-            base_tokens = [self.id_to_token[x] for x in tokens]
-            return self.base_tokenizer.decode(base_tokens)
-        else:
-            return self.base_tokenizer.decode(tokens)
+        # if self.id_to_token is not None:
+        #     base_tokens = [self.id_to_token[x] for x in tokens]
+        #     return self.base_tokenizer.decode(base_tokens)
+        # else:
+        return self.base_tokenizer.decode(tokens)
 
     @property
     def eot_token(self) -> int:
-        if self.token_to_id is not None:
-            return self.token_to_id[self.base_tokenizer.eot_token]
-        else:
-            return self.base_tokenizer.eot_token
+        # if self.token_to_id is not None:
+        #     return self.token_to_id[self.base_tokenizer.eot_token]
+        # else:
+        return self.base_tokenizer.eot_token
 
     @property
     def vocab_size(self) -> int:
-        if self.token_to_id is not None:
-            return len(self.token_to_id)
-        else:
-            return self.base_tokenizer.vocab_size
+        # if self.token_to_id is not None:
+        #     return len(self.token_to_id)
+        # else:
+        return self.base_tokenizer.vocab_size

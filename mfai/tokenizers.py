@@ -110,9 +110,10 @@ class LlamaTokenizer(Tokenizer):
 
 class MiniTokenizer(Tokenizer, ABC):
     """
-    A Tokenizer using a reduced set of tokens
-    from a base/parent Tokenizer. Typical use case is for
-    narrow vocab problems with only 1000 tokens out of a vocab of 50000.
+    A Tokenizer using a reduced set of tokens from a base/parent Tokenizer.
+    Typical use case is for narrow vocab problems with only 1000 tokens out
+    of a vocab of 50000.
+    To use these class, you only have to implement the method 'get_set_tokens'.
     """
 
     def __init__(self, base_tokenizer: Tokenizer):
@@ -125,9 +126,18 @@ class MiniTokenizer(Tokenizer, ABC):
         self.post_init(tokens)
 
     @abstractmethod
-    def get_list_tokens(self) -> set:
+    def get_set_tokens(self) -> set:
         """
-        Method that return a set of words to tokenize.
+        Method that return a set of tokenized words.
+
+        Example:
+            def get_set_tokens(self) -> set:
+                unique_tokens = set()
+                texts: list[str] = ...  # Load all texts you want to encode
+                for text in texts:
+                    tokens = self.base_tokenizer.encode(text)
+                    unique_tokens.update(tokens)
+                return unique_tokens
         """
 
     def post_init(self, tokens: set) -> None:

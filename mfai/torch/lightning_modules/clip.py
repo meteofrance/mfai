@@ -34,7 +34,9 @@ class CLIPLightningModule(pl.LightningModule):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         return self.model(texts, images)
 
-    def _shared_forward_step(self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _shared_forward_step(
+        self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         images, texts, _ = batch
 
         if len(images.tensor.shape) == 5:
@@ -67,10 +69,14 @@ class CLIPLightningModule(pl.LightningModule):
                 max_steps_or_epochs = self.trainer.max_steps
             elif self.trainer.max_epochs:
                 max_steps_or_epochs = self.trainer.max_epochs
-                if self.lr_scheduler_interval == "step":  # Multiply epochs by number of batches
+                if (
+                    self.lr_scheduler_interval == "step"
+                ):  # Multiply epochs by number of batches
                     max_steps_or_epochs *= num_batches
             else:
-                raise ValueError("Please set 'trainer.max_steps' or 'trainer.max_epochs' to use an LRScheduler.")
+                raise ValueError(
+                    "Please set 'trainer.max_steps' or 'trainer.max_epochs' to use an LRScheduler."
+                )
             scheduler = LinearWarmupCosineAnnealingLR(
                 optimizer,
                 warmup_epochs=warmup_epochs,
@@ -98,7 +104,6 @@ class CLIPLightningModule(pl.LightningModule):
             "train_loss", loss, on_step=True, prog_bar=True, logger=True, sync_dist=True
         )
         return loss
-
 
     def validation_step(
         self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor], batch_idx: int

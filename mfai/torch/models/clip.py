@@ -41,8 +41,10 @@ class Clip(nn.Module):
         self.text_emb_dim = self.text_encoder.emb_dim
 
         self.text_norm = LayerNorm(self.text_emb_dim)
-        self.text_projection = nn.Parameter(torch.empty(self.text_emb_dim, self.emb_dim))
-        nn.init.normal_(self.text_projection, std=self.text_encoder.emb_dim ** -0.5)
+        self.text_projection = nn.Parameter(
+            torch.empty(self.text_emb_dim, self.emb_dim)
+        )
+        nn.init.normal_(self.text_projection, std=self.text_encoder.emb_dim**-0.5)
         self.temperature = nn.Parameter(
             torch.ones([]) * torch.log(torch.Tensor([settings.init_temperature]))
         )
@@ -50,8 +52,10 @@ class Clip(nn.Module):
     def forward(
         self, text_tokens: torch.Tensor, image_input: NamedTensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        text_tokens = text_tokens[:, -self.text_encoder.context_length:]  # Keep only the last context_length tokens
-        
+        text_tokens = text_tokens[
+            :, -self.text_encoder.context_length :
+        ]  # Keep only the last context_length tokens
+
         image_features = self.image_encoder(image_input.tensor)
         text_features = self.text_encoder.embed_tokens(text_tokens)
 
@@ -60,9 +64,13 @@ class Clip(nn.Module):
         # "The [EOS] token are treated as the feature representation of the text which is
         # layer normalized and then linearly projected into the multi-modal embedding space."
         text_features = self.text_norm(text_features)
-        text_features = text_features[
-            torch.arange(len(text_tokens), device=text_tokens.device), text_tokens.argmax(dim=-1)
-        ] @ self.text_projection
+        text_features = (
+            text_features[
+                torch.arange(len(text_tokens), device=text_tokens.device),
+                text_tokens.argmax(dim=-1),
+            ]
+            @ self.text_projection
+        )
 
         # Normalize features
         image_features = image_features / image_features.norm(dim=1, keepdim=True)

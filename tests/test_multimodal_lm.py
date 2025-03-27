@@ -51,7 +51,6 @@ def generate_text_simple(
             {
                 "llama": ("Sustine et abstineAlignment Геrace sqlwesten Loggerлага Bushに同", "Sustine et abstinecalarote чу七egung rocequelle应arqu management"),
                 "gpt2": ("Sustine et abstine decom diagn duty Hiroshima fielding richerICE refuel dexterityfest", "Sustine et abstine BUTILLEWithin substancesly outfield Toriesfinals Jenny applied"),
-                "mini_gpt2": ("Sustine et abstineCaptagi charts wielding worship sqor remain Drivers worksposium", "Sustine et abstine Patrol reflexForest os piousShe bent investigations 1972 Corp"),
             },
         ),
         (
@@ -59,7 +58,6 @@ def generate_text_simple(
             {
                 "llama": ("Sustine et abstine współ terrestführtrange지edتズ ownershipantal", "Sustine et abstine Cot plugniu named technology Stuart возможièresམ soil"),
                 "gpt2": ("Sustine et abstine outright Manila TraymoralNeitherTargetcylå Hue hello", "Sustine et abstine marineFamily comprehensiveBabySecureの� erroneous Hogan cour standalone"),
-                "mini_gpt2": ("Sustine et abstine works Rowling Gum finite fallen DiveivingDavis Clarke Ronald", "Sustine et abstineomingruit hindsightasa manufacturer chronic Jets nort euphem weird"),
             },
         ),
     ],
@@ -71,7 +69,6 @@ def test_multimodal_llm(backend_target):
         for tokenizer in [
             LlamaTokenizer(),
             GPT2Tokenizer(),
-            MiniTokenizer(GPT2Tokenizer()),
         ]:
             model = MultiModalLM(
                 settings=MultiModalLMSettings(

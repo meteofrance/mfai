@@ -61,7 +61,9 @@ warn_unreachable = true
 
 # Disable the check for dynamically defined attributes, for more details see link below
 # [attr-defined](https://mypy.readthedocs.io/en/stable/error_code_list.html#check-that-attribute-exists-attr-defined)
-disable_error_code = "attr-defined"
+disable_error_code = [
+  "attr-defined"
+]
 
 # Configure mypy output styling
 show_error_code_links = true

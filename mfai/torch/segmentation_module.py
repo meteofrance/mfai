@@ -123,8 +123,8 @@ class SegmentationLightningModule(pl.LightningModule):
         hparams["model"] = self.model.__class__.__name__
         if self.logger and self.logger.log_dir:
             print(f"Logs will be saved in \033[96m{self.logger.log_dir}\033[0m")
-            self.logger.experiment.add_custom_scalars(layout) # type: ignore[union-attr]
-            self.logger.log_hyperparams(hparams, {"val_loss": 0, "val_f1": 0}) # type: ignore[union-attr]
+            self.logger.experiment.add_custom_scalars(layout)
+            self.logger.log_hyperparams(hparams, {"val_loss": 0, "val_f1": 0})
 
     def _shared_epoch_end(self, outputs: list[torch.Tensor], label: str) -> None:
         """Computes and logs the averaged loss at the end of an epoch on custom layout.
@@ -134,7 +134,7 @@ class SegmentationLightningModule(pl.LightningModule):
         tb = self.logger.experiment # type: ignore[union-attr]
         tb.add_scalar(f"loss/{label}", avg_loss, self.current_epoch)
 
-    def training_step(self, batch: Tuple[torch.tensor, torch.tensor], batch_idx: int) -> Any:
+    def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> Any:
         x, y = batch
         _, loss = self._shared_forward_step(x, y)
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)

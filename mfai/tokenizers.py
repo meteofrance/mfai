@@ -118,7 +118,7 @@ class MiniTokenizer(Tokenizer, ABC):
 
     def __init__(self, base_tokenizer: Tokenizer):
         self.base_tokenizer = base_tokenizer
-        tokens = self.get_set_tokens()
+        tokens = self.tokens()
 
         self.token_to_id: dict[int, int] = dict()
         self.id_to_token: dict[int, int] = dict()
@@ -126,12 +126,12 @@ class MiniTokenizer(Tokenizer, ABC):
         self.post_init(tokens)
 
     @abstractmethod
-    def get_set_tokens(self) -> set:
+    def tokens(self) -> set:
         """
         Method that return a set of tokenized words.
 
         Example:
-            def get_set_tokens(self) -> set:
+            def tokens(self) -> set:
                 unique_tokens = set()
                 texts: list[str] = ...  # Load all texts you want to encode
                 for text in texts:

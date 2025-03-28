@@ -6,7 +6,7 @@ LOREM_IPSUM = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do e
 
 
 class LoremMiniTokenizer(MiniTokenizer):
-    def get_set_tokens(self) -> set:
+    def tokens(self) -> set:
         unique_tokens = set()
         tokens = self.base_tokenizer.encode(LOREM_IPSUM)
         unique_tokens.update(tokens)

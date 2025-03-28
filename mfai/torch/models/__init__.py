@@ -11,14 +11,13 @@ from .base import AutoPaddingModel, ModelABC
 # which are ModelABC subclasses and have the register attribute set to True
 registry = dict()
 package = importlib.import_module("mfai.torch.models")
-for _, name, _ in pkgutil.walk_packages(package.__path__, package.__name__ + "."):
-    module = importlib.import_module(name)
+for module_info in pkgutil.walk_packages(package.__path__, package.__name__ + "."):
+    module = importlib.import_module(module_info.name)
     for object_name, kls in module.__dict__.items():
         if (
             isinstance(kls, type)
             and issubclass(kls, ModelABC)
-            and kls != ModelABC
-            and kls.register
+            and kls.register  # type: ignore[truthy-function]
         ):
             if kls.__name__ in registry:
                 raise ValueError(
@@ -43,12 +42,24 @@ def load_from_settings_file(
     Instanciate a model from a settings file with Schema validation.
     """
 
-    # pick the class matching the supplied name
+    # Pick the class matching the supplied name
     model_kls = registry.get(model_name, None)
 
     if model_kls is None:
         raise ValueError(
             f"Model {model_name} not found in available architectures: {[x for x in registry]}. Make sure the model's `registry` attribute is set to True (default is False)."
+        )
+    
+    # Check that the class is ModelABC subclass
+    if not issubclass(model_kls, ModelABC):
+        raise ValueError(
+            f"Model {model_name}, is not a subclass of mfai.torch.models.ModelABC."
+        )
+
+    # Check that the model's settings class is wrapped by the @dataclass_json decorator by looking for the schema attribute
+    if not hasattr(model_kls.settings_kls, 'schema'):
+        raise ValueError(
+            f"Model {model_name}.settings_kls has no attribute schema. Make sure the model's settings class is wrapped by the @dataclass_json decorator."
         )
 
     # load the settings
@@ -58,4 +69,4 @@ def load_from_settings_file(
     # instanciate the model
     return model_kls(
         in_channels, out_channels, input_shape=input_shape, settings=model_settings
-    )
+    )  # type: ignore[call-arg]

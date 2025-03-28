@@ -4,7 +4,7 @@ Interface contract for our models.
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Optional, Tuple
+from typing import Any, Optional, Tuple, Union
 from torch import Size
 import torch
 
@@ -24,10 +24,14 @@ class ModelType(Enum):
     MULTIMODAL_LLM = 5
 
 
-class ModelABC(ABC):
+class ModelABC(ABC, torch.nn.Module):
     # concrete subclasses shoudl set register to True
     # to be included in the registry of available models.
     register: bool = False
+
+    in_channels: int
+    out_channels: int
+    input_shape: tuple[int, int]
 
     @property
     @abstractmethod
@@ -38,7 +42,7 @@ class ModelABC(ABC):
 
     @property
     @abstractmethod
-    def settings_kls(self):
+    def settings_kls(self) -> Any:
         """
         Returns the settings class for this model.
         """
@@ -87,7 +91,7 @@ class ModelABC(ABC):
     def features_second(self) -> bool:
         return not self.features_last
 
-    def check_required_attributes(self):
+    def check_required_attributes(self) -> None:
         # we check that the model has defined the following attributes.
         # this must be called at the end of the __init__ of each subclass.
         required_attrs = ["in_channels", "out_channels", "input_shape"]
@@ -97,8 +101,22 @@ class ModelABC(ABC):
 
 
 class AutoPaddingModel(ABC):
+    @property
     @abstractmethod
-    def validate_input_shape(self, input_shape: Size) -> Tuple[bool | Size]:
+    def settings(self) -> Any:
+        """
+        Returns the settings instance used to configure for this model.
+        """
+
+    @property
+    @abstractmethod
+    def input_shape(self) -> Any:
+        """
+        Returns the settings instance used to configure for this model.
+        """
+    
+    @abstractmethod
+    def validate_input_shape(self, input_shape: Size) -> Tuple[bool, Size]:
         """ Given an input shape, verifies whether the inputs fit with the 
             calling model's specifications. 
 
@@ -113,7 +131,7 @@ class AutoPaddingModel(ABC):
                                 shape that fits the model, otherwise it will be None.
         """
         
-    def _maybe_padding(self, data_tensor: torch.Tensor)-> Tuple[torch.Tensor, Optional[torch.Size]]:
+    def _maybe_padding(self, data_tensor: torch.Tensor)-> Tuple[Union[torch.Tensor, ValueError], Optional[torch.Size]]:
         """ Performs an optional padding to ensure that the data tensor can be fed 
             to the underlying model. Padding will happen if if 
             autopadding was enabled via the settings.
@@ -126,7 +144,7 @@ class AutoPaddingModel(ABC):
             and the old size if padding was possible. If not possible or the shape is already fine, 
             the data is returned untouched and the second return value will be none. 
         """
-        if not self._settings.autopad_enabled:
+        if not self.settings.autopad_enabled:
             return data_tensor, None
         
         old_shape = data_tensor.shape[-len(self.input_shape):]
@@ -135,7 +153,7 @@ class AutoPaddingModel(ABC):
             return pad_batch(batch=data_tensor, new_shape=new_shape, pad_value=0), old_shape
         return data_tensor, None
     
-    def _maybe_unpadding(self, data_tensor: torch.Tensor, old_shape: torch.Size)-> torch.Tensor:
+    def _maybe_unpadding(self, data_tensor: torch.Tensor, old_shape: torch.Size)-> torch.Tensor | ValueError:
         """Potentially removes the padding previously added to the given tensor. This action 
            is only carried out if autopadding was enabled via the settings.
 
@@ -147,6 +165,6 @@ class AutoPaddingModel(ABC):
         Returns:
             torch.Tensor: The data tensor with the padding removed, if possible.
         """
-        if self._settings.autopad_enabled and old_shape is not None:
+        if self.settings.autopad_enabled and old_shape is not None:
             return undo_padding(data_tensor, old_shape=old_shape)
         return data_tensor

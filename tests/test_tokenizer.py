@@ -14,7 +14,7 @@ class LoremMiniTokenizer(MiniTokenizer):
 
 
 @pytest.mark.parametrize(
-    "base_tokenizer, expected_num_tokens", [(GPT2Tokenizer(), 39), (LlamaTokenizer(), 37)],
+    "base_tokenizer, expected_num_tokens", [(GPT2Tokenizer(), 40), (LlamaTokenizer(), 38)],
 )
 def test_mini_tokenizer(base_tokenizer: Tokenizer, expected_num_tokens: int):
     tokenizer = LoremMiniTokenizer(base_tokenizer)

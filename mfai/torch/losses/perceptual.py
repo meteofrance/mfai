@@ -254,14 +254,14 @@ class PerceptualLoss(torch.nn.Module):
         features_x, styles_x = self._forward_net_single_img(x)
 
         return self._perceptual_loss_given_features_and_target(
-            y=y,
-            features_x=features_x,
-            styles_x=styles_x
+            x=y,
+            features_y=features_x,
+            styles_y=styles_x
         )
 
     def forward(self,
                 x: torch.Tensor,
-                y : torch.Tensor = None
+                y: torch.Tensor = None
         ):
         r''' Computes the Perceptual loss between two images 
         Arguments :
@@ -336,6 +336,10 @@ class PerceptualLoss(torch.nn.Module):
 
 class LPIPS(nn.Module):
     r''' Creates a criterion that measures Learned Perceptual Image Patch Similarity (LPIPS).
+        For more info see : Zhang et al. The Unreasonable Effectiveness of Deep Features as a Perceptual Metric 
+        (https://arxiv.org/pdf/1801.03924)
+
+        This code is inspired from : https://github.com/richzhang/PerceptualSimilarity/
 
         Arguments :
                 device: (str) - Device where to store the Neural Network (default = 'cuda')

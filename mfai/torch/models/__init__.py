@@ -69,4 +69,4 @@ def load_from_settings_file(
     # instanciate the model
     return model_kls(
         in_channels, out_channels, input_shape=input_shape, settings=model_settings
-    )  # type: ignore[call-arg]
+    )

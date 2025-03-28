@@ -159,15 +159,16 @@ class MiniTokenizer(Tokenizer, ABC):
 
     def encode(self, text: str, *args: Any, **kwargs: Any) -> List[int]:
         base_token_ids = self.base_tokenizer.encode(text)
-        return base_token_ids
+        return [self.token_to_id[x] for x in base_token_ids]
 
     def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
-        return self.base_tokenizer.decode(tokens)
+        base_tokens = [self.id_to_token[x] for x in tokens]
+        return self.base_tokenizer.decode(base_tokens)
 
     @property
     def eot_token(self) -> int:
-        return self.base_tokenizer.eot_token
+        return self.token_to_id[self.base_tokenizer.eot_token]
 
     @property
     def vocab_size(self) -> int:
-        return self.base_tokenizer.vocab_size
+        return len(self.token_to_id)

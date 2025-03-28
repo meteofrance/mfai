@@ -230,11 +230,15 @@ class DummyMultiModalDataModule(LightningDataModule):
         self, batch: List[Tuple[NamedTensor, torch.Tensor, torch.Tensor]]
     ) -> Tuple[NamedTensor, torch.Tensor, torch.Tensor]:
         """Collate a batch of multimodal data."""
-        images, input_txt, targets = zip(*batch)
-        images = NamedTensor.collate_fn(images)  # type: ignore[arg-type, assignment]
-        collate_input_txt: torch.Tensor = self.collate_text(input_txt)  # type: ignore[arg-type]
-        collate_targets: torch.Tensor = self.collate_text(targets)  # type: ignore[arg-type]
-        return images, collate_input_txt, collate_targets  # type: ignore[return-value]
+        images: list[NamedTensor]
+        input_txt: list[torch.Tensor]
+        targets: list[torch.Tensor]
+        images, input_txt, targets = zip(*batch)  # type: ignore[assignment]
+        return (
+            NamedTensor.collate_fn(images),
+            self.collate_text(input_txt),
+            self.collate_text(targets)
+        )
 
     def collate_text(
         self, batch: List[torch.Tensor], target: bool = False, prompt: bool = False

@@ -1,4 +1,5 @@
 from typing import List, Literal, Tuple
+import random
 
 from lightning.pytorch.core import LightningDataModule
 import torch
@@ -135,7 +136,7 @@ class DummyDataModule(LightningDataModule):
 ##########################################################################################################
 
 
-class MultiModalDummyDataset(Dataset):
+class DummyMultiModalDataset(Dataset):
     """
     A dummy multimodal dataset to test our training modules.
         - image is a random float tensor of  size (nb_input_channels, dim_x, dim_y).
@@ -159,7 +160,7 @@ class MultiModalDummyDataset(Dataset):
 
         self.len = 6
         self.vocab_size = 128
-        self.eot_token = torch.tensor(6666)
+        self.eot_token = 6666
 
     def __len__(self) -> int:
         return self.len
@@ -173,13 +174,13 @@ class MultiModalDummyDataset(Dataset):
             feature_names=[f"feature_{i}" for i in range(self.nb_input_channels)],
         )
         # Create the random output and input tokens
-        random_text_len = torch.randint(2, self.context_length, (1,))
+        random_text_len = random.randint(2, self.context_length)
         output_text = torch.randint(self.vocab_size, (random_text_len,))
         input_text = output_text[:-1]
         return images, input_text, output_text
 
 
-class MultiModalDummyDataModule(DummyDataModule):
+class DummyMultiModalDataModule(LightningDataModule):
     """
     A Lightning DataModule wrapping our dummy dataset.
     It defines the train/valid/test/predict datasets and their dataloaders.
@@ -201,21 +202,21 @@ class MultiModalDummyDataModule(DummyDataModule):
         self.context_length = context_length
 
     def setup(self, stage: str = "") -> None:
-        self.dummy_train = MultiModalDummyDataset(
+        self.dummy_train = DummyMultiModalDataset(
             "train",
             self.dim_x,
             self.dim_y,
             self.nb_input_channels,
             self.context_length,
         )
-        self.dummy_val = MultiModalDummyDataset(
+        self.dummy_val = DummyMultiModalDataset(
             "val",
             self.dim_x,
             self.dim_y,
             self.nb_input_channels,
             self.context_length,
         )
-        self.dummy_test = MultiModalDummyDataset(
+        self.dummy_test = DummyMultiModalDataset(
             "test",
             self.dim_x,
             self.dim_y,
@@ -229,11 +230,11 @@ class MultiModalDummyDataModule(DummyDataModule):
         self, batch: List[Tuple[NamedTensor, torch.Tensor, torch.Tensor]]
     ) -> Tuple[NamedTensor, torch.Tensor, torch.Tensor]:
         """Collate a batch of multimodal data."""
-        inputs, input_txt, targets = zip(*batch)
-        inputs = NamedTensor.collate_fn(inputs)
-        input_txt = self.collate_text(input_txt)
-        targets = self.collate_text(targets)
-        return inputs, input_txt, targets
+        images, input_txt, targets = zip(*batch)
+        images = NamedTensor.collate_fn(images)
+        input_txt: torch.Tensor = self.collate_text(input_txt)
+        targets: torch.Tensor = self.collate_text(targets)
+        return images, input_txt, targets
 
     def collate_text(
         self, batch: List[torch.Tensor], target: bool = False, prompt: bool = False

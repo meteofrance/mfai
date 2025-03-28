@@ -1,4 +1,4 @@
-from mfai.torch.dummy_dataset import MultiModalDummyDataModule
+from mfai.torch.dummy_dataset import DummyMultiModalDataModule
 from mfai.torch.lightning_modules.clip import CLIPLightningModule
 
 from lightning.pytorch.cli import LightningCLI, ArgsType
@@ -23,7 +23,7 @@ class ClipCLI(LightningCLI):
 def cli_main(args: ArgsType = None):
     cli = ClipCLI(
         CLIPLightningModule,
-        MultiModalDummyDataModule,
+        DummyMultiModalDataModule,
         run=False,
         args=args,
     )

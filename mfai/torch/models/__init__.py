@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 from torch import nn
-from .base import AutoPaddingModel, ModelABC
 
+from .base import AutoPaddingModel, ModelABC
 
 # Load all models from the torch.models package
 # which are ModelABC subclasses and have the register attribute set to True
@@ -27,8 +27,11 @@ for module_info in pkgutil.walk_packages(package.__path__, package.__name__ + ".
 all_nn_architectures = list(registry.values())
 
 
-autopad_nn_architectures = {obj for obj in all_nn_architectures
-                 if issubclass(obj, AutoPaddingModel) and obj != 'AutoPaddingModel'}
+autopad_nn_architectures = {
+    obj
+    for obj in all_nn_architectures
+    if issubclass(obj, AutoPaddingModel) and obj != "AutoPaddingModel"
+}
 
 
 def load_from_settings_file(

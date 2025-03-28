@@ -7,7 +7,7 @@ from dataclasses_json import dataclass_json
 from torch.nn import functional as F
 
 from .base import ModelABC, ModelType
-from .encoders import get_encoder
+from .resnet import get_resnet_encoder
 
 
 class Activation(nn.Module):
@@ -299,7 +299,7 @@ class DeepLabV3(ModelABC, torch.nn.Module):
         self.input_shape = input_shape
         self._settings = settings
 
-        self.encoder = get_encoder(
+        self.encoder = get_resnet_encoder(
             settings.encoder_name,
             in_channels=in_channels,
             depth=settings.encoder_depth,
@@ -506,7 +506,7 @@ class DeepLabV3Plus(DeepLabV3):
         self.out_channels = out_channels
         self.input_shape = input_shape
 
-        self.encoder = get_encoder(
+        self.encoder = get_resnet_encoder(
             settings.encoder_name,
             in_channels=in_channels,
             depth=settings.encoder_depth,

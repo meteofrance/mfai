@@ -23,18 +23,20 @@ class PerceptualLoss(torch.nn.Module):
                  alpha_feature: float = 1,
         ):
         r''' Class that computes the Perceptual Loss based on selected Network.
+            For more details : See Johnson et al. - Perceptual losses for real-time style transfer and super-resolution.
+            (https://arxiv.org/pdf/1603.08155)
 
         Arguments :
-                device: (str) - Device where to store the Neural Network (default = 'cuda')
-                multi_scale: (bool) - Multi Scale mode to compute Perceptual Loss at different scales (default = False)
-                channel_iterative_mode: (bool) - To compute the Perceptual Loss over channels of the input (default = False)
-                in_channels: (int) - Number of input channels for perceptual Loss - [Used only if channel_iterative_mode=False] (default = 1)
-                pre_trained: (bool) - To use a pre-trained or a random version of the VGG16 (default = False)
-                resize_input: (bool) - To adapt input size to ImageNet Dataset size (224x224) (default = False)
-                style_layer_ids: (list) - Ids of Style Layers used for Perceptual Loss (default = [])
-                feature_layer_ids: (list) - Ids of Feature Layers used for Perceptual Loss (default = [4,9,16,23,30])
-                alpha_style: (float) - Weight of Style Loss (default = 0)
-                alpha_feature (float) - Weight of Feature Loss (default = 1)
+                - device: (str) - Device where to store the Neural Network (default = 'cuda')
+                - multi_scale: (bool) - Multi Scale mode to compute Perceptual Loss at different scales (default = False)
+                - channel_iterative_mode: (bool) - To compute the Perceptual Loss over channels of the input (default = False)
+                - in_channels: (int) - Number of input channels for perceptual Loss - [Used only if channel_iterative_mode=False] (default = 1)
+                - pre_trained: (bool) - To use a pre-trained or a random version of the VGG16 (default = False)
+                - resize_input: (bool) - To adapt input size to ImageNet Dataset size (224x224) (default = False)
+                - style_layer_ids: (list) - Ids of Style Layers used for Perceptual Loss (default = [])
+                - feature_layer_ids: (list) - Ids of Feature Layers used for Perceptual Loss (default = [4,9,16,23,30])
+                - alpha_style: (float) - Weight of Style Loss (default = 0)
+                - alpha_feature (float) - Weight of Feature Loss (default = 1)
          '''
         super(PerceptualLoss, self).__init__()
 
@@ -69,9 +71,9 @@ class PerceptualLoss(torch.nn.Module):
             for i in range(3):
                 self.scaling_factor.append(2**i)
         
-        self.__set_network()
+        self._set_network()
 
-    def __set_blocks(self):
+    def _set_blocks(self):
         r''' Set the blocks of layers from the neural network 
         
         Return : 
@@ -98,7 +100,7 @@ class PerceptualLoss(torch.nn.Module):
 
         return blocks
     
-    def __downscale(self,
+    def _downscale(self,
                   x : torch.Tensor,
                   scale_times=1,
                   mode='bilinear'
@@ -109,7 +111,7 @@ class PerceptualLoss(torch.nn.Module):
 
         return x
     
-    def __set_network(self):
+    def _set_network(self):
         r''' Set the VGG16 from torchvision.
         
         Trained version obtained : "https://download.pytorch.org/models/vgg16-397923af.pth"
@@ -117,7 +119,7 @@ class PerceptualLoss(torch.nn.Module):
         self.size_resize=[224,224]
         self.network = models.vgg16(pretrained=self.pre_trained).to(self.device)
         
-        blocks =  self.__set_blocks()
+        blocks =  self._set_blocks()
 
         for bl in blocks:
             for p in bl.parameters():
@@ -125,7 +127,7 @@ class PerceptualLoss(torch.nn.Module):
 
         self.blocks = torch.nn.ModuleList(blocks)
     
-    def __forward_net_single_img(self,
+    def _forward_net_single_img(self,
                                x: torch.Tensor
         ):
         r''' Forward the Network features and styles for a single image. 
@@ -185,15 +187,15 @@ class PerceptualLoss(torch.nn.Module):
         styles = []
         for scaling_factor in self.scaling_factor:
             if self.multi_scale:
-                x = self.__downscale(x, scaling_factor)
+                x = self._downscale(x, scaling_factor)
 
             if self.channel_iterative_mode:
                 for channel_id in range(x.shape[1]):
-                    feature, style = self.__forward_net_single_img(x[:, channel_id, :, :])
+                    feature, style = self._forward_net_single_img(x[:, channel_id, :, :])
                     features.append(feature)
                     styles.append(style)
             else :
-                feature, style = self.__forward_net_single_img(x)
+                feature, style = self._forward_net_single_img(x)
                 features.append(feature)
                 styles.append(style)
 
@@ -204,7 +206,7 @@ class PerceptualLoss(torch.nn.Module):
             return features, styles
 
     
-    def __perceptual_loss_given_features_and_target(self,
+    def _perceptual_loss_given_features_and_target(self,
                                                   x: torch.Tensor,
                                                   features_y: list,
                                                   styles_y: list
@@ -220,7 +222,7 @@ class PerceptualLoss(torch.nn.Module):
             loss : (troch.Tensor)
         '''
 
-        features_x, styles_x = self.__forward_net_single_img(x)
+        features_x, styles_x = self._forward_net_single_img(x)
 
         loss = 0.0
         for i, _ in enumerate(self.blocks):
@@ -236,7 +238,7 @@ class PerceptualLoss(torch.nn.Module):
                 loss += self.alpha_style*loss_style
         return loss
 
-    def __perceptual_loss_given_input_and_target(self,
+    def _perceptual_loss_given_input_and_target(self,
                                                x : torch.Tensor,
                                                y : torch.Tensor
         ):
@@ -249,9 +251,9 @@ class PerceptualLoss(torch.nn.Module):
         Return :
             loss : (troch.Tensor)'''
 
-        features_x, styles_x = self.__forward_net_single_img(x)
+        features_x, styles_x = self._forward_net_single_img(x)
 
-        return self.__perceptual_loss_given_features_and_target(
+        return self._perceptual_loss_given_features_and_target(
             y=y,
             features_x=features_x,
             styles_x=styles_x
@@ -276,18 +278,18 @@ class PerceptualLoss(torch.nn.Module):
         if y is not None:
             for scaling_factor in self.scaling_factor:
                 if self.multi_scale:
-                    x = self.__downscale(x, scaling_factor)
-                    y = self.__downscale(y, scaling_factor)
+                    x = self._downscale(x, scaling_factor)
+                    y = self._downscale(y, scaling_factor)
                     
                 if self.channel_iterative_mode:
                     for channel_id in range(x.shape[1]):
-                        perceptual_loss += self.__perceptual_loss_given_input_and_target( 
+                        perceptual_loss += self._perceptual_loss_given_input_and_target( 
                             x = x[:, channel_id, :, :],
                             y = y[:, channel_id, :, :]
                         )
                     perceptual_loss /= x.shape[1]
                 else :
-                    perceptual_loss += self.__perceptual_loss_given_input_and_target( 
+                    perceptual_loss += self._perceptual_loss_given_input_and_target( 
                             x = x,
                             y = y
                         )
@@ -297,7 +299,7 @@ class PerceptualLoss(torch.nn.Module):
                 raise ValueError
             for id_scaling_factor, scaling_factor in enumerate(self.scaling_factor):
                 if self.multi_scale:
-                    x = self.__downscale(x, scaling_factor)
+                    x = self._downscale(x, scaling_factor)
                 else :
                     id_scaling_factor = 0
                 if self.channel_iterative_mode:
@@ -307,7 +309,7 @@ class PerceptualLoss(torch.nn.Module):
                             styles_y=self.styles_memory[id_scaling_factor*x.shape[1]+channel_id]
                         else :
                             styles_y=None
-                        perceptual_loss += self.__perceptual_loss_given_features_and_target(
+                        perceptual_loss += self._perceptual_loss_given_features_and_target(
                             x=x[:, channel_id, :, :],
                             features_y=features_y, 
                             styles_y=styles_y
@@ -321,7 +323,7 @@ class PerceptualLoss(torch.nn.Module):
                     else :
                         styles_y=None
 
-                    perceptual_loss += self.__perceptual_loss_given_features_and_target(
+                    perceptual_loss += self._perceptual_loss_given_features_and_target(
                         x=x,
                         features_y=features_y, 
                         styles_y=styles_y,
@@ -383,9 +385,9 @@ class LPIPS(nn.Module):
         
         # linear layers
         self.lin = LinLayers(n_channels_list).to("cuda")
-        self.lin.load_state_dict(self.__get_state_dict())
+        self.lin.load_state_dict(self._get_state_dict())
 
-    def __get_state_dict(self, net_type: str = 'vgg16', version: str = '0.1'):
+    def _get_state_dict(self, net_type: str = 'vgg16', version: str = '0.1'):
         # build url
         url = 'https://raw.githubusercontent.com/richzhang/PerceptualSimilarity/' \
             + f'master/lpips/weights/v{version}/{net_type}.pth'

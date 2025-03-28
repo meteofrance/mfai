@@ -36,7 +36,7 @@ class Tokenizer(ABC):
         pass
 
     @abstractmethod
-    def post_init(self, tokens: set) -> None:
+    def post_init(self) -> None:
         """
         Do any post init using the full set of tokens
         available in the dataset.
@@ -64,7 +64,7 @@ class GPT2Tokenizer(Tokenizer):
     def vocab_size(self) -> int:
         return self.tokenizer.n_vocab
 
-    def post_init(self, tokens: set) -> None:
+    def post_init(self) -> None:
         pass
 
 
@@ -104,7 +104,7 @@ class LlamaTokenizer(Tokenizer):
     def vocab_size(self) -> int:
         return self.tokenizer.vocab_size()
 
-    def post_init(self, tokens: set) -> None:
+    def post_init(self) -> None:
         pass
 
 
@@ -118,12 +118,11 @@ class MiniTokenizer(Tokenizer, ABC):
 
     def __init__(self, base_tokenizer: Tokenizer):
         self.base_tokenizer = base_tokenizer
-        tokens = self.tokens()
 
         self.token_to_id: dict[int, int] = dict()
         self.id_to_token: dict[int, int] = dict()
 
-        self.post_init(tokens)
+        self.post_init()
 
     @abstractmethod
     def tokens(self) -> set:
@@ -140,12 +139,12 @@ class MiniTokenizer(Tokenizer, ABC):
                 return unique_tokens
         """
 
-    def post_init(self, tokens: set) -> None:
+    def post_init(self) -> None:
         """
         Constructs the forward and backward lookup tables between base tokenizer tokens
         and reduced set of ids.
         """
-        for idx, token_id in enumerate(tokens):
+        for idx, token_id in enumerate(self.tokens()):
             self.token_to_id[token_id] = idx
             self.id_to_token[idx] = token_id
 

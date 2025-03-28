@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 
 
-def patch_first_conv(model, new_in_channels, default_in_channels=3, pretrained=True) -> None:
+def patch_first_conv(model: torch.nn.Module, new_in_channels: int, default_in_channels: int=3, pretrained: bool=True) -> None:
     """Change first convolution layer input channels.
     In case:
         in_channels == 1 or in_channels == 2 -> reuse original weights
@@ -47,7 +47,7 @@ def patch_first_conv(model, new_in_channels, default_in_channels=3, pretrained=T
         module.weight = nn.parameter.Parameter(new_weight)
 
 
-def replace_strides_with_dilation(module, dilation_rate) -> None:
+def replace_strides_with_dilation(module: torch.nn.Module, dilation_rate: float) -> None:
     """Patch Conv2d modules replacing strides with dilation"""
     for mod in module.modules():
         if isinstance(mod, nn.Conv2d):

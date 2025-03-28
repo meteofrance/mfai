@@ -36,7 +36,7 @@ class Tokenizer(ABC):
         pass
 
     @abstractmethod
-    def post_init(self, tokens: set) -> None:
+    def post_init(self) -> None:
         """
         Do any post init using the full set of tokens
         available in the dataset.
@@ -64,7 +64,7 @@ class GPT2Tokenizer(Tokenizer):
     def vocab_size(self) -> int:
         return self.tokenizer.n_vocab
 
-    def post_init(self, tokens: set) -> None:
+    def post_init(self) -> None:
         pass
 
 
@@ -104,33 +104,47 @@ class LlamaTokenizer(Tokenizer):
     def vocab_size(self) -> int:
         return self.tokenizer.vocab_size()
 
-    def post_init(self, tokens: set) -> None:
+    def post_init(self) -> None:
         pass
 
 
-class MiniTokenizer(Tokenizer):
+class MiniTokenizer(Tokenizer, ABC):
     """
-    A Tokenizer using a reduced set of tokens
-    from a base/parent Tokenizer. Typical use case is for
-    narrow vocab problems with only 1000 tokens out of a vocab of 50000.
+    A Tokenizer using a reduced set of tokens from a base/parent Tokenizer.
+    Typical use case is for narrow vocab problems with only 1000 tokens out
+    of a vocab of 50000.
+    To use these class, you only have to implement the method 'get_set_tokens'.
     """
 
     def __init__(self, base_tokenizer: Tokenizer):
         self.base_tokenizer = base_tokenizer
 
-        # at this stage the lookup table are not initialised
-        self.token_to_id: dict[int, int] | None = None
-        self.id_to_token: dict[int, int] | None = None
+        self.token_to_id: dict[int, int] = dict()
+        self.id_to_token: dict[int, int] = dict()
 
-    def post_init(self, tokens: set) -> None:
+        self.post_init()
+
+    @abstractmethod
+    def tokens(self) -> set:
+        """
+        Method that return a set of tokenized words.
+
+        Example:
+            def tokens(self) -> set:
+                unique_tokens = set()
+                texts: list[str] = ...  # Load all texts you want to encode
+                for text in texts:
+                    tokens = self.base_tokenizer.encode(text)
+                    unique_tokens.update(tokens)
+                return unique_tokens
+        """
+
+    def post_init(self) -> None:
         """
         Constructs the forward and backward lookup tables between base tokenizer tokens
         and reduced set of ids.
         """
-        self.token_to_id = dict()
-        self.id_to_token = dict()
-
-        for idx, token_id in enumerate(tokens):
+        for idx, token_id in enumerate(self.tokens()):
             self.token_to_id[token_id] = idx
             self.id_to_token[idx] = token_id
 
@@ -144,28 +158,16 @@ class MiniTokenizer(Tokenizer):
 
     def encode(self, text: str, *args: Any, **kwargs: Any) -> List[int]:
         base_token_ids = self.base_tokenizer.encode(text)
-        if self.token_to_id is not None:
-            return [self.token_to_id[x] for x in base_token_ids]
-        else:
-            return base_token_ids
+        return [self.token_to_id[x] for x in base_token_ids]
 
     def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
-        if self.id_to_token is not None:
-            base_tokens = [self.id_to_token[x] for x in tokens]
-            return self.base_tokenizer.decode(base_tokens)
-        else:
-            return self.base_tokenizer.decode(tokens)
+        base_tokens = [self.id_to_token[x] for x in tokens]
+        return self.base_tokenizer.decode(base_tokens)
 
     @property
     def eot_token(self) -> int:
-        if self.token_to_id is not None:
-            return self.token_to_id[self.base_tokenizer.eot_token]
-        else:
-            return self.base_tokenizer.eot_token
+        return self.token_to_id[self.base_tokenizer.eot_token]
 
     @property
     def vocab_size(self) -> int:
-        if self.token_to_id is not None:
-            return len(self.token_to_id)
-        else:
-            return self.base_tokenizer.vocab_size
+        return len(self.token_to_id)

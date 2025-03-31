@@ -241,10 +241,9 @@ The original VGG-16 architecture is kept. There will be N forwards of the networ
 You can either choose to compute the Perceptual Loss with the ImageNet Pre-trained version of the VGG-16 or use a random version of it.
 
 ## Example
-An example of PerceptualLoss usage : \
-(Case 1 : Tensors have more or less than three channels)
+An example of PerceptualLoss usage :
 ```python
-
+# In case the target and input are different everytime
 inputs = torch.rand(25, 5, 128, 128)
 targets = torch.rand(25, 5, 128, 128)
 
@@ -253,17 +252,22 @@ perceptual_loss_class = PerceptualLoss(channel_iterative_mode=True)
 
 # Computing Perceptual Loss
 perceptual_loss = perceptual_loss_class(inputs, targets)
+
 ```
-(Case 2 : Tensors have three channels)
 ```python
+# In case you need to compare different targets to the same input
+inputs = torch.rand(25, 5, 128, 128)
+perceptual_loss_class = PerceptualLoss(channel_iterative_mode=True)
 
-inputs = torch.rand(25, 3, 128, 128)
-targets = torch.rand(25, 3, 128, 128)
+# The features of the inputs are computed and stored in the memory
+perceptual_loss_class.compute_perceptual_features(inputs)
 
-# Initialize the perceptual loss class to compute the features on each channels separately.
-perceptual_loss_class = PerceptualLoss(channel_iterative_mode=False)
-# Computing Perceptual Loss
-perceptual_loss = perceptual_loss_class(inputs, targets)
+for _ in range():
+  
+  targets = torch.rand(25, 5, 128, 128)
+
+  # The features of the targets are computed and compared to the input features
+  perceptual_loss = perceptual_loss_class(targets)
 
 ```
 

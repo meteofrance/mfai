@@ -37,6 +37,22 @@ class PerceptualLoss(torch.nn.Module):
                 - feature_layer_ids: (list) - Ids of Feature Layers used for Perceptual Loss (default = [4,9,16,23,30])
                 - alpha_style: (float) - Weight of Style Loss (default = 0)
                 - alpha_feature (float) - Weight of Feature Loss (default = 1)
+        
+        Example :
+        ```python
+            # In case the target and input are different everytime
+            inputs = torch.rand(25, 5, 128, 128)
+            targets = torch.rand(25, 5, 128, 128)
+
+            # Initialize the perceptual loss class
+            perceptual_loss_class = PerceptualLoss(channel_iterative_mode=True)
+
+            # Computing Perceptual Loss
+            perceptual_loss = perceptual_loss_class(inputs, targets)
+
+        ```
+        
+        
          '''
         super(PerceptualLoss, self).__init__()
 
@@ -179,9 +195,25 @@ class PerceptualLoss(torch.nn.Module):
         Arguments :
             x: (torch.Tensor)
             return_features_and_styles: (bool)
-
-        Note : Useful in case you need to compute the perceptual loss between the same original image and other images.
         
+        Example :
+        ```python
+            # In case you need to compare different targets to the same input
+            inputs = torch.rand(25, 5, 128, 128)
+            perceptual_loss_class = PerceptualLoss(channel_iterative_mode=True)
+            
+            # The features of the inputs are computed and stored in the memory
+            perceptual_loss_class.compute_perceptual_features(inputs)
+            
+            for _ in range():
+                
+                targets = torch.rand(25, 5, 128, 128)
+
+                # The features of the targets are computed and compared to the input features
+                perceptual_loss = perceptual_loss_class(targets)
+
+        ```
+
         '''
         features = []
         styles = []

@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
+# type: ignore
 import torch
 from typing import Sequence
 from collections import OrderedDict
 from itertools import chain
 import torch.nn as nn
-from torchvision import models
+import torchvision.models.vgg16 as vgg16
 from urllib.error import URLError
 
 class PerceptualLoss(torch.nn.Module):
@@ -21,7 +22,7 @@ class PerceptualLoss(torch.nn.Module):
                  feature_block_ids: list = [0,1,2,3,4],
                  alpha_style: float = 0,
                  alpha_feature: float = 1,
-        ):
+        ) -> None:
         r''' Class that computes the Perceptual Loss based on selected Network.
             For more details : See Johnson et al. - Perceptual losses for real-time style transfer and super-resolution.
             (https://arxiv.org/pdf/1603.08155)
@@ -67,8 +68,8 @@ class PerceptualLoss(torch.nn.Module):
         self.resize_input = resize_input
 
         # Memory for features
-        self.features_memory=None
-        self.styles_memory=None 
+        self.features_memory: list[list]=[]
+        self.styles_memory: list[list]=[] 
 
         # Style layer
         self.style_layer_ids = style_layer_ids
@@ -89,7 +90,7 @@ class PerceptualLoss(torch.nn.Module):
         
         self._set_network()
 
-    def _set_blocks(self):
+    def _set_blocks(self) -> list :
         r''' Set the blocks of layers from the neural network 
         
         Return : 
@@ -116,22 +117,22 @@ class PerceptualLoss(torch.nn.Module):
     
     def _downscale(self,
                   x : torch.Tensor,
-                  scale_times=1,
-                  mode='bilinear'
-        ):
+                  scale_times: int =1,
+                  mode: str='bilinear'
+        ) -> torch.Tensor :
         
         for _ in range(scale_times):
             x = torch.nn.functional.interpolate(x, scale_factor=0.5, mode=mode)
 
         return x
     
-    def _set_network(self):
+    def _set_network(self) -> None :
         r''' Set the VGG16 from torchvision.
         
         Trained version obtained : "https://download.pytorch.org/models/vgg16-397923af.pth"
         '''
         self.size_resize=[224,224]
-        self.network = models.vgg16(weights=None if not self.pre_trained else self.pre_trained).to(self.device)
+        self.network =  vgg16(weights=None if not self.pre_trained else self.pre_trained).to(self.device)
         
         blocks =  self._set_blocks()
 
@@ -143,7 +144,7 @@ class PerceptualLoss(torch.nn.Module):
     
     def _forward_net_single_img(self,
                                x: torch.Tensor
-        ):
+        ) -> tuple :
         r''' Forward the Network features and styles for a single image. 
 
         Arguments :
@@ -187,7 +188,7 @@ class PerceptualLoss(torch.nn.Module):
     def compute_perceptual_features(self,
                                     x: torch.Tensor,
                                     return_features_and_styles:bool = False
-        ):
+        ) -> tuple :
         r''' Compute the features of a single image.
 
         Arguments :
@@ -234,13 +235,15 @@ class PerceptualLoss(torch.nn.Module):
 
         if return_features_and_styles:
             return features, styles
+        else :
+            return None, None
 
     
     def _perceptual_loss_given_features_and_target(self,
                                                   x: torch.Tensor,
                                                   features_y: list,
                                                   styles_y: list
-        ):
+        ) -> torch.Tensor :
         r''' Computes the Perceptual Loss given features and a target image.
 
         Arguments :
@@ -254,7 +257,7 @@ class PerceptualLoss(torch.nn.Module):
 
         features_x, styles_x = self._forward_net_single_img(x)
 
-        loss = 0.0
+        loss = torch.tensor(0.).to(self.device)
         for i, _ in enumerate(self.blocks):
             if i in self.feature_block_ids:
                 x = features_x[i]
@@ -271,7 +274,7 @@ class PerceptualLoss(torch.nn.Module):
     def _perceptual_loss_given_input_and_target(self,
                                                x : torch.Tensor,
                                                y : torch.Tensor
-        ):
+        ) -> torch.Tensor :
         r''' Computes the Perceptual Loss between two images 
         
         Arguments :
@@ -292,7 +295,7 @@ class PerceptualLoss(torch.nn.Module):
     def forward(self,
                 x: torch.Tensor,
                 y: torch.Tensor = None
-        ):
+        ) -> torch.Tensor :
         r''' Computes the Perceptual loss between two images 
         Arguments :
             x: (torch.Tensor)
@@ -308,8 +311,9 @@ class PerceptualLoss(torch.nn.Module):
         # Check that tensors are normalized 
         if x.max() > 1 or x.min() < 0 : 
             raise ValueError('x data should be normalized between 0 and 1')
-        elif y.max() > 1 or y.min() < 0 : 
-            raise ValueError('y data should be normalized between 0 and 1')
+        elif y is not None:
+            if y.max() > 1 or y.min() < 0 : 
+                raise ValueError('y data should be normalized between 0 and 1')
         else :
             pass
 
@@ -332,7 +336,7 @@ class PerceptualLoss(torch.nn.Module):
                             y = y
                         )
         else :
-            if self.features_memory is None and self.styles_memory is None :
+            if len(self.features_memory) and len(self.styles_memory) :
                 print('Warning: The features needs to be computed before. To do so call the function : compute_perceptual_features ')
                 raise ValueError
             for id_scaling_factor, scaling_factor in enumerate(self.scaling_factor):
@@ -346,7 +350,7 @@ class PerceptualLoss(torch.nn.Module):
                         if len(self.style_layer_ids):
                             styles_y=self.styles_memory[id_scaling_factor*x.shape[1]+channel_id]
                         else :
-                            styles_y=None
+                            styles_y=[]
                         perceptual_loss += self._perceptual_loss_given_features_and_target(
                             x=x[:, channel_id, :, :],
                             features_y=features_y, 
@@ -359,7 +363,7 @@ class PerceptualLoss(torch.nn.Module):
                     if len(self.style_layer_ids):
                         styles_y=self.styles_memory[id_scaling_factor]
                     else :
-                        styles_y=None
+                        styles_y=[]
 
                     perceptual_loss += self._perceptual_loss_given_features_and_target(
                         x=x,
@@ -404,7 +408,7 @@ class LPIPS(nn.Module):
                  feature_block_ids: list = [0,1,2,3,4],
                  alpha_style: float = 0,
                  alpha_feature: float = 1
-        ):
+        ) -> None :
         super().__init__()
 
         
@@ -423,6 +427,7 @@ class LPIPS(nn.Module):
             alpha_feature=alpha_feature
         ).to(device)
 
+        self.pre_trained = pre_trained
         self.device = device
         
         n_channels_list = [64, 128, 256, 512, 512]
@@ -436,7 +441,7 @@ class LPIPS(nn.Module):
             print('The linear layers for LPIPS computation could not be downloaded. Please check SSL certificate.')
 
         
-    def _get_state_dict(self, net_type: str = 'vgg16', version: str = '0.1'):
+    def _get_state_dict(self, net_type: str = 'vgg16', version: str = '0.1') -> OrderedDict :
         # build url
         url = 'https://raw.githubusercontent.com/richzhang/PerceptualSimilarity/' \
             + f'master/lpips/weights/v{version}/{net_type[:-2]}.pth'
@@ -457,7 +462,7 @@ class LPIPS(nn.Module):
         
         return new_state_dict
 
-    def forward(self, x: torch.Tensor, y: torch.Tensor):
+    def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         feat_x, _ = self.perceptual_loss.compute_perceptual_features(x, return_features_and_styles=True)
         feat_y, _ = self.perceptual_loss.compute_perceptual_features(y, return_features_and_styles=True)
         
@@ -478,13 +483,72 @@ class LPIPS(nn.Module):
 
 
 
+class LinLayers(nn.ModuleList):
+    def __init__(self, n_channels_list: Sequence[int])  -> None :
+        super().__init__([
+            nn.Sequential(
+                nn.Identity(),
+                nn.Conv2d(nc, 1, 1, 1, 0, bias=False)
+            ) for nc in n_channels_list
+        ])
 
-def normalize_activation(x, eps=1e-10):
+        for param in self.parameters():
+            param.requires_grad = False
+
+
+class BaseNet(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+
+        # register buffer
+        self.mean = torch.Tensor([-.030, -.088, -.188])[None, :, None, None]
+        self.std = torch.Tensor([.458, .448, .450])[None, :, None, None]
+
+    def set_requires_grad(self, state: bool) -> None:
+        for param in chain(self.parameters(), self.buffers()):
+            param.requires_grad = state
+
+    def z_score(self, x: torch.Tensor) -> torch.Tensor:
+        return (x - self.mean) / self.std
+
+    def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
+        raise NotImplementedError
+
+def get_network(net_type: str) -> BaseNet:
+    if net_type == 'vgg':
+        return VGG16()
+    else:
+        raise NotImplementedError('choose net_type from [alex, squeeze, vgg].')
+
+class VGG16(BaseNet):
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.layers = vgg16(weights=self.pre_trained).features
+        self.target_layers = [4, 9, 16, 23, 30]
+        self.n_channels_list = [64, 128, 256, 512, 512]
+
+        self.set_requires_grad(False)
+
+    def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
+        x = self.z_score(x)
+
+        output = []
+        for i, (_, layer) in enumerate(self.layers._modules.items(), 1):
+            x = layer(x)
+            if i in self.target_layers:
+                output.append(normalize_activation(x))
+            if len(output) == self.target_layers.shape:
+                break
+        return output
+
+
+def normalize_activation(x : torch.Tensor, eps : float =1e-10) -> torch.Tensor:
     norm_factor = torch.sqrt(torch.sum(x ** 2, dim=1, keepdim=True))
     return x / (norm_factor + eps)
 
 
-def get_state_dict(dir, net_type: str = 'alex'):
+def get_state_dict(dir : str, net_type : str = 'alex') -> OrderedDict:
 
     old_state_dict = torch.load(
         dir+f'lpips/{net_type}.pth',
@@ -501,61 +565,3 @@ def get_state_dict(dir, net_type: str = 'alex'):
 
     return new_state_dict
 
-def get_network(net_type: str):
-    if net_type == 'vgg':
-        return VGG16()
-    else:
-        raise NotImplementedError('choose net_type from [alex, squeeze, vgg].')
-
-
-class LinLayers(nn.ModuleList):
-    def __init__(self, n_channels_list: Sequence[int]):
-        super().__init__([
-            nn.Sequential(
-                nn.Identity(),
-                nn.Conv2d(nc, 1, 1, 1, 0, bias=False)
-            ) for nc in n_channels_list
-        ])
-
-        for param in self.parameters():
-            param.requires_grad = False
-
-
-class BaseNet(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-        # register buffer
-        self.register_buffer(
-            'mean', torch.Tensor([-.030, -.088, -.188])[None, :, None, None])
-        self.register_buffer(
-            'std', torch.Tensor([.458, .448, .450])[None, :, None, None])
-
-    def set_requires_grad(self, state: bool):
-        for param in chain(self.parameters(), self.buffers()):
-            param.requires_grad = state
-
-    def z_score(self, x: torch.Tensor):
-        return (x - self.mean) / self.std
-
-    def forward(self, x: torch.Tensor):
-        x = self.z_score(x)
-
-        output = []
-        for i, (_, layer) in enumerate(self.layers._modules.items(), 1):
-            x = layer(x)
-            if i in self.target_layers:
-                output.append(normalize_activation(x))
-            if len(output) == len(self.target_layers):
-                break
-        return output
-
-class VGG16(BaseNet):
-    def __init__(self):
-        super().__init__()
-
-        self.layers = models.vgg16(weights=self.perceptual_loss.pre_trained).features
-        self.target_layers = [4, 9, 16, 23, 30]
-        self.n_channels_list = [64, 128, 256, 512, 512]
-
-        self.set_requires_grad(False)

@@ -6,7 +6,6 @@ from collections import OrderedDict
 from itertools import chain
 import torch.nn as nn
 from torchvision import models
-import urllib
 from urllib.error import URLError
 
 class PerceptualLoss(torch.nn.Module):

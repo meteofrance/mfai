@@ -2,12 +2,14 @@ import pytest
 import torch
 from mfai.torch.losses.perceptual import PerceptualLoss, LPIPS
 
-# @pytest.mark.parametrize("input", [torch.rand(size=(1,3,224,224))])
-def test_perceptual_loss_on_same_img(input):
+
+def test_perceptual_loss_on_same_img():
     """
     Test of the Perceptual Loss on the same image
     """
     # Test with 3-channels images
+
+    input = torch.rand(size=(1,3,224,224))
     # Random VGG16 
     perceptual_loss = PerceptualLoss(
         device='cpu',
@@ -59,14 +61,16 @@ def test_perceptual_loss_on_same_img(input):
     loss = perceptual_loss.forward(input, input)
     assert pytest.approx(loss, 0.001) == 0
 
-# @pytest.mark.parametrize("input,preds", [torch.rand(size=(1,3,224,224)),torch.rand(size=(1,3,224,224))])
-def test_perceptual_loss_on_different_img(input, preds):
+
+def test_perceptual_loss_on_different_img():
     """
     Test of the Perceptual Loss on the different image
     """
 
     # Test with 3-channels images
 
+    preds = torch.rand(size=(1,3,224,224))
+    input = torch.rand(size=(1,3,224,224))
     # Random VGG16 
     perceptual_loss = PerceptualLoss(
         device='cpu',
@@ -119,11 +123,11 @@ def test_perceptual_loss_on_different_img(input, preds):
     loss = perceptual_loss.forward(input, preds)
     assert pytest.approx(loss, 0.001) != 0
 
-# @pytest.mark.parametrize("preds", [torch.rand(size=(1,1,224,224))])
-def test_feature_computation(preds):
+def test_feature_computation():
     """
     Test of the Perceptual Loss on feature computation
     """
+    preds = torch.rand(size=(1,1,224,224))
     # Random VGG16 
     perceptual_loss = PerceptualLoss(
         device='cpu',
@@ -144,13 +148,14 @@ def test_feature_computation(preds):
     assert len(features) == 1
     assert len(styles) == 1
 
-# @pytest.mark.parametrize("input", [torch.rand(size=(1,3,224,224))])
-def test_lpips_on_same_img(input):
+
+def test_lpips_on_same_img():
     """
     Test of the Perceptual Loss on the same image
     """
     # Test with 3-channel images
 
+    input = torch.rand(size=(1,3,224,224))
     # Random VGG16 
     lpips = LPIPS(
         device='cpu',
@@ -202,13 +207,16 @@ def test_lpips_on_same_img(input):
     loss = lpips.forward(input, input)
     assert pytest.approx(loss, 0.001) == 0
 
-# @pytest.mark.parametrize("input,preds", [torch.rand(size=(1,3,224,224)),torch.rand(size=(1,3,224,224))])
-def test_lpips_on_different_img(input,preds):
+
+def test_lpips_on_different_img():
     """
     Test of the Perceptual Loss on the different image
     """
     
     # Test with 3-channel images
+
+    preds = torch.rand(size=(1,3,224,224))
+    input = torch.rand(size=(1,3,224,224))
     # Random VGG16 
     lpips = LPIPS(
         device='cpu',

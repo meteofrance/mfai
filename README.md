@@ -228,7 +228,7 @@ for _ in range():
 
 ## LPIPS
 
-The [**LPIPS**](mfai/torch/losses/perceptual.py#L28) class is a torch.nn.Module that computes the Learned Perceptual Image Patch Similarity metric. It is using the aforementionned PerceptualLoss class so it contains the same modes.
+The [**LPIPS**](mfai/torch/losses/perceptual.py#L28) class is a `torch.nn.Module` that computes the Learned Perceptual Image Patch Similarity metric. It is using the aforementionned PerceptualLoss class so it contains the same modes.
 
 
 # Installation

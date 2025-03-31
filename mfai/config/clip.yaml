@@ -1,0 +1,32 @@
+seed_everything: 42
+
+model:
+  settings:
+    emb_dim: 32
+    image_encoder:
+      num_channels: 2
+    text_encoder:
+      class_path: mfai.torch.models.llms.GPT2
+      init_args:
+        settings:
+          n_heads: 1
+          n_layers: 1
+          context_length: 16
+    init_temperature: 14.3  # = 1 / 0.07
+
+  learning_rate: 0.0005
+  min_learning_rate: 0.0001
+  lr_scheduler_interval: step
+
+
+data:
+  batch_size: 2
+
+
+trainer:
+  max_epochs: 2
+  strategy: auto
+  num_nodes: 1
+  precision: 16-mixed
+  enable_progress_bar: true
+  default_root_dir: null

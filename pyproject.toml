@@ -29,3 +29,54 @@ dependencies = {file = ["requirements.txt"]}
 
 [project.urls]
 Homepage = "https://github.com/meteofrance/mfai"
+
+[tool.mypy]
+# [mypy configuration file doc](https://mypy.readthedocs.io/en/stable/config_file.html#confval-exclude)
+exclude = [
+  '^mfai/torch/models/*$',
+  '^mfai/torch/namedtensor.py$',
+  '^mfai/torch/segmentation_module.py$',
+]
+
+# Disallows defining functions without type annotations or with incomplete type annotations.
+# Use Any for *args and **kwargs
+disallow_untyped_defs = true
+
+# Causes mypy to treat parameters with a None default value as having an implicit optional type (T | None)
+# Allows `def foo(a: str = None)` instead of `def foo(a: str | None = None)` or `def foo(a: Union[str, None] = None)`
+implicit_optional = true
+
+# Warn when a # type: ignore comment does not specify any error codes.
+# This clarifies the intent of the ignore and ensures that only the expected errors are silenced.
+# Ignore comments should contain the error code silenced:
+# a: str = 1  # type: ignore[assignment]
+enable_error_code = [
+  "ignore-without-code"
+]
+
+# Warn when a `#type: ignore` silences a line that is not actually generating an error
+warn_unused_ignores = true
+
+# Shows a warning when encountering any code inferred to be unreachable or redundant after performing type analysis.
+warn_unreachable = true
+
+# Disable the check for dynamically defined attributes, for more details see link below
+# [attr-defined](https://mypy.readthedocs.io/en/stable/error_code_list.html#check-that-attribute-exists-attr-defined)
+disable_error_code = "attr-defined"
+
+# Configure mypy output styling
+show_error_code_links = true
+show_error_codes = true
+pretty = true
+
+# Override mypy default value `ignore_missing_imports = false` to `true` for modules with no typing
+# Has the effect of silencing `import-untyped` error
+[[tool.mypy.overrides]]
+module = [
+  "tiktoken_ext",
+  "tiktoken_ext.openai_public",
+  "sentencepiece",
+  "onnxruntime",
+  "pl_bolts.*",
+]
+ignore_missing_imports = true

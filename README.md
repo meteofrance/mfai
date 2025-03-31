@@ -83,6 +83,12 @@ Currently we support the following neural network architectures:
 | :---:   | :---: | :---: | :---: | :---: | :---: |
 |[Custom Fuyu Like Model](mfai/torch/models/llms/multimodal.py#L37)| [arxiv link](https://arxiv.org/abs/2307.09288)  | (Batch, token_id) for text, (Batch, Lat, Lon, Timestep, Features) for weather inputs | No | Inspired from [Adept AI blog post](https://www.adept.ai/blog/fuyu-8b)  and [Sebastian Raschka's blog](https://magazine.sebastianraschka.com/p/understanding-multimodal-llms) | Marine text product generation |
 
+## Vision Language Models
+
+| Model  | Research Paper  | Input Shape    | ONNX exportable ? | Notes | Use-Cases at MF |
+| :---:   | :---: | :---: | :---: | :---: | :---: |
+|[CLIP](mfai/torch/models/clip.py#30)| [arxiv link](https://arxiv.org/abs/2103.00020)  | (Batch, token_id) for text, (Batch, Features, Lat, Lon) | No | Usefull to pre-train a Vision Encoder | Marine text product generation |
+
 <details>
 <summary>Details about our models</summary>
 
@@ -144,60 +150,9 @@ We provide an example of usage of the Lightning CLI with our lightning module an
 
 PyTorch provides an experimental feature called [**named tensors**](https://pytorch.org/docs/stable/named_tensor.html), at this time it is subject to change so we don't use it. That's why we provide our own implementation.
 
-NamedTensors are a way to give names to dimensions of tensors and to keep track of the names of the physical/weather parameters along the features dimension.
+Our **NamedTensor** class is a wrapper around a PyTorch tensor that adds named dimensions and named features to the tensor. It is useful to handle multi-dimensional data with named dimensions and named features.
 
-The [**NamedTensor**](mfai/torch/namedtensor.py#L28) class is a wrapper around a PyTorch tensor with additionnal attributes and methods, it allows us to pass consistent object linking data and metadata with extra utility methods (concat along features dimension, flatten in place, ...). 
-
-An example of NamedTensor usage for gridded data on a 256x256 grid:
-
-```python
-
-tensor = torch.rand(4, 256, 256, 3)
-
-nt = NamedTensor(
-    tensor,
-    names=["batch", "lat", "lon", "features"],
-    feature_names=["u", "v", "t2m"],
-)
-
-print(nt.dim_size("lat"))
-# 256
-
-nt2 = NamedTensor(
-    torch.rand(4, 256, 256, 1),
-    names=["batch", "lat", "lon", "features"],
-    feature_names=["q"],
-)
-
-# concat along the features dimension
-nt3 = nt | nt2
-
-# index by feature name
-nt3["u"]
-
-# Create a new NamedTensor with the same names but different data (useful for autoregressive models)
-nt4 = NamedTensor.new_like(torch.rand(4, 256, 256, 4), nt3)
-
-# Flatten in place the lat and lon dimensions and rename the new dim to 'ngrid'
-# this is typically to feed our gridded data to GNNs
-nt3.flatten_("ngrid", 1, 2)
-
-# str representation of the NamedTensor yields useful statistics
->>> print(nt)
---- NamedTensor ---
-Names: ['batch', 'lat', 'lon', 'features']
-Tensor Shape: torch.Size([4, 256, 256, 3]))
-Features:
-┌────────────────┬─────────────┬──────────┐
-│ Feature name   │         Min │      Max │
-├────────────────┼─────────────┼──────────┤
-│ u              │ 1.3113e-06  │ 0.999996 │
-│ v              │ 8.9407e-07  │ 0.999997 │
-│ t2m            │ 5.06639e-06 │ 0.999995 │
-
-# rearrange in place using einops like syntax
-nt3.rearrange_("batch ngrid features -> batch features ngrid")
-```
+You can find the documentation of the NamedTensor class **[here](doc/namedtensor.md)**.
 
 # Metrics
 
@@ -631,8 +586,18 @@ Our tests are written using [pytest](https://docs.pytest.org). We check that:
 
 ```bash
 docker build . -f Dockerfile -t mfai
-docker run -it --rm mfai python -m pytest tests
+docker run -it --rm mfai python3 -m pytest tests
 ```
+
+# Running mypy
+Mypy is used to check the project type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
+
+To run mypy:
+```bash
+docker build . -f Dockerfile -t mfai
+docker run -it --rm mfai mypy mfai/
+```
+
 # Contributing
 
 We welcome contributions to this package. Our guidelines are the following:
@@ -640,6 +605,7 @@ We welcome contributions to this package. Our guidelines are the following:
 - Submit a PR with a clear description of the changes and the motivation behind them.
 - Make sure the current tests pass and add new tests if necessary to cover the new features. Our CI will fail with a **test coverage below 80%**.
 - Make sure the code is formatted with [ruff](https://docs.astral.sh/ruff/) : `ruff format` and `ruff check`
+- Make sure the code respects our mypy type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
 
 # Publishing
 

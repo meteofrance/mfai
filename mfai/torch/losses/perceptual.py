@@ -5,7 +5,7 @@ from typing import Sequence
 from collections import OrderedDict
 from itertools import chain
 import torch.nn as nn
-import torchvision.models.vgg16 as vgg16
+import torchvision.models as models
 from urllib.error import URLError
 
 class PerceptualLoss(torch.nn.Module):
@@ -132,7 +132,7 @@ class PerceptualLoss(torch.nn.Module):
         Trained version obtained : "https://download.pytorch.org/models/vgg16-397923af.pth"
         '''
         self.size_resize=[224,224]
-        self.network =  vgg16(weights=None if not self.pre_trained else self.pre_trained).to(self.device)
+        self.network =  models.vgg16(weights=None if not self.pre_trained else self.pre_trained).to(self.device)
         
         blocks =  self._set_blocks()
 
@@ -524,7 +524,7 @@ class VGG16(BaseNet):
     def __init__(self) -> None:
         super().__init__()
 
-        self.layers = vgg16(weights=self.pre_trained).features
+        self.layers = models.vgg16(weights=self.pre_trained).features
         self.target_layers = [4, 9, 16, 23, 30]
         self.n_channels_list = [64, 128, 256, 512, 512]
 

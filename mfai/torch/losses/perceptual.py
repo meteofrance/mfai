@@ -54,7 +54,7 @@ class PerceptualLoss(torch.nn.Module):
         
         
          '''
-        super(PerceptualLoss, self).__init__()
+        super().__init__()
 
         self.device=device
         if 'cuda' in device and not torch.cuda.is_available() : 
@@ -405,7 +405,7 @@ class LPIPS(nn.Module):
                  alpha_style: float = 0,
                  alpha_feature: float = 1
         ):
-        super(LPIPS, self).__init__()
+        super().__init__()
 
         
         self.perceptual_loss = PerceptualLoss(
@@ -509,7 +509,7 @@ def get_network(net_type: str):
 
 class LinLayers(nn.ModuleList):
     def __init__(self, n_channels_list: Sequence[int]):
-        super(LinLayers, self).__init__([
+        super().__init__([
             nn.Sequential(
                 nn.Identity(),
                 nn.Conv2d(nc, 1, 1, 1, 0, bias=False)
@@ -522,7 +522,7 @@ class LinLayers(nn.ModuleList):
 
 class BaseNet(nn.Module):
     def __init__(self):
-        super(BaseNet, self).__init__()
+        super().__init__()
 
         # register buffer
         self.register_buffer(
@@ -551,7 +551,7 @@ class BaseNet(nn.Module):
 
 class VGG16(BaseNet):
     def __init__(self):
-        super(VGG16, self).__init__()
+        super().__init__()
 
         self.layers = models.vgg16(weights=self.perceptual_loss.pre_trained).features
         self.target_layers = [4, 9, 16, 23, 30]

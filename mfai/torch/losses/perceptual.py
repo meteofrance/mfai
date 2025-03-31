@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import urllib.request
 import torch
 from typing import Sequence
 from collections import OrderedDict

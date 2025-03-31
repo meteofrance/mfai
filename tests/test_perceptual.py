@@ -2,7 +2,7 @@ import pytest
 import torch
 from mfai.torch.losses.perceptual import PerceptualLoss, LPIPS
 
-@pytest.mark.parametrize("input", [torch.rand(size=(1,3,224,224))])
+# @pytest.mark.parametrize("input", [torch.rand(size=(1,3,224,224))])
 def test_perceptual_loss_on_same_img(input):
     """
     Test of the Perceptual Loss on the same image
@@ -59,7 +59,7 @@ def test_perceptual_loss_on_same_img(input):
     loss = perceptual_loss.forward(input, input)
     assert pytest.approx(loss, 0.001) == 0
 
-@pytest.mark.parametrize("input,preds", [torch.rand(size=(1,3,224,224)),torch.rand(size=(1,3,224,224))])
+# @pytest.mark.parametrize("input,preds", [torch.rand(size=(1,3,224,224)),torch.rand(size=(1,3,224,224))])
 def test_perceptual_loss_on_different_img(input, preds):
     """
     Test of the Perceptual Loss on the different image
@@ -119,7 +119,7 @@ def test_perceptual_loss_on_different_img(input, preds):
     loss = perceptual_loss.forward(input, preds)
     assert pytest.approx(loss, 0.001) != 0
 
-@pytest.mark.parametrize("preds", [torch.rand(size=(1,1,224,224))])
+# @pytest.mark.parametrize("preds", [torch.rand(size=(1,1,224,224))])
 def test_feature_computation(preds):
     """
     Test of the Perceptual Loss on feature computation
@@ -144,7 +144,7 @@ def test_feature_computation(preds):
     assert len(features) == 1
     assert len(styles) == 1
 
-@pytest.mark.parametrize("input", [torch.rand(size=(1,3,224,224))])
+# @pytest.mark.parametrize("input", [torch.rand(size=(1,3,224,224))])
 def test_lpips_on_same_img(input):
     """
     Test of the Perceptual Loss on the same image
@@ -202,7 +202,7 @@ def test_lpips_on_same_img(input):
     loss = lpips.forward(input, input)
     assert pytest.approx(loss, 0.001) == 0
 
-@pytest.mark.parametrize("input,preds", [torch.rand(size=(1,3,224,224)),torch.rand(size=(1,3,224,224))])
+# @pytest.mark.parametrize("input,preds", [torch.rand(size=(1,3,224,224)),torch.rand(size=(1,3,224,224))])
 def test_lpips_on_different_img(input,preds):
     """
     Test of the Perceptual Loss on the different image

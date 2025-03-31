@@ -48,14 +48,14 @@ def patch_first_conv(model: torch.nn.Module, new_in_channels: int, default_in_ch
         first_conv.weight = nn.parameter.Parameter(new_weight)
 
 
-def replace_strides_with_dilation(module: torch.nn.Module, dilation_rate: int) -> None:
+def replace_strides_with_dilation(module: torch.nn.Module, dilation: int) -> None:
     """Patch Conv2d modules replacing strides with dilation"""
     for mod in module.modules():
         if isinstance(mod, nn.Conv2d):
             mod.stride = (1, 1)
-            mod.dilation = (dilation_rate, dilation_rate)
+            mod.dilation = (dilation, dilation)
             kh, kw = mod.kernel_size
-            mod.padding = ((kh // 2) * dilation_rate, (kh // 2) * dilation_rate)
+            mod.padding = ((kh // 2) * dilation, (kh // 2) * dilation)
 
             # Kostyl for EfficientNet
             if hasattr(mod, "static_padding"):

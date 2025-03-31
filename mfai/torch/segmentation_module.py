@@ -36,7 +36,7 @@ class SegmentationLightningModule(pl.LightningModule):
         self.model = model
         self.channels_last = self.model.in_channels == 3
         if self.channels_last:  # Optimizes computation for RGB images
-            self.model = self.model.to(memory_format=torch.channels_last)
+            self.model = self.model.to(memory_format=torch.channels_last)  # type: ignore[call-overload]
         self.type_segmentation = type_segmentation
         self.loss = loss
         self.metrics = self.get_metrics()
@@ -68,26 +68,39 @@ class SegmentationLightningModule(pl.LightningModule):
                 }
             )
         else:
-            metrics_kwargs: dict[str, str | int] = {"task": self.type_segmentation}
-            acc_kwargs: dict[str, str | int] = {"task": self.type_segmentation}
+            num_classes: int | None = None
+            average: Literal["micro", "macro", "weighted", "none"] = 'micro'
+            num_labels: int | None = None
 
             if self.type_segmentation == "multiclass":
-                metrics_kwargs["num_classes"] = self.model.out_channels
-                acc_kwargs["num_classes"] = self.model.out_channels
+                num_classes = self.model.out_channels
                 # by default, average="micro" and when task="multiclass", f1 = recall = acc = precision
                 # consequently, we put average="macro" for other metrics
-                metrics_kwargs["average"] = "macro"
-                acc_kwargs["average"] = "micro"
+                average = 'macro'
 
             elif self.type_segmentation == "multilabel":
-                metrics_kwargs["num_labels"] = self.model.out_channels
-                acc_kwargs["num_labels"] = self.model.out_channels
+                num_labels = self.model.out_channels
 
             metrics_dict = {
-                "acc": tm.Accuracy(**acc_kwargs),
-                "f1": tm.F1Score(**metrics_kwargs),
-                "recall_pod": tm.Recall(**metrics_kwargs),
-                "precision": tm.Precision(**metrics_kwargs),  # Precision = 1 - FAR
+                "acc": tm.Accuracy(
+                    task=self.type_segmentation,
+                    num_classes=num_classes,
+                    num_labels=num_labels),
+                "f1": tm.F1Score(
+                    task=self.type_segmentation,
+                    num_classes=num_classes,
+                    average=average,
+                    num_labels=num_labels),
+                "recall_pod": tm.Recall(
+                    task=self.type_segmentation,
+                    num_classes=num_classes,
+                    average=average,
+                    num_labels=num_labels),
+                "precision": tm.Precision(  # Precision = 1 - FAR
+                    task=self.type_segmentation,
+                    num_classes=num_classes,
+                    average=average,
+                    num_labels=num_labels),
             }
             return torch.nn.ModuleDict(metrics_dict)
 

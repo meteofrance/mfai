@@ -248,7 +248,7 @@ inputs = torch.rand(25, 5, 128, 128)
 targets = torch.rand(25, 5, 128, 128)
 
 # Initialize the perceptual loss class
-perceptual_loss_class = PerceptualLoss(channel_iterative_mode=True)
+perceptual_loss_class = PerceptualLoss(channel_iterative_mode=True, in_channels=5)
 
 # Computing Perceptual Loss
 perceptual_loss = perceptual_loss_class(inputs, targets)
@@ -257,7 +257,7 @@ perceptual_loss = perceptual_loss_class(inputs, targets)
 ```python
 # In case you need to compare different targets to the same input
 inputs = torch.rand(25, 5, 128, 128)
-perceptual_loss_class = PerceptualLoss(channel_iterative_mode=True)
+perceptual_loss_class = PerceptualLoss(channel_iterative_mode=True, in_channels=5)
 
 # The features of the inputs are computed and stored in the memory
 perceptual_loss_class.compute_perceptual_features(inputs)

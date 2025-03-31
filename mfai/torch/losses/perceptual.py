@@ -106,14 +106,12 @@ class PerceptualLoss(torch.nn.Module):
 
             blocks.append(nn.Sequential(*layers))
 
-            for id in range(1, len(self.feature_layer_ids)-1):
-                blocks.append(self.network.features[self.feature_layer_ids[id]:self.feature_layer_ids[id+1]].eval())
-
         else :
             blocks.append(self.network.features[:self.feature_layer_ids[0]].eval())
-            for id in range(len(self.feature_layer_ids)-1):
-                blocks.append(self.network.features[self.feature_layer_ids[id]:self.feature_layer_ids[id+1]].eval())
 
+        for id in range(len(self.feature_layer_ids)-1):
+            blocks.append(self.network.features[self.feature_layer_ids[id]:self.feature_layer_ids[id+1]].eval())
+        
         return blocks
     
     def _downscale(self,
@@ -133,7 +131,7 @@ class PerceptualLoss(torch.nn.Module):
         Trained version obtained : "https://download.pytorch.org/models/vgg16-397923af.pth"
         '''
         self.size_resize=[224,224]
-        self.network = models.vgg16(pretrained=self.pre_trained).to(self.device)
+        self.network = models.vgg16(weights=None if not self.pre_trained else self.pre_trained).to(self.device)
         
         blocks =  self._set_blocks()
 
@@ -167,7 +165,7 @@ class PerceptualLoss(torch.nn.Module):
                 raise ValueError(f'Excpecting input to have 3 channels but it has {x.shape[1]}')
         else :
             if x.shape[1] != self.in_channels :
-                raise ValueError(f'Excpecting input to have {self.in_channels} channels but it has {x.shape[1]}')
+                raise ValueError(f'Expecting input to have {self.in_channels} channels but it has {x.shape[1]}')
         
         if self.resize_input:
             x = torch.nn.functional.interpolate(x, mode='bilinear', size=self.size_resize, align_corners=False)
@@ -307,6 +305,14 @@ class PerceptualLoss(torch.nn.Module):
 
         perceptual_loss = torch.tensor(0.).to(self.device)
 
+        # Check that tensors are normalized 
+        if x.max() > 1 or x.min() < 0 : 
+            raise ValueError('x data should be normalized between 0 and 1')
+        elif y.max() > 1 or y.min() < 0 : 
+            raise ValueError('y data should be normalized between 0 and 1')
+        else :
+            pass
+
         if y is not None:
             for scaling_factor in self.scaling_factor:
                 if self.multi_scale:
@@ -389,7 +395,7 @@ class LPIPS(nn.Module):
                  device: str = 'cuda',
                  multi_scale: bool = False,
                  channel_iterative_mode: bool = False,
-                 in_channels: int = 1,
+                 in_channels: int = 3,
                  pre_trained: bool = False,
                  resize_input: bool = False,
                  style_layer_ids: list = [],
@@ -415,23 +421,29 @@ class LPIPS(nn.Module):
             feature_block_ids=feature_block_ids,
             alpha_style=alpha_style,
             alpha_feature=alpha_feature
-        )
+        ).to(device)
 
+        self.device = device
+        
         n_channels_list = [64, 128, 256, 512, 512]
         
         # linear layers
-        self.lin = LinLayers(n_channels_list).to("cuda")
-        self.lin.load_state_dict(self._get_state_dict())
+        self.lin = LinLayers(n_channels_list).to(device)
+        try :
+            self.lin.load_state_dict(self._get_state_dict())
+        except : 
+            print('The linear layers for LPIPS computation could not be downloaded. Please check SSL certificate.')
 
+        
     def _get_state_dict(self, net_type: str = 'vgg16', version: str = '0.1'):
         # build url
         url = 'https://raw.githubusercontent.com/richzhang/PerceptualSimilarity/' \
-            + f'master/lpips/weights/v{version}/{net_type}.pth'
+            + f'master/lpips/weights/v{version}/{net_type[:-2]}.pth'
 
         # download
         old_state_dict = torch.hub.load_state_dict_from_url(
             url, progress=True,
-            map_location=None if torch.cuda.is_available() else torch.device('cpu')
+            map_location=self.device
         )
 
         # rename keys
@@ -541,7 +553,7 @@ class VGG16(BaseNet):
     def __init__(self):
         super(VGG16, self).__init__()
 
-        self.layers = models.vgg16(True).features
+        self.layers = models.vgg16(weights=self.perceptual_loss.pre_trained).features
         self.target_layers = [4, 9, 16, 23, 30]
         self.n_channels_list = [64, 128, 256, 512, 512]
 

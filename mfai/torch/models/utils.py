@@ -16,38 +16,39 @@ def patch_first_conv(model: torch.nn.Module, new_in_channels: int, default_in_ch
     # get first conv
     for module in model.modules():
         if isinstance(module, nn.Conv2d) and module.in_channels == default_in_channels:
+            first_conv: nn.Conv2d = module
             break
 
-    weight = module.weight.detach()
-    module.in_channels = new_in_channels
+    weight = first_conv.weight.detach()
+    first_conv.in_channels = new_in_channels
 
     if not pretrained:
-        module.weight = nn.parameter.Parameter(
+        first_conv.weight = nn.parameter.Parameter(
             torch.Tensor(
-                module.out_channels,
-                new_in_channels // module.groups,
-                *module.kernel_size,
+                first_conv.out_channels,
+                new_in_channels // first_conv.groups,
+                *first_conv.kernel_size,
             )
         )
-        module.reset_parameters()
+        first_conv.reset_parameters()
 
     elif new_in_channels == 1:
         new_weight = weight.sum(1, keepdim=True)
-        module.weight = nn.parameter.Parameter(new_weight)
+        first_conv.weight = nn.parameter.Parameter(new_weight)
 
     else:
         new_weight = torch.Tensor(
-            module.out_channels, new_in_channels // module.groups, *module.kernel_size
+            first_conv.out_channels, new_in_channels // first_conv.groups, *first_conv.kernel_size
         )
 
         for i in range(new_in_channels):
             new_weight[:, i] = weight[:, i % default_in_channels]
 
         new_weight = new_weight * (default_in_channels / new_in_channels)
-        module.weight = nn.parameter.Parameter(new_weight)
+        first_conv.weight = nn.parameter.Parameter(new_weight)
 
 
-def replace_strides_with_dilation(module: torch.nn.Module, dilation_rate: float) -> None:
+def replace_strides_with_dilation(module: torch.nn.Module, dilation_rate: int) -> None:
     """Patch Conv2d modules replacing strides with dilation"""
     for mod in module.modules():
         if isinstance(mod, nn.Conv2d):

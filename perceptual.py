@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
+import urllib.request
 import torch
 from typing import Sequence
 from collections import OrderedDict
-import torch
 from itertools import chain
 import torch.nn as nn
 from torchvision import models
+import urllib
+from urllib.error import URLError
 
 class PerceptualLoss(torch.nn.Module):
     def __init__(self,
@@ -429,9 +431,10 @@ class LPIPS(nn.Module):
         
         # linear layers
         self.lin = LinLayers(n_channels_list).to(device)
+        self.lin.load_state_dict(self._get_state_dict())
         try :
             self.lin.load_state_dict(self._get_state_dict())
-        except : 
+        except URLError:
             print('The linear layers for LPIPS computation could not be downloaded. Please check SSL certificate.')
 
         
@@ -471,7 +474,7 @@ class LPIPS(nn.Module):
                 feat_y_list.append(x)
 
         diff = [(fx - fy) ** 2 for fx, fy in zip(feat_x_list, feat_y_list)]
-        res = [l(d).mean((2, 3), True) for d, l in zip(diff, self.lin)]
+        res = [layer(difference).mean((2, 3), True) for difference, layer in zip(diff, self.lin)]
 
         return torch.sum(torch.cat(res, 0)) / x.shape[0]
 

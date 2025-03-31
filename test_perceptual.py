@@ -1,6 +1,6 @@
 import pytest
 import torch
-from mfai.torch.losses.perceptual import PerceptualLoss, LPIPS
+from perceptual import PerceptualLoss, LPIPS
 
 
 def test_perceptual_loss_on_same_img():
@@ -268,3 +268,6 @@ def test_lpips_on_different_img():
     )
     loss = lpips.forward(input, preds)
     assert pytest.approx(loss, 0.001) != 0
+
+if __name__=="__main__" :
+    test_lpips_on_different_img()

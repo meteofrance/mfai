@@ -31,9 +31,9 @@ def test_mini_tokenizer(base_tokenizer: Tokenizer, expected_vocab_size: int):
 ##########################################################################################################
 @pytest.mark.parametrize("base_tokenizer", [GPT2Tokenizer])
 def test_add_special_tokens(base_tokenizer: Tokenizer):
+
     tokenizer = base_tokenizer(special_tokens=set(["<|Lorem ipsum|>"]))
-    print("BASE tokenizer", base_tokenizer().vocab_size)
-    print("CUSTOM tokenizer", tokenizer.vocab_size)
     assert tokenizer.vocab_size == base_tokenizer().vocab_size + 1
+
     text_encoded = tokenizer.encode(LOREM_IPSUM_SPECIAL_TOKENS)
     assert text_encoded[0] == base_tokenizer().vocab_size

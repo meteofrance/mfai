@@ -85,11 +85,11 @@ class GPT2Tokenizer(Tokenizer):
 
 
 class LlamaTokenizer(Tokenizer):
-    def __init__(self) -> None:
+    def __init__(self, special_tokens: set[str] | None = None) -> None:
         sp = spm.SentencePieceProcessor()
 
-        folderpath = Path(__file__).parent / "tokenizer" / "Llama-2-7B"
-
+        folderpath = Path(__file__).parent / "Llama-2-7B"
+        print("Llama2 folderpath", folderpath)
         if not folderpath.exists():
             login()
             tokenizer_file = hf_hub_download(
@@ -101,6 +101,13 @@ class LlamaTokenizer(Tokenizer):
             tokenizer_file = str(folderpath / "tokenizer.model")
 
         sp.load(tokenizer_file)
+
+        if special_tokens:
+            # Save special tokens in a file
+            special_tokens_file = "new_tokens.txt"
+            with open(folderpath / special_tokens_file, "w", encoding="utf-8") as f:
+                [f.write(token + "\n") for token in special_tokens]
+                    
         self.tokenizer = sp
 
     def name(self) -> str:

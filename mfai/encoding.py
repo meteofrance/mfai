@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 
 # Define the cache dir for tiktoken lib
-tiktoken_cache_dir = Path(__file__).parent / "tokenizer" / "tiktoken_cache"
+tiktoken_cache_dir = Path(__file__).parent / "tokenizers" / "tiktoken_cache"
 os.environ["TIKTOKEN_CACHE_DIR"] = str(tiktoken_cache_dir)
 
 import tiktoken_ext.openai_public  # noqa

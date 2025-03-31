@@ -170,7 +170,7 @@ Pytorch already provide some Loss like Mean Squared Error (torch.nn.MSELoss) or 
 
 It was introduced by Johnson et al. - Perceptual losses for real-time style transfer and super-resolution. (https://arxiv.org/pdf/1603.08155).  
 
-The [**PerceptualLoss**](mfai/torch/losses/perceptual.py#L28) class is a torch.nn.Module that allows to initialize a VGG-16 and compute directly the perceptual loss between a given input and target.
+The [**PerceptualLoss**](mfai/torch/losses/perceptual.py#L28) class is a `torch.nn.Module` that allows to initialize a VGG-16 and compute directly the perceptual loss between a given input and target.
 
 ### Multi Scale :
 The VGG-16 was originally designed for ImageNet dataset that contains 224x224 images. It can still be used with image dimensionned differently. But in case your tensors are high dimensional (ex:1024x1024) the VGG-16 features might not be able to catch fine-scale details. The *multi_scale* mode allows to compute the Perceptual Loss on different downscale version of your original tensors. For example, if your tensors are 1024x1024, the perceptual loss will be computed both on the original dimension and on its downscaled versions : 512x512 and 256x256.

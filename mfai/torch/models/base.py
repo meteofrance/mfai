@@ -101,6 +101,8 @@ class ModelABC(ABC, torch.nn.Module):
 
 
 class AutoPaddingModel(ABC):
+    input_shape: tuple[int, ...]
+
     @property
     @abstractmethod
     def settings(self) -> Any:
@@ -108,13 +110,6 @@ class AutoPaddingModel(ABC):
         Returns the settings instance used to configure for this model.
         """
 
-    @property
-    @abstractmethod
-    def input_shape(self) -> Any:
-        """
-        Returns the settings instance used to configure for this model.
-        """
-    
     @abstractmethod
     def validate_input_shape(self, input_shape: Size) -> Tuple[bool, Size]:
         """ Given an input shape, verifies whether the inputs fit with the 

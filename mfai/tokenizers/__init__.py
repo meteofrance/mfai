@@ -91,7 +91,6 @@ class LlamaTokenizer(Tokenizer):
         sp = spm.SentencePieceProcessor()
 
         folderpath = Path(__file__).parent / "Llama-2-7B"
-        print(folderpath)
         if not folderpath.exists():
             login()
             tokenizer_file = hf_hub_download(

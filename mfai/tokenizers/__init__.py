@@ -8,6 +8,8 @@ from typing import Any, List
 
 import sentencepiece as spm
 from huggingface_hub import hf_hub_download, login
+import tiktoken  # noqa
+
 
 from mfai.encoding import get_tiktoken_encoding
 
@@ -44,14 +46,30 @@ class Tokenizer(ABC):
 
 
 class GPT2Tokenizer(Tokenizer):
-    def __init__(self) -> None:
-        self.tokenizer = get_tiktoken_encoding("gpt2")
+    def __init__(self, special_tokens: set[str] | None = None) -> None:
+        self.special_tokens = special_tokens
+        base_tokenizer = get_tiktoken_encoding("gpt2")
+
+        if special_tokens:
+            # For more details about extending a tiktoken.Encoding
+            # https://github.com/openai/tiktoken/tree/main?tab=readme-ov-file#extending-tiktoken
+            self.tokenizer = tiktoken.Encoding(
+                name=f"custom_{self.name()}",
+                pat_str=base_tokenizer._pat_str,
+                mergeable_ranks=base_tokenizer._mergeable_ranks,
+                special_tokens={
+                    tok: base_tokenizer.n_vocab + i
+                    for i, tok in enumerate(special_tokens)
+                },
+            )
+        else:
+            self.tokenizer = base_tokenizer
 
     def name(self) -> str:
         return "gpt2"
 
     def encode(self, text: str, *args: Any, **kwargs: Any) -> List[int]:
-        return self.tokenizer.encode(text, allowed_special={"<|endoftext|>"})
+        return self.tokenizer.encode(text, allowed_special="all")
 
     def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
         return self.tokenizer.decode(tokens, *args, **kwargs)
@@ -72,8 +90,7 @@ class LlamaTokenizer(Tokenizer):
     def __init__(self) -> None:
         sp = spm.SentencePieceProcessor()
 
-        folderpath = Path(__file__).parent / "tokenizer" / "Llama-2-7B"
-
+        folderpath = Path(__file__).parent / "Llama-2-7B"
         if not folderpath.exists():
             login()
             tokenizer_file = hf_hub_download(

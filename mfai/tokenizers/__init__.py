@@ -51,6 +51,8 @@ class GPT2Tokenizer(Tokenizer):
         base_tokenizer = get_tiktoken_encoding("gpt2")
 
         if special_tokens:
+            # For more details about extending a tiktoken.Encoding
+            # https://github.com/openai/tiktoken/tree/main?tab=readme-ov-file#extending-tiktoken
             self.tokenizer = tiktoken.Encoding(
                 name=f"custom_{self.name()}",
                 pat_str=base_tokenizer._pat_str,

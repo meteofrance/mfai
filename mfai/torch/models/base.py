@@ -4,7 +4,7 @@ Interface contract for our models.
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Optional
 from torch import Size
 import torch
 
@@ -25,7 +25,7 @@ class ModelType(Enum):
 
 
 class ModelABC(ABC, torch.nn.Module):
-    # concrete subclasses shoudl set register to True
+    # concrete subclasses should set register to True
     # to be included in the registry of available models.
     register: bool = False
 
@@ -49,7 +49,7 @@ class ModelABC(ABC, torch.nn.Module):
 
     @property
     @abstractmethod
-    def supported_num_spatial_dims(self) -> Tuple[int, ...]:
+    def supported_num_spatial_dims(self) -> tuple[int, ...]:
         """
         Returns the number of input spatial dimensions supported by the model.
         A 2d vision model supporting (H, W) should return (2,).
@@ -116,7 +116,7 @@ class AutoPaddingModel(ABC):
         """
     
     @abstractmethod
-    def validate_input_shape(self, input_shape: Size) -> Tuple[bool, Size]:
+    def validate_input_shape(self, input_shape: Size) -> tuple[bool, Size]:
         """ Given an input shape, verifies whether the inputs fit with the 
             calling model's specifications. 
 
@@ -126,12 +126,12 @@ class AutoPaddingModel(ABC):
                                 For 3D data instead of shape [B,C,W,H,D], instead, [W,H,D] should be passed. 
 
         Returns:
-            Tuple[bool, Size]: Returns a tuple where the first element is a boolean signaling whether the given input shape 
+            tuple[bool, Size]: Returns a tuple where the first element is a boolean signaling whether the given input shape 
                                 already fits the model's requirements. If that value is False, the second element contains the closest 
                                 shape that fits the model, otherwise it will be None.
         """
         
-    def _maybe_padding(self, data_tensor: torch.Tensor)-> Tuple[Union[torch.Tensor, ValueError], Optional[torch.Size]]:
+    def _maybe_padding(self, data_tensor: torch.Tensor)-> tuple[torch.Tensor | ValueError, Optional[torch.Size]]:
         """ Performs an optional padding to ensure that the data tensor can be fed 
             to the underlying model. Padding will happen if if 
             autopadding was enabled via the settings.
@@ -140,7 +140,7 @@ class AutoPaddingModel(ABC):
             data_tensor (torch.Tensor): the input data to be potentially padded. 
 
         Returns:
-            Tuple[torch.Tensor, Optional[torch.Size]]: the padded tensor, where the original data is found in the center, 
+            tuple[torch.Tensor, Optional[torch.Size]]: the padded tensor, where the original data is found in the center, 
             and the old size if padding was possible. If not possible or the shape is already fine, 
             the data is returned untouched and the second return value will be none. 
         """

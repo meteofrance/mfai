@@ -26,7 +26,7 @@ class Activation(nn.Module):
         elif name == "softmax2d":
             self.activation = nn.Softmax(dim=1)
         elif name == "softmax":
-            self.activation = nn.Softmax()
+            self.activation = nn.Softmax(dim=None)
         elif name == "logsoftmax":
             self.activation = nn.LogSoftmax(dim=None)
         elif name == "tanh":
@@ -51,7 +51,7 @@ class DeepLabV3Decoder(nn.Sequential):
             nn.BatchNorm2d(out_channels),
             nn.ReLU(),
         )
-        self.out_channels: int = out_channels
+        self.out_channels = out_channels
 
     def forward(self, *features: tuple[torch.Tensor]) -> torch.Tensor:
         return super().forward(features[-1])
@@ -542,7 +542,7 @@ class DeepLabV3Plus(DeepLabV3):
         )
 
         # Violates liskov substitution principle
-        self.decoder: DeepLabV3PlusDecoder = DeepLabV3PlusDecoder(  # type: ignore[override]
+        self.decoder = DeepLabV3PlusDecoder(  # type: ignore[assignment]
             encoder_channels=self.encoder.out_channels,
             out_channels=settings.decoder_channels,
             atrous_rates=settings.decoder_atrous_rates,

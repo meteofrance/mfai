@@ -35,7 +35,6 @@ Homepage = "https://github.com/meteofrance/mfai"
 exclude = [
   '^mfai/torch/models/llms/*$',
   '^mfai/torch/models/nlam/*$',
-  '^mfai/torch/models/deeplabv3.py$',
   '^mfai/torch/models/half_unet.py$',
   '^mfai/torch/models/resnet.py$',
   '^mfai/torch/models/segformer.py$',

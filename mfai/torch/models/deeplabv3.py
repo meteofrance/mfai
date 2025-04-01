@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Callable, Literal, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Literal, Optional, Sequence, Tuple
 
 import torch
 import torch.nn as nn
@@ -12,13 +12,18 @@ from .resnet import ResNetEncoder, get_resnet_encoder
 
 class Activation(nn.Module):
     def __init__(
-            self,
-            name: Literal['identity', 'sigmoid', 'softmax2d', 'softmax', 'logsoftmax', 'tanh'] | Callable='identity',
-            **params: dict[str, Any]
-        ) -> None:
+        self,
+        name: Literal[
+            "identity", "sigmoid", "softmax2d", "softmax", "logsoftmax", "tanh"
+        ]
+        | Callable = "identity",
+        **params: dict[str, Any],
+    ) -> None:
         super().__init__()
 
-        self.activation: nn.Identity | nn.Sigmoid | nn.Softmax | nn.LogSoftmax | nn.Tanh | Any
+        self.activation: (
+            nn.Identity | nn.Sigmoid | nn.Softmax | nn.LogSoftmax | nn.Tanh | Any
+        )
         if name == "identity":
             self.activation = nn.Identity(**params)
         elif name == "sigmoid":
@@ -40,11 +45,11 @@ class Activation(nn.Module):
 
 class DeepLabV3Decoder(nn.Sequential):
     def __init__(
-            self,
-            in_channels: int,
-            out_channels: int=256,
-            atrous_rates: tuple[int, int, int]=(12, 24, 36)
-        ) -> None:
+        self,
+        in_channels: int,
+        out_channels: int = 256,
+        atrous_rates: tuple[int, int, int] = (12, 24, 36),
+    ) -> None:
         super().__init__(
             ASPP(in_channels, out_channels, atrous_rates),
             nn.Conv2d(out_channels, out_channels, 3, padding=1, bias=False),
@@ -61,9 +66,9 @@ class DeepLabV3PlusDecoder(nn.Module):
     def __init__(
         self,
         encoder_channels: Sequence[int],
-        out_channels: int=256,
-        atrous_rates: tuple[int, int, int]=(12, 24, 36),
-        output_stride: int=16,
+        out_channels: int = 256,
+        atrous_rates: tuple[int, int, int] = (12, 24, 36),
+        output_stride: int = 16,
     ) -> None:
         super().__init__()
         if output_stride not in (8, 16):
@@ -111,18 +116,15 @@ class DeepLabV3PlusDecoder(nn.Module):
         aspp_features: torch.Tensor = self.aspp(features[-1])
         aspp_features = self.up(aspp_features)
         high_res_features: torch.Tensor = self.block1(features[-4])
-        concat_features: torch.Tensor = torch.cat([aspp_features, high_res_features], dim=1)
+        concat_features: torch.Tensor = torch.cat(
+            [aspp_features, high_res_features], dim=1
+        )
         fused_features: torch.Tensor = self.block2(concat_features)
         return fused_features
 
 
 class ASPPConv(nn.Sequential):
-    def __init__(
-            self,
-            in_channels: int,
-            out_channels: int,
-            dilation: int
-        ) -> None:
+    def __init__(self, in_channels: int, out_channels: int, dilation: int) -> None:
         super().__init__(
             nn.Conv2d(
                 in_channels,
@@ -138,12 +140,7 @@ class ASPPConv(nn.Sequential):
 
 
 class ASPPSeparableConv(nn.Sequential):
-    def __init__(
-            self,
-            in_channels: int,
-            out_channels: int,
-            dilation: int
-        ) -> None:
+    def __init__(self, in_channels: int, out_channels: int, dilation: int) -> None:
         super().__init__(
             SeparableConv2d(
                 in_channels,
@@ -159,11 +156,7 @@ class ASPPSeparableConv(nn.Sequential):
 
 
 class ASPPPooling(nn.Sequential):
-    def __init__(
-            self,
-            in_channels: int,
-            out_channels: int
-        ) -> None:
+    def __init__(self, in_channels: int, out_channels: int) -> None:
         super().__init__(
             nn.AdaptiveAvgPool2d(1),
             nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False),
@@ -180,12 +173,12 @@ class ASPPPooling(nn.Sequential):
 
 class ASPP(nn.Module):
     def __init__(
-            self,
-            in_channels: int,
-            out_channels: int,
-            atrous_rates: tuple[int, int, int],
-            separable: bool=False
-        ) -> None:
+        self,
+        in_channels: int,
+        out_channels: int,
+        atrous_rates: tuple[int, int, int],
+        separable: bool = False,
+    ) -> None:
         super().__init__()
         modules = []
         modules.append(
@@ -227,10 +220,10 @@ class SeparableConv2d(nn.Sequential):
         in_channels: int,
         out_channels: int,
         kernel_size: tuple[int, int],
-        stride: int=1,
-        padding: int=0,
-        dilation: int=1,
-        bias: bool=True,
+        stride: int = 1,
+        padding: int = 0,
+        dilation: int = 1,
+        bias: bool = True,
     ) -> None:
         dephtwise_conv = nn.Conv2d(
             in_channels,
@@ -278,11 +271,14 @@ class DeepLabV3Settings:
                 (could be **None** to return logits)
     """
 
-    encoder_name: Literal['resnet18', 'resnet34', 'resnet50'] = "resnet18"
+    encoder_name: Literal["resnet18", "resnet34", "resnet50"] = "resnet18"
     encoder_depth: int = 5
     encoder_weights: bool = True
     decoder_channels: int = 256
-    activation: Literal['identity', 'sigmoid', 'softmax2d', 'softmax', 'logsoftmax', 'tanh'] | Callable = 'identity'
+    activation: (
+        Literal["identity", "sigmoid", "softmax2d", "softmax", "logsoftmax", "tanh"]
+        | Callable
+    ) = "identity"
     upsampling: int = 8
     aux_params: Optional[dict] = None
 
@@ -410,7 +406,9 @@ class DeepLabV3(ModelABC, torch.nn.Module):
                 f"divisible by {output_stride}. Consider pad your images to shape ({new_h}, {new_w})."
             )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self, x: torch.Tensor
+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """Sequentially pass `x` trough model`s encoder, decoder and heads"""
 
         self.check_input_shape(x)
@@ -427,7 +425,9 @@ class DeepLabV3(ModelABC, torch.nn.Module):
         return masks
 
     @torch.no_grad()
-    def predict(self, x: torch.Tensor) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
+    def predict(
+        self, x: torch.Tensor
+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """Inference method. Switch model to `eval` mode, call `.forward(x)` with `torch.no_grad()`
 
         Args:
@@ -448,9 +448,12 @@ class DeepLabV3(ModelABC, torch.nn.Module):
         self,
         in_channels: int,
         out_channels: int,
-        kernel_size: int=3,
-        activation: Literal['identity', 'sigmoid', 'softmax2d', 'softmax', 'logsoftmax', 'tanh'] | Callable='identity',
-        upsampling: int=1,
+        kernel_size: int = 3,
+        activation: Literal[
+            "identity", "sigmoid", "softmax2d", "softmax", "logsoftmax", "tanh"
+        ]
+        | Callable = "identity",
+        upsampling: int = 1,
     ) -> nn.Sequential:
         conv2d = nn.Conv2d(
             in_channels, out_channels, kernel_size=kernel_size, padding=kernel_size // 2
@@ -469,7 +472,10 @@ class DeepLabV3(ModelABC, torch.nn.Module):
         out_channels: int,
         pooling: str = "avg",
         dropout: float = 0.2,
-        activation: Literal['identity', 'sigmoid', 'softmax2d', 'softmax', 'logsoftmax', 'tanh'] | Callable='identity',
+        activation: Literal[
+            "identity", "sigmoid", "softmax2d", "softmax", "logsoftmax", "tanh"
+        ]
+        | Callable = "identity",
     ) -> nn.Sequential:
         if pooling not in ("max", "avg"):
             raise ValueError(
@@ -477,7 +483,9 @@ class DeepLabV3(ModelABC, torch.nn.Module):
             )
         pool = nn.AdaptiveAvgPool2d(1) if pooling == "avg" else nn.AdaptiveMaxPool2d(1)
         flatten = nn.Flatten()
-        dropout_module: nn.Module = nn.Dropout(p=dropout, inplace=True) if dropout else nn.Identity()
+        dropout_module: nn.Module = (
+            nn.Dropout(p=dropout, inplace=True) if dropout else nn.Identity()
+        )
         linear = nn.Linear(in_channels, out_channels, bias=True)
         activation_module: Activation = Activation(activation)
         return nn.Sequential(pool, flatten, dropout_module, linear, activation_module)

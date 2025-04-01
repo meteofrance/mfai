@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Any, Literal, Tuple, Type, Union
+from typing import Any, Literal, Tuple, Union
 
 import torch
 import torch.nn as nn
@@ -43,9 +43,7 @@ class EncoderMixin(ResNet):
             self._out_channels = tuple([in_channels] + list(self._out_channels)[1:])
 
         utils.patch_first_conv(
-            model=self,
-            new_in_channels=in_channels,
-            pretrained=pretrained
+            model=self, new_in_channels=in_channels, pretrained=pretrained
         )
 
     @abstractmethod
@@ -78,7 +76,9 @@ class EncoderMixin(ResNet):
 
 
 class ResNetEncoder(EncoderMixin):
-    def __init__(self, out_channels: tuple[int, ...], depth: int = 5, **kwargs: dict[str, Any]) -> None:
+    def __init__(
+        self, out_channels: tuple[int, ...], depth: int = 5, **kwargs: dict[str, Any]
+    ) -> None:
         super().__init__(**kwargs)
         self._depth: int = depth
         self._out_channels: tuple[int, ...] = out_channels
@@ -107,13 +107,15 @@ class ResNetEncoder(EncoderMixin):
 
         return features
 
-    def load_state_dict(self, state_dict: dict[str, Any], **kwargs: dict[str, Any]) -> None:
+    def load_state_dict(
+        self, state_dict: dict[str, Any], **kwargs: dict[str, Any]
+    ) -> None:
         state_dict.pop("fc.bias", None)
         state_dict.pop("fc.weight", None)
         super().load_state_dict(state_dict, **kwargs)
 
 
-ENCODERS_MAP: dict[Literal['resnet18', 'resnet34', 'resnet50'], Any] = {
+ENCODERS_MAP: dict[Literal["resnet18", "resnet34", "resnet50"], Any] = {
     "resnet18": {
         "encoder": ResNetEncoder,
         "pretrained_url": "https://dl.fbaipublicfiles.com/semiweaksupervision/model_files/semi_supervised_resnet18-d92f0530.pth",  # noqa
@@ -145,7 +147,7 @@ ENCODERS_MAP: dict[Literal['resnet18', 'resnet34', 'resnet50'], Any] = {
 
 
 def get_resnet_encoder(
-    name: Literal['resnet18', 'resnet34', 'resnet50'],
+    name: Literal["resnet18", "resnet34", "resnet50"],
     in_channels: int = 3,
     depth: int = 5,
     weights: bool = True,

@@ -6,7 +6,12 @@ import torch
 import torch.nn as nn
 
 
-def patch_first_conv(model: torch.nn.Module, new_in_channels: int, default_in_channels: int=3, pretrained: bool=True) -> None:
+def patch_first_conv(
+    model: torch.nn.Module,
+    new_in_channels: int,
+    default_in_channels: int = 3,
+    pretrained: bool = True,
+) -> None:
     """Change first convolution layer input channels.
     In case:
         in_channels == 1 or in_channels == 2 -> reuse original weights
@@ -38,7 +43,9 @@ def patch_first_conv(model: torch.nn.Module, new_in_channels: int, default_in_ch
 
     else:
         new_weight = torch.Tensor(
-            first_conv.out_channels, new_in_channels // first_conv.groups, *first_conv.kernel_size
+            first_conv.out_channels,
+            new_in_channels // first_conv.groups,
+            *first_conv.kernel_size,
         )
 
         for i in range(new_in_channels):

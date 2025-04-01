@@ -69,14 +69,14 @@ class SegmentationLightningModule(pl.LightningModule):
             )
         else:
             num_classes: int | None = None
-            average: Literal["micro", "macro", "weighted", "none"] = 'micro'
+            average: Literal["micro", "macro", "weighted", "none"] = "micro"
             num_labels: int | None = None
 
             if self.type_segmentation == "multiclass":
                 num_classes = self.model.out_channels
                 # by default, average="micro" and when task="multiclass", f1 = recall = acc = precision
                 # consequently, we put average="macro" for other metrics
-                average = 'macro'
+                average = "macro"
 
             elif self.type_segmentation == "multilabel":
                 num_labels = self.model.out_channels
@@ -85,22 +85,26 @@ class SegmentationLightningModule(pl.LightningModule):
                 "acc": tm.Accuracy(
                     task=self.type_segmentation,
                     num_classes=num_classes,
-                    num_labels=num_labels),
+                    num_labels=num_labels,
+                ),
                 "f1": tm.F1Score(
                     task=self.type_segmentation,
                     num_classes=num_classes,
                     average=average,
-                    num_labels=num_labels),
+                    num_labels=num_labels,
+                ),
                 "recall_pod": tm.Recall(
                     task=self.type_segmentation,
                     num_classes=num_classes,
                     average=average,
-                    num_labels=num_labels),
+                    num_labels=num_labels,
+                ),
                 "precision": tm.Precision(  # Precision = 1 - FAR
                     task=self.type_segmentation,
                     num_classes=num_classes,
                     average=average,
-                    num_labels=num_labels),
+                    num_labels=num_labels,
+                ),
             }
             return torch.nn.ModuleDict(metrics_dict)
 
@@ -113,8 +117,10 @@ class SegmentationLightningModule(pl.LightningModule):
 
         y_hat = self.model(inputs)
         return self.last_activation(y_hat)
-    
-    def _shared_forward_step(self, x: torch.Tensor, y: torch.Tensor) -> tuple[torch.Tensor, Any]:
+
+    def _shared_forward_step(
+        self, x: torch.Tensor, y: torch.Tensor
+    ) -> tuple[torch.Tensor, Any]:
         """Computes forward pass and loss for a batch.
         Step shared by training, validation and test steps"""
         if self.channels_last:
@@ -126,7 +132,6 @@ class SegmentationLightningModule(pl.LightningModule):
         y_hat = self.last_activation(y_hat)
 
         return y_hat, loss
-        
 
     def on_train_start(self) -> None:
         """Setup custom scalars panel on tensorboard and log hparams.
@@ -144,10 +149,12 @@ class SegmentationLightningModule(pl.LightningModule):
         Step shared by training and validation epochs.
         """
         avg_loss = torch.stack(outputs).mean()
-        tb = self.logger.experiment # type: ignore[union-attr]
+        tb = self.logger.experiment  # type: ignore[union-attr]
         tb.add_scalar(f"loss/{label}", avg_loss, self.current_epoch)
 
-    def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> Any:
+    def training_step(
+        self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
+    ) -> Any:
         x, y = batch
         _, loss = self._shared_forward_step(x, y)
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
@@ -158,18 +165,22 @@ class SegmentationLightningModule(pl.LightningModule):
         self._shared_epoch_end(self.training_loss, "train")
         self.training_loss.clear()  # free memory
 
-    def val_plot_step(self, batch_idx: int, y: torch.Tensor, y_hat: torch.Tensor) -> None:
+    def val_plot_step(
+        self, batch_idx: int, y: torch.Tensor, y_hat: torch.Tensor
+    ) -> None:
         """Plots images on first batch of validation and log them in logger.
         Should be overwrited for each specific project, with matplotlib plots."""
         if batch_idx == 0:
-            tb = self.logger.experiment # type: ignore[union-attr]
+            tb = self.logger.experiment  # type: ignore[union-attr]
             step = self.current_epoch
             dformat = "HW" if self.type_segmentation == "multiclass" else "CHW"
             if step == 0:
                 tb.add_image("val_plots/true_image", y[0], dataformats=dformat)
             tb.add_image("val_plots/pred_image", y_hat[0], step, dataformats=dformat)
 
-    def validation_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> Any:
+    def validation_step(
+        self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
+    ) -> Any:
         x, y = batch
         y_hat, loss = self._shared_forward_step(x, y)
         self.log("val_loss", loss, on_epoch=True, sync_dist=True)
@@ -191,7 +202,9 @@ class SegmentationLightningModule(pl.LightningModule):
             tb.add_scalar(f"val_{metric_name}", metric.compute(), self.current_epoch)
             metric.reset()
 
-    def test_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> None:
+    def test_step(
+        self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
+    ) -> None:
         """Computes metrics for each sample, at the end of the run."""
         x, y = batch
         y_hat, loss = self._shared_forward_step(x, y)
@@ -216,7 +229,9 @@ class SegmentationLightningModule(pl.LightningModule):
     @rank_zero_only
     def save_test_metrics_as_csv(self, df: pd.DataFrame) -> None:
         if self.logger is None or self.logger.log_dir is None:
-            warnings.warn("SegmentationLightningModule.save_test_metrics_as_csv() called with no logger or no local save path.")
+            warnings.warn(
+                "SegmentationLightningModule.save_test_metrics_as_csv() called with no logger or no local save path."
+            )
             return
         path_csv = Path(self.logger.log_dir) / "metrics_test_set.csv"
         df.to_csv(path_csv, index=False)

@@ -310,7 +310,7 @@ class DeepLabV3(ModelABC, torch.nn.Module):
         self,
         in_channels: int = 3,
         out_channels: int = 1,
-        input_shape: tuple[int, int] = (-1, -1),
+        input_shape: tuple[int, ...] = (-1,),
         settings: DeepLabV3Settings = DeepLabV3Settings(),
     ) -> None:
         super().__init__()

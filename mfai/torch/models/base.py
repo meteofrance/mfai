@@ -32,7 +32,7 @@ class ModelABC(ABC, torch.nn.Module):
 
     in_channels: int
     out_channels: int
-    input_shape: tuple[int, int]
+    input_shape: tuple[int, ...]
 
     @property
     @abstractmethod
@@ -102,16 +102,11 @@ class ModelABC(ABC, torch.nn.Module):
 
 
 class AutoPaddingModel(ABC):
-    @property
-    @abstractmethod
-    def settings(self) -> Any:
-        """
-        Returns the settings instance used to configure for this model.
-        """
+    input_shape: tuple[int, int] | None
 
     @property
     @abstractmethod
-    def input_shape(self) -> Any:
+    def settings(self) -> Any:
         """
         Returns the settings instance used to configure for this model.
         """

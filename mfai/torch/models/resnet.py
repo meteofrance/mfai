@@ -1,5 +1,6 @@
+from abc import abstractmethod
 from dataclasses import dataclass
-from typing import List, Tuple, Union
+from typing import Any, Literal, Tuple, Type, Union
 
 import torch
 import torch.nn as nn
@@ -14,21 +15,22 @@ from mfai.torch.models import utils
 ##########################################################################################################
 
 
-class EncoderMixin:
+class EncoderMixin(ResNet):
     """Add encoder functionality such as:
     - output channels specification of feature tensors (produced by encoder)
     - patching first convolution for arbitrary input channels
     """
 
-    _output_stride = 32
+    _output_stride: int = 32
+    _out_channels: tuple[int, ...]
 
     @property
-    def out_channels(self) -> int:
+    def out_channels(self) -> tuple[int, ...]:
         """Return channels dimensions for each tensor of forward output of encoder"""
         return self._out_channels[: self._depth + 1]
 
     @property
-    def output_stride(self):
+    def output_stride(self) -> int:
         return min(self._output_stride, 2**self._depth)
 
     def set_in_channels(self, in_channels: int, pretrained: bool = True) -> None:
@@ -41,10 +43,13 @@ class EncoderMixin:
             self._out_channels = tuple([in_channels] + list(self._out_channels)[1:])
 
         utils.patch_first_conv(
-            model=self, new_in_channels=in_channels, pretrained=pretrained
+            model=self,
+            new_in_channels=in_channels,
+            pretrained=pretrained
         )
 
-    def get_stages(self):
+    @abstractmethod
+    def get_stages(self) -> list[nn.Module]:
         """Override it in your implementation"""
         raise NotImplementedError
 
@@ -65,24 +70,24 @@ class EncoderMixin:
         self._output_stride = output_stride
 
         stages = self.get_stages()
-        for stage_indx, dilation_rate in zip(stage_list, dilation_list):
+        for stage_indx, dilation in zip(stage_list, dilation_list):
             utils.replace_strides_with_dilation(
                 module=stages[stage_indx],
-                dilation_rate=dilation_rate,
+                dilation=dilation,
             )
 
 
-class ResNetEncoder(ResNet, EncoderMixin):
-    def __init__(self, out_channels: int, depth: int = 5, **kwargs):
+class ResNetEncoder(EncoderMixin):
+    def __init__(self, out_channels: tuple[int, ...], depth: int = 5, **kwargs: dict[str, Any]) -> None:
         super().__init__(**kwargs)
-        self._depth = depth
-        self._out_channels = out_channels
-        self._in_channels = 3
+        self._depth: int = depth
+        self._out_channels: tuple[int, ...] = out_channels
+        self._in_channels: int = 3
 
         del self.fc
         del self.avgpool
 
-    def get_stages(self) -> List[nn.Module]:
+    def get_stages(self) -> list[nn.Module]:
         return [
             nn.Identity(),
             nn.Sequential(self.conv1, self.bn1, self.relu),
@@ -92,23 +97,23 @@ class ResNetEncoder(ResNet, EncoderMixin):
             self.layer4,
         ]
 
-    def forward(self, x) -> List[torch.Tensor]:
-        stages = self.get_stages()
+    def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
+        stages: list[nn.Module] = self.get_stages()
 
-        features = []
+        features: list[torch.Tensor] = []
         for i in range(self._depth + 1):
             x = stages[i](x)
             features.append(x)
 
         return features
 
-    def load_state_dict(self, state_dict, **kwargs) -> None:
+    def load_state_dict(self, state_dict: dict[str, Any], **kwargs: dict[str, Any]) -> None:
         state_dict.pop("fc.bias", None)
         state_dict.pop("fc.weight", None)
         super().load_state_dict(state_dict, **kwargs)
 
 
-ENCODERS_MAP = {
+ENCODERS_MAP: dict[Literal['resnet18', 'resnet34', 'resnet50'], Any] = {
     "resnet18": {
         "encoder": ResNetEncoder,
         "pretrained_url": "https://dl.fbaipublicfiles.com/semiweaksupervision/model_files/semi_supervised_resnet18-d92f0530.pth",  # noqa
@@ -140,7 +145,7 @@ ENCODERS_MAP = {
 
 
 def get_resnet_encoder(
-    name: str,
+    name: Literal['resnet18', 'resnet34', 'resnet50'],
     in_channels: int = 3,
     depth: int = 5,
     weights: bool = True,
@@ -150,7 +155,7 @@ def get_resnet_encoder(
     Return an encoder with pretrained weights or not.
     """
     try:
-        Encoder = ENCODERS_MAP[name]["encoder"]
+        Encoder: type[ResNetEncoder] = ENCODERS_MAP[name]["encoder"]
     except KeyError:
         raise KeyError(
             "Wrong encoder name `{}`, supported ENCODERS_MAP: {}".format(
@@ -160,7 +165,7 @@ def get_resnet_encoder(
 
     params = ENCODERS_MAP[name]["params"]
     params.update(depth=depth)
-    encoder = Encoder(**params)
+    encoder: ResNetEncoder = Encoder(**params)
 
     if weights:
         url = ENCODERS_MAP[name]["pretrained_url"]

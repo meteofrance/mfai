@@ -278,7 +278,7 @@ class DeepLabV3Settings:
                 (could be **None** to return logits)
     """
 
-    encoder_name: str = "resnet18"
+    encoder_name: Literal['resnet18', 'resnet34', 'resnet50'] = "resnet18"
     encoder_depth: int = 5
     encoder_weights: bool = True
     decoder_channels: int = 256
@@ -333,7 +333,7 @@ class DeepLabV3(ModelABC, torch.nn.Module):
         )
 
         self.decoder: DeepLabV3Decoder = self.get_decoder(
-            in_channels=self.encoder.out_channels,
+            in_channels=self.encoder.out_channels[0],
             out_channels=settings.decoder_channels,
         )
 
@@ -348,7 +348,7 @@ class DeepLabV3(ModelABC, torch.nn.Module):
         self.classification_head: nn.Sequential | None
         if settings.aux_params is not None:
             self.classification_head = self.get_classification_head(
-                in_channels=self.encoder.out_channels, **settings.aux_params
+                in_channels=self.encoder.out_channels[-1], **settings.aux_params
             )
         else:
             self.classification_head = None

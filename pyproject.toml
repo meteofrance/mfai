@@ -36,7 +36,6 @@ exclude = [
   '^mfai/torch/models/llms/*$',
   '^mfai/torch/models/nlam/*$',
   '^mfai/torch/models/half_unet.py$',
-  '^mfai/torch/models/resnet.py$',
   '^mfai/torch/models/segformer.py$',
   '^mfai/torch/models/swinunetr.py$',
   '^mfai/torch/models/unet.py$',
@@ -86,5 +85,6 @@ module = [
   "sentencepiece",
   "onnxruntime",
   "pl_bolts.*",
+  "torchvision.models.resnet"
 ]
 ignore_missing_imports = true

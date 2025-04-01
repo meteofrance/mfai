@@ -145,7 +145,7 @@ def get_resnet_encoder(
     depth: int = 5,
     weights: bool = True,
     output_stride: int = 32,
-) -> ResNetEncoder:
+):
     """
     Return an encoder with pretrained weights or not.
     """

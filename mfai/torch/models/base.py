@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Optional, Tuple, Union
 from torch import Size
+from torch import nn
 import torch
 
 from mfai.torch.padding import pad_batch, undo_padding
@@ -24,7 +25,7 @@ class ModelType(Enum):
     MULTIMODAL_LLM = 5
 
 
-class ModelABC(ABC, torch.nn.Module):
+class ModelABC(ABC):
     # concrete subclasses shoudl set register to True
     # to be included in the registry of available models.
     register: bool = False
@@ -163,3 +164,8 @@ class AutoPaddingModel(ABC):
         if self.settings.autopad_enabled and old_shape is not None:
             return undo_padding(data_tensor, old_shape=old_shape)
         return data_tensor
+
+
+# Drived class to specify type hinting
+class _ModelABC_nnModule(ModelABC, nn.Module):
+    pass

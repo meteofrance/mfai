@@ -57,9 +57,9 @@ def load_from_settings_file(
         )
     
     # Check that the class is ModelABC subclass
-    if not issubclass(model_kls, ModelABC):
+    if not (issubclass(model_kls, ModelABC) and issubclass(model_kls, nn.Module)):
         raise ValueError(
-            f"Model {model_name}, is not a subclass of mfai.torch.models.ModelABC."
+            f"Model {model_name}, is not a subclass of mfai.torch.models.ModelABC and torch.nn.Module."
         )
 
     # Check that the model's settings class is wrapped by the @dataclass_json decorator by looking for the schema attribute

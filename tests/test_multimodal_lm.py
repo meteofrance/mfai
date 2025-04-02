@@ -4,7 +4,7 @@ import pytest
 import torch
 from torch import Tensor, nn
 
-from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, MiniTokenizer
+from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer
 from mfai.torch.models.llms.multimodal import MultiModalLM, MultiModalLMSettings
 from mfai.torch.namedtensor import NamedTensor
 

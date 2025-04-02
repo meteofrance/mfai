@@ -31,7 +31,7 @@ class ModelABC(ABC, torch.nn.Module):
 
     in_channels: int
     out_channels: int
-    input_shape: tuple[int, int]
+    input_shape: tuple[int, ...]
 
     @property
     @abstractmethod

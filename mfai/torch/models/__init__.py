@@ -1,6 +1,7 @@
 import importlib
 import pkgutil
 from pathlib import Path
+from types import ModuleType
 from typing import Optional, Tuple
 
 from torch import nn
@@ -9,14 +10,16 @@ from .base import AutoPaddingModel, ModelABC
 
 # Load all models from the torch.models package
 # which are ModelABC subclasses and have the register attribute set to True
-registry = dict()
-package = importlib.import_module("mfai.torch.models")
+registry: dict[str, type[ModelABC] | type[AutoPaddingModel]] = dict()
+package: ModuleType = importlib.import_module("mfai.torch.models")
 for module_info in pkgutil.walk_packages(package.__path__, package.__name__ + "."):
-    module = importlib.import_module(module_info.name)
+    module: ModuleType = importlib.import_module(module_info.name)
     for object_name, kls in module.__dict__.items():
         if (
             isinstance(kls, type)
-            and issubclass(kls, ModelABC)
+            and (issubclass(kls, ModelABC) or issubclass(kls, AutoPaddingModel))
+            and kls != ModelABC
+            and kls != AutoPaddingModel
             and kls.register  # type: ignore[truthy-function]
         ):
             if kls.__name__ in registry:
@@ -30,7 +33,7 @@ all_nn_architectures = list(registry.values())
 autopad_nn_architectures = {
     obj
     for obj in all_nn_architectures
-    if issubclass(obj, AutoPaddingModel) and obj != "AutoPaddingModel"
+    if issubclass(obj, AutoPaddingModel)
 }
 
 

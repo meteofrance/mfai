@@ -25,7 +25,7 @@ class ModelType(Enum):
     MULTIMODAL_LLM = 5
 
 
-class ModelABC(ABC):
+class _ModelABC(ABC):
     # concrete subclasses shoudl set register to True
     # to be included in the registry of available models.
     register: bool = False
@@ -101,6 +101,11 @@ class ModelABC(ABC):
                 raise AttributeError(f"Missing required attribute : {attr}")
 
 
+# Drived class to specify type hinting
+class ModelABC(_ModelABC, nn.Module):
+    pass
+
+
 class AutoPaddingModel(ABC):
     input_shape: tuple[int, ...]
 
@@ -164,8 +169,3 @@ class AutoPaddingModel(ABC):
         if self.settings.autopad_enabled and old_shape is not None:
             return undo_padding(data_tensor, old_shape=old_shape)
         return data_tensor
-
-
-# Drived class to specify type hinting
-class _ModelABC_nnModule(ModelABC, nn.Module):
-    pass

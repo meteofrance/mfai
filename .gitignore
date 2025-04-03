@@ -167,3 +167,6 @@ logs/
 # Meteo France certificates
 matplotlibrc
 mf.crt
+
+# puml diagrams
+*.puml

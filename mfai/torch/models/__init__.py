@@ -30,9 +30,7 @@ all_nn_architectures = list(registry.values())
 
 
 autopad_nn_architectures = {
-    obj
-    for obj in all_nn_architectures
-    if issubclass(obj, AutoPaddingModel)
+    obj for obj in all_nn_architectures if issubclass(obj, AutoPaddingModel)
 }
 
 
@@ -54,7 +52,7 @@ def load_from_settings_file(
         raise ValueError(
             f"Model {model_name} not found in available architectures: {[x for x in registry]}. Make sure the model's `registry` attribute is set to True (default is False)."
         )
-    
+
     # Check that the class is ModelABC subclass
     if not (issubclass(model_kls, ModelABC) and issubclass(model_kls, nn.Module)):
         raise ValueError(
@@ -62,7 +60,7 @@ def load_from_settings_file(
         )
 
     # Check that the model's settings class is wrapped by the @dataclass_json decorator by looking for the schema attribute
-    if not hasattr(model_kls.settings_kls, 'schema'):
+    if not hasattr(model_kls.settings_kls, "schema"):
         raise ValueError(
             f"Model {model_name}.settings_kls has no attribute schema. Make sure the model's settings class is wrapped by the @dataclass_json decorator."
         )

@@ -8,7 +8,7 @@ import torch
 import torchmetrics as tm
 from pytorch_lightning.utilities import rank_zero_only
 
-from mfai.torch.models.base import ModelABC
+from mfai.torch.models.base import BaseModel, ModelABC
 
 # define custom scalar in tensorboard, to have 2 lines on same graph
 layout = {
@@ -21,7 +21,7 @@ layout = {
 class SegmentationLightningModule(pl.LightningModule):
     def __init__(
         self,
-        model: ModelABC,
+        model: BaseModel,
         type_segmentation: Literal["binary", "multiclass", "multilabel", "regression"],
         loss: torch.nn.modules.loss._Loss,
     ) -> None:

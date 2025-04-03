@@ -45,7 +45,7 @@ class MultiModalLM(nn.Module):
     """
 
     settings_kls = MultiModalLMSettings
-    model_type: ModelType.MULTIMODAL_LLM
+    model_type: ModelType = ModelType.MULTIMODAL_LLM
 
     def __init__(
         self,

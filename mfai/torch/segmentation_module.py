@@ -8,7 +8,7 @@ import torch
 import torchmetrics as tm
 from pytorch_lightning.utilities import rank_zero_only
 
-from mfai.torch.models.base import BaseModel, ModelABC
+from mfai.torch.models.base import BaseModel
 
 # define custom scalar in tensorboard, to have 2 lines on same graph
 layout = {

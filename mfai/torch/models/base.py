@@ -25,7 +25,7 @@ class ModelType(Enum):
     MULTIMODAL_LLM = 5
 
 
-class _ModelABC(ABC):
+class ModelABC(ABC):
     # concrete subclasses shoudl set register to True
     # to be included in the registry of available models.
     register: bool = False
@@ -102,7 +102,7 @@ class _ModelABC(ABC):
 
 
 # Drived class to specify type hinting
-class ModelABC(_ModelABC, nn.Module):
+class BaseModel(ModelABC, nn.Module):
     pass
 
 

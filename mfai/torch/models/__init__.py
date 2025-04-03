@@ -17,9 +17,8 @@ for module_info in pkgutil.walk_packages(package.__path__, package.__name__ + ".
     for object_name, kls in module.__dict__.items():
         if (
             isinstance(kls, type)
-            and (issubclass(kls, ModelABC) or issubclass(kls, AutoPaddingModel))
+            and (issubclass(kls, ModelABC))
             and kls != ModelABC
-            and kls != AutoPaddingModel
             and kls.register  # type: ignore[truthy-function]
         ):
             if kls.__name__ in registry:

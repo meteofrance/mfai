@@ -54,7 +54,7 @@ class GPT2Tokenizer(Tokenizer):
         # Always add the <|endoftext|> token
         self.add_special_tokens(["<|endoftext|>"])
 
-    def add_special_tokens(self, new_special_tokens: list[str]):
+    def add_special_tokens(self, new_special_tokens: list[str]) -> None:
         """
         Method to add some special tokens to the tokenizer.
 
@@ -143,7 +143,7 @@ class MiniGPT2Tokenizer(Tokenizer, ABC):
     To use these class, you only have to implement the method 'get_set_tokens'.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.base_tokenizer = GPT2Tokenizer()
 
         self.token_to_id: dict[int, int] = dict()
@@ -178,7 +178,7 @@ class MiniGPT2Tokenizer(Tokenizer, ABC):
         self.add_special_tokens(["<|endoftext|>"])
 
 
-    def add_special_tokens(self, special_tokens: list[str]):
+    def add_special_tokens(self, special_tokens: list[str]) -> None:
         """
         Method to add some special tokens to the tokenizer.
 

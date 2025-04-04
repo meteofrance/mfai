@@ -28,9 +28,9 @@ class SegmentationLightningModule(pl.LightningModule):
         """A lightning module adapted for segmentation of weather images.
 
         Args:
-            model (ModelABC): Torch neural network model in [DeepLabV3, DeepLabV3Plus, HalfUNet, Segformer, SwinUNETR, UNet, CustomUnet, UNETRPP]
+            model (BaseModel): Torch neural network model in [DeepLabV3, DeepLabV3Plus, HalfUNet, Segformer, SwinUNETR, UNet, CustomUnet, UNETRPP]
             type_segmentation (Literal["binary", "multiclass", "multilabel", "regression"]): Type of segmentation we want to do"
-            loss (Callable): Loss function
+            loss (torch.nn.modules.loss._Loss): Loss function
         """
         super().__init__()
         self.model = model

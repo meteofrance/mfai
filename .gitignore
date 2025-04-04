@@ -169,4 +169,5 @@ matplotlibrc
 mf.crt
 
 # puml diagrams
+doc/class_diagrams/mfai
 *.puml

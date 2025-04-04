@@ -1,7 +1,6 @@
 from functools import partial
 import pytest
 import torch
-from torch import Tensor, nn
 from mfai.torch.models.llms import Llama2Settings, Llama2, GPT2, GPT2Settings
 from mfai.tokenizers import LlamaTokenizer, GPT2Tokenizer
 from test_multimodal_lm import generate_text_simple

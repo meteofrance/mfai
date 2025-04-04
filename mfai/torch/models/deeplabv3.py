@@ -6,7 +6,7 @@ import torch.nn as nn
 from dataclasses_json import dataclass_json
 from torch.nn import functional as F
 
-from .base import ModelABC, ModelType
+from .base import BaseModel, ModelType
 from .resnet import get_resnet_encoder
 
 
@@ -261,7 +261,7 @@ class DeepLabV3Settings:
     aux_params: Optional[dict] = None
 
 
-class DeepLabV3(ModelABC, torch.nn.Module):
+class DeepLabV3(BaseModel):
     """DeepLabV3_ implementation from "Rethinking Atrous Convolution for Semantic Image Segmentation"
 
     Args:

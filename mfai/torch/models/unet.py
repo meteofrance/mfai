@@ -15,7 +15,7 @@ import torch
 from dataclasses_json import dataclass_json
 from torch import nn
 
-from .base import AutoPaddingModel, ModelABC, ModelType
+from .base import AutoPaddingModel, BaseModel, ModelType
 from .resnet import get_resnet_encoder
 
 
@@ -64,7 +64,7 @@ class UnetSettings:
     autopad_enabled: bool = False
 
 
-class UNet(ModelABC, AutoPaddingModel, nn.Module):
+class UNet(BaseModel, AutoPaddingModel):
     """
     Returns a u_net architecture, with uninitialised weights, matching desired numbers of input and output channels.
 
@@ -238,7 +238,7 @@ class CustomUnetSettings:
     autopad_enabled: bool = False
 
 
-class CustomUnet(ModelABC, AutoPaddingModel, nn.Module):
+class CustomUnet(BaseModel, AutoPaddingModel):
     settings_kls = CustomUnetSettings
     onnx_supported = True
     supported_num_spatial_dims = (2,)

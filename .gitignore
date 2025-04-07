@@ -170,4 +170,5 @@ mf.crt
 
 # puml diagrams
 doc/class_diagrams/mfai
+doc/class_diagrams/**/*.png
 *.puml

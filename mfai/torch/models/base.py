@@ -4,15 +4,12 @@ Interface contract for our models.
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Optional, Tuple, Union
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Tuple
 from torch import Size
-from torch import nn
 from torch import nn
 import torch
 
 from mfai.torch.padding import pad_batch, undo_padding
-
 
 
 class ModelType(Enum):
@@ -114,21 +111,7 @@ class BaseModel(ModelABC, nn.Module):
     pass
 
 
-# Drived class to specify type hinting
-class BaseModel(ModelABC, nn.Module):
-    pass
-
-
 class AutoPaddingModel(ABC):
-    input_shape: tuple[int, ...]
-
-    @property
-    @abstractmethod
-    def settings(self) -> Any:
-        """
-        Returns the settings instance used to configure for this model.
-        """
-
     input_shape: tuple[int, ...]
 
     @property
@@ -159,8 +142,7 @@ class AutoPaddingModel(ABC):
         """
 
     def _maybe_padding(
-        self,
-        data_tensor: torch.Tensor
+        self, data_tensor: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Size]:
         """Performs an optional padding to ensure that the data tensor can be fed
             to the underlying model. Padding will happen if if
@@ -193,7 +175,8 @@ class AutoPaddingModel(ABC):
         return data_tensor, old_shape
 
     def _maybe_unpadding(
-        self, data_tensor: torch.Tensor,
+        self,
+        data_tensor: torch.Tensor,
         old_shape: torch.Size,
     ) -> torch.Tensor:
         """Potentially removes the padding previously added to the given tensor. This action
@@ -212,4 +195,3 @@ class AutoPaddingModel(ABC):
         if self.settings.autopad_enabled:
             return undo_padding(data_tensor, old_shape=old_shape)
         return data_tensor
-

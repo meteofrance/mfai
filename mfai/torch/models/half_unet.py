@@ -82,14 +82,12 @@ class HalfUNet(BaseModel, AutoPaddingModel):
         *args: dict[str, Any],
         **kwargs: dict[str, Any],
     ) -> None:
-
         super().__init__(*args, **kwargs)
 
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.input_shape = input_shape
         self._settings = settings
-
 
         self.encoder1 = self._block(
             in_channels,
@@ -184,7 +182,7 @@ class HalfUNet(BaseModel, AutoPaddingModel):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x, old_shape = self._maybe_padding(data_tensor=x)
-        
+
         enc1 = self.encoder1(x)
         enc2 = self.encoder2(self.pool1(enc1))
         enc3 = self.encoder3(self.pool2(enc2))
@@ -285,10 +283,7 @@ class HalfUNet(BaseModel, AutoPaddingModel):
             )
         return layers
 
-    def validate_input_shape(
-            self,
-            input_shape: torch.Size
-        ) -> tuple[bool, torch.Size]:
+    def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
         number_pool_layers = sum(
             1 for layer in self.modules() if isinstance(layer, nn.MaxPool2d)
         )

@@ -2,7 +2,6 @@ import importlib
 import pkgutil
 from pathlib import Path
 from types import ModuleType
-from types import ModuleType
 
 
 from torch import nn

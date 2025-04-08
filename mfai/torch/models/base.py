@@ -5,11 +5,14 @@ Interface contract for our models.
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union
 from torch import Size
+from torch import nn
 from torch import nn
 import torch
 
 from mfai.torch.padding import pad_batch, undo_padding
+
 
 
 class ModelType(Enum):
@@ -35,6 +38,10 @@ class ModelABC(ABC):
     out_channels: int
     input_shape: tuple[int, ...]
 
+    in_channels: int
+    out_channels: int
+    input_shape: tuple[int, ...]
+
     @property
     @abstractmethod
     def onnx_supported(self) -> bool:
@@ -44,6 +51,7 @@ class ModelABC(ABC):
 
     @property
     @abstractmethod
+    def settings_kls(self) -> Any:
     def settings_kls(self) -> Any:
         """
         Returns the settings class for this model.
@@ -94,12 +102,18 @@ class ModelABC(ABC):
         return not self.features_last
 
     def check_required_attributes(self) -> None:
+    def check_required_attributes(self) -> None:
         # we check that the model has defined the following attributes.
         # this must be called at the end of the __init__ of each subclass.
         required_attrs = ["in_channels", "out_channels", "input_shape"]
         for attr in required_attrs:
             if not hasattr(self, attr):
                 raise AttributeError(f"Missing required attribute : {attr}")
+
+
+# Drived class to specify type hinting
+class BaseModel(ModelABC, nn.Module):
+    pass
 
 
 # Drived class to specify type hinting
@@ -117,6 +131,15 @@ class AutoPaddingModel(ABC):
         Returns the settings instance used to configure for this model.
         """
 
+    input_shape: tuple[int, ...]
+
+    @property
+    @abstractmethod
+    def settings(self) -> Any:
+        """
+        Returns the settings instance used to configure for this model.
+        """
+
     @abstractmethod
     def validate_input_shape(self, input_shape: Size) -> Tuple[bool, Size]:
         """Given an input shape, verifies whether the inputs fit with the
@@ -124,10 +147,14 @@ class AutoPaddingModel(ABC):
 
         Args:
             input_shape (Size): The shape of the input data, excluding any batch dimension and channel dimension.
+            input_shape (Size): The shape of the input data, excluding any batch dimension and channel dimension.
                                 For example, for a batch of 2D tensors of shape [B,C,W,H], [W,H] should be passed.
+                                For 3D data instead of shape [B,C,W,H,D], instead, [W,H,D] should be passed.
                                 For 3D data instead of shape [B,C,W,H,D], instead, [W,H,D] should be passed.
 
         Returns:
+            Tuple[bool, Size]: Returns a tuple where the first element is a boolean signaling whether the given input shape
+                                already fits the model's requirements. If that value is False, the second element contains the closest
             Tuple[bool, Size]: Returns a tuple where the first element is a boolean signaling whether the given input shape
                                 already fits the model's requirements. If that value is False, the second element contains the closest
                                 shape that fits the model, otherwise it will be None.
@@ -143,8 +170,12 @@ class AutoPaddingModel(ABC):
 
         Args:
             data_tensor (torch.Tensor): the input data to be potentially padded.
+            data_tensor (torch.Tensor): the input data to be potentially padded.
 
         Returns:
+            Tuple[torch.Tensor, Optional[torch.Size]]: the padded tensor, where the original data is found in the center,
+            and the old size if padding was possible. If not possible or the shape is already fine,
+            the data is returned untouched and the second return value will be none.
             Tuple[torch.Tensor, Optional[torch.Size]]: the padded tensor, where the original data is found in the center,
             and the old size if padding was possible. If not possible or the shape is already fine,
             the data is returned untouched and the second return value will be none.
@@ -173,6 +204,8 @@ class AutoPaddingModel(ABC):
         Args:
             data_tensor (torch.Tensor): The data tensor from which padding is to be removed.
             old_shape (torch.Size): The previous shape of the data tensor. It can either be
+            data_tensor (torch.Tensor): The data tensor from which padding is to be removed.
+            old_shape (torch.Size): The previous shape of the data tensor. It can either be
             [W,H] or [W,H,D] for 2D and 3D data respectively. old_shape is returned by self._maybe_padding.
 
         Returns:
@@ -181,3 +214,4 @@ class AutoPaddingModel(ABC):
         if self.settings.autopad_enabled:
             return undo_padding(data_tensor, old_shape=old_shape)
         return data_tensor
+

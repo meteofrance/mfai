@@ -33,7 +33,7 @@ class MultiModalLMSettings:
         10,
     )  # lat_dim, lon_dim, timestep_dim, features_dim
     layer_norm_vis: bool = True
-    
+
     # Inject vision tokens at each stage ?
     inject_vision_each_stage: bool = False
 
@@ -118,14 +118,14 @@ class MultiModalLM(nn.Module):
     @property
     def context_length(self):
         return self.backend.context_length
-    
+
     def freeze_llm(self):
         """
         Freeze the LLM layers (not the vision layers)
         """
         for param in self.backend.parameters():
             param.requires_grad = False
-    
+
     def unfreeze_llm(self):
         """
         Unfreeze the LLM layers
@@ -173,7 +173,9 @@ class MultiModalLM(nn.Module):
 
         if self.settings.inject_vision_each_stage:
             # Inject vision tokens at each stage
-            logits = self.backend.forward_vectors(x, vis_txt_embeds[:, : vis_embeds.shape[1]])
+            logits = self.backend.forward_vectors(
+                x, vis_txt_embeds[:, : vis_embeds.shape[1]]
+            )
         else:
             logits = self.backend.forward_vectors(x)
 

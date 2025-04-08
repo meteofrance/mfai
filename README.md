@@ -83,6 +83,12 @@ Currently we support the following neural network architectures:
 | :---:   | :---: | :---: | :---: | :---: | :---: |
 |[Custom Fuyu Like Model](mfai/torch/models/llms/multimodal.py#L37)| [arxiv link](https://arxiv.org/abs/2307.09288)  | (Batch, token_id) for text, (Batch, Lat, Lon, Timestep, Features) for weather inputs | No | Inspired from [Adept AI blog post](https://www.adept.ai/blog/fuyu-8b)  and [Sebastian Raschka's blog](https://magazine.sebastianraschka.com/p/understanding-multimodal-llms) | Marine text product generation |
 
+## Vision Language Models
+
+| Model  | Research Paper  | Input Shape    | ONNX exportable ? | Notes | Use-Cases at MF |
+| :---:   | :---: | :---: | :---: | :---: | :---: |
+|[CLIP](mfai/torch/models/clip.py#30)| [arxiv link](https://arxiv.org/abs/2103.00020)  | (Batch, token_id) for text, (Batch, Features, Lat, Lon) | No | Usefull to pre-train a Vision Encoder | Marine text product generation |
+
 <details>
 <summary>Details about our models</summary>
 
@@ -155,6 +161,75 @@ In addition to metrics available in [**torchmetrics**](https://lightning.ai/docs
 - False Alarm Rate (FAR) is given by: FP / (FP + TP).
 - False Negative Rate (FNR) is given by: FN / (FN + TP).
 - Precision-Recall Area Under the Curve (PR AUC). This metric summarize the overall performance of a model without depending on a threshold. It can be used in place of the Area Under ROC Curve when the dataset is too unbalanced.
+
+# Losses
+
+Pytorch already provide some Loss like Mean Squared Error (torch.nn.MSELoss) or Mean Absolute Error (torch.nn.L1Loss). Here we add two loss functions that focus on perceptual similarity of tensors.
+
+## Perceptual Loss
+
+It was introduced by Johnson et al. - Perceptual losses for real-time style transfer and super-resolution. (https://arxiv.org/pdf/1603.08155).  
+
+The [**PerceptualLoss**](mfai/torch/losses/perceptual.py#L28) class is a `torch.nn.Module` that allows to initialize a VGG-16 and compute directly the perceptual loss between a given input and target.
+
+### Multi Scale :
+The VGG-16 was originally designed for ImageNet dataset that contains 224x224 images. It can still be used with image dimensionned differently. But in case your tensors are high dimensional (ex:1024x1024) the VGG-16 features might not be able to catch fine-scale details. The *multi_scale* mode allows to compute the Perceptual Loss on different downscale version of your original tensors. For example, if your tensors are 1024x1024, the perceptual loss will be computed both on the original dimension and on its downscaled versions : 512x512 and 256x256.
+
+### Channel handling case :
+
+Because the VGG-16 was designed for RGB images, the perceptual loss can be computed differently depending on your tensors channel dimension. \
+The *channel_iterative_mode* is done so that the loss is iteratively computed by replicating three times each channel (RGB like) so that it is compatible with VGG-16 original architecture. \
+
+**(Case 1)** : Tensors with N!=3 channels \
+**(Case 1.1)** : *channel_iterative_mode*=False : \
+The VGG-16 architecture is adapted so that it can forward tensors with N channels. There will be a single forward of the network per tensor to compute the features. \
+**(Case 1.2)** : *channel_iterative_mode*=True : \
+The original VGG-16 architecture is kept. There will be N forwards of the network per tensor to compute the features.
+
+**(Case 2)** : Tensors with N=3 channels \
+**(Case 2.1)** : *channel_iterative_mode*=False : \
+The original VGG-16 architecture is kept. There will be a single forward of the network per tensor to compute the features. \
+**(Case 2.2)** : *channel_iterative_mode*=True : \
+The original VGG-16 architecture is kept. There will be N forwards of the network per tensor to compute the features.
+
+### Pre Trained
+You can either choose to compute the Perceptual Loss with the ImageNet Pre-trained version of the VGG-16 or use a random version of it.
+
+## Example
+An example of PerceptualLoss usage :
+```python
+# In case the target and input are different everytime
+inputs = torch.rand(25, 5, 128, 128)
+targets = torch.rand(25, 5, 128, 128)
+
+# Initialize the perceptual loss class
+perceptual_loss_class = PerceptualLoss(channel_iterative_mode=True, in_channels=5)
+
+# Computing Perceptual Loss
+perceptual_loss = perceptual_loss_class(inputs, targets)
+
+```
+```python
+# In case you need to compare different targets to the same input
+inputs = torch.rand(25, 5, 128, 128)
+perceptual_loss_class = PerceptualLoss(channel_iterative_mode=True, in_channels=5)
+
+# The features of the inputs are computed and stored in the memory
+perceptual_loss_class.compute_perceptual_features(inputs)
+
+for _ in range():
+  
+  targets = torch.rand(25, 5, 128, 128)
+
+  # The features of the targets are computed and compared to the input features
+  perceptual_loss = perceptual_loss_class(targets)
+
+```
+
+## LPIPS
+
+The [**LPIPS**](mfai/torch/losses/perceptual.py#L28) class is a `torch.nn.Module` that computes the Learned Perceptual Image Patch Similarity metric. It is using the aforementionned PerceptualLoss class so it contains the same modes.
+
 
 # Installation
 
@@ -511,8 +586,18 @@ Our tests are written using [pytest](https://docs.pytest.org). We check that:
 
 ```bash
 docker build . -f Dockerfile -t mfai
-docker run -it --rm mfai python -m pytest tests
+docker run -it --rm mfai python3 -m pytest tests
 ```
+
+# Running mypy
+Mypy is used to check the project type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
+
+To run mypy:
+```bash
+docker build . -f Dockerfile -t mfai
+docker run -it --rm mfai mypy mfai/
+```
+
 # Contributing
 
 We welcome contributions to this package. Our guidelines are the following:

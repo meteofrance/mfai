@@ -52,7 +52,6 @@ class ModelABC(ABC):
     @property
     @abstractmethod
     def settings_kls(self) -> Any:
-    def settings_kls(self) -> Any:
         """
         Returns the settings class for this model.
         """
@@ -101,7 +100,6 @@ class ModelABC(ABC):
     def features_second(self) -> bool:
         return not self.features_last
 
-    def check_required_attributes(self) -> None:
     def check_required_attributes(self) -> None:
         # we check that the model has defined the following attributes.
         # this must be called at the end of the __init__ of each subclass.

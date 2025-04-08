@@ -173,27 +173,25 @@ def test_extra_models(model_and_settings):
 
 def test_load_model_by_name():
     with pytest.raises(ValueError):
-        load_from_settings_file("NotAValidModel", 2, 2, None)
+        load_from_settings_file("NotAValidModel", 2, 2, None, (1, 1))
 
     # Should work: valid settings file for this model
     load_from_settings_file(
-        "HalfUNet",
-        2,
-        2,
-        Path(__file__).parents[1] / "mfai" / "config" / "models" / "halfunet128.json",
+        model_name="HalfUNet",
+        in_channels=2,
+        out_channels=2,
+        settings_path=Path(__file__).parents[1] / "mfai" / "config" / "models" / "halfunet128.json",
+        input_shape=(10, 10, 10)
     )
 
     # Should raise: invalid settings file for this model
     with pytest.raises(ValidationError):
         load_from_settings_file(
-            "UNETRPP",
-            2,
-            2,
-            Path(__file__).parents[1]
-            / "mfai"
-            / "config"
-            / "models"
-            / "halfunet128.json",
+            model_name="UNETRPP",
+            in_channels=2,
+            out_channels=2,
+            settings_path=Path(__file__).parents[1] / "mfai" / "config" / "models" / "halfunet128.json",
+            input_shape=(10, 10, 10)
         )
      
 @pytest.mark.parametrize("model_class", autopad_nn_architectures)   
@@ -203,7 +201,7 @@ def test_input_shape_validation(model_class):
     B, C, W, H = 32,3,64,65
     
     input_data = torch.randn(B,C,W,H)
-    net = model_class(in_channels=C, out_channels=1)
+    net = model_class(in_channels=C, out_channels=1, input_shape=input_data.shape)
     # assert it fails before padding
     with pytest.raises(RuntimeError):
         net(input_data)

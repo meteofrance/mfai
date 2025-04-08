@@ -2,11 +2,12 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from functools import reduce
 from math import ceil
-from typing import Tuple, Union
+from typing import Any, Sequence
 
 import torch
 from dataclasses_json import dataclass_json
 from torch import nn
+from torch.nn.common_types import _size_2_t
 
 from mfai.torch.models.base import AutoPaddingModel, BaseModel, ModelType
 from mfai.torch.models.utils import AbsolutePosEmdebding
@@ -30,10 +31,10 @@ class GhostModule(nn.Module):
         in_channels: int = 64,
         out_channels: int = 64,
         bias: bool = False,
-        kernel_size=3,
-        padding="same",
-        dilation=1,
-    ):
+        kernel_size: _size_2_t = 3,
+        padding: str | _size_2_t = "same",
+        dilation: int = 1,
+    ) -> None:
         super().__init__()
 
         self.conv = nn.Conv2d(
@@ -55,7 +56,7 @@ class GhostModule(nn.Module):
         self.bn = nn.BatchNorm2d(num_features=out_channels)
         self.relu = nn.ReLU(inplace=True)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv(x)
         x2 = self.sepconv(x)
         x = torch.cat([x, x2], dim=1)
@@ -69,22 +70,18 @@ class HalfUNet(BaseModel, AutoPaddingModel):
     supported_num_spatial_dims = (2,)
     num_spatial_dims: int = 2
     features_last: bool = False
-    model_type: int = ModelType.CONVOLUTIONAL
+    model_type: ModelType = ModelType.CONVOLUTIONAL
     register: bool = True
 
     def __init__(
         self,
         in_channels: int,
         out_channels: int,
-        input_shape: Union[None, Tuple[int, int]] = None,
+        input_shape: tuple[int, ...],
         settings: HalfUNetSettings = HalfUNetSettings(),
-        *args,
-        **kwargs,
-    ):
-        if settings.absolute_pos_embed and input_shape is None:
-            raise ValueError(
-                "You must provide a grid_shape to use absolute_pos_embed in HalfUnet"
-            )
+        *args: dict[str, Any],
+        **kwargs: dict[str, Any],
+    ) -> None:
 
         super().__init__(*args, **kwargs)
 
@@ -93,11 +90,6 @@ class HalfUNet(BaseModel, AutoPaddingModel):
         self.input_shape = input_shape
         self._settings = settings
 
-        if settings.absolute_pos_embed:
-            if input_shape is None:
-                raise ValueError(
-                    "You must provide an input_shape to use absolute_pos_embed in HalfUnet"
-                )
 
         self.encoder1 = self._block(
             in_channels,
@@ -120,7 +112,7 @@ class HalfUNet(BaseModel, AutoPaddingModel):
             use_ghost=settings.use_ghost,
             dilation=settings.dilation,
             absolute_pos_embed=settings.absolute_pos_embed,
-            grid_shape=[x // 2 for x in input_shape] if input_shape else None,
+            grid_shape=[x // 2 for x in input_shape],
         )
         self.up2 = nn.UpsamplingBilinear2d(scale_factor=2)
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
@@ -133,7 +125,7 @@ class HalfUNet(BaseModel, AutoPaddingModel):
             use_ghost=settings.use_ghost,
             dilation=settings.dilation,
             absolute_pos_embed=settings.absolute_pos_embed,
-            grid_shape=[x // 4 for x in input_shape] if input_shape else None,
+            grid_shape=[x // 4 for x in input_shape],
         )
 
         self.up3 = nn.UpsamplingBilinear2d(scale_factor=4)
@@ -147,7 +139,7 @@ class HalfUNet(BaseModel, AutoPaddingModel):
             use_ghost=settings.use_ghost,
             dilation=settings.dilation,
             absolute_pos_embed=settings.absolute_pos_embed,
-            grid_shape=[x // 8 for x in input_shape] if input_shape else None,
+            grid_shape=[x // 8 for x in input_shape],
         )
         self.up4 = nn.UpsamplingBilinear2d(scale_factor=8)
         self.pool4 = nn.MaxPool2d(kernel_size=2, stride=2)
@@ -160,7 +152,7 @@ class HalfUNet(BaseModel, AutoPaddingModel):
             use_ghost=settings.use_ghost,
             dilation=settings.dilation,
             absolute_pos_embed=settings.absolute_pos_embed,
-            grid_shape=[x // 16 for x in input_shape] if input_shape else None,
+            grid_shape=[x // 16 for x in input_shape],
         )
         self.up5 = nn.UpsamplingBilinear2d(scale_factor=16)
 
@@ -190,9 +182,9 @@ class HalfUNet(BaseModel, AutoPaddingModel):
     def settings(self) -> HalfUNetSettings:
         return self._settings
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x, old_shape = self._maybe_padding(data_tensor=x)
-
+        
         enc1 = self.encoder1(x)
         enc2 = self.encoder2(self.pool1(enc1))
         enc3 = self.encoder3(self.pool2(enc2))
@@ -211,16 +203,16 @@ class HalfUNet(BaseModel, AutoPaddingModel):
 
     @staticmethod
     def _block(
-        in_channels,
-        features,
-        name,
-        bias=False,
+        nb_in_channels: int,
+        nb_features: int,
+        name: str,
+        grid_shape: Sequence[int],
+        bias: bool = False,
         use_ghost: bool = False,
         dilation: int = 1,
-        padding="same",
+        padding: str | _size_2_t = "same",
         absolute_pos_embed: bool = False,
-        grid_shape: Tuple[int, int] = None,
-    ):
+    ) -> nn.Sequential:
         if use_ghost:
             layers = nn.Sequential(
                 OrderedDict(
@@ -228,8 +220,8 @@ class HalfUNet(BaseModel, AutoPaddingModel):
                         (
                             name + "ghost1",
                             GhostModule(
-                                in_channels=in_channels,
-                                out_channels=features,
+                                in_channels=nb_in_channels,
+                                out_channels=nb_features,
                                 kernel_size=3,
                                 padding=padding,
                                 bias=bias,
@@ -239,8 +231,8 @@ class HalfUNet(BaseModel, AutoPaddingModel):
                         (
                             name + "ghost2",
                             GhostModule(
-                                in_channels=features,
-                                out_channels=features,
+                                in_channels=nb_features,
+                                out_channels=nb_features,
                                 kernel_size=3,
                                 padding=padding,
                                 bias=bias,
@@ -257,28 +249,28 @@ class HalfUNet(BaseModel, AutoPaddingModel):
                         (
                             name + "conv1",
                             nn.Conv2d(
-                                in_channels=in_channels,
-                                out_channels=features,
+                                in_channels=nb_in_channels,
+                                out_channels=nb_features,
                                 kernel_size=3,
                                 padding=padding,
                                 bias=bias,
                                 dilation=dilation,
                             ),
                         ),
-                        (name + "norm1", nn.BatchNorm2d(num_features=features)),
+                        (name + "norm1", nn.BatchNorm2d(num_features=nb_features)),
                         (name + "relu1", nn.ReLU(inplace=True)),
                         (
                             name + "conv2",
                             nn.Conv2d(
-                                in_channels=features,
-                                out_channels=features,
+                                in_channels=nb_features,
+                                out_channels=nb_features,
                                 kernel_size=3,
                                 padding=padding,
                                 bias=bias,
                                 dilation=dilation,
                             ),
                         ),
-                        (name + "norm2", nn.BatchNorm2d(num_features=features)),
+                        (name + "norm2", nn.BatchNorm2d(num_features=nb_features)),
                         (name + "relu2", nn.ReLU(inplace=True)),
                     ]
                 )
@@ -287,13 +279,16 @@ class HalfUNet(BaseModel, AutoPaddingModel):
             layers = nn.Sequential(
                 AbsolutePosEmdebding(
                     input_shape=(grid_shape[0], grid_shape[1]),
-                    num_features=in_channels,
+                    num_features=nb_in_channels,
                 ),
                 *layers,
             )
         return layers
 
-    def validate_input_shape(self, input_shape: torch.Size) -> Tuple[bool | torch.Size]:
+    def validate_input_shape(
+            self,
+            input_shape: torch.Size
+        ) -> tuple[bool, torch.Size]:
         number_pool_layers = sum(
             1 for layer in self.modules() if isinstance(layer, nn.MaxPool2d)
         )
@@ -303,7 +298,8 @@ class HalfUNet(BaseModel, AutoPaddingModel):
         # be divisible by 2^N
         d = 2**number_pool_layers
 
-        new_shape = [d * ceil(input_shape[i] / d) for i in range(len(input_shape))]
-        new_shape = torch.Size(new_shape)
+        new_shape = torch.Size(
+            [d * ceil(input_shape[i] / d) for i in range(len(input_shape))]
+        )
 
         return new_shape == input_shape, new_shape

@@ -134,8 +134,9 @@ class AutoPaddingModel(ABC):
         """
 
     def _maybe_padding(
-        self, data_tensor: torch.Tensor
-    ) -> Tuple[Union[torch.Tensor, ValueError], Optional[torch.Size]]:
+        self,
+        data_tensor: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Size]:
         """Performs an optional padding to ensure that the data tensor can be fed
             to the underlying model. Padding will happen if if
             autopadding was enabled via the settings.
@@ -148,10 +149,11 @@ class AutoPaddingModel(ABC):
             and the old size if padding was possible. If not possible or the shape is already fine,
             the data is returned untouched and the second return value will be none.
         """
-        if not self.settings.autopad_enabled:
-            return data_tensor, None
-
         old_shape = data_tensor.shape[-len(self.input_shape) :]
+
+        if not self.settings.autopad_enabled:
+            return data_tensor, old_shape
+
         valid_shape, new_shape = self.validate_input_shape(
             data_tensor.shape[-len(self.input_shape) :]
         )
@@ -159,11 +161,12 @@ class AutoPaddingModel(ABC):
             return pad_batch(
                 batch=data_tensor, new_shape=new_shape, pad_value=0
             ), old_shape
-        return data_tensor, None
+        return data_tensor, old_shape
 
     def _maybe_unpadding(
-        self, data_tensor: torch.Tensor, old_shape: torch.Size
-    ) -> torch.Tensor | ValueError:
+        self, data_tensor: torch.Tensor,
+        old_shape: torch.Size,
+    ) -> torch.Tensor:
         """Potentially removes the padding previously added to the given tensor. This action
            is only carried out if autopadding was enabled via the settings.
 
@@ -175,6 +178,6 @@ class AutoPaddingModel(ABC):
         Returns:
             torch.Tensor: The data tensor with the padding removed, if possible.
         """
-        if self.settings.autopad_enabled and old_shape is not None:
+        if self.settings.autopad_enabled:
             return undo_padding(data_tensor, old_shape=old_shape)
         return data_tensor

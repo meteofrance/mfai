@@ -2,12 +2,11 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from functools import reduce
 from math import ceil
-from typing import Any, Sequence
+from typing import Any, Literal, Sequence
 
 import torch
 from dataclasses_json import dataclass_json
 from torch import nn
-from torch.nn.common_types import _size_2_t
 
 from mfai.torch.models.base import AutoPaddingModel, BaseModel, ModelType
 from mfai.torch.models.utils import AbsolutePosEmdebding
@@ -31,8 +30,8 @@ class GhostModule(nn.Module):
         in_channels: int = 64,
         out_channels: int = 64,
         bias: bool = False,
-        kernel_size: _size_2_t = 3,
-        padding: str | _size_2_t = "same",
+        kernel_size: tuple[int, int] = (3, 3),
+        padding: Literal["valid", "same"] | tuple[int, int] = "same",
         dilation: int = 1,
     ) -> None:
         super().__init__()
@@ -113,7 +112,7 @@ class HalfUNet(BaseModel, AutoPaddingModel):
             grid_shape=[x // 2 for x in input_shape],
         )
         self.up2 = nn.UpsamplingBilinear2d(scale_factor=2)
-        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.pool2 = nn.MaxPool2d(kernel_size=(2, 2), stride=2)
 
         self.encoder3 = self._block(
             settings.num_filters,
@@ -127,7 +126,7 @@ class HalfUNet(BaseModel, AutoPaddingModel):
         )
 
         self.up3 = nn.UpsamplingBilinear2d(scale_factor=4)
-        self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.pool3 = nn.MaxPool2d(kernel_size=(2, 2), stride=2)
 
         self.encoder4 = self._block(
             settings.num_filters,
@@ -208,7 +207,7 @@ class HalfUNet(BaseModel, AutoPaddingModel):
         bias: bool = False,
         use_ghost: bool = False,
         dilation: int = 1,
-        padding: str | _size_2_t = "same",
+        padding: Literal["valid", "same"] | tuple[int, int] = "same",
         absolute_pos_embed: bool = False,
     ) -> nn.Sequential:
         if use_ghost:
@@ -220,7 +219,7 @@ class HalfUNet(BaseModel, AutoPaddingModel):
                             GhostModule(
                                 in_channels=nb_in_channels,
                                 out_channels=nb_features,
-                                kernel_size=3,
+                                kernel_size=(3, 3),
                                 padding=padding,
                                 bias=bias,
                                 dilation=dilation,
@@ -231,7 +230,7 @@ class HalfUNet(BaseModel, AutoPaddingModel):
                             GhostModule(
                                 in_channels=nb_features,
                                 out_channels=nb_features,
-                                kernel_size=3,
+                                kernel_size=(3, 3),
                                 padding=padding,
                                 bias=bias,
                                 dilation=dilation,

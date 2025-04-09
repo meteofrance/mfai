@@ -130,7 +130,7 @@ class UNet(BaseModel, AutoPaddingModel):
     def settings(self) -> UnetSettings:
         return self._settings
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor | ValueError:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Description of the architecture from the original paper (https://arxiv.org/pdf/1505.04597.pdf):
         The network architecture is illustrated in Figure 1. It consists of a contracting

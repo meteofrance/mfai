@@ -9,12 +9,11 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from functools import cached_property
 from math import ceil
-from typing import Tuple, Union
-from torch import Size
+from typing import Tuple
 
 import torch
 from dataclasses_json import dataclass_json
-from torch import nn
+from torch import Size, nn
 
 from .base import AutoPaddingModel, BaseModel, ModelType
 from .resnet import get_resnet_encoder
@@ -83,8 +82,8 @@ class UNet(BaseModel, AutoPaddingModel):
     def __init__(
         self,
         input_shape: tuple[int, ...],
-        in_channels: int=3,
-        out_channels: int=1,
+        in_channels: int = 3,
+        out_channels: int = 1,
         # input_shape: Union[None, Tuple[int, int]] = None,
         settings: UnetSettings = UnetSettings(),
     ) -> None:
@@ -220,7 +219,7 @@ class UNet(BaseModel, AutoPaddingModel):
 
         new_shape = torch.Size(
             [d * ceil(input_shape[i] / d) for i in range(len(input_shape))]
-            )
+        )
 
         return new_shape == input_shape, new_shape
 
@@ -325,6 +324,8 @@ class CustomUnet(BaseModel, AutoPaddingModel):
         print(number_pool_layers)
         d = 2**number_pool_layers
 
-        new_shape = torch.Size([d * ceil(input_shape[i] / d) for i in range(len(input_shape))])
+        new_shape = torch.Size(
+            [d * ceil(input_shape[i] / d) for i in range(len(input_shape))]
+        )
 
         return new_shape == input_shape, new_shape

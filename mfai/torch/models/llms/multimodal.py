@@ -34,6 +34,9 @@ class MultiModalLMSettings:
     )  # lat_dim, lon_dim, timestep_dim, features_dim
     layer_norm_vis: bool = True
 
+    # Inject vision tokens at each stage ?
+    inject_vision_each_stage: bool = False
+
 
 class MultiModalLM(nn.Module):
     """
@@ -116,6 +119,20 @@ class MultiModalLM(nn.Module):
     def context_length(self):
         return self.backend.context_length
 
+    def freeze_llm(self):
+        """
+        Freeze the LLM layers (not the vision layers)
+        """
+        for param in self.backend.parameters():
+            param.requires_grad = False
+
+    def unfreeze_llm(self):
+        """
+        Unfreeze the LLM layers
+        """
+        for param in self.backend.parameters():
+            param.requires_grad = True
+
     def forward(self, text_tokens: Tensor, vision_input: NamedTensor) -> Tensor:
         # Linear projection of weather input data
         vis_timesteps_embeds = []
@@ -154,7 +171,13 @@ class MultiModalLM(nn.Module):
         else:
             x = vis_txt_embeds
 
-        logits = self.backend.forward_vectors(x)
+        if self.settings.inject_vision_each_stage:
+            # Inject vision tokens at each stage
+            logits = self.backend.forward_vectors(
+                x, vis_txt_embeds[:, : vis_embeds.shape[1]]
+            )
+        else:
+            logits = self.backend.forward_vectors(x)
 
         # removes the vision part of the logits
         return logits[:, vis_embeds.shape[1] :]

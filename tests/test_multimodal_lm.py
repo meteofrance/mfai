@@ -1,9 +1,11 @@
-from typing import Union
+from typing import Literal, Tuple, Union
+
 import pytest
 import torch
-from torch import nn, Tensor
-from mfai.tokenizers import GPT2Tokenizer
-from mfai.torch.models.llms.multimodal import MultiModalLMSettings, MultiModalLM
+from torch import Tensor, nn
+
+from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer
+from mfai.torch.models.llms.multimodal import MultiModalLM, MultiModalLMSettings
 from mfai.torch.namedtensor import NamedTensor
 
 
@@ -42,48 +44,77 @@ def generate_text_simple(
 
 
 @pytest.mark.parametrize(
-    "backend_target",
+    "llm_backend, tokenizer, expected_text",
     [
         (
             "llama2",
-            "Sustine et abstine condolences % contracted Expressku LookingOriginally laughable gathered redesign",
+            LlamaTokenizer(),
+            (
+                "Sustine et abstineAlignment Геrace sqlwesten Loggerлага Bushに同",
+                "Sustine et abstine makulsion flag重глеägerhand Av Lincoln mul",
+            ),
         ),
         (
             "gpt2",
-            "Sustine et abstinegreg LXamm Local addition Immun GlassrikeFal Resurrection",
+            GPT2Tokenizer(),
+            (
+                "Sustine et abstinegreg LXamm Local addition Immun GlassrikeFal Resurrection",
+                "Sustine et abstineohoorphLE updates� Oaks Coconut VC Privacy backward",
+            ),
+        ),
+        (
+            "gpt2",
+            LlamaTokenizer(),
+            (
+                "Sustine et abstine współ terrestführtrange지edتズ ownershipantal",
+                "Sustine et abstine detected *rit україн dernièreistoryikalcorüssknow",
+            ),
+        ),
+        (
+            "gpt2",
+            GPT2Tokenizer(),
+            (
+                "Sustine et abstinegreg LXamm Local addition Immun GlassrikeFal Resurrection",
+                "Sustine et abstineohoorphLE updates� Oaks Coconut VC Privacy backward",
+            ),
         ),
     ],
 )
-def test_multimodal_llm(backend_target):
+def test_multimodal_llm(
+    llm_backend: Literal["llama2", "gpt2"],
+    tokenizer: Union[GPT2Tokenizer, LlamaTokenizer],
+    expected_text: Tuple[str, str],
+):
     torch.manual_seed(999)
-    backend, target = backend_target
-    tokenizer = GPT2Tokenizer()
-    model = MultiModalLM(
-        settings=MultiModalLMSettings(
-            vision_input_shape=(3, 3, 2, 1),
-            backend=backend,
-            n_heads=1,
-            n_layers=1,
-            emb_dim=32,
-            hidden_dim=32,
-            context_length=32,
+    for force_vision in (False, True):
+        model = MultiModalLM(
+            settings=MultiModalLMSettings(
+                vision_input_shape=(3, 3, 2, 1),
+                backend=llm_backend,
+                n_heads=1,
+                n_layers=1,
+                emb_dim=32,
+                hidden_dim=32,
+                context_length=32,
+                inject_vision_each_stage=force_vision,
+            ),
+            vocab_size=tokenizer.vocab_size,
         )
-    )
-    vision_input = NamedTensor(
-        torch.randn(1, 3, 3, 2, 1),
-        names=("batch", "lat", "lon", "timestep", "features"),
-        feature_names=("u",),
-    )
-    encoded = tokenizer.encode("Sustine et abstine")
-    encoded_tensor = torch.tensor(encoded).unsqueeze(0)
+        vision_input = NamedTensor(
+            torch.randn(1, 3, 3, 2, 1),
+            names=("batch", "lat", "lon", "timestep", "features"),
+            feature_names=("u",),
+        )
+        encoded = tokenizer.encode("Sustine et abstine")
+        encoded_tensor = torch.tensor(encoded).unsqueeze(0)
 
-    out = generate_text_simple(
-        model=model,
-        idx=encoded_tensor,
-        max_new_tokens=10,
-        context_size=model.context_length,
-        vision_input=vision_input,
-    )
-    decoded_text = tokenizer.decode(out.squeeze(0).tolist())
-
-    assert decoded_text == target
+        out = generate_text_simple(
+            model=model,
+            idx=encoded_tensor,
+            max_new_tokens=10,
+            context_size=model.context_length,
+            vision_input=vision_input,
+        )
+        decoded_text = tokenizer.decode(out.squeeze(0).tolist())
+        print(llm_backend, tokenizer.name(), decoded_text)
+        assert decoded_text == expected_text[0 if not force_vision else 1]

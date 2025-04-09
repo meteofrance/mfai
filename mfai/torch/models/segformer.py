@@ -12,7 +12,7 @@ from dataclasses_json import dataclass_json
 from einops import rearrange
 from torch import einsum, nn
 
-from .base import ModelABC, ModelType
+from .base import BaseModel, ModelType
 
 
 def exists(val):
@@ -207,7 +207,7 @@ class MiT(nn.Module):
         return ret
 
 
-class Segformer(ModelABC, nn.Module):
+class Segformer(BaseModel):
     """
     Segformer architecture with extra
     upsampling in the decoder to match

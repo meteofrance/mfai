@@ -3,17 +3,20 @@ pytorch models wrapped
 for DSM/LabIA projects.
 """
 
+import inspect
+import re
 from collections import OrderedDict
 from dataclasses import dataclass
+from functools import cached_property
+from math import ceil
 from typing import Tuple, Union
 
 import torch
 from dataclasses_json import dataclass_json
 from torch import nn
 
-from mfai.torch.models.encoders import get_encoder
-
-from .base import ModelABC, ModelType
+from .base import AutoPaddingModel, BaseModel, ModelType
+from .resnet import get_resnet_encoder
 
 
 class DoubleConv(nn.Module):
@@ -58,9 +61,10 @@ class DoubleConv(nn.Module):
 @dataclass(slots=True)
 class UnetSettings:
     init_features: int = 64
+    autopad_enabled: bool = False
 
 
-class UNet(ModelABC, nn.Module):
+class UNet(BaseModel, AutoPaddingModel):
     """
     Returns a u_net architecture, with uninitialised weights, matching desired numbers of input and output channels.
 
@@ -146,6 +150,8 @@ class UNet(ModelABC, nn.Module):
         are applied to a layer with an even x- and y-size.
         """
 
+        x, old_shape = self._maybe_padding(data_tensor=x)
+
         enc1 = self.encoder1(x)
         enc2 = self.encoder2(self.max_pool(enc1))
         enc3 = self.encoder3(self.max_pool(enc2))
@@ -165,7 +171,9 @@ class UNet(ModelABC, nn.Module):
         dec1 = self.upconv1(dec2)
         dec1 = torch.cat((dec1, enc1), dim=1)
         dec1 = self.decoder1(dec1)
-        return self.conv(dec1)
+        out = self.conv(dec1)
+
+        return self._maybe_unpadding(out, old_shape=old_shape)
 
     @staticmethod
     def _block(in_channels, features, name):
@@ -200,6 +208,26 @@ class UNet(ModelABC, nn.Module):
             )
         )
 
+    def validate_input_shape(self, input_shape: torch.Size) -> Tuple[bool | torch.Size]:
+        number_pool_layers = self._num_pool_layers
+
+        # The UNet has M max pooling layers of size 2x2 with stride 2, each of which halves the
+        # dimensions. For the residual connections to match shape, the input dimensions should
+        # be divisible by 2^N
+        d = 2**number_pool_layers
+
+        new_shape = [d * ceil(input_shape[i] / d) for i in range(len(input_shape))]
+        new_shape = torch.Size(new_shape)
+
+        return new_shape == input_shape, new_shape
+
+    @cached_property
+    def _num_pool_layers(self):
+        # introspective, looks at the code of forword and
+        # counts the number of max pool calls
+        source_code = inspect.getsource(self.forward)
+        return len(re.findall(r"max_pool\(", source_code))
+
 
 @dataclass_json
 @dataclass(slots=True)
@@ -207,9 +235,10 @@ class CustomUnetSettings:
     encoder_name: str = "resnet18"
     encoder_depth: int = 5
     encoder_weights: bool = True
+    autopad_enabled: bool = False
 
 
-class CustomUnet(ModelABC, nn.Module):
+class CustomUnet(BaseModel, AutoPaddingModel):
     settings_kls = CustomUnetSettings
     onnx_supported = True
     supported_num_spatial_dims = (2,)
@@ -226,17 +255,20 @@ class CustomUnet(ModelABC, nn.Module):
         settings: CustomUnetSettings = CustomUnetSettings(),
     ):
         super().__init__()
+
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.input_shape = input_shape
         self._settings = settings
 
-        self.encoder = get_encoder(
+        self.encoder = get_resnet_encoder(
             settings.encoder_name,
             in_channels=in_channels,
             depth=settings.encoder_depth,
             weights=settings.encoder_weights,
         )
+
+        self.input_shape = input_shape
 
         decoder_channels = self.encoder.out_channels[
             ::-1
@@ -265,6 +297,7 @@ class CustomUnet(ModelABC, nn.Module):
         return self._settings
 
     def forward(self, x):
+        x, old_shape = self._maybe_padding(data_tensor=x)
         # Encoder part
         encoder_outputs = self.encoder(x)
         encoder_outputs = encoder_outputs[
@@ -280,4 +313,15 @@ class CustomUnet(ModelABC, nn.Module):
             x = torch.cat([x, skip], dim=1)
             x = decoder(x)
 
-        return self.final_conv(x)
+        out = self.final_conv(x)
+        return self._maybe_unpadding(out, old_shape=old_shape)
+
+    def validate_input_shape(self, input_shape: torch.Size) -> Tuple[bool | torch.Size]:
+        number_pool_layers = self._settings.encoder_depth
+        print(number_pool_layers)
+        d = 2**number_pool_layers
+
+        new_shape = [d * ceil(input_shape[i] / d) for i in range(len(input_shape))]
+        new_shape = torch.Size(new_shape)
+
+        return new_shape == input_shape, new_shape

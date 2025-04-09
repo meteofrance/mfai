@@ -304,7 +304,7 @@ class PerceptualLoss(torch.nn.Module):
             x=y, features_y=features_x, styles_y=styles_x
         )
 
-    def forward(self, x: torch.Tensor, y: torch.Tensor = None) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, y: torch.Tensor | None = None) -> torch.Tensor:
         r"""Computes the Perceptual loss between two images
         Arguments :
             x: (torch.Tensor)

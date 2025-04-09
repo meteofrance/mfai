@@ -84,7 +84,6 @@ class UNet(BaseModel, AutoPaddingModel):
         input_shape: tuple[int, ...],
         in_channels: int = 3,
         out_channels: int = 1,
-        # input_shape: Union[None, Tuple[int, int]] = None,
         settings: UnetSettings = UnetSettings(),
     ) -> None:
         super().__init__()

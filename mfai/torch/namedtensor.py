@@ -290,30 +290,26 @@ class NamedTensor(TensorWrapper):
         self.names.insert(dim_index, dim_name)
 
     def select_dim(
-        self, dim_name: str, index: int, bare_tensor: bool = True
-    ) -> Union["NamedTensor", torch.Tensor]:
+        self, dim_name: str, index: int) -> "NamedTensor":
         """
         Return the tensor indexed along the dimension dim_name
         with the index index.
         The given dimension is removed from the tensor.
         See https://pytorch.org/docs/stable/generated/torch.select.html
         """
-        if bare_tensor:
-            return self.tensor.select(self.names.index(dim_name), index)
-        else:
-            # if they try to select the features it will break as
-            # the feature dimension is not present anymore
-            return NamedTensor(
-                self.select_dim(dim_name, index, bare_tensor=True),
-                self.names[: self.names.index(dim_name)]
-                + self.names[self.names.index(dim_name) + 1 :],
-                self.feature_names,
-                feature_dim_name=self.feature_dim_name,
-            )
+
+        # if they try to select the features it will break as
+        # the feature dimension is not present anymore
+        return NamedTensor(
+            self.select_dim(dim_name, index).tensor,
+            self.names[: self.names.index(dim_name)]
+            + self.names[self.names.index(dim_name) + 1 :],
+            self.feature_names,
+            feature_dim_name=self.feature_dim_name,
+        )
 
     def index_select_dim(
-        self, dim_name: str, indices: torch.Tensor, bare_tensor: bool = True
-    ) -> Union["NamedTensor", torch.Tensor]:
+        self, dim_name: str, indices: torch.Tensor) -> "NamedTensor":
         """
         Return the tensor indexed along the dimension dim_name
         with the indices tensor.
@@ -322,22 +318,17 @@ class NamedTensor(TensorWrapper):
         the same size as in the original tensor.
         See https://pytorch.org/docs/stable/generated/torch.index_select.html
         """
-        if bare_tensor:
-            return self.tensor.index_select(
-                self.names.index(dim_name),
-                torch.Tensor(indices).type(torch.int64).to(self.device),
-            )
-        else:
-            return NamedTensor(
-                self.index_select_dim(dim_name, indices, bare_tensor=True),
-                self.names,
-                (
-                    self.feature_names
-                    if dim_name != self.feature_dim_name
-                    else [self.feature_names[i] for i in indices]
-                ),
-                feature_dim_name=self.feature_dim_name,
-            )
+
+        return NamedTensor(
+            self.index_select_dim(dim_name, indices).tensor,
+            self.names,
+            (
+                self.feature_names
+                if dim_name != self.feature_dim_name
+                else [self.feature_names[i] for i in indices]
+            ),
+            feature_dim_name=self.feature_dim_name,
+        )
 
     def dim_size(self, dim_name: str) -> int:
         """
@@ -381,14 +372,12 @@ class NamedTensor(TensorWrapper):
 
             self.tensor = self.tensor.expand(*expander)
 
-    def iter_dim(
-        self, dim_name: str, bare_tensor: bool = True
-    ) -> Iterable[torch.Tensor]:
+    def iter_dim(self, dim_name: str) -> Iterable["NamedTensor"]:
         """
         Iterate over the tensor along a given dimension.
         """
         for i in range(self.dim_size(dim_name)):
-            yield self.select_dim(dim_name, i, bare_tensor=bare_tensor)
+            yield self.select_dim(dim_name, i)
 
     def rearrange_(self, einops_str: str):
         """

@@ -46,17 +46,45 @@ def generate_text_simple(
 @pytest.mark.parametrize(
     "llm_backend, tokenizer, expected_text",
     [
-        ("llama2", LlamaTokenizer(), ("Sustine et abstineAlignment Геrace sqlwesten Loggerлага Bushに同", "Sustine et abstine makulsion flag重глеägerhand Av Lincoln mul")),
-        ("gpt2", GPT2Tokenizer(), ("Sustine et abstinegreg LXamm Local addition Immun GlassrikeFal Resurrection", "Sustine et abstineohoorphLE updates� Oaks Coconut VC Privacy backward")),
-        ("gpt2", LlamaTokenizer(), ("Sustine et abstine współ terrestführtrange지edتズ ownershipantal", "Sustine et abstine detected *rit україн dernièreistoryikalcorüssknow")),
-        ("gpt2", GPT2Tokenizer(), ("Sustine et abstinegreg LXamm Local addition Immun GlassrikeFal Resurrection", "Sustine et abstineohoorphLE updates� Oaks Coconut VC Privacy backward")),
+        (
+            "llama2",
+            LlamaTokenizer(),
+            (
+                "Sustine et abstineAlignment Геrace sqlwesten Loggerлага Bushに同",
+                "Sustine et abstine makulsion flag重глеägerhand Av Lincoln mul",
+            ),
+        ),
+        (
+            "gpt2",
+            GPT2Tokenizer(),
+            (
+                "Sustine et abstinegreg LXamm Local addition Immun GlassrikeFal Resurrection",
+                "Sustine et abstineohoorphLE updates� Oaks Coconut VC Privacy backward",
+            ),
+        ),
+        (
+            "gpt2",
+            LlamaTokenizer(),
+            (
+                "Sustine et abstine współ terrestführtrange지edتズ ownershipantal",
+                "Sustine et abstine detected *rit україн dernièreistoryikalcorüssknow",
+            ),
+        ),
+        (
+            "gpt2",
+            GPT2Tokenizer(),
+            (
+                "Sustine et abstinegreg LXamm Local addition Immun GlassrikeFal Resurrection",
+                "Sustine et abstineohoorphLE updates� Oaks Coconut VC Privacy backward",
+            ),
+        ),
     ],
 )
 def test_multimodal_llm(
-        llm_backend: Literal["llama2", "gpt2"],
-        tokenizer: Union[GPT2Tokenizer, LlamaTokenizer],
-        expected_text: Tuple[str, str],
-    ):
+    llm_backend: Literal["llama2", "gpt2"],
+    tokenizer: Union[GPT2Tokenizer, LlamaTokenizer],
+    expected_text: Tuple[str, str],
+):
     torch.manual_seed(999)
     for force_vision in (False, True):
         model = MultiModalLM(
@@ -90,5 +118,3 @@ def test_multimodal_llm(
         decoded_text = tokenizer.decode(out.squeeze(0).tolist())
         print(llm_backend, tokenizer.name(), decoded_text)
         assert decoded_text == expected_text[0 if not force_vision else 1]
-
-

@@ -40,7 +40,6 @@ exclude = [
   '^mfai/torch/models/resnet.py$',
   '^mfai/torch/models/segformer.py$',
   '^mfai/torch/models/swinunetr.py$',
-  '^mfai/torch/models/unet.py$',
   '^mfai/torch/models/unetrpp.py$',
   '^mfai/torch/namedtensor.py$',
 ]

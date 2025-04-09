@@ -13,7 +13,7 @@ from typing import Tuple
 
 import torch
 from dataclasses_json import dataclass_json
-from torch import Size, nn
+from torch import nn
 
 from .base import AutoPaddingModel, BaseModel, ModelType
 from .resnet import get_resnet_encoder
@@ -209,7 +209,7 @@ class UNet(BaseModel, AutoPaddingModel):
             )
         )
 
-    def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, Size]:
+    def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
         number_pool_layers = self._num_pool_layers
 
         # The UNet has M max pooling layers of size 2x2 with stride 2, each of which halves the

@@ -209,6 +209,7 @@ def test_input_shape_validation(model_class):
 
     input_data = torch.randn(B, C, W, H)
     net = model_class(in_channels=C, out_channels=1, input_shape=input_data.shape)
+
     # assert it fails before padding
     with pytest.raises(RuntimeError):
         net(input_data)

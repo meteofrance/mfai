@@ -1,6 +1,7 @@
 """
 LightningModule used to train a Clip model.
 """
+
 from typing import Literal, Tuple
 
 import lightning.pytorch as pl

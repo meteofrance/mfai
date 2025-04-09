@@ -218,8 +218,9 @@ class UNet(BaseModel, AutoPaddingModel):
         # be divisible by 2^N
         d = 2**number_pool_layers
 
-        new_shape = [d * ceil(input_shape[i] / d) for i in range(len(input_shape))]
-        new_shape = torch.Size(new_shape)
+        new_shape = torch.Size(
+            [d * ceil(input_shape[i] / d) for i in range(len(input_shape))]
+            )
 
         return new_shape == input_shape, new_shape
 
@@ -324,7 +325,6 @@ class CustomUnet(BaseModel, AutoPaddingModel):
         print(number_pool_layers)
         d = 2**number_pool_layers
 
-        new_shape = [d * ceil(input_shape[i] / d) for i in range(len(input_shape))]
-        new_shape = torch.Size(new_shape)
+        new_shape = torch.Size([d * ceil(input_shape[i] / d) for i in range(len(input_shape))])
 
         return new_shape == input_shape, new_shape

@@ -137,16 +137,16 @@ class AutoPaddingModel(ABC):
         self, data_tensor: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Size]:
         """Performs an optional padding to ensure that the data tensor can be fed
-            to the underlying model. Padding will happen if if
+            to the underlying model. Padding will happen only if
             autopadding was enabled via the settings.
 
         Args:
             data_tensor (torch.Tensor): the input data to be potentially padded.
 
         Returns:
-            Tuple[torch.Tensor, Optional[torch.Size]]: the padded tensor, where the original data is found in the center,
-            and the old size if padding was possible. If not possible or the shape is already fine,
-            the data is returned untouched and the second return value will be none.
+            tuple[torch.Tensor, torch.Size]: the padded tensor, where the original data is found in the center,
+            and the old size. If padding not possible or the shape is already fine,
+            the data is returned untouched with it's old shape, which is unchanged.
         """
         old_shape = data_tensor.shape[-len(self.input_shape) :]
 
@@ -176,7 +176,7 @@ class AutoPaddingModel(ABC):
             [W,H] or [W,H,D] for 2D and 3D data respectively. old_shape is returned by self._maybe_padding.
 
         Returns:
-            torch.Tensor: The data tensor with the padding removed, if possible.
+            torch.Tensor: The data tensor with the padding removed, or untouched if already at the right shape.
         """
         if self.settings.autopad_enabled:
             return undo_padding(data_tensor, old_shape=old_shape)

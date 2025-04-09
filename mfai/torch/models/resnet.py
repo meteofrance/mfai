@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, List, Literal, Tuple, Union
+from typing import Any, Literal, Union
 
 import torch
 import torch.nn as nn
@@ -45,7 +45,7 @@ class EncoderMixin:
             model=self, new_in_channels=in_channels, pretrained=pretrained  # type:ignore [arg-type]
         )
 
-    def get_stages(self) -> List[nn.Module]:
+    def get_stages(self) -> list[nn.Module]:
         """Override it in your implementation"""
         raise NotImplementedError
 
@@ -83,7 +83,7 @@ class ResNetEncoder(ResNet, EncoderMixin):
         del self.fc
         del self.avgpool
 
-    def get_stages(self) -> List[nn.Module]:
+    def get_stages(self) -> list[nn.Module]:
         return [
             nn.Identity(),
             nn.Sequential(self.conv1, self.bn1, self.relu),
@@ -93,7 +93,7 @@ class ResNetEncoder(ResNet, EncoderMixin):
             self.layer4,
         ]
 
-    def forward(self, x: torch.Tensor) -> List[torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
         stages = self.get_stages()
 
         features = []
@@ -202,7 +202,7 @@ class ResNet50(torch.nn.Module):
         self,
         num_channels: int = 3,
         num_classes: int = 1000,
-        input_shape: Union[None, Tuple[int, int]] = None,
+        input_shape: Union[None, tuple[int, int]] = None,
         settings: ResNet50Settings = ResNet50Settings(),
     ):
         super().__init__()

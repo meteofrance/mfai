@@ -2,7 +2,7 @@ import importlib
 import pkgutil
 from pathlib import Path
 from types import ModuleType
-from typing import Optional, Tuple
+
 
 from torch import nn
 
@@ -39,7 +39,7 @@ def load_from_settings_file(
     in_channels: int,
     out_channels: int,
     settings_path: Path,
-    input_shape: Optional[Tuple[int, ...]] = None,
+    input_shape: tuple[int, ...],
 ) -> nn.Module:
     """
     Instanciate a model from a settings file with Schema validation.

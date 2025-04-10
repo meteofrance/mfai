@@ -151,4 +151,3 @@ def test_multimodal_clip():
         vision_input=vision_input,
     )
     decoded_text = tokenizer.decode(out.squeeze(0).tolist())
-    print(decoded_text)

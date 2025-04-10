@@ -7,9 +7,6 @@ from torch import Tensor, nn
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer
 from mfai.torch.models.llms.multimodal import MultiModalLM, MultiModalLMSettings
 from mfai.torch.namedtensor import NamedTensor
-from mfai.torch.models.clip import ClipSettings
-
-
 def generate_text_simple(
     model: nn.Module,
     idx: Tensor,

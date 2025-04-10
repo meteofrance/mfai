@@ -4,7 +4,6 @@ from torch import Tensor
 from dataclasses import dataclass, asdict
 from dataclasses_json import dataclass_json
 import math
-from itertools import product
 import einops
 from mfai.torch.models.llms import GPT2, Llama2
 from mfai.torch.models.base import ModelType

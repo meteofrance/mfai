@@ -7,6 +7,7 @@ from torch import Tensor, nn
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer
 from mfai.torch.models.llms.multimodal import MultiModalLM, MultiModalLMSettings
 from mfai.torch.namedtensor import NamedTensor
+from mfai.torch.models.clip import ClipSettings
 
 
 def generate_text_simple(
@@ -118,3 +119,39 @@ def test_multimodal_llm(
         decoded_text = tokenizer.decode(out.squeeze(0).tolist())
         print(llm_backend, tokenizer.name(), decoded_text)
         assert decoded_text == expected_text[0 if not force_vision else 1]
+
+
+def test_multimodal_clip():
+    torch.manual_seed(666)
+    tokenizer = GPT2Tokenizer()
+    model = MultiModalLM(
+        settings=MultiModalLMSettings(
+            vision_input_shape=(128, 128, 2, 1),
+            backend="gpt2",
+            n_heads=1,
+            n_layers=1,
+            emb_dim=32,
+            hidden_dim=32,
+            context_length=32,
+            inject_vision_each_stage=False,
+            vision_encoder="resnet50",
+        ),
+        vocab_size=tokenizer.vocab_size,
+    )
+    vision_input = NamedTensor(
+        torch.randn(1, 128, 128, 2, 1),
+        names=("batch", "lat", "lon", "timestep", "features"),
+        feature_names=("u",),
+    )
+    encoded = tokenizer.encode("Sustine et abstine")
+    encoded_tensor = torch.tensor(encoded).unsqueeze(0)
+
+    out = generate_text_simple(
+        model=model,
+        idx=encoded_tensor,
+        max_new_tokens=10,
+        context_size=model.context_length,
+        vision_input=vision_input,
+    )
+    decoded_text = tokenizer.decode(out.squeeze(0).tolist())
+    print(decoded_text)

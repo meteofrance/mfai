@@ -9,7 +9,7 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from functools import cached_property
 from math import ceil
-from typing import Tuple
+from typing import Literal, Tuple
 
 import torch
 from dataclasses_json import dataclass_json
@@ -233,7 +233,7 @@ class UNet(BaseModel, AutoPaddingModel):
 @dataclass_json
 @dataclass(slots=True)
 class CustomUnetSettings:
-    encoder_name: str = "resnet18"
+    encoder_name: Literal["resnet18", "resnet34", "resnet50"] = "resnet18"
     encoder_depth: int = 5
     encoder_weights: bool = True
     autopad_enabled: bool = False
@@ -263,7 +263,7 @@ class CustomUnet(BaseModel, AutoPaddingModel):
         self._settings = settings
 
         self.encoder = get_resnet_encoder(
-            settings.encoder_name,
+            name=settings.encoder_name,
             in_channels=in_channels,
             depth=settings.encoder_depth,
             weights=settings.encoder_weights,

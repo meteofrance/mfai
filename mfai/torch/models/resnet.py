@@ -14,67 +14,12 @@ from mfai.torch.models import utils
 ##########################################################################################################
 
 
-class EncoderMixin:
-    """Add encoder functionality such as:
+class ResNetEncoder(ResNet):
+    """Resnet with encoder functionality such as:
     - output channels specification of feature tensors (produced by encoder)
     - patching first convolution for arbitrary input channels
     """
-
-    _output_stride: int = 32
-    _out_channels: tuple[int, ...]
-
-    @property
-    def out_channels(self) -> tuple[int, ...]:
-        """Return channels dimensions for each tensor of forward output of encoder"""
-        return self._out_channels[: self._depth + 1]
-
-    @property
-    def output_stride(self) -> int:
-        return min(self._output_stride, 2**self._depth)
-
-    def set_in_channels(self, in_channels: int, pretrained: bool = True) -> None:
-        """Change first convolution channels"""
-        if in_channels == 3:
-            return
-
-        self._in_channels = in_channels
-        if self._out_channels[0] == 3:
-            self._out_channels = tuple([in_channels] + list(self._out_channels)[1:])
-
-        utils.patch_first_conv(
-            model=self, new_in_channels=in_channels, pretrained=pretrained  # type:ignore [arg-type]
-        )
-
-    def get_stages(self) -> list[nn.Module]:
-        """Override it in your implementation"""
-        raise NotImplementedError
-
-    def make_dilated(self, output_stride: int) -> None:
-        if output_stride == 16:
-            stage_list = [5]
-            dilation_list = [2]
-
-        elif output_stride == 8:
-            stage_list = [4, 5]
-            dilation_list = [2, 4]
-
-        else:
-            raise ValueError(
-                "Output stride should be 16 or 8, got {}.".format(output_stride)
-            )
-
-        self._output_stride = output_stride
-
-        stages = self.get_stages()
-        for stage_indx, dilation in zip(stage_list, dilation_list):
-            utils.replace_strides_with_dilation(
-                module=stages[stage_indx],
-                dilation=dilation,
-            )
-
-
-class ResNetEncoder(ResNet, EncoderMixin):
-    def __init__(self, out_channels: tuple[int], depth: int = 5, **kwargs: dict[str, Any]):
+    def __init__(self, out_channels: tuple[int, ...], depth: int = 5, **kwargs: dict[str, Any]):
         super().__init__(**kwargs)
         self._depth = depth
         self._out_channels = out_channels
@@ -107,6 +52,51 @@ class ResNetEncoder(ResNet, EncoderMixin):
         state_dict.pop("fc.bias", None)
         state_dict.pop("fc.weight", None)
         super().load_state_dict(state_dict, **kwargs)
+    
+    @property
+    def out_channels(self) -> tuple[int, ...]:
+        """Return channels dimensions for each tensor of forward output of encoder"""
+        return self._out_channels[: self._depth + 1]
+
+    @property
+    def output_stride(self) -> int:
+        return min(self._output_stride, 2**self._depth)
+
+    def set_in_channels(self, in_channels: int, pretrained: bool = True) -> None:
+        """Change first convolution channels"""
+        if in_channels == 3:
+            return
+
+        self._in_channels = in_channels
+        if self._out_channels[0] == 3:
+            self._out_channels = tuple([in_channels] + list(self._out_channels)[1:])
+
+        utils.patch_first_conv(
+            model=self, new_in_channels=in_channels, pretrained=pretrained
+        )
+
+    def make_dilated(self, output_stride: int) -> None:
+        if output_stride == 16:
+            stage_list = [5]
+            dilation_list = [2]
+
+        elif output_stride == 8:
+            stage_list = [4, 5]
+            dilation_list = [2, 4]
+
+        else:
+            raise ValueError(
+                "Output stride should be 16 or 8, got {}.".format(output_stride)
+            )
+
+        self._output_stride = output_stride
+
+        stages = self.get_stages()
+        for stage_indx, dilation in zip(stage_list, dilation_list):
+            utils.replace_strides_with_dilation(
+                module=stages[stage_indx],
+                dilation=dilation,
+            )
 
 
 ENCODERS_MAP: dict[Literal['resnet18', 'resnet34', 'resnet50'], dict[str, Any]] = {

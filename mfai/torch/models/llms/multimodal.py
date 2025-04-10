@@ -39,7 +39,7 @@ class MultiModalLMSettings:
 
     # Inject vision tokens at each stage ?
     inject_vision_each_stage: bool = False
-    
+
     # choice of vision encoder
     # "resnet50", "linear"
     vision_encoder: str = "linear"
@@ -123,7 +123,11 @@ class MultiModalLM(nn.Module):
                     ]
                 )
         elif self.settings.vision_encoder == "resnet50":
-            self.resnet50 = ResNet50(num_channels=settings.vision_input_shape[3]*settings.vision_input_shape[2], num_classes=settings.emb_dim)
+            self.resnet50 = ResNet50(
+                num_channels=settings.vision_input_shape[3]
+                * settings.vision_input_shape[2],
+                num_classes=settings.emb_dim,
+            )
         else:
             raise ValueError(
                 f"Unknown vision encoder: {self.settings.vision_encoder}. Use 'linear' or 'resnet50'."
@@ -155,8 +159,10 @@ class MultiModalLM(nn.Module):
                 timestep_embed = []
                 # batch, lat, lon, features
                 # rearrange to batch, features, lat, lon
-                timestep_nt.rearrange_("batch lat lon features -> batch features lat lon")
-         
+                timestep_nt.rearrange_(
+                    "batch lat lon features -> batch features lat lon"
+                )
+
                 for i in range(timestep_nt.dim_size("features")):
                     timestep_tensor = timestep_nt.select_dim("features", i)
                     timestep_tensor = self.downsampler(timestep_tensor)
@@ -168,35 +174,38 @@ class MultiModalLM(nn.Module):
                 timestep_embed = torch.stack(timestep_embed, dim=1)
                 vis_timesteps_embeds.append(timestep_embed)
                 vis_embeds = torch.cat(vis_timesteps_embeds, dim=1)
-        
+
         elif self.settings.vision_encoder == "resnet50":
-            
             new_tensor = einops.rearrange(
                 vision_input.tensor,
                 "batch lat lon timestep features -> batch (timestep features) lat lon",
             )
-            
+
             print("**********************")
-            print(new_tensor.mean(), new_tensor.std(), new_tensor.min(), new_tensor.max())
-            
+            print(
+                new_tensor.mean(), new_tensor.std(), new_tensor.min(), new_tensor.max()
+            )
+
             # Clip encoder
             vis_embeds = self.resnet50(new_tensor)
-                        
+
             # Normalize the output
             vis_embeds = vis_embeds / vis_embeds.norm(dim=1, keepdim=True)
-            
+
             print("--------------------------------")
             # print stats of values
-            print(vis_embeds.mean(), vis_embeds.std(), vis_embeds.min(), vis_embeds.max())
+            print(
+                vis_embeds.mean(), vis_embeds.std(), vis_embeds.min(), vis_embeds.max()
+            )
             vis_embeds = vis_embeds.unsqueeze(1)
-        
+
         else:
             raise ValueError(
                 f"Unknown vision encoder: {self.settings.vision_encoder}. Use 'linear' or 'resnet50'."
             )
 
         text_embeds = self.backend.tok_emb(text_tokens)
-        
+
         vis_txt_embeds = torch.cat([vis_embeds, text_embeds], dim=1)
         if vis_txt_embeds.shape[1] > self.context_length:
             print(

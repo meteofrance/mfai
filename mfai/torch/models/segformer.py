@@ -40,14 +40,14 @@ class SegformerSettings:
 
 class DsConv2d(nn.Module):
     def __init__(
-            self,
-            nb_in_channels: int,
-            nb_out_channels: int,
-            kernel_size: tuple[int, int],
-            padding: tuple[int, int] | Literal['valid', 'same'],
-            stride: int = 1,
-            bias: bool = True,
-        ) -> None:
+        self,
+        nb_in_channels: int,
+        nb_out_channels: int,
+        kernel_size: tuple[int, int],
+        padding: tuple[int, int] | Literal["valid", "same"],
+        stride: int = 1,
+        bias: bool = True,
+    ) -> None:
         super().__init__()
         self.net = nn.Sequential(
             nn.Conv2d(
@@ -67,7 +67,7 @@ class DsConv2d(nn.Module):
 
 
 class LayerNorm(nn.Module):
-    def __init__(self, dim: int, eps: float =1e-5) -> None:
+    def __init__(self, dim: int, eps: float = 1e-5) -> None:
         super().__init__()
         self.eps = eps
         self.g = nn.Parameter(torch.ones(1, dim, 1, 1))
@@ -91,12 +91,12 @@ class PreNorm(nn.Module):
 
 class EfficientSelfAttention(nn.Module):
     def __init__(
-            self,
-            *,
-            dim: int,
-            heads: int,
-            reduction_ratio: int | tuple[int, int],
-        ) -> None:
+        self,
+        *,
+        dim: int,
+        heads: int,
+        reduction_ratio: int | tuple[int, int],
+    ) -> None:
         super().__init__()
         self.scale = (dim // heads) ** -0.5
         self.heads = heads
@@ -107,7 +107,7 @@ class EfficientSelfAttention(nn.Module):
             out_channels=dim * 2,
             kernel_size=reduction_ratio,  # TODO: reduction ratio as kernel size ?
             stride=reduction_ratio,
-            bias=False
+            bias=False,
         )
         self.to_out = nn.Conv2d(dim, dim, 1, bias=False)
 
@@ -200,8 +200,7 @@ class MiT(nn.Module):
                             PreNorm(
                                 dim_out,
                                 MixFeedForward(
-                                    dim=dim_out,
-                                    expansion_factor=ff_expansion
+                                    dim=dim_out, expansion_factor=ff_expansion
                                 ),
                             ),
                         ]
@@ -212,7 +211,9 @@ class MiT(nn.Module):
                 nn.ModuleList([get_overlap_patches, overlap_patch_embed, layers])
             )
 
-    def forward(self, x: torch.Tensor, return_layer_outputs: bool = False) -> torch.Tensor | list[torch.Tensor]:
+    def forward(
+        self, x: torch.Tensor, return_layer_outputs: bool = False
+    ) -> torch.Tensor | list[torch.Tensor]:
         h, w = x.shape[-2:]
 
         layer_outputs = []

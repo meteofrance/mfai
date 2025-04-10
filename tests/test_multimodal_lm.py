@@ -150,4 +150,4 @@ def test_multimodal_clip():
         context_size=model.context_length,
         vision_input=vision_input,
     )
-    decoded_text = tokenizer.decode(out.squeeze(0).tolist())
+    tokenizer.decode(out.squeeze(0).tolist())

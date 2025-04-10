@@ -166,23 +166,17 @@ class PanguWeatherSettings:
     surface_variables: int = 4
     plevel_variables: int = 5
     plevels: int = 13
-    window_size: tuple[int, int, int] = (2, 6, 12), 
+    window_size: tuple[int, int, int] = (2, 6, 12)
     dropout_rate: float = 0.
-    checkpoint_activation=False
+    checkpoint_activation: bool = False
     lam: bool = False
 
 
 class PanguWeather(BaseModel):
-    """PanguWeather network as described in http://arxiv.org/abs/2211.02556 and https://www.nature.com/articles/s41586-023-06185-3.
+    """
+    PanguWeather network as described in http://arxiv.org/abs/2211.02556 and https://www.nature.com/articles/s41586-023-06185-3.
     This implementation follows the official pseudo code here: https://github.com/198808xc/Pangu-Weather
-
-        Args:
-            plevel_patch_size (tuple[int]): Patch size for the pressure level data. Default is (2, 4, 4). Setting (2, 8, 8) leads to Pangu Lite.
-            constant_mask_list (list[str]): list of the constant masks to add to the surface data as additional channels (e. g., soil type).
-            token_size (int): Size of the tokens (equivalent to channel size) of the first layer. Default is 192.
-            layer_depth (tuple[int, int]): Number of blocks in layers. Default is (2, 6), meaning that the first and fourth layers contain 2 blocks, and the second and third contain 6.
-            num_heads (tuple[int, int]): Number of heads in attention layers. Default is (6, 12), corresponding to respectively first and fourth layers, and second and third.
-        """
+    """
     onnx_supported = False
     supported_num_spatial_dims = (2,)
     settings_kls = PanguWeatherSettings
@@ -202,14 +196,18 @@ class PanguWeather(BaseModel):
             in_channels: dimension of input channels, including constant mask if any.
             out_channels: dimension of output channels.
             input_shape: dimension of input image.
-            hidden_size: dimensions of  the last encoder.
-            num_heads: number of attention heads.
-            pos_embed: position embedding layer type.
-            norm_name: feature normalization type and arguments.
+            plevel_patch_size (tuple[int]): Patch size for the pressure level data. Default is (2, 4, 4). Setting (2, 8, 8) leads to Pangu Lite.
+            token_size : Size of the tokens (equivalent to channel size) of the first layer. Default is 192.
+            layer_depth : Number of blocks in layers. Default is (2, 6), meaning that the first and fourth layers contain 2 blocks, and the second and third contain 6.
+            num_heads : Number of heads in attention layers. Default is (6, 12), corresponding to respectively first and fourth layers, and second and third.
+            spatial_dims: number of spatial dimensions (2 or 3).
+            surface_variables: number of surface variables.
+            plevel_variables: number of pressure level variables.
+            plevels: number of pressure levels.
+            window_size: size of the sliding window.
             dropout_rate: faction of the input units to drop.
-            depths: number of blocks for each stage.
-            conv_op: type of convolution operation.
-            do_ds: use deep supervision to compute the loss.
+            checkpoint_activation: whether to use checkpoint activation.
+            lam: whether to use the limited area attention mask.
         """
 
         super().__init__()
@@ -226,9 +224,10 @@ class PanguWeather(BaseModel):
         self.plevel_patch_size = settings.plevel_patch_size
 
         # Compute surface size and plevel size. Needed to compute the size of earth specific bias
-        constant_masks = in_channels - (settings.surface_variables + settings.plevel_variables * settings.plevels)
-        surface_channels = settings.surface_variables + constant_masks 
-        surface_size = torch.Size((surface_channels, latitude, longitude))
+        # constant_masks = in_channels - (settings.surface_variables + settings.plevel_variables * settings.plevels)
+        constant_masks = in_channels - out_channels
+        self.surface_channels = settings.surface_variables + constant_masks 
+        surface_size = torch.Size((self.surface_channels, latitude, longitude))
         plevel_size = torch.Size((settings.plevel_variables, settings.plevels, latitude, longitude))
         
         # Drop path rate is linearly increased as the depth increases
@@ -293,7 +292,12 @@ class PanguWeather(BaseModel):
             )
 
         # Patch Recovery
-        self._output_layer = PatchRecovery(token_size * 2, self.plevel_patch_size)
+        self._output_layer = PatchRecovery(
+            dim=token_size * 2,
+            patch_size=self.plevel_patch_size,
+            plevel_channels=settings.plevel_variables,
+            surface_channels=settings.surface_variables,
+            )
 
         self.check_required_attributes()
 
@@ -306,7 +310,13 @@ class PanguWeather(BaseModel):
         return self.settings.spatial_dims
     
     def forward(self, input_tensor: Tensor) -> Tensor:
-        #TODO retrieve input_plevel and input_surface from the input namedtensor             
+        # Retrieve input_plevel and input_surface from the input namedtensor
+        # Assuming that input_tensor has shape (N, C, lat, lon) and channels orgnized as 
+        # (surface variables + constant masks + plevel variables * plevels)
+        N, _, lat, lon = input_tensor.shape
+        input_surface = input_tensor[:, :self.surface_channels, :, :]
+        input_plevel = input_tensor[:, self.surface_channels:, :, :].reshape(N, self.settings.plevel_variables, self.settings.plevels, lat, lon)
+        
         # Embed the input fields into patches
         x, embedding_shape = self.embedding_layer(input_plevel, input_surface)
         
@@ -316,23 +326,23 @@ class PanguWeather(BaseModel):
         # Store the tensor for skip-connection
         skip = x
 
-        # Downsample from (8, 181, 360) to (8, 91, 180)
+        # Downsample from (8, 181, 360) to (8, 91, 180) in the case of vanilla Pangu
         x, downsampled_shape = self.downsample(x, embedding_shape)
 
-        # Layer 2, shape (8, 91, 180, 2C), C = 192 as in the original paper
+        # Layer 2, shape (8, 91, 180, 2C), C = 192 as in the original paper in the case of vanilla Pangu
         x = self.layer2(x, downsampled_shape)
         
         # Decoder, composed of two layers
-        # Layer 3, shape (8, 91, 180, 2C), C = 192 as in the original paper
+        # Layer 3, shape (8, 91, 180, 2C), C = 192 as in the original paper in the case of vanilla Pangu
         x = self.layer3(x, downsampled_shape)
         
         # Upsample from (8, 91, 180) to (8, 181, 360)
         x = self.upsample(x, embedding_shape)
 
-        # Layer 4, shape (8, 181, 360, 2C), C = 192 as in the original paper
+        # Layer 4, shape (8, 181, 360, 2C), C = 192 as in the original paper in the case of vanilla Pangu
         x = self.layer4(x, embedding_shape)
        
-        # Skip connect, in last dimension(C from 192 to 384)
+        # Skip connect, in last dimension(C from 192 to 384) in the case of vanilla Pangu
         x = torch.cat([x, skip], dim=-1)
 
         # Recover the output fields from patches
@@ -345,7 +355,9 @@ class PanguWeather(BaseModel):
         output_plevel = output_plevel[:, :, padding_front:padded_z-padding_back, padding_top:padded_h-padding_bottom, padding_left:padded_w-padding_right]
         output_surface = output_surface[:, :, padding_top:padded_h-padding_bottom, padding_left:padded_w-padding_right]
 
-        #TODO build output tensor from output_plevel, output_surface
+        # Build output tensor from output_plevel, output_surface
+        output_plevel = output_plevel.reshape(N, self.settings.plevel_variables * self.settings.plevels, lat, lon)
+        output_tensor = torch.cat([output_surface, output_plevel], dim=1)
         return output_tensor
 
 

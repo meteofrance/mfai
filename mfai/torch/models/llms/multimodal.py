@@ -9,7 +9,7 @@ from mfai.torch.models.llms import GPT2, Llama2
 from mfai.torch.models.base import ModelType
 from mfai.torch.namedtensor import NamedTensor
 from mfai.torch.models.resnet import ResNet50
-
+from typing import Literal
 
 @dataclass_json
 @dataclass

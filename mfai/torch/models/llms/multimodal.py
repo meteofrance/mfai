@@ -180,7 +180,7 @@ class MultiModalLM(nn.Module):
                 "batch lat lon timestep features -> batch (timestep features) lat lon",
             )
 
-            # Clip encoder
+            # Resnet50 encoder
             vis_embeds = self.resnet50(new_tensor)
 
             # Normalize the output

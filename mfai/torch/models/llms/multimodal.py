@@ -41,7 +41,7 @@ class MultiModalLMSettings:
 
     # choice of vision encoder
     # "resnet50", "linear"
-    vision_encoder: str = "linear"
+    vision_encoder: Literal["resnet50", "linear"] = "linear"
 
 
 class MultiModalLM(nn.Module):

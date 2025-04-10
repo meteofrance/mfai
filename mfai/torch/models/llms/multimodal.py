@@ -172,7 +172,7 @@ class MultiModalLM(nn.Module):
 
                 timestep_embed = torch.stack(timestep_embed, dim=1)
                 vis_timesteps_embeds.append(timestep_embed)
-                vis_embeds = torch.cat(vis_timesteps_embeds, dim=1)
+            vis_embeds = torch.cat(vis_timesteps_embeds, dim=1)
 
         elif self.settings.vision_encoder == "resnet50":
             new_tensor = einops.rearrange(

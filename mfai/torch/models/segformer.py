@@ -5,7 +5,7 @@ SegFormer adapted from https://github.com/lucidrains/segformer-pytorch
 from dataclasses import dataclass
 from functools import partial
 from math import sqrt
-from typing import Any, Callable, Literal, Sequence, Tuple
+from typing import Any, Callable, Literal, Sequence
 
 import torch
 from dataclasses_json import dataclass_json
@@ -26,10 +26,10 @@ def cast_tuple(val: Any, depth: int) -> tuple[Any, ...]:
 @dataclass_json
 @dataclass(slots=True)
 class SegformerSettings:
-    dims: Tuple[int, ...] = (32, 64, 160, 256)
-    heads: Tuple[int, ...] = (1, 2, 5, 8)
-    ff_expansion: Tuple[int, ...] = (8, 8, 4, 4)
-    reduction_ratio: Tuple[int, ...] = (8, 4, 2, 1)
+    dims: tuple[int, ...] = (32, 64, 160, 256)
+    heads: tuple[int, ...] = (1, 2, 5, 8)
+    ff_expansion: tuple[int, ...] = (8, 8, 4, 4)
+    reduction_ratio: tuple[int, ...] = (8, 4, 2, 1)
     num_layers: int = 2
     decoder_dim: int = 256
 
@@ -256,7 +256,7 @@ class Segformer(BaseModel):
         self,
         in_channels: int,
         out_channels: int,
-        input_shape: Tuple[int, int],
+        input_shape: tuple[int, int],
         settings: SegformerSettings = SegformerSettings(),
         *args: dict[str, Any],
         **kwargs: dict[str, Any],

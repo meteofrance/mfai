@@ -181,22 +181,12 @@ class MultiModalLM(nn.Module):
                 "batch lat lon timestep features -> batch (timestep features) lat lon",
             )
 
-            print("**********************")
-            print(
-                new_tensor.mean(), new_tensor.std(), new_tensor.min(), new_tensor.max()
-            )
-
             # Clip encoder
             vis_embeds = self.resnet50(new_tensor)
 
             # Normalize the output
             vis_embeds = vis_embeds / vis_embeds.norm(dim=1, keepdim=True)
 
-            print("--------------------------------")
-            # print stats of values
-            print(
-                vis_embeds.mean(), vis_embeds.std(), vis_embeds.min(), vis_embeds.max()
-            )
             vis_embeds = vis_embeds.unsqueeze(1)
 
         else:

@@ -5,7 +5,7 @@ SegFormer adapted from https://github.com/lucidrains/segformer-pytorch
 from dataclasses import dataclass
 from functools import partial
 from math import sqrt
-from typing import Tuple
+from typing import Any, Callable, Literal, Sequence, Tuple
 
 import torch
 from dataclasses_json import dataclass_json
@@ -15,11 +15,11 @@ from torch import einsum, nn
 from .base import BaseModel, ModelType
 
 
-def exists(val):
+def exists(val: Any | None) -> bool:
     return val is not None
 
 
-def cast_tuple(val, depth):
+def cast_tuple(val: Any, depth: int) -> tuple[Any, ...]:
     return val if isinstance(val, tuple) else (val,) * depth
 
 
@@ -39,65 +39,86 @@ class SegformerSettings:
 
 
 class DsConv2d(nn.Module):
-    def __init__(self, dim_in, dim_out, kernel_size, padding, stride=1, bias=True):
+    def __init__(
+            self,
+            nb_in_channels: int,
+            nb_out_channels: int,
+            kernel_size: tuple[int, int],
+            padding: tuple[int, int] | Literal['valid', 'same'],
+            stride: int = 1,
+            bias: bool = True,
+        ) -> None:
         super().__init__()
         self.net = nn.Sequential(
             nn.Conv2d(
-                dim_in,
-                dim_in,
+                in_channels=nb_in_channels,
+                out_channels=nb_in_channels,
                 kernel_size=kernel_size,
                 padding=padding,
-                groups=dim_in,
+                groups=nb_in_channels,
                 stride=stride,
                 bias=bias,
             ),
-            nn.Conv2d(dim_in, dim_out, kernel_size=1, bias=bias),
+            nn.Conv2d(nb_in_channels, nb_out_channels, kernel_size=1, bias=bias),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.net(x)
 
 
 class LayerNorm(nn.Module):
-    def __init__(self, dim, eps=1e-5):
+    def __init__(self, dim: int, eps: float =1e-5) -> None:
         super().__init__()
         self.eps = eps
         self.g = nn.Parameter(torch.ones(1, dim, 1, 1))
         self.b = nn.Parameter(torch.zeros(1, dim, 1, 1))
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         std = torch.var(x, dim=1, unbiased=False, keepdim=True).sqrt()
         mean = torch.mean(x, dim=1, keepdim=True)
         return (x - mean) / (std + self.eps) * self.g + self.b
 
 
 class PreNorm(nn.Module):
-    def __init__(self, dim, fn):
+    def __init__(self, dim: int, fn: Callable):
         super().__init__()
         self.fn = fn
         self.norm = LayerNorm(dim)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.fn(self.norm(x))
 
 
 class EfficientSelfAttention(nn.Module):
-    def __init__(self, *, dim, heads, reduction_ratio):
+    def __init__(
+            self,
+            *,
+            dim: int,
+            heads: int,
+            reduction_ratio: int | tuple[int, int],
+        ) -> None:
         super().__init__()
         self.scale = (dim // heads) ** -0.5
         self.heads = heads
 
         self.to_q = nn.Conv2d(dim, dim, 1, bias=False)
         self.to_kv = nn.Conv2d(
-            dim, dim * 2, reduction_ratio, stride=reduction_ratio, bias=False
+            in_channels=dim,
+            out_channels=dim * 2,
+            kernel_size=reduction_ratio,  # TODO: reduction ratio as kernel size ?
+            stride=reduction_ratio,
+            bias=False
         )
         self.to_out = nn.Conv2d(dim, dim, 1, bias=False)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         h, w = x.shape[-2:]
         heads = self.heads
 
-        q, k, v = (self.to_q(x), *self.to_kv(x).chunk(2, dim=1))
+        q: torch.Tensor = self.to_q(x)
+        k: torch.Tensor
+        v: torch.Tensor
+        k, v = self.to_kv(x).chunk(2, dim=1)
         q, k, v = map(
             lambda t: rearrange(t, "b (h c) x y -> (b h) (x y) c", h=heads), (q, k, v)
         )
@@ -111,28 +132,35 @@ class EfficientSelfAttention(nn.Module):
 
 
 class MixFeedForward(nn.Module):
-    def __init__(self, *, dim, expansion_factor):
+    def __init__(self, *, dim: int, expansion_factor: int) -> None:
         super().__init__()
         hidden_dim = dim * expansion_factor
         self.net = nn.Sequential(
             nn.Conv2d(dim, hidden_dim, 1),
-            DsConv2d(hidden_dim, hidden_dim, 3, padding=1),
+            DsConv2d(hidden_dim, hidden_dim, (3, 3), padding=(1, 1)),
             nn.GELU(),
             nn.Conv2d(hidden_dim, dim, 1),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.net(x)
 
 
 class MiT(nn.Module):
     def __init__(
-        self, *, channels, dims, heads, ff_expansion, reduction_ratio, num_layers
-    ):
+        self,
+        *,
+        channels: int,
+        dims: Sequence[int],
+        heads: Sequence[int],
+        ff_expansions: Sequence[int],
+        reduction_ratios: Sequence[int],
+        num_layers: Sequence[int],
+    ) -> None:
         super().__init__()
         stage_kernel_stride_pad = ((7, 4, 3), (3, 2, 1), (3, 2, 1), (3, 2, 1))
 
-        dims = (channels, *dims)
+        dims = [channels, *dims]
         dim_pairs = list(zip(dims[:-1], dims[1:]))
 
         self.stages = nn.ModuleList([])
@@ -140,24 +168,24 @@ class MiT(nn.Module):
         for (
             (dim_in, dim_out),
             (kernel, stride, padding),
-            num_layers,
+            num_layer,
             ff_expansion,
-            heads,
+            head,
             reduction_ratio,
         ) in zip(
             dim_pairs,
             stage_kernel_stride_pad,
             num_layers,
-            ff_expansion,
+            ff_expansions,
             heads,
-            reduction_ratio,
+            reduction_ratios,
         ):
             get_overlap_patches = nn.Unfold(kernel, stride=stride, padding=padding)
             overlap_patch_embed = nn.Conv2d(dim_in * kernel**2, dim_out, 1)
 
             layers = nn.ModuleList([])
 
-            for _ in range(num_layers):
+            for _ in range(num_layer):
                 layers.append(
                     nn.ModuleList(
                         [
@@ -165,14 +193,15 @@ class MiT(nn.Module):
                                 dim_out,
                                 EfficientSelfAttention(
                                     dim=dim_out,
-                                    heads=heads,
+                                    heads=head,
                                     reduction_ratio=reduction_ratio,
                                 ),
                             ),
                             PreNorm(
                                 dim_out,
                                 MixFeedForward(
-                                    dim=dim_out, expansion_factor=ff_expansion
+                                    dim=dim_out,
+                                    expansion_factor=ff_expansion
                                 ),
                             ),
                         ]
@@ -183,7 +212,7 @@ class MiT(nn.Module):
                 nn.ModuleList([get_overlap_patches, overlap_patch_embed, layers])
             )
 
-    def forward(self, x, return_layer_outputs=False):
+    def forward(self, x: torch.Tensor, return_layer_outputs: bool = False) -> torch.Tensor | list[torch.Tensor]:
         h, w = x.shape[-2:]
 
         layer_outputs = []
@@ -228,9 +257,9 @@ class Segformer(BaseModel):
         out_channels: int,
         input_shape: Tuple[int, int],
         settings: SegformerSettings = SegformerSettings(),
-        *args,
-        **kwargs,
-    ):
+        *args: dict[str, Any],
+        **kwargs: dict[str, Any],
+    ) -> None:
         super().__init__(*args, **kwargs)
 
         self.in_channels = in_channels
@@ -238,6 +267,11 @@ class Segformer(BaseModel):
         self.input_shape = input_shape
         self._settings = settings
 
+        dims: tuple[int]
+        heads: tuple[int]
+        ff_expansion: tuple[int]
+        reduction_ratio: tuple[int]
+        num_layers: tuple[int]
         dims, heads, ff_expansion, reduction_ratio, num_layers = map(
             partial(cast_tuple, depth=4),
             (
@@ -272,8 +306,8 @@ class Segformer(BaseModel):
             channels=num_chans,
             dims=dims,
             heads=heads,
-            ff_expansion=ff_expansion,
-            reduction_ratio=reduction_ratio,
+            ff_expansions=ff_expansion,
+            reduction_ratios=reduction_ratio,
             num_layers=num_layers,
         )
 
@@ -311,12 +345,12 @@ class Segformer(BaseModel):
     def settings(self) -> SegformerSettings:
         return self._settings
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.downsampler(x)
-        layer_outputs = self.mit(x, return_layer_outputs=True)
+        layer_outputs: list[torch.Tensor] = self.mit(x, return_layer_outputs=True)
 
-        fused = [
+        fused: list[torch.Tensor] = [
             to_fused(output) for output, to_fused in zip(layer_outputs, self.to_fused)
         ]
-        fused = torch.cat(fused, dim=1)
-        return self.upsampler(fused)
+        out: torch.Tensor = torch.cat(fused, dim=1)
+        return self.upsampler(out)

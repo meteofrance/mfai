@@ -9,7 +9,6 @@ def pad_batch(
     mode: str = "constant",
     pad_value: Optional[float] = 0,
 ) -> torch.Tensor:
-
     """Given batch of 2D or 3D data and a shape new_shape,
         pads the tensor with the given pad_value.
 
@@ -46,7 +45,6 @@ def pad_batch(
         )
 
     raise ValueError("new_shape must be a torch.Size of length 2 or 3.")
-
 
 
 def _get_2D_padding(
@@ -89,7 +87,6 @@ def _get_3D_padding(
 def undo_padding(
     batch: torch.Tensor, old_shape: torch.Size, inplace: bool = False
 ) -> torch.Tensor:
-
     """Removes the padding added by pad_batch
 
     Args:
@@ -132,4 +129,3 @@ def undo_padding(
         ].clone()
     else:
         raise ValueError("old_shape must be a torch.Size of length 2 or 3.")
-

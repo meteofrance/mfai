@@ -95,7 +95,7 @@ class EfficientSelfAttention(nn.Module):
         *,
         dim: int,
         heads: int,
-        reduction_ratio: int | tuple[int, int],
+        kernel_and_stride: int | tuple[int, int],
     ) -> None:
         super().__init__()
         self.scale = (dim // heads) ** -0.5
@@ -105,8 +105,8 @@ class EfficientSelfAttention(nn.Module):
         self.to_kv = nn.Conv2d(
             in_channels=dim,
             out_channels=dim * 2,
-            kernel_size=reduction_ratio,  # TODO: reduction ratio as kernel size ?
-            stride=reduction_ratio,
+            kernel_size=kernel_and_stride,
+            stride=kernel_and_stride,
             bias=False,
         )
         self.to_out = nn.Conv2d(dim, dim, 1, bias=False)

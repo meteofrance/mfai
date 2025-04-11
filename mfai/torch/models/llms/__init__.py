@@ -19,7 +19,7 @@ from mfai.torch.models.base import ModelType
 
 
 class LayerNorm(nn.Module):
-    def __init__(self, emb_dim: int):
+    def __init__(self, emb_dim: int) -> None:
         super().__init__()
         self.eps = 1e-5
         self.scale = nn.Parameter(torch.ones(emb_dim))
@@ -33,7 +33,7 @@ class LayerNorm(nn.Module):
 
 
 class GELU(nn.Module):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x: Tensor) -> Tensor:
@@ -51,7 +51,7 @@ class GELU(nn.Module):
 
 
 class FeedForward(nn.Module):
-    def __init__(self, emb_dim: int):
+    def __init__(self, emb_dim: int) -> None:
         super().__init__()
         self.layers = nn.Sequential(
             nn.Linear(emb_dim, 4 * emb_dim),
@@ -76,7 +76,7 @@ class MultiHeadAttentionPySDPA(nn.Module):
         context_length: int,
         dropout: float = 0.0,
         qkv_bias: bool = False,
-    ):
+    ) -> None:
         super().__init__()
 
         if d_out % num_heads != 0:
@@ -148,7 +148,7 @@ class TransformerBlock(nn.Module):
 
     """
 
-    def __init__(self, settings: GPT2Settings):
+    def __init__(self, settings: GPT2Settings) -> None:
         super().__init__()
         self.att = MultiHeadAttentionPySDPA(
             d_in=settings.emb_dim,
@@ -191,7 +191,7 @@ class GPT2(nn.Module):
     settings_kls = GPT2Settings
     model_type = ModelType.LLM
 
-    def __init__(self, settings: GPT2Settings, vocab_size: int = 50257):
+    def __init__(self, settings: GPT2Settings, vocab_size: int = 50257) -> None:
         super().__init__()
         self.context_length = settings.context_length
         self.emb_dim = settings.emb_dim
@@ -258,7 +258,7 @@ class GPT2(nn.Module):
 
 
 class RMSNorm(nn.Module):
-    def __init__(self, emb_dim: int, eps: float = 1e-5):
+    def __init__(self, emb_dim: int, eps: float = 1e-5) -> None:
         super().__init__()
         self.eps = eps
         self.emb_dim = emb_dim
@@ -271,7 +271,7 @@ class RMSNorm(nn.Module):
 
 
 class SiLU(nn.Module):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x: Tensor) -> Tensor:
@@ -279,7 +279,9 @@ class SiLU(nn.Module):
 
 
 class FeedForwardLlama2(nn.Module):
-    def __init__(self, emb_dim: int, hidden_dim: int, dtype: torch.dtype = None):
+    def __init__(
+        self, emb_dim: int, hidden_dim: int, dtype: torch.dtype = None
+    ) -> None:
         super().__init__()
         self.fc1 = nn.Linear(emb_dim, hidden_dim, dtype=dtype, bias=False)
         self.fc2 = nn.Linear(emb_dim, hidden_dim, dtype=dtype, bias=False)
@@ -344,6 +346,9 @@ class MultiHeadAttentionPySDPALlama2(nn.Module):
     Mutli Head Attention using Pytorch's scaled_dot_product_attention
     """
 
+    cos: torch.Tensor
+    sin: torch.Tensor
+
     def __init__(
         self,
         d_in: int,
@@ -351,7 +356,7 @@ class MultiHeadAttentionPySDPALlama2(nn.Module):
         num_heads: int,
         context_length: int,
         dtype: torch.dtype = None,
-    ):
+    ) -> None:
         super().__init__()
 
         assert d_out % num_heads == 0, "embed_dim is indivisible by num_heads"
@@ -427,7 +432,7 @@ class TransformerBlockLlama2(nn.Module):
 
     """
 
-    def __init__(self, settings: Llama2Settings):
+    def __init__(self, settings: Llama2Settings) -> None:
         super().__init__()
         self.att = MultiHeadAttentionPySDPALlama2(
             d_in=settings.emb_dim,
@@ -465,7 +470,7 @@ class Llama2(nn.Module):
     settings_kls = Llama2Settings
     model_type = ModelType.LLM
 
-    def __init__(self, settings: Llama2Settings, vocab_size: int = 32000):
+    def __init__(self, settings: Llama2Settings, vocab_size: int = 32000) -> None:
         super().__init__()
         self.emb_dim = settings.emb_dim
         self.tok_emb = nn.Embedding(vocab_size, self.emb_dim)

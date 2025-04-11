@@ -7,6 +7,7 @@ import math
 from mfai.torch.models.llms import GPT2, Llama2
 from mfai.torch.models.base import ModelType
 from mfai.torch.namedtensor import NamedTensor
+from typing import Literal
 
 
 @dataclass_json
@@ -45,7 +46,7 @@ class MultiModalLM(nn.Module):
     """
 
     settings_kls = MultiModalLMSettings
-    model_type: ModelType.MULTIMODAL_LLM
+    model_type: Literal[ModelType.MULTIMODAL_LLM]
 
     def __init__(
         self,
@@ -58,6 +59,7 @@ class MultiModalLM(nn.Module):
         # Init the backend model
         # Here we only pass the settings that are relevant to the backend model
         # by iterating over the fields of the settings object and filtering out
+        self.backend: GPT2 | Llama2
         if settings.backend == "gpt2":
             self.backend = GPT2(
                 GPT2.settings_kls(
@@ -116,17 +118,17 @@ class MultiModalLM(nn.Module):
             )
 
     @property
-    def context_length(self):
+    def context_length(self) -> int:
         return self.backend.context_length
 
-    def freeze_llm(self):
+    def freeze_llm(self) -> None:
         """
         Freeze the LLM layers (not the vision layers)
         """
         for param in self.backend.parameters():
             param.requires_grad = False
 
-    def unfreeze_llm(self):
+    def unfreeze_llm(self) -> None:
         """
         Unfreeze the LLM layers
         """
@@ -151,8 +153,8 @@ class MultiModalLM(nn.Module):
                     timestep_tensor = self.vis_layer_norms[i](timestep_tensor)
                 timestep_embed.append(self.linear_vis_projs[i](timestep_tensor))
 
-            timestep_embed = torch.stack(timestep_embed, dim=1)
-            vis_timesteps_embeds.append(timestep_embed)
+            timestep_embed_tensor = torch.stack(timestep_embed, dim=1)
+            vis_timesteps_embeds.append(timestep_embed_tensor)
 
         text_embeds = self.backend.tok_emb(text_tokens)
         vis_embeds = torch.cat(vis_timesteps_embeds, dim=1)
@@ -165,8 +167,9 @@ class MultiModalLM(nn.Module):
             vis_txt_embeds = vis_txt_embeds[:, -self.context_length :]
         embeds_idx = torch.arange(vis_txt_embeds.shape[1], device=text_tokens.device)
 
-        if hasattr(self.backend, "pos_emb"):
-            pos_embeds = self.backend.pos_emb(embeds_idx)
+        if isinstance(self.backend, GPT2):
+            pos_embed_fn: nn.Embedding = self.backend.pos_emb
+            pos_embeds = pos_embed_fn(embeds_idx)
             x = vis_txt_embeds + pos_embeds.unsqueeze(0)
         else:
             x = vis_txt_embeds

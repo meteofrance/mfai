@@ -29,7 +29,7 @@ class SegformerSettings:
     dims: tuple[int, ...] = (32, 64, 160, 256)
     heads: tuple[int, ...] = (1, 2, 5, 8)
     ff_expansion: tuple[int, ...] = (8, 8, 4, 4)
-    reduction_ratio: tuple[int, ...] = (8, 4, 2, 1)
+    kernel_and_stride: tuple[int, ...] = (8, 4, 2, 1)
     num_layers: int = 2
     decoder_dim: int = 256
 
@@ -154,7 +154,7 @@ class MiT(nn.Module):
         dims: Sequence[int],
         heads: Sequence[int],
         ff_expansions: Sequence[int],
-        reduction_ratios: Sequence[int],
+        kernel_and_strides: Sequence[int],
         num_layers: Sequence[int],
     ) -> None:
         super().__init__()
@@ -171,14 +171,14 @@ class MiT(nn.Module):
             num_layer,
             ff_expansion,
             head,
-            reduction_ratio,
+            kernel_and_stride,
         ) in zip(
             dim_pairs,
             stage_kernel_stride_pad,
             num_layers,
             ff_expansions,
             heads,
-            reduction_ratios,
+            kernel_and_strides,
         ):
             get_overlap_patches = nn.Unfold(kernel, stride=stride, padding=padding)
             overlap_patch_embed = nn.Conv2d(dim_in * kernel**2, dim_out, 1)
@@ -194,7 +194,7 @@ class MiT(nn.Module):
                                 EfficientSelfAttention(
                                     dim=dim_out,
                                     heads=head,
-                                    reduction_ratio=reduction_ratio,
+                                    kernel_and_stride=kernel_and_stride,
                                 ),
                             ),
                             PreNorm(
@@ -271,22 +271,22 @@ class Segformer(BaseModel):
         dims: tuple[int]
         heads: tuple[int]
         ff_expansion: tuple[int]
-        reduction_ratio: tuple[int]
+        kernel_and_strides: tuple[int]
         num_layers: tuple[int]
-        dims, heads, ff_expansion, reduction_ratio, num_layers = map(
+        dims, heads, ff_expansion, kernel_and_stride, num_layers = map(
             partial(cast_tuple, depth=4),
             (
                 settings.dims,
                 settings.heads,
                 settings.ff_expansion,
-                settings.reduction_ratio,
+                settings.kernel_and_stride,
                 settings.num_layers,
             ),
         )
         assert all(
             map(
                 lambda t: len(t) == 4,
-                (dims, heads, ff_expansion, reduction_ratio, num_layers),
+                (dims, heads, ff_expansion, kernel_and_stride, num_layers),
             )
         ), "only four stages are allowed, all keyword arguments must be either a single value or a tuple of 4 values"
 
@@ -308,7 +308,7 @@ class Segformer(BaseModel):
             dims=dims,
             heads=heads,
             ff_expansions=ff_expansion,
-            reduction_ratios=reduction_ratio,
+            kernel_and_strides=kernel_and_stride,
             num_layers=num_layers,
         )
 

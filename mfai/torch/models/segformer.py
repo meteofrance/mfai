@@ -271,7 +271,7 @@ class Segformer(BaseModel):
         dims: tuple[int]
         heads: tuple[int]
         ff_expansion: tuple[int]
-        kernel_and_strides: tuple[int]
+        kernel_and_stride: tuple[int]
         num_layers: tuple[int]
         dims, heads, ff_expansion, kernel_and_stride, num_layers = map(
             partial(cast_tuple, depth=4),

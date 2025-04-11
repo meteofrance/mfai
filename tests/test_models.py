@@ -124,6 +124,13 @@ def test_torch_training_loop(model_kls):
         for spatial_dims in model_kls.supported_num_spatial_dims:
             if hasattr(settings, "spatial_dims"):
                 settings.spatial_dims = spatial_dims
+            
+            if model_kls.model_type == ModelType.PANGU:
+                NUM_INPUTS = 6
+                NUM_OUTPUTS = 5
+                settings.surface_variables = 1
+                settings.plevel_variables = 2
+                settings.plevels = 2
 
             model = model_kls(
                 in_channels=NUM_INPUTS,

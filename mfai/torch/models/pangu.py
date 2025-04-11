@@ -36,13 +36,13 @@ from timm.models.layers import drop_path
 from .base import BaseModel, ModelType
 
 
-def define_3d_earth_position_index(window_size: tuple[int]) -> Tensor:
+def define_3d_earth_position_index(window_size: Tuple[int]) -> Tensor:
     """Build the index for the Earth specific positional bias of sliding
     attention windows from PanguWeather.
     See http://arxiv.org/abs/2211.02556
 
     Args:
-        window_size (tuple[int]): size of the sliding window
+        window_size (Tuple[int]): size of the sliding window
 
     Returns:
         Tensor: index
@@ -87,8 +87,8 @@ def define_3d_earth_position_index(window_size: tuple[int]) -> Tensor:
 
 def generate_3d_attention_mask(
         x: Tensor,
-        window_size: tuple[int],
-        shift_size: tuple[int],
+        window_size: Tuple[int],
+        shift_size: Tuple[int],
         lam: bool = False
         ) -> Tensor:
     """Method to generate attention mask for sliding window attention in the context of 3D data.
@@ -96,8 +96,8 @@ def generate_3d_attention_mask(
 
     Args:
         x (Tensor): input data, used to generate the mask on the same device
-        window_size (tuple[int]): size of the sliding window
-        shift_size (tuple[int]): size of the shift for the sliding window
+        window_size (Tuple[int]): size of the sliding window
+        shift_size (Tuple[int]): size of the shift for the sliding window
 
     Returns:
         Tensor: attention mask
@@ -166,7 +166,7 @@ class PanguWeatherSettings:
     surface_variables: int = 4
     plevel_variables: int = 5
     plevels: int = 13
-    window_size: tuple[int, int, int] = (2, 6, 12)
+    window_size: Tuple[int, int, int] = (2, 6, 12)
     dropout_rate: float = 0.
     checkpoint_activation: bool = False
     lam: bool = False
@@ -180,7 +180,7 @@ class PanguWeather(BaseModel):
     onnx_supported: bool = False
     supported_num_spatial_dims: Tuple = (2,)
     settings_kls = PanguWeatherSettings
-    model_type = ModelType.VISION_TRANSFORMER
+    model_type = ModelType.PANGU
     features_last: bool = False
     register: bool = True
 
@@ -196,7 +196,7 @@ class PanguWeather(BaseModel):
             in_channels: dimension of input channels, including constant mask if any.
             out_channels: dimension of output channels.
             input_shape: dimension of input image.
-            plevel_patch_size (tuple[int]): Patch size for the pressure level data. Default is (2, 4, 4). Setting (2, 8, 8) leads to Pangu Lite.
+            plevel_patch_size (Tuple[int]): Patch size for the pressure level data. Default is (2, 4, 4). Setting (2, 8, 8) leads to Pangu Lite.
             token_size : Size of the tokens (equivalent to channel size) of the first layer. Default is 192.
             layer_depth : Number of blocks in layers. Default is (2, 6), meaning that the first and fourth layers contain 2 blocks, and the second and third contain 6.
             num_heads : Number of heads in attention layers. Default is (6, 12), corresponding to respectively first and fourth layers, and second and third.
@@ -211,7 +211,9 @@ class PanguWeather(BaseModel):
         """
 
         super().__init__()
-
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.input_shape = input_shape
         self._settings = settings
 
         if settings.spatial_dims == 2:
@@ -366,11 +368,11 @@ class CustomPad3d(ConstantPad3d):
 
         Args:
             data_size (torch.Size): data size
-            patch_size (tuple[int]): patch size for the token embedding operation
+            patch_size (Tuple[int]): patch size for the token embedding operation
             value (float, optional): padding value. Defaults to 0.
         """
 
-    def __init__(self, data_size: torch.Size, patch_size: tuple[int], value: float = 0.) -> None:
+    def __init__(self, data_size: torch.Size, patch_size: Tuple[int], value: float = 0.) -> None:
         # Compute paddings, starts from the last dim and goes backward
         assert len(data_size) == 3, "This padding class is for 3d data, but data has {} dimension(s)".format(
             len(data_size))
@@ -395,11 +397,11 @@ class CustomPad2d(ConstantPad2d):
 
         Args:
             data_size (torch.Size): data size
-            patch_size (tuple[int]): patch size for the token embedding operation
+            patch_size (Tuple[int]): patch size for the token embedding operation
             value (float, optional): padding value. Defaults to 0.
         """
 
-    def __init__(self, data_size: torch.Size, patch_size: tuple[int], value: float = 0.) -> None:
+    def __init__(self, data_size: torch.Size, patch_size: Tuple[int], value: float = 0.) -> None:
         # Compute paddings, starts from the last dim and goes backward
         assert len(data_size) == 2, "This padding class is for 2d data, but data has {} dimension(s)".format(
             len(data_size))
@@ -427,7 +429,7 @@ class PatchEmbedding(nn.Module):
             surface_size (torch.Size): surface data size
         """
 
-    def __init__(self, c_dim: int, patch_size: tuple[int], plevel_size: torch.Size, surface_size: torch.Size) -> None:
+    def __init__(self, c_dim: int, patch_size: Tuple[int], plevel_size: torch.Size, surface_size: torch.Size) -> None:
         super().__init__()
         
         # Here we use convolution to partition data into cubes
@@ -471,12 +473,12 @@ class PatchRecovery(nn.Module):
 
         Args:
             dim (int): number of channels
-            patch_size (tuple[int]): pressure level patch size, e. g., (2, 4, 4) as in the original paper
+            patch_size (Tuple[int]): pressure level patch size, e. g., (2, 4, 4) as in the original paper
             plevel_channels (int, optional): pressure level data channel size
             surface_channels (int, optional): surface data channel size
         """
 
-    def __init__(self, dim: int, patch_size: tuple[int], plevel_channels: int = 5, surface_channels: int = 4) -> None:
+    def __init__(self, dim: int, patch_size: Tuple[int], plevel_channels: int = 5, surface_channels: int = 4) -> None:
         super().__init__()
         # Hear we use two transposed convolutions to recover data
         self.conv_surface = ConvTranspose2d(
@@ -485,7 +487,7 @@ class PatchRecovery(nn.Module):
             in_channels=dim, out_channels=plevel_channels, kernel_size=patch_size, stride=patch_size)
         
         
-    def forward(self, x: Tensor, embedding_shape: torch.Size) -> tuple[Tensor]:
+    def forward(self, x: Tensor, embedding_shape: torch.Size) -> Tuple[Tensor]:
         # Reshape x back to three dimensions
         x = x.reshape(x.shape[0], embedding_shape[1], embedding_shape[2], embedding_shape[3], -1)
         x = x.permute(0, 4, 1, 2, 3)
@@ -600,14 +602,14 @@ class EarthSpecificLayer(nn.Module):
             dim (int): see EarthSpecificBlock
             drop_path_ratio_list (list[float]): see EarthSpecificBlock
             num_heads (int): see EarthSpecificBlock
-            window_size (tuple[int], optional): see EarthSpecificBlock
+            window_size (Tuple[int], optional): see EarthSpecificBlock
             dropout_rate (float, optional): see EarthSpecificBlock
             checkpoint_activation (bool, optional): see EarthSpecificBlock
             lam (bool, optional): see EarthSpecificBlock
         """
 
 
-    def __init__(self, depth: int, data_size: torch.Size, dim: int, drop_path_ratio_list: list[float], num_heads: int, window_size: tuple[int, int, int], 
+    def __init__(self, depth: int, data_size: torch.Size, dim: int, drop_path_ratio_list: list[float], num_heads: int, window_size: Tuple[int, int, int], 
                  dropout_rate: float, checkpoint_activation: bool, lam: bool) -> None:
 
         super().__init__()
@@ -647,13 +649,13 @@ class EarthSpecificBlock(nn.Module):
             dim (int): token size
             drop_path_ratio (float): ratio to apply to drop path
             num_heads (int): number of attention heads
-            window_size (tuple[int], optional): window size for the sliding window attention. Defaults to (2, 6, 12).
+            window_size (Tuple[int], optional): window size for the sliding window attention. Defaults to (2, 6, 12).
             dropout_rate (float, optional): dropout rate in the MLP. Defaults to 0..
             checkpoint_activation (bool, optional): whether to use checkpoint activation. Defaults to False.
             lam (bool, optional): whether to use the limited area attention mask. Defaults to False.
         """
 
-    def __init__(self, data_size: torch.Size, dim: int, drop_path_ratio: float, num_heads: int, window_size: tuple[int, int, int] = (2, 6, 12), 
+    def __init__(self, data_size: torch.Size, dim: int, drop_path_ratio: float, num_heads: int, window_size: Tuple[int, int, int] = (2, 6, 12), 
                  dropout_rate: float = 0., checkpoint_activation=False, lam: bool = False) -> None:
         super().__init__()
 
@@ -760,10 +762,10 @@ class EarthAttention3D(nn.Module):
             dim (int): token size
             num_heads (int): number of heads
             dropout_rate (float): dropout rate
-            window_size (tuple[int]): window size (z, h ,w)
+            window_size (Tuple[int]): window size (z, h ,w)
         """
 
-    def __init__(self, data_size: torch.Size, dim: int, num_heads: int, dropout_rate: float, window_size: tuple[int]) -> None:
+    def __init__(self, data_size: torch.Size, dim: int, num_heads: int, dropout_rate: float, window_size: Tuple[int]) -> None:
         super().__init__()
         
         # Store several attributes

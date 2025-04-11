@@ -177,8 +177,8 @@ class PanguWeather(BaseModel):
     PanguWeather network as described in http://arxiv.org/abs/2211.02556 and https://www.nature.com/articles/s41586-023-06185-3.
     This implementation follows the official pseudo code here: https://github.com/198808xc/Pangu-Weather
     """
-    onnx_supported = False
-    supported_num_spatial_dims = (2,)
+    onnx_supported: bool = False
+    supported_num_spatial_dims: Tuple = (2,)
     settings_kls = PanguWeatherSettings
     model_type = ModelType.VISION_TRANSFORMER
     features_last: bool = False
@@ -502,6 +502,7 @@ class DownSample(nn.Module):
     E. g., from (8x360x181) tokens of size 192 to (8x180x91) tokens of size 384.
 
         Args:
+            data_size (torch.Size): data size in terms of embeded plevel, latitude, longitude
             dim (int): initial size of the tokens
         """
 
@@ -599,6 +600,10 @@ class EarthSpecificLayer(nn.Module):
             dim (int): see EarthSpecificBlock
             drop_path_ratio_list (list[float]): see EarthSpecificBlock
             num_heads (int): see EarthSpecificBlock
+            window_size (tuple[int], optional): see EarthSpecificBlock
+            dropout_rate (float, optional): see EarthSpecificBlock
+            checkpoint_activation (bool, optional): see EarthSpecificBlock
+            lam (bool, optional): see EarthSpecificBlock
         """
 
 
@@ -644,6 +649,8 @@ class EarthSpecificBlock(nn.Module):
             num_heads (int): number of attention heads
             window_size (tuple[int], optional): window size for the sliding window attention. Defaults to (2, 6, 12).
             dropout_rate (float, optional): dropout rate in the MLP. Defaults to 0..
+            checkpoint_activation (bool, optional): whether to use checkpoint activation. Defaults to False.
+            lam (bool, optional): whether to use the limited area attention mask. Defaults to False.
         """
 
     def __init__(self, data_size: torch.Size, dim: int, drop_path_ratio: float, num_heads: int, window_size: tuple[int, int, int] = (2, 6, 12), 
@@ -682,7 +689,7 @@ class EarthSpecificBlock(nn.Module):
         # back to previous shape
         x = x.permute((0, 2, 3, 4, 1))
 
-        B, padded_z, padded_h, padded_w, C = x.shape
+        batch_size, padded_z, padded_h, padded_w, C = x.shape
 
         if roll:
             # Roll x for half of the window for 3 dimensions
@@ -711,12 +718,12 @@ class EarthSpecificBlock(nn.Module):
         
         # Apply 3D window attention with Earth-Specific bias
         if self.checkpoint_activation:
-            x_window = checkpoint(self.attention, x_window, mask, B, padded_z, padded_h, use_reentrant=False)
+            x_window = checkpoint(self.attention, x_window, mask, batch_size, use_reentrant=False)
         else:
-            x_window = self.attention(x_window, mask, B, padded_z, padded_h)
+            x_window = self.attention(x_window, mask, batch_size)
 
         # Reorganize data to original shapes
-        x = x_window.reshape(shape=(B,
+        x = x_window.reshape(shape=(batch_size,
                                     padded_z // self.window_size[0], padded_h // self.window_size[1], padded_w // self.window_size[2],
                                     self.window_size[0], self.window_size[1], self.window_size[2],
                                     -1)
@@ -724,7 +731,7 @@ class EarthSpecificBlock(nn.Module):
         x = x.permute((0, 1, 4, 2, 5, 3, 6, 7))
 
         # Reshape the tensor back to its original shape
-        x = x.reshape(shape=(B, padded_z, padded_h, padded_w, -1))
+        x = x.reshape(shape=(batch_size, padded_z, padded_h, padded_w, -1))
 
         if roll:
             # Roll x back for half of the window
@@ -736,7 +743,7 @@ class EarthSpecificBlock(nn.Module):
         x = x[:, padding_front:padded_z-padding_back, padding_top:padded_h-padding_bottom, padding_left:padded_w-padding_right, :]
 
         # Reshape the tensor back to the input shape
-        x = x.reshape(shape=(B, -1, C))
+        x = x.reshape(shape=(batch_size, -1, C))
 
         # Main calculation stages
         x = shortcut + self.drop_path(self.norm1(x))
@@ -791,7 +798,7 @@ class EarthAttention3D(nn.Module):
         torch.nn.init.trunc_normal_(
             self.earth_specific_bias, mean=0.0, std=0.02)
 
-    def forward(self, x: Tensor, mask: Tensor, B: int, z: int, h: int) -> Tensor:
+    def forward(self, x: Tensor, mask: Tensor, batch_size: int) -> Tensor:
         # Record the original shape of the input (B*num_windows, window_size, dim)
         original_shape = x.shape
 
@@ -810,32 +817,31 @@ class EarthAttention3D(nn.Module):
         self.attention = query @ key.mT  # @ denotes matrix multiplication ; B*num_windows_lon*num_windows, head_number, window_size, window_size
 
         # self.earth_specific_bias is a set of neural network parameters to optimize.
-        EarthSpecificBias = self.earth_specific_bias[self.position_index]
-        # EarthSpecificBias = self.earth_specific_bias
+        earth_specific_bias = self.earth_specific_bias[self.position_index]
 
         # Reshape the learnable bias to the same shape as the attention matrix
-        EarthSpecificBias = EarthSpecificBias.reshape(shape=(self.window_size[0]*self.window_size[1]*self.window_size[2],
+        earth_specific_bias = earth_specific_bias.reshape(shape=(self.window_size[0]*self.window_size[1]*self.window_size[2],
                                                              self.window_size[0]*self.window_size[1]*self.window_size[2],
                                                              self.num_windows, self.head_number))
-        EarthSpecificBias = EarthSpecificBias.permute((2, 3, 0, 1))
-        EarthSpecificBias = EarthSpecificBias.unsqueeze(0)  # 1, num_windows, head_number, window_size, window_size
+        earth_specific_bias = earth_specific_bias.permute((2, 3, 0, 1))
+        earth_specific_bias = earth_specific_bias.unsqueeze(0)  # 1, num_windows, head_number, window_size, window_size
 
         # Add the Earth-Specific bias to the attention matrix
         attention_shape = self.attention.shape
-        # Reshape and permute the lon dim to match the shape of EarthSpecificBias
-        attention = self.attention.reshape(B, self.num_windows, -1, self.head_number, attention_shape[-2], attention_shape[-1])
+        # Reshape and permute the lon dim to match the shape of earth_specific_bias
+        attention = self.attention.reshape(batch_size, self.num_windows, -1, self.head_number, attention_shape[-2], attention_shape[-1])
         attention = attention.permute(0, 2, 1, 3, 4, 5)
         attention = attention.reshape(-1, self.num_windows, self.head_number, attention_shape[-2], attention_shape[-1])
         # add bias
-        attention = attention + EarthSpecificBias
+        attention = attention + earth_specific_bias
         # Reshape the attention matrix back
-        attention = attention.reshape(B, -1, self.num_windows, self.head_number, attention_shape[-2], attention_shape[-1])
+        attention = attention.reshape(batch_size, -1, self.num_windows, self.head_number, attention_shape[-2], attention_shape[-1])
         attention = attention.permute(0, 2, 1, 3, 4, 5)
         self.attention2 = attention.reshape(attention_shape)
 
         # Mask the attention between non-adjacent pixels, e.g., simply add -100 to the masked element.
         if mask is not None:
-            attention = self.attention2.view(B, -1, self.head_number, original_shape[1], original_shape[1])
+            attention = self.attention2.view(batch_size, -1, self.head_number, original_shape[1], original_shape[1])
             attention = attention + mask.unsqueeze(1).unsqueeze(0)
             self.attention2 = attention.view(-1, self.head_number, original_shape[1], original_shape[1])
         attention = self.softmax(self.attention2)
@@ -892,21 +898,4 @@ class DropPath(nn.Module):
 
     def extra_repr(self):
         return f'drop_prob={torch.round(self.drop_prob, decimals=3):0.3f}'
-
-
-class CustomPanguModel(nn.Module):
-    pass
-
-
-class MockPanguModel(nn.Module):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-        from collections import OrderedDict
-        self.net = torch.nn.Sequential(OrderedDict([('earth_specific_bias_{}'.format(i), nn.Linear(1, 1)) for i in range(16)]))
-
-    def forward(self, input_plevel: Tensor, input_surface: Tensor):
-        d = input_plevel.sum(dim=(1,2,3,4), keepdim=True) + input_surface.sum(dim=(1,2,3), keepdim=True)
-        d = self.net(d)
-        return input_plevel , input_surface*(d.squeeze(-1))
         

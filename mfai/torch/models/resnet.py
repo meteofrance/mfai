@@ -28,8 +28,7 @@ class ResNetEncoder(ResNet):
         del self.fc
         del self.avgpool
 
-    def get_stages(self) -> list[nn.Module]:
-        return [
+        self.stages: list[nn.Module] = [
             nn.Identity(),
             nn.Sequential(self.conv1, self.bn1, self.relu),
             nn.Sequential(self.maxpool, self.layer1),
@@ -39,11 +38,9 @@ class ResNetEncoder(ResNet):
         ]
 
     def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
-        stages = self.get_stages()
-
         features = []
         for i in range(self._depth + 1):
-            x = stages[i](x)
+            x = self.stages[i](x)
             features.append(x)
 
         return features
@@ -91,10 +88,9 @@ class ResNetEncoder(ResNet):
 
         self._output_stride = output_stride
 
-        stages = self.get_stages()
         for stage_indx, dilation in zip(stage_list, dilation_list):
             utils.replace_strides_with_dilation(
-                module=stages[stage_indx],
+                module=self.stages[stage_indx],
                 dilation=dilation,
             )
 

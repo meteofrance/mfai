@@ -85,5 +85,8 @@ module = [
   "sentencepiece",
   "onnxruntime",
   "pl_bolts.*",
+  "torch_geometric.*",
+  "networkx",
+  "scipy.spatial",
 ]
 ignore_missing_imports = true

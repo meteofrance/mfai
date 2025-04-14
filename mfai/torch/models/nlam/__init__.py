@@ -2,9 +2,10 @@
 Graph Neural Network architectures adapted from https://github.com/mllam/neural-lam
 """
 
+from ctypes import Union
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple
+from typing import Any, Generator, Literal, Tuple
 
 import torch
 import torch_geometric as pyg
@@ -18,7 +19,7 @@ from .create_mesh import build_graph_for_grid
 from .interaction_net import InteractionNet, make_mlp
 
 
-def offload_to_cpu(model: nn.ModuleList):
+def offload_to_cpu(model: nn.ModuleList) -> nn.ModuleList:
     return nn.ModuleList([offload_wrapper(x) for x in model])
 
 
@@ -31,23 +32,23 @@ class BufferList(nn.Module):
     See: https://github.com/pytorch/pytorch/issues/37386
     """
 
-    def __init__(self, buffer_tensors, persistent=True):
+    def __init__(self, buffer_tensors: Any, persistent: bool=True) -> None:
         super().__init__()
         self.n_buffers = len(buffer_tensors)
         for buffer_i, tensor in enumerate(buffer_tensors):
             self.register_buffer(f"b{buffer_i}", tensor, persistent=persistent)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: int) -> Any:
         return getattr(self, f"b{key}")
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.n_buffers
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[Any]:
         return (self[i] for i in range(len(self)))
 
 
-def load_graph(graph_dir: Path, device="cpu") -> Tuple[bool, dict]:
+def load_graph(graph_dir: Path, device: Union[torch.device, "cpu", "cuda"]="cpu") -> Tuple[bool, dict]:
     """
     Loads a graph from its disk serialised format
     into a dict of Tensors.
@@ -160,7 +161,7 @@ class GraphLamSettings:
     Settings for graph-based models
     """
 
-    tmp_dir: Path | str = "/tmp"  # nosec B108
+    tmp_dir: Path = Path("/tmp")  # nosec B108
     hidden_dims: int = 64
     hidden_layers: int = 1
 
@@ -303,30 +304,30 @@ class BaseGraphModel(BaseModel):
         self.check_required_attributes()
 
     @property
-    def settings(self):
+    def settings(self) -> GraphLamSettings:
         return self._settings
 
-    def finalize_graph_model(self):
+    def finalize_graph_model(self) -> None:
         """
         Method to be overridden by subclasses for finalizing the graph model
         """
         pass
 
-    def get_num_mesh(self):
+    def get_num_mesh(self) -> None:
         """
         Compute number of mesh nodes from loaded features,
         and number of mesh nodes that should be ignored in encoding/decoding
         """
         raise NotImplementedError("get_num_mesh not implemented")
 
-    def embedd_mesh_nodes(self):
+    def embedd_mesh_nodes(self) -> None:
         """
         Embedd static mesh features
         Returns tensor of shape (N_mesh, d_h)
         """
         raise NotImplementedError("embedd_mesh_nodes not implemented")
 
-    def process_step(self, mesh_rep):
+    def process_step(self, mesh_rep: torch.Tensor) -> None:
         """
         Process step of embedd-process-decode framework
         Processes the representation on the mesh, possible in multiple steps
@@ -699,7 +700,7 @@ class HiLAMParallel(BaseHiGraphModel):
 
     register: bool = True
 
-    def finalize_graph_model(self):
+    def finalize_graph_model(self) -> None:
         super().finalize_graph_model()
 
         # Processor GNNs
@@ -786,7 +787,7 @@ class HiLAM(BaseHiGraphModel):
 
     register: bool = True
 
-    def finalize_graph_model(self):
+    def finalize_graph_model(self) -> None:
         super().finalize_graph_model()
 
         # Make down GNNs, both for down edges and same level
@@ -807,7 +808,7 @@ class HiLAM(BaseHiGraphModel):
             [self.make_same_gnns() for _ in range(self.settings.processor_layers)]
         )  # Nested lists (proc_steps, N_levels)
 
-    def make_same_gnns(self):
+    def make_same_gnns(self) -> nn.ModuleList:
         """
         Make intra-level GNNs.
         """
@@ -826,7 +827,7 @@ class HiLAM(BaseHiGraphModel):
             model = offload_to_cpu(model)
         return model
 
-    def make_up_gnns(self):
+    def make_up_gnns(self) -> nn.ModuleList:
         """
         Make GNNs for processing steps up through the hierarchy.
         """
@@ -845,7 +846,7 @@ class HiLAM(BaseHiGraphModel):
             model = offload_to_cpu(model)
         return model
 
-    def make_down_gnns(self):
+    def make_down_gnns(self) -> nn.ModuleList:
         """
         Make GNNs for processing steps down through the hierarchy.
         """

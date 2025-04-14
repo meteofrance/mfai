@@ -3,13 +3,13 @@ import matplotlib
 import matplotlib.pyplot as plt
 import networkx
 import numpy as np
-import scipy.spatial
+from scipy.spatial import KDTree
 import torch
 import torch_geometric as pyg
 from torch_geometric.utils.convert import from_networkx
 
 
-def torch_save(data, path: Path):
+def torch_save(data: torch.Tensor| list[torch.Tensor], path: Path) -> None:
     """Saving files with torch to be writeable by anyone"""
     if path.exists():
         path.unlink()
@@ -17,7 +17,7 @@ def torch_save(data, path: Path):
     path.chmod(0o666)
 
 
-def sort_nodes_internally(nx_graph):
+def sort_nodes_internally(nx_graph: networkx.Graph | networkx.DiGraph) -> networkx.DiGraph:
     # For some reason the networkx .nodes() return list can not be sorted,
     # but this is the ordering used by pyg when converting. This function fixes this
     H = networkx.DiGraph()
@@ -26,14 +26,14 @@ def sort_nodes_internally(nx_graph):
     return H
 
 
-def prepend_node_index(graph, new_index):
+def prepend_node_index(graph: networkx.Graph, new_index: int) -> networkx.Graph:
     # Relabel node indices in graph, insert (graph_level, i, j)
     ijk = [tuple((new_index,) + x) for x in graph.nodes]
     to_mapping = dict(zip(graph.nodes, ijk))
     return networkx.relabel_nodes(graph, to_mapping, copy=True)
 
 
-def plot_graph(graph, title=None):
+def plot_graph(graph: networkx.Graph, title: str=None) -> tuple[plt.Figure, plt.Axes]:
     fig, axis = plt.subplots(figsize=(8, 8), dpi=200)  # W,H
     edge_index = graph.edge_index
     pos = graph.pos
@@ -82,13 +82,13 @@ def plot_graph(graph, title=None):
     return fig, axis
 
 
-def from_networkx_with_start_index(nx_graph, start_index):
+def from_networkx_with_start_index(nx_graph: networkx.Graph | networkx.DiGraph, start_index: int) -> pyg.data.Data :
     pyg_graph = from_networkx(nx_graph)
     pyg_graph.edge_index += start_index
     return pyg_graph
 
 
-def mk_2d_graph(xy, nx, ny):
+def mk_2d_graph(xy: np.ndarray, nx: int, ny: int) -> networkx.DiGraph:
     xm, xM = np.amin(xy[0][0, :]), np.amax(xy[0][0, :])
     ym, yM = np.amin(xy[1][:, 0]), np.amax(xy[1][:, 0])
     if xm == xM or ym == yM:
@@ -125,7 +125,7 @@ def mk_2d_graph(xy, nx, ny):
     return dg
 
 
-def save_edges(graph, name, base_path):
+def save_edges(graph: pyg.data.Data, name: str, base_path: Path) -> None:
     torch_save(graph.edge_index, base_path / f"{name}_edge_index.pt")
 
     edge_features = torch.cat((graph.len.unsqueeze(1), graph.vdiff), dim=1).to(
@@ -134,7 +134,7 @@ def save_edges(graph, name, base_path):
     torch_save(edge_features, base_path / f"{name}_features.pt")
 
 
-def save_edges_list(graphs, name, base_path):
+def save_edges_list(graphs: list[pyg.data.Data], name: str, base_path: Path) -> None:
     list_edge_index = [graph.edge_index for graph in graphs]
     torch_save(list_edge_index, base_path / f"{name}_edge_index.pt")
     edge_features = [
@@ -147,7 +147,7 @@ def save_edges_list(graphs, name, base_path):
 ########################################################################################
 
 
-def hierarchical_mesh(G, mesh_levels, plot, cache_dir_path):
+def hierarchical_mesh(G: list[networkx.DiGraph], mesh_levels: int, plot: bool, cache_dir_path: Path) -> tuple[list[pyg.data.Data], list[torch.Tensor], networkx.DiGraph, networkx.NodeView]:
     # Relabel nodes of each level with level index first
     G = [prepend_node_index(graph, level_i) for level_i, graph in enumerate(G)]
 
@@ -180,7 +180,7 @@ def hierarchical_mesh(G, mesh_levels, plot, cache_dir_path):
         v_to_list = list(G_to.nodes)
         v_from_list = list(G_from.nodes)
         v_from_xy = np.array([xy for _, xy in G_from.nodes.data("pos")])
-        kdt_m = scipy.spatial.KDTree(v_from_xy)
+        kdt_m = KDTree(v_from_xy)
 
         # add edges from mesh to grid
         for v in v_to_list:
@@ -247,7 +247,7 @@ def hierarchical_mesh(G, mesh_levels, plot, cache_dir_path):
 ########################################################################################
 
 
-def monolevel_mesh(G, nx, plot):
+def monolevel_mesh(G: list[networkx.DiGraph], nx: int, plot: bool) -> tuple[list[pyg.data.Data], list[torch.Tensor], networkx.DiGraph, networkx.NodeView]:
     # combine all levels to one graph
     G_tot = G[0]
     for lev in range(1, len(G)):
@@ -275,7 +275,7 @@ def monolevel_mesh(G, nx, plot):
     all_mesh_nodes = G_tot.nodes(data=True)
 
     # export the nx graph to PyTorch geometric
-    pyg_m2m = from_networkx(G_int)
+    pyg_m2m: pyg.data.Data = from_networkx(G_int)
     m2m_graphs = [pyg_m2m]
     mesh_pos = [pyg_m2m.pos.to(torch.float32)]
 
@@ -291,11 +291,11 @@ def monolevel_mesh(G, nx, plot):
 
 def build_graph_for_grid(
     grid_xy: torch.Tensor,
-    cache_dir_path: str,
+    cache_dir_path: Path,
     plot: bool = False,
     levels: int = None,
     hierarchical: bool = False,
-):
+) -> None:
     """
     xy: (x, y) coordinates of grid points, shape (2, N_x, N_y).
     plot: If graphs should be plotted during generation (default: False).
@@ -363,7 +363,7 @@ def build_graph_for_grid(
 ########################################################################################
 
 
-def grid2mesh(G_bottom_mesh, all_mesh_nodes, xy, plot, cache_dir_path):
+def grid2mesh(G_bottom_mesh: networkx.DiGraph, all_mesh_nodes: networkx.NodeView, xy: np.ndarray, plot: bool, cache_dir_path: Path) -> tuple[networkx.DiGraph, networkx.NodeView, np.ndarray, list[networkx.NodeView]]:
     # radius within which grid nodes are associated with a mesh node
     # (in terms of mesh distance)
     DM_SCALE = 0.67
@@ -398,7 +398,7 @@ def grid2mesh(G_bottom_mesh, all_mesh_nodes, xy, plot, cache_dir_path):
     # order in vg_list should be same as in vg_xy
     vg_list = list(G_grid.nodes)
     vg_xy = np.array([[xy[0][node[1:]], xy[1][node[1:]]] for node in vg_list])
-    kdt_g = scipy.spatial.KDTree(vg_xy)
+    kdt_g = KDTree(vg_xy)
 
     # now add (all) mesh nodes, include features (pos)
     G_grid.add_nodes_from(all_mesh_nodes)
@@ -437,14 +437,14 @@ def grid2mesh(G_bottom_mesh, all_mesh_nodes, xy, plot, cache_dir_path):
 ########################################################################################
 
 
-def mesh2grid(G_g2m, vm, vm_xy, vg_list, plot, cache_dir_path):
+def mesh2grid(G_g2m: networkx.DiGraph, vm: networkx.NodeView, vm_xy: np.ndarray, vg_list: list[networkx.NodeView], plot: bool, cache_dir_path: Path) -> None:
     G_m2g = G_g2m.copy()
     G_m2g.clear_edges()
 
     # build kd tree for mesh point pos
     # order in vm should be same as in vm_xy
     vm_list = list(vm)
-    kdt_m = scipy.spatial.KDTree(vm_xy)
+    kdt_m = KDTree(vm_xy)
 
     # add edges from mesh to grid
     for v in vg_list:

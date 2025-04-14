@@ -167,9 +167,10 @@ class MultiModalLM(nn.Module):
             vis_txt_embeds = vis_txt_embeds[:, -self.context_length :]
         embeds_idx = torch.arange(vis_txt_embeds.shape[1], device=text_tokens.device)
 
-        if isinstance(self.backend, GPT2):
-            pos_embed_fn: nn.Embedding = self.backend.pos_emb
-            pos_embeds = pos_embed_fn(embeds_idx)
+        if hasattr(self.backend, "pos_emb") and isinstance(
+            self.backend.pos_embed, nn.Embedding
+        ):
+            pos_embeds = self.backend.pos_embed(embeds_idx)
             x = vis_txt_embeds + pos_embeds.unsqueeze(0)
         else:
             x = vis_txt_embeds

@@ -168,9 +168,9 @@ class MultiModalLM(nn.Module):
         embeds_idx = torch.arange(vis_txt_embeds.shape[1], device=text_tokens.device)
 
         if hasattr(self.backend, "pos_emb") and isinstance(
-            self.backend.pos_embed, nn.Embedding
+            self.backend.pos_emb, nn.Embedding
         ):
-            pos_embeds = self.backend.pos_embed(embeds_idx)
+            pos_embeds = self.backend.pos_emb(embeds_idx)
             x = vis_txt_embeds + pos_embeds.unsqueeze(0)
         else:
             x = vis_txt_embeds

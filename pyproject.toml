@@ -35,7 +35,6 @@ Homepage = "https://github.com/meteofrance/mfai"
 exclude = [
   '^mfai/torch/models/nlam/*$',
   '^mfai/torch/models/deeplabv3.py$',
-  '^mfai/torch/models/resnet.py$',
   '^mfai/torch/models/swinunetr.py$',
   '^mfai/torch/models/unetrpp.py$',
   '^mfai/torch/namedtensor.py$',
@@ -78,10 +77,10 @@ pretty = true
 # Has the effect of silencing `import-untyped` error
 [[tool.mypy.overrides]]
 module = [
-  "tiktoken_ext",
-  "tiktoken_ext.openai_public",
+  "tiktoken_ext.*",
   "sentencepiece",
   "onnxruntime",
   "pl_bolts.*",
+  "torchvision.*"
 ]
 ignore_missing_imports = true

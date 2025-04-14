@@ -42,5 +42,5 @@ def test_add_special_tokens(tokenizer: Tokenizer):
     # Check that the encoding of <|Lorem ipsum|> is last token id because it is the
     # last token added to the tokenizer
     assert text_encoded[0] == tokenizer.vocab_size - 1
-    # Check that the encoding of <|endoftext|> is unghanged after adding some new token
+    # Check that the encoding of <|endoftext|> is unchanged after adding some new token
     assert text_encoded[-1] == base_tokenizer.eot_token

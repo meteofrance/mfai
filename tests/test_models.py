@@ -20,6 +20,7 @@ from mfai.torch import export_to_onnx, onnx_load_and_infer
 from mfai.torch.models import (
     all_nn_architectures,
     autopad_nn_architectures,
+    pangu_nn_architectures,
     load_from_settings_file,
 )
 
@@ -46,6 +47,38 @@ class FakeSumDataset(torch.utils.data.Dataset):
         x = torch.rand(*self.input_shape)
         y = torch.sum(x, 0).unsqueeze(0)
         return x, y
+
+
+class FakePanguDataset(torch.utils.data.Dataset):
+    def __init__(
+            self,
+            input_shape: Tuple[int, ...],
+            surface_variables: int,
+            plevel_variables: int,
+            plevels: int,
+            static_length: int,
+            ):
+        self.surface_shape = (surface_variables, *input_shape)
+        self.plevel_shape = (plevel_variables, plevels, *input_shape)
+        self.static_shape = (static_length, *input_shape)
+        super().__init__()
+
+    def __len__(self):
+        return 4
+
+    def __getitem__(self, idx: int):
+        input_surface = torch.rand(*self.surface_shape)
+        input_plevel = torch.rand(*self.plevel_shape)
+        input_static = torch.rand(*self.static_shape)
+        target_surface = torch.rand(*self.surface_shape)
+        target_plevel = torch.rand(*self.plevel_shape)
+        return {
+            'input_surface': input_surface,
+            'input_plevel': input_plevel,
+            'input_static': input_static,
+            'target_surface': target_surface,
+            'target_plevel': target_plevel
+            }
 
 
 def train_model(model: torch.nn.Module, input_shape: Tuple[int, ...]):
@@ -79,6 +112,44 @@ def train_model(model: torch.nn.Module, input_shape: Tuple[int, ...]):
     model.eval()
     sample = ds[0][0].unsqueeze(0)
     model(sample)
+    return model
+
+
+def train_pangu_model(
+        model: torch.nn.Module, 
+        input_shape: Tuple[int, ...],
+        surface_variables: int,
+        plevel_variables: int,
+        plevels: int,
+        static_length: int
+        ):
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    loss_fn = torch.nn.MSELoss()
+
+    ds = FakePanguDataset(input_shape, surface_variables, plevel_variables, plevels, static_length)
+
+    training_loader = torch.utils.data.DataLoader(ds, batch_size=2)
+
+    # Simulate 2 EPOCHS of training
+    for _ in range(2):
+        for _, data in enumerate(training_loader):
+            # Zero your gradients for every batch!
+            optimizer.zero_grad()
+
+            # Make predictions for this batch
+            output_plevel, output_surface = model(data['input_plevel'], data['input_surface'], data['input_static'])
+
+            # Compute the loss and its gradients
+            loss = loss_fn(output_plevel, data['target_plevel']) + loss_fn(output_surface, data['target_surface'])
+            loss.backward()
+
+            # Adjust learning weights
+            optimizer.step()
+
+    # Make a prediction in eval mode
+    model.eval()
+    sample = ds[0]
+    model(sample['input_plevel'].unsqueeze(0), sample['input_surface'].unsqueeze(0), sample['input_static'].unsqueeze(0))
     return model
 
 
@@ -119,18 +190,11 @@ def test_torch_training_loop(model_kls):
 
         model = train_model(model, input_shape)
 
-    else:
+    elif model_kls.model_type != ModelType.PANGU:
         # We test the model for all supported input spatial dimensions
         for spatial_dims in model_kls.supported_num_spatial_dims:
             if hasattr(settings, "spatial_dims"):
                 settings.spatial_dims = spatial_dims
-            
-            if model_kls.model_type == ModelType.PANGU:
-                NUM_INPUTS = 6
-                NUM_OUTPUTS = 5
-                settings.surface_variables = 1
-                settings.plevel_variables = 2
-                settings.plevels = 2
 
             model = model_kls(
                 in_channels=NUM_INPUTS,
@@ -147,6 +211,53 @@ def test_torch_training_loop(model_kls):
                     sample = torch.rand(1, NUM_INPUTS, *INPUT_SHAPE[:spatial_dims])
                     export_to_onnx(model, sample, dst.name)
                     onnx_load_and_infer(dst.name, sample)
+
+
+@pytest.mark.parametrize("model_kls", pangu_nn_architectures)
+def test_torch_pangu_training_loop(model_kls):
+    """
+    Checks that our models are trainable on a toy problem (sum).
+    """
+    INPUT_SHAPE = (64, 64, 64)
+    NUM_INPUTS = 7
+    NUM_OUTPUTS = 6
+    SURFACE_VARIABLES = 2
+    PLEVEL_VARIABLES = 2
+    PLEVELS = 2
+    STATIC_LENGTH = 1
+
+    settings = model_kls.settings_kls(surface_variables=SURFACE_VARIABLES,
+                                      plevel_variables=PLEVEL_VARIABLES,
+                                      plevels=PLEVELS,
+                                      static_length=STATIC_LENGTH)
+
+    # We test the model for all supported input spatial dimensions
+    for spatial_dims in model_kls.supported_num_spatial_dims:
+        if hasattr(settings, "spatial_dims"):
+            settings.spatial_dims = spatial_dims
+
+        model = model_kls(
+            in_channels=NUM_INPUTS,
+            out_channels=NUM_OUTPUTS,
+            input_shape=INPUT_SHAPE[:spatial_dims],
+            settings=settings,
+        )
+        model = train_pangu_model(
+            model, 
+            INPUT_SHAPE[:spatial_dims], 
+            SURFACE_VARIABLES,
+            PLEVEL_VARIABLES,
+            PLEVELS,
+            STATIC_LENGTH
+            )
+
+        # We test if models claiming to be onnx exportable really are post training.
+        # See https://pytorch.org/tutorials/beginner/onnx/export_simple_model_to_onnx_tutorial.html
+        if model.onnx_supported:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".onnx") as dst:
+                sample = torch.rand(1, NUM_INPUTS, *INPUT_SHAPE[:spatial_dims])
+                export_to_onnx(model, sample, dst.name)
+                onnx_load_and_infer(dst.name, sample)
 
 
 @pytest.mark.parametrize(

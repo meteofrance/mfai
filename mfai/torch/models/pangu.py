@@ -139,22 +139,6 @@ def generate_3d_attention_mask(
     return attention_mask
 
 
-def cat_constant_masks(surface_data: Tensor, constant_masks: Tensor) -> Tensor:
-    """Concatenate constant masks to surface data.
-
-    Args:
-        surface_data (Tensor): surface data
-        constant_masks (Tensor): Tensor of masks
-
-    Returns:
-        Tensor: constant masks concatenated with surface data
-    """
-    batch_size = surface_data.shape[0]
-    mask_data = constant_masks.expand(batch_size, *constant_masks.shape)
-    surface_data = torch.cat([surface_data, mask_data], dim=1)
-    return surface_data
-
-
 @dataclass_json
 @dataclass
 class PanguWeatherSettings:
@@ -166,6 +150,7 @@ class PanguWeatherSettings:
     surface_variables: int = 4
     plevel_variables: int = 5
     plevels: int = 13
+    static_length: int = 3
     window_size: Tuple[int, int, int] = (2, 6, 12)
     dropout_rate: float = 0.
     checkpoint_activation: bool = False
@@ -204,6 +189,7 @@ class PanguWeather(BaseModel):
             surface_variables: number of surface variables.
             plevel_variables: number of pressure level variables.
             plevels: number of pressure levels.
+            static_length: number of static variables (e.g., land sea mask).
             window_size: size of the sliding window.
             dropout_rate: faction of the input units to drop.
             checkpoint_activation: whether to use checkpoint activation.
@@ -218,17 +204,13 @@ class PanguWeather(BaseModel):
 
         if settings.spatial_dims == 2:
             latitude, longitude = input_shape
-        elif settings.spatial_dims == 3:
-            plevels, latitude, longitude = input_shape  #TODO check usage of spatial_dims
         else:
             raise ValueError(f"Unsupported spatial dimension: {settings.spatial_dims}")
 
         self.plevel_patch_size = settings.plevel_patch_size
 
         # Compute surface size and plevel size. Needed to compute the size of earth specific bias
-        # constant_masks = in_channels - (settings.surface_variables + settings.plevel_variables * settings.plevels)
-        constant_masks = in_channels - out_channels
-        self.surface_channels = settings.surface_variables + constant_masks 
+        self.surface_channels = settings.surface_variables + settings.static_length 
         surface_size = torch.Size((self.surface_channels, latitude, longitude))
         plevel_size = torch.Size((settings.plevel_variables, settings.plevels, latitude, longitude))
         
@@ -311,16 +293,21 @@ class PanguWeather(BaseModel):
     def num_spatial_dims(self) -> int:
         return self.settings.spatial_dims
     
-    def forward(self, input_tensor: Tensor) -> Tensor:
-        # Retrieve input_plevel and input_surface from the input namedtensor
-        # Assuming that input_tensor has shape (N, C, lat, lon) and channels orgnized as 
-        # (surface variables + constant masks + plevel variables * plevels)
-        N, _, lat, lon = input_tensor.shape
-        input_surface = input_tensor[:, :self.surface_channels, :, :]
-        input_plevel = input_tensor[:, self.surface_channels:, :, :].reshape(N, self.settings.plevel_variables, self.settings.plevels, lat, lon)
-        
+    def forward(self, input_plevel: Tensor, input_surface: Tensor, static_data: Tensor = None) -> Tensor:
+        """
+        Forward pass of the PanguWeather model.
+        Args:
+            input_plevel (Tensor): Input tensor of shape (N, C, Z, H, W) for pressure level data.
+            input_surface (Tensor): Input tensor of shape (N, C, H, W) for surface data.
+            static_data (Tensor, optional): Static data tensor, e.g., land sea mask, of shape (N, C, H, W). Defaults to None.
+        """
+        if static_data is not None:
+            surface_data = torch.cat([input_surface, static_data], dim=1)
+        else:
+            surface_data = input_surface
+                     
         # Embed the input fields into patches
-        x, embedding_shape = self.embedding_layer(input_plevel, input_surface)
+        x, embedding_shape = self.embedding_layer(input_plevel, surface_data)
         
         # Encoder, composed of two layers
         x = self.layer1(x, embedding_shape)
@@ -357,10 +344,7 @@ class PanguWeather(BaseModel):
         output_plevel = output_plevel[:, :, padding_front:padded_z-padding_back, padding_top:padded_h-padding_bottom, padding_left:padded_w-padding_right]
         output_surface = output_surface[:, :, padding_top:padded_h-padding_bottom, padding_left:padded_w-padding_right]
 
-        # Build output tensor from output_plevel, output_surface
-        output_plevel = output_plevel.reshape(N, self.settings.plevel_variables * self.settings.plevels, lat, lon)
-        output_tensor = torch.cat([output_surface, output_plevel], dim=1)
-        return output_tensor
+        return output_plevel, output_surface
 
 
 class CustomPad3d(ConstantPad3d):

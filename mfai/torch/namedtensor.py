@@ -73,27 +73,27 @@ class NamedTensor(TensorWrapper):
         self.feature_dim_name = feature_dim_name
 
     @property
-    def ndims(self):
+    def ndims(self) -> int:
         """
         Number of dimensions of the tensor.
         """
         return len(self.names)
 
     @property
-    def num_spatial_dims(self):
+    def num_spatial_dims(self) -> int:
         """
         Number of spatial dimensions of the tensor.
         """
         return len([x for x in self.names if x in self.SPATIAL_DIM_NAMES])
 
     @property
-    def feature_dim_idx(self):
+    def feature_dim_idx(self) -> int:
         """
         Index of the features dimension.
         """
         return self.names.index(self.feature_dim_name)
 
-    def __str__(self):
+    def __str__(self) -> str:
         head = "--- NamedTensor ---\n"
         head += f"Names: {self.names}\nTensor Shape: {self.tensor.shape})\nFeatures:\n"
         table = [
@@ -178,7 +178,7 @@ class NamedTensor(TensorWrapper):
             return nts[0].clone()
         else:
             # Check features names are distinct between the n named tensors
-            feature_names = set()
+            feature_names: set[str] = set()
             for nt in nts:
                 if feature_names & set(nt.feature_names):
                     raise ValueError(
@@ -215,7 +215,7 @@ class NamedTensor(TensorWrapper):
         """
         return self.names.index(dim_name)
 
-    def clone(self):
+    def clone(self) -> "NamedTensor":
         return NamedTensor(
             tensor=deepcopy(self.tensor).to(self.tensor.device),
             names=self.names.copy(),

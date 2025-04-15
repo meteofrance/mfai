@@ -78,8 +78,8 @@ class HalfUNet(BaseModel, AutoPaddingModel):
         out_channels: int,
         input_shape: tuple[int, ...],
         settings: HalfUNetSettings = HalfUNetSettings(),
-        *args: dict[str, Any],
-        **kwargs: dict[str, Any],
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
 

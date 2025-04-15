@@ -228,8 +228,9 @@ class NamedTensor(TensorWrapper):
         The returned tensor has the same number of dimensions as the original tensor.
         """
         try:
-            return self.select_dim(
-                self.feature_dim_name, self.feature_names_to_idx[feature_name]
+            return self.tensor.select(
+                self.names.index(self.feature_dim_name),
+                self.feature_names_to_idx[feature_name]
             ).unsqueeze(self.names.index(self.feature_dim_name))
         except KeyError:
             raise ValueError(
@@ -289,27 +290,34 @@ class NamedTensor(TensorWrapper):
         self.tensor = torch.unsqueeze(self.tensor, dim_index)
         self.names.insert(dim_index, dim_name)
 
-    def select_dim(
-        self, dim_name: str, index: int) -> "NamedTensor":
+    def select_dim(self, dim_name: str, index: int) -> "NamedTensor":
         """
         Return the tensor indexed along the dimension dim_name
         with the index index.
         The given dimension is removed from the tensor.
         See https://pytorch.org/docs/stable/generated/torch.select.html
         """
-
-        # if they try to select the features it will break as
-        # the feature dimension is not present anymore
+        if dim_name == self.feature_dim_name:
+            raise ValueError('Impossible to select the feature dimension of a NamedTensor.')
+        
         return NamedTensor(
-            self.select_dim(dim_name, index).tensor,
+            self.tensor.select(self.names.index(dim_name), index),
             self.names[: self.names.index(dim_name)]
             + self.names[self.names.index(dim_name) + 1 :],
             self.feature_names,
             feature_dim_name=self.feature_dim_name,
         )
+    
+    def select_bare_dim(self, dim_name: str, index: int) -> torch.Tensor:
+        """
+        Same as select_dim but returns a torch.Tensor, bur returns a torch.Tensor.
+        Allows the selection of the feature dimension.
+        """        
+        return self.tensor.select(self.names.index(dim_name), index)
 
     def index_select_dim(
-        self, dim_name: str, indices: torch.Tensor) -> "NamedTensor":
+        self, dim_name: str, indices: torch.Tensor
+    ) -> Union["NamedTensor", torch.Tensor]:
         """
         Return the tensor indexed along the dimension dim_name
         with the indices tensor.
@@ -318,9 +326,11 @@ class NamedTensor(TensorWrapper):
         the same size as in the original tensor.
         See https://pytorch.org/docs/stable/generated/torch.index_select.html
         """
-
         return NamedTensor(
-            self.index_select_dim(dim_name, indices).tensor,
+            self.tensor.index_select(
+                self.names.index(dim_name),
+                torch.Tensor(indices).type(torch.int64).to(self.device),
+            ),
             self.names,
             (
                 self.feature_names
@@ -329,6 +339,18 @@ class NamedTensor(TensorWrapper):
             ),
             feature_dim_name=self.feature_dim_name,
         )
+    
+    
+    def index_select_bare_dim(
+        self, dim_name: str, indices: torch.Tensor
+    ) -> Union["NamedTensor", torch.Tensor]:
+        """
+        Same as index_select_dim but returns a torch.tensor, but returns a torch.Tensor.
+        """
+        return self.tensor.index_select(
+                self.names.index(dim_name),
+                torch.Tensor(indices).type(torch.int64).to(self.device),
+            )
 
     def dim_size(self, dim_name: str) -> int:
         """
@@ -372,12 +394,24 @@ class NamedTensor(TensorWrapper):
 
             self.tensor = self.tensor.expand(*expander)
 
-    def iter_dim(self, dim_name: str) -> Iterable["NamedTensor"]:
+    def iter_dim(
+        self, dim_name: str
+    ) -> Iterable["NamedTensor"]:
         """
         Iterate over the tensor along a given dimension.
         """
         for i in range(self.dim_size(dim_name)):
             yield self.select_dim(dim_name, i)
+    
+    def iter_bare_dim(
+        self, dim_name: str
+    ) -> Iterable[torch.Tensor]:
+        """
+        Iterate over the tensor along a given dimension.
+        Returns an iterable on torch.Tensor
+        """
+        for i in range(self.dim_size(dim_name)):
+            yield self.select_bare_dim(dim_name, i)
 
     def rearrange_(self, einops_str: str):
         """

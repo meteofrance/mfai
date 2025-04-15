@@ -188,7 +188,7 @@ def test_named_tensor():
     feature_tensor = nt_cat["feature_0"]
     assert feature_tensor.shape == (3, 1, 256, 256)
 
-    # Test iteration on batch dimension
+    # Test iteration on batch dimension with bare_tensor=False
     for i, nt_dim in enumerate(nt.iter_dim("batch")):
         assert nt_dim.tensor.shape == (256, 256, 50)
         assert nt_dim.names == ["lat", "lon", "features"]
@@ -227,16 +227,24 @@ def test_named_tensor():
     assert nt_cat.tensor.shape == (3, 256, 256, 30)
     assert nt_cat.names == ["batch", "lat", "lon", "features"]
 
-    # test select_dim along the features dim
-    t = nt_cat.select_dim("features", 0)
-    assert t.shape == (3, 256, 256)
+    # test selecting bare tensor features dimension
+    t = nt_cat.select_bare_dim(nt_cat.feature_dim_name, 0)
+    assert t.shape == torch.Size([3, 256, 256])
 
     # test select_dim along the lat dim
     t = nt_cat.select_dim("lat", 128)
+    assert t.tensor.shape == (3, 256, 30)
+    
+    # test select_bare_dim along the lat dim
+    t = nt_cat.select_bare_dim("lat", 128)
     assert t.shape == (3, 256, 30)
 
     # test index_select_dim
     t = nt_cat.index_select_dim("features", [0, 1, 2])
+    assert t.tensor.shape == (3, 256, 256, 3)
+    
+    # test index_select_bare_dim
+    t = nt_cat.index_select_bare_dim("features", [0, 1, 2])
     assert t.shape == (3, 256, 256, 3)
 
     # test select_dim when returning NamedTensor

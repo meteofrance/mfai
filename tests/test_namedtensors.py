@@ -192,7 +192,7 @@ def test_named_tensor():
     for i, nt_dim in enumerate(nt.iter_dim("batch")):
         assert nt_dim.tensor.shape == (256, 256, 50)
         assert nt_dim.names == ["lat", "lon", "features"]
-        
+
     # Test iteration on batch dimension returning bare tensors
     for i, nt_dim in enumerate(nt.iter_tensor_dim("batch")):
         assert nt_dim.shape == (256, 256, 50)
@@ -238,7 +238,7 @@ def test_named_tensor():
     # test select_dim along the lat dim
     t = nt_cat.select_dim("lat", 128)
     assert t.tensor.shape == (3, 256, 30)
-    
+
     # test select_tensor_dim along the lat dim
     t = nt_cat.select_tensor_dim("lat", 128)
     assert t.shape == (3, 256, 30)
@@ -246,7 +246,7 @@ def test_named_tensor():
     # test index_select_dim
     t = nt_cat.index_select_dim("features", [0, 1, 2])
     assert t.tensor.shape == (3, 256, 256, 3)
-    
+
     # test index_select_tensor_dim
     t = nt_cat.index_select_tensor_dim("features", [0, 1, 2])
     assert t.shape == (3, 256, 256, 3)

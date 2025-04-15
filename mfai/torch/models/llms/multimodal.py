@@ -195,7 +195,6 @@ class MultiModalLM(nn.Module):
                 f"Unknown vision encoder: {self.settings.vision_encoder}. Use 'linear' or 'resnet50'."
             )
 
-
         text_embeds = self.backend.tok_emb(text_tokens)
 
         vis_txt_embeds = torch.cat([vis_embeds, text_embeds], dim=1)

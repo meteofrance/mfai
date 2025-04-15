@@ -97,6 +97,8 @@ class SwinUNETR(ModelABC, MonaiSwinUNETR):
         # because ConvTranspose2d introduced checkerboard artifacts
 
         feature_size = settings.feature_size
+        # Using custom up sample block, type differs from base class MonaiSwinUNETR
+        # ignoring type for mypy check
         self.decoder5 = UpsampleBlock(  # type:ignore[assignment]
             in_channels=16 * feature_size,
             out_channels=8 * feature_size,

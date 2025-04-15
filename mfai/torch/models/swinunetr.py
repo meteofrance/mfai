@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Tuple, Union
+from typing import Tuple, Union, Any
 
 import torch
 from dataclasses_json import dataclass_json
@@ -22,8 +22,8 @@ class SwinUNETRSettings:
     dropout_path_rate: float = 0.0
     normalize: bool = True
     use_checkpoint: bool = False
-    downsample = "merging"
-    use_v2 = False
+    downsample: str = "merging"
+    use_v2: bool = False
 
 
 class UpsampleBlock(nn.Module):
@@ -63,12 +63,11 @@ class SwinUNETR(ModelABC, MonaiSwinUNETR):
     Wrapper around the SwinUNETR from MONAI.
     Instanciated in 2D for now, with a custom decoder.
     """
-
-    onnx_supported = False
     settings_kls = SwinUNETRSettings
-    supported_num_spatial_dims = (2,)
-    features_last = False
-    model_type = ModelType.VISION_TRANSFORMER
+    onnx_supported: bool = False
+    supported_num_spatial_dims: tuple[int,...] = (2,)
+    features_last: bool = False
+    model_type: ModelType = ModelType.VISION_TRANSFORMER
     num_spatial_dims: int = 2
     register: bool = True
 
@@ -76,11 +75,11 @@ class SwinUNETR(ModelABC, MonaiSwinUNETR):
         self,
         in_channels: int,
         out_channels: int,
-        input_shape: Union[None, Tuple[int, int]] = None,
+        input_shape: tuple[int, ...] = (1,),
         settings: SwinUNETRSettings = SwinUNETRSettings(),
-        *args,
-        **kwargs,
-    ):
+        *args:Any,
+        **kwargs:Any,
+    ) -> None:
         super().__init__(
             in_channels=in_channels,
             out_channels=out_channels,
@@ -98,34 +97,34 @@ class SwinUNETR(ModelABC, MonaiSwinUNETR):
         # because ConvTranspose2d introduced checkerboard artifacts
 
         feature_size = settings.feature_size
-        self.decoder5 = UpsampleBlock(
+        self.decoder5 = UpsampleBlock(  # type:ignore[assignment]
             in_channels=16 * feature_size,
             out_channels=8 * feature_size,
             kernel_size=3,
             norm_name=settings.norm_name,
         )
 
-        self.decoder4 = UpsampleBlock(
+        self.decoder4 = UpsampleBlock(  # type:ignore[assignment]
             in_channels=feature_size * 8,
             out_channels=feature_size * 4,
             kernel_size=3,
             norm_name=settings.norm_name,
         )
 
-        self.decoder3 = UpsampleBlock(
+        self.decoder3 = UpsampleBlock(  # type:ignore[assignment]
             in_channels=feature_size * 4,
             out_channels=feature_size * 2,
             kernel_size=3,
             norm_name=settings.norm_name,
         )
-        self.decoder2 = UpsampleBlock(
+        self.decoder2 = UpsampleBlock(  # type:ignore[assignment]
             in_channels=feature_size * 2,
             out_channels=feature_size,
             kernel_size=3,
             norm_name=settings.norm_name,
         )
 
-        self.decoder1 = UpsampleBlock(
+        self.decoder1 = UpsampleBlock(  # type:ignore[assignment]
             in_channels=feature_size,
             out_channels=feature_size,
             kernel_size=3,

@@ -24,7 +24,7 @@ from monai.networks.layers.utils import get_norm_layer
 from monai.utils import optional_import
 from torch.nn.functional import scaled_dot_product_attention
 
-from .base import BaseModel, ModelType
+from .base import ModelABC, ModelType
 
 
 def _trunc_normal_(tensor, mean, std, a, b):
@@ -613,7 +613,7 @@ class UNETRPPSettings:
     attention_code: str = "torch"
 
 
-class UNETRPP(BaseModel):
+class UNETRPP(ModelABC, nn.Module):
     """
     UNETR++ based on: "Shaker et al.,
     UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation"

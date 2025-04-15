@@ -237,7 +237,7 @@ class DummyMultiModalDataModule(LightningDataModule):
         return (
             NamedTensor.collate_fn(images),
             self.collate_text(input_txt),
-            self.collate_text(targets),
+            self.collate_text(targets)
         )
 
     def collate_text(

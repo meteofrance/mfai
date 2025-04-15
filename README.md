@@ -102,7 +102,7 @@ Except for LLMs and MLLMs, each model we provide is a subclass of [torch.nn.Modu
 - **features_last**: a boolean that indicates if the features dimension is the last dimension of the input/output tensor. If False, the features dimension is the second dimension of the input/output tensor.
 - **register**: a boolean that indicates if the model should be registered in the **MODELS** registry. By default, it is set to False which allows the creation of intermediate subclasses not meant for direct use.
 
-The Python interface contract for our model is enforced using [Python ABC](https://docs.python.org/3/library/abc.html) and in our case [ModelABC](mfai/torch/models/base.py#L1) class. This class is combined to `torch.nn.Module` in [BaseModel](mfai/torch/models/base.py#L1).
+The Python interface contract for our model is enforced using [Python ABC](https://docs.python.org/3/library/abc.html) and in our case [ModelABC](mfai/torch/models/base.py#L1) class.
 
 ```python
 @dataclass_json
@@ -115,7 +115,7 @@ class HalfUNetSettings:
     last_activation: str = "Identity"
     absolute_pos_embed: bool = False
 
-class HalfUNet(BaseModel):
+class HalfUNet(ModelABC, nn.Module):
     settings_kls = HalfUNetSettings
     onnx_supported: bool = True
     supported_num_spatial_dims = (2,)

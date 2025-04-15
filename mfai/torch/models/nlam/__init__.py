@@ -9,7 +9,7 @@ from typing import Tuple
 import torch
 import torch_geometric as pyg
 from dataclasses_json import dataclass_json
-from mfai.torch.models.base import BaseModel, ModelType
+from mfai.torch.models.base import ModelABC, ModelType
 from torch import nn
 from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import offload_wrapper
 
@@ -178,7 +178,7 @@ class GraphLamSettings:
         return f"ModelCOnfig : {self.hidden_dims}x{self.hidden_layers}x{self.processor_layers}"
 
 
-class BaseGraphModel(BaseModel):
+class BaseGraphModel(ModelABC, nn.Module):
     """
     Base (abstract) class for graph-based models building on
     the encode-process-decode idea.

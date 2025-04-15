@@ -7,6 +7,8 @@ from torch import Tensor, nn
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer
 from mfai.torch.models.llms.multimodal import MultiModalLM, MultiModalLMSettings
 from mfai.torch.namedtensor import NamedTensor
+
+
 def generate_text_simple(
     model: nn.Module,
     idx: Tensor,
@@ -44,45 +46,17 @@ def generate_text_simple(
 @pytest.mark.parametrize(
     "llm_backend, tokenizer, expected_text",
     [
-        (
-            "llama2",
-            LlamaTokenizer(),
-            (
-                "Sustine et abstineAlignment Геrace sqlwesten Loggerлага Bushに同",
-                "Sustine et abstine makulsion flag重глеägerhand Av Lincoln mul",
-            ),
-        ),
-        (
-            "gpt2",
-            GPT2Tokenizer(),
-            (
-                "Sustine et abstinegreg LXamm Local addition Immun GlassrikeFal Resurrection",
-                "Sustine et abstineohoorphLE updates� Oaks Coconut VC Privacy backward",
-            ),
-        ),
-        (
-            "gpt2",
-            LlamaTokenizer(),
-            (
-                "Sustine et abstine współ terrestführtrange지edتズ ownershipantal",
-                "Sustine et abstine detected *rit україн dernièreistoryikalcorüssknow",
-            ),
-        ),
-        (
-            "gpt2",
-            GPT2Tokenizer(),
-            (
-                "Sustine et abstinegreg LXamm Local addition Immun GlassrikeFal Resurrection",
-                "Sustine et abstineohoorphLE updates� Oaks Coconut VC Privacy backward",
-            ),
-        ),
+        ("llama2", LlamaTokenizer(), ("Sustine et abstineAlignment Геrace sqlwesten Loggerлага Bushに同", "Sustine et abstine makulsion flag重глеägerhand Av Lincoln mul")),
+        ("gpt2", GPT2Tokenizer(), ("Sustine et abstinegreg LXamm Local addition Immun GlassrikeFal Resurrection", "Sustine et abstineohoorphLE updates� Oaks Coconut VC Privacy backward")),
+        ("gpt2", LlamaTokenizer(), ("Sustine et abstine współ terrestführtrange지edتズ ownershipantal", "Sustine et abstine detected *rit україн dernièreistoryikalcorüssknow")),
+        ("gpt2", GPT2Tokenizer(), ("Sustine et abstinegreg LXamm Local addition Immun GlassrikeFal Resurrection", "Sustine et abstineohoorphLE updates� Oaks Coconut VC Privacy backward")),
     ],
 )
 def test_multimodal_llm(
-    llm_backend: Literal["llama2", "gpt2"],
-    tokenizer: Union[GPT2Tokenizer, LlamaTokenizer],
-    expected_text: Tuple[str, str],
-):
+        llm_backend: Literal["llama2", "gpt2"],
+        tokenizer: Union[GPT2Tokenizer, LlamaTokenizer],
+        expected_text: Tuple[str, str],
+    ):
     torch.manual_seed(999)
     for force_vision in (False, True):
         model = MultiModalLM(
@@ -118,36 +92,3 @@ def test_multimodal_llm(
         assert decoded_text == expected_text[0 if not force_vision else 1]
 
 
-def test_multimodal_clip():
-    torch.manual_seed(666)
-    tokenizer = GPT2Tokenizer()
-    model = MultiModalLM(
-        settings=MultiModalLMSettings(
-            vision_input_shape=(128, 128, 2, 1),
-            backend="gpt2",
-            n_heads=1,
-            n_layers=1,
-            emb_dim=32,
-            hidden_dim=32,
-            context_length=32,
-            inject_vision_each_stage=False,
-            vision_encoder="resnet50",
-        ),
-        vocab_size=tokenizer.vocab_size,
-    )
-    vision_input = NamedTensor(
-        torch.randn(1, 128, 128, 2, 1),
-        names=("batch", "lat", "lon", "timestep", "features"),
-        feature_names=("u",),
-    )
-    encoded = tokenizer.encode("Sustine et abstine")
-    encoded_tensor = torch.tensor(encoded).unsqueeze(0)
-
-    out = generate_text_simple(
-        model=model,
-        idx=encoded_tensor,
-        max_new_tokens=10,
-        context_size=model.context_length,
-        vision_input=vision_input,
-    )
-    tokenizer.decode(out.squeeze(0).tolist())

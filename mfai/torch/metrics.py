@@ -55,7 +55,7 @@ class FNR(Metric):
 class PR_AUC(Metric):
     """Area Under the Precsion-Recall Curve."""
 
-    def __init__(self, task: Literal["binary", "multiclass", "multilabel"] = "binary"):
+    def __init__(self, task: Literal['binary', 'multiclass', 'multilabel'] = "binary"):
         super().__init__()
         full_state_update = True  # noqa
         self.task = task
@@ -152,13 +152,7 @@ class CSINeighborood(Metric):
         If multiclass, takes int value in [0, nb_output_channels] interval.
         """
 
-        def compute_sub_results(
-            preds: torch.Tensor, targets: torch.Tensor
-        ) -> tuple[
-            torch.Tensor,
-            torch.Tensor,
-            torch.Tensor,
-        ]:
+        def compute_sub_results(preds: torch.Tensor, targets: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor,]:
             exp_targets = targets.type(torch.FloatTensor.dtype).to(device=self.device)
             targets_extend = self.binary_dilation_(exp_targets)
             true_positives = torch.sum((preds == 1) & (targets_extend == 1))

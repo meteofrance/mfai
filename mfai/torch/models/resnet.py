@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Literal, Union
+from typing import List, Tuple, Union
 
 import torch
 import torch.nn as nn
@@ -14,49 +14,21 @@ from mfai.torch.models import utils
 ##########################################################################################################
 
 
-class ResNetEncoder(ResNet):
-    """Resnet with encoder functionality such as:
+class EncoderMixin:
+    """Add encoder functionality such as:
     - output channels specification of feature tensors (produced by encoder)
     - patching first convolution for arbitrary input channels
     """
-    def __init__(self, out_channels: tuple[int, ...], depth: int = 5, **kwargs: dict[str, Any]):
-        super().__init__(**kwargs)
-        self._depth = depth
-        self._out_channels = out_channels
-        self._in_channels = 3
 
-        del self.fc
-        del self.avgpool
+    _output_stride = 32
 
-        self.stages: list[nn.Module] = [
-            nn.Identity(),
-            nn.Sequential(self.conv1, self.bn1, self.relu),
-            nn.Sequential(self.maxpool, self.layer1),
-            self.layer2,
-            self.layer3,
-            self.layer4,
-        ]
-
-    def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
-        features = []
-        for i in range(self._depth + 1):
-            x = self.stages[i](x)
-            features.append(x)
-
-        return features
-
-    def load_state_dict(self, state_dict: dict[str, Any], **kwargs: dict[str, Any]) -> None:
-        state_dict.pop("fc.bias", None)
-        state_dict.pop("fc.weight", None)
-        super().load_state_dict(state_dict, **kwargs)
-    
     @property
-    def out_channels(self) -> tuple[int, ...]:
+    def out_channels(self) -> int:
         """Return channels dimensions for each tensor of forward output of encoder"""
         return self._out_channels[: self._depth + 1]
 
     @property
-    def output_stride(self) -> int:
+    def output_stride(self):
         return min(self._output_stride, 2**self._depth)
 
     def set_in_channels(self, in_channels: int, pretrained: bool = True) -> None:
@@ -71,6 +43,10 @@ class ResNetEncoder(ResNet):
         utils.patch_first_conv(
             model=self, new_in_channels=in_channels, pretrained=pretrained
         )
+
+    def get_stages(self):
+        """Override it in your implementation"""
+        raise NotImplementedError
 
     def make_dilated(self, output_stride: int) -> None:
         if output_stride == 16:
@@ -88,14 +64,51 @@ class ResNetEncoder(ResNet):
 
         self._output_stride = output_stride
 
-        for stage_indx, dilation in zip(stage_list, dilation_list):
+        stages = self.get_stages()
+        for stage_indx, dilation_rate in zip(stage_list, dilation_list):
             utils.replace_strides_with_dilation(
-                module=self.stages[stage_indx],
-                dilation=dilation,
+                module=stages[stage_indx],
+                dilation_rate=dilation_rate,
             )
 
 
-ENCODERS_MAP: dict[Literal['resnet18', 'resnet34', 'resnet50'], dict[str, Any]] = {
+class ResNetEncoder(ResNet, EncoderMixin):
+    def __init__(self, out_channels: int, depth: int = 5, **kwargs):
+        super().__init__(**kwargs)
+        self._depth = depth
+        self._out_channels = out_channels
+        self._in_channels = 3
+
+        del self.fc
+        del self.avgpool
+
+    def get_stages(self) -> List[nn.Module]:
+        return [
+            nn.Identity(),
+            nn.Sequential(self.conv1, self.bn1, self.relu),
+            nn.Sequential(self.maxpool, self.layer1),
+            self.layer2,
+            self.layer3,
+            self.layer4,
+        ]
+
+    def forward(self, x) -> List[torch.Tensor]:
+        stages = self.get_stages()
+
+        features = []
+        for i in range(self._depth + 1):
+            x = stages[i](x)
+            features.append(x)
+
+        return features
+
+    def load_state_dict(self, state_dict, **kwargs) -> None:
+        state_dict.pop("fc.bias", None)
+        state_dict.pop("fc.weight", None)
+        super().load_state_dict(state_dict, **kwargs)
+
+
+ENCODERS_MAP = {
     "resnet18": {
         "encoder": ResNetEncoder,
         "pretrained_url": "https://dl.fbaipublicfiles.com/semiweaksupervision/model_files/semi_supervised_resnet18-d92f0530.pth",  # noqa
@@ -127,17 +140,17 @@ ENCODERS_MAP: dict[Literal['resnet18', 'resnet34', 'resnet50'], dict[str, Any]] 
 
 
 def get_resnet_encoder(
-    name: Literal['resnet18', 'resnet34', 'resnet50'],
+    name: str,
     in_channels: int = 3,
     depth: int = 5,
     weights: bool = True,
     output_stride: int = 32,
-) -> ResNetEncoder:
+):
     """
     Return an encoder with pretrained weights or not.
     """
     try:
-        Encoder: type[ResNetEncoder] = ENCODERS_MAP[name]["encoder"]
+        Encoder = ENCODERS_MAP[name]["encoder"]
     except KeyError:
         raise KeyError(
             "Wrong encoder name `{}`, supported ENCODERS_MAP: {}".format(
@@ -188,7 +201,7 @@ class ResNet50(torch.nn.Module):
         self,
         num_channels: int = 3,
         num_classes: int = 1000,
-        input_shape: Union[None, tuple[int, int]] = None,
+        input_shape: Union[None, Tuple[int, int]] = None,
         settings: ResNet50Settings = ResNet50Settings(),
     ):
         super().__init__()

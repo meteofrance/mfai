@@ -9,20 +9,16 @@ from torch import nn
 
 
 def to_numpy(tensor: torch.Tensor) -> numpy.ndarray:
-    return (
-        tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
-    )
+    return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
 
 
-def export_to_onnx(
-    model: nn.Module, sample: torch.Tensor | tuple[Any], filepath: Path | str
-) -> None:
+def export_to_onnx(model: nn.Module, sample: torch.Tensor | tuple[Any], filepath: Path | str) -> None:
     """
     Exports a model to ONNX format.
     """
     if isinstance(sample, torch.Tensor):
         sample = (sample,)
-
+    
     if isinstance(filepath, Path):
         filepath = filepath.as_posix()
 

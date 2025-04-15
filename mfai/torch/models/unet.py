@@ -9,13 +9,13 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from functools import cached_property
 from math import ceil
-from typing import Literal, Tuple
+from typing import Tuple, Union
 
 import torch
 from dataclasses_json import dataclass_json
 from torch import nn
 
-from .base import AutoPaddingModel, BaseModel, ModelType
+from .base import AutoPaddingModel, ModelABC, ModelType
 from .resnet import get_resnet_encoder
 
 
@@ -53,7 +53,7 @@ class DoubleConv(nn.Module):
             )
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x):
         return self.double_conv(x)
 
 
@@ -64,7 +64,7 @@ class UnetSettings:
     autopad_enabled: bool = False
 
 
-class UNet(BaseModel, AutoPaddingModel):
+class UNet(ModelABC, AutoPaddingModel, nn.Module):
     """
     Returns a u_net architecture, with uninitialised weights, matching desired numbers of input and output channels.
 
@@ -81,11 +81,11 @@ class UNet(BaseModel, AutoPaddingModel):
 
     def __init__(
         self,
-        input_shape: tuple[int, ...],
-        in_channels: int = 3,
-        out_channels: int = 1,
+        in_channels=3,
+        out_channels=1,
+        input_shape: Union[None, Tuple[int, int]] = None,
         settings: UnetSettings = UnetSettings(),
-    ) -> None:
+    ):
         super().__init__()
 
         self.in_channels = in_channels
@@ -128,7 +128,7 @@ class UNet(BaseModel, AutoPaddingModel):
     def settings(self) -> UnetSettings:
         return self._settings
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x):
         """
         Description of the architecture from the original paper (https://arxiv.org/pdf/1505.04597.pdf):
         The network architecture is illustrated in Figure 1. It consists of a contracting
@@ -176,7 +176,7 @@ class UNet(BaseModel, AutoPaddingModel):
         return self._maybe_unpadding(out, old_shape=old_shape)
 
     @staticmethod
-    def _block(in_channels: int, features: int, name: str) -> nn.Sequential:
+    def _block(in_channels, features, name):
         return nn.Sequential(
             OrderedDict(
                 [
@@ -208,7 +208,7 @@ class UNet(BaseModel, AutoPaddingModel):
             )
         )
 
-    def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
+    def validate_input_shape(self, input_shape: torch.Size) -> Tuple[bool | torch.Size]:
         number_pool_layers = self._num_pool_layers
 
         # The UNet has M max pooling layers of size 2x2 with stride 2, each of which halves the
@@ -216,14 +216,13 @@ class UNet(BaseModel, AutoPaddingModel):
         # be divisible by 2^N
         d = 2**number_pool_layers
 
-        new_shape = torch.Size(
-            [d * ceil(input_shape[i] / d) for i in range(len(input_shape))]
-        )
+        new_shape = [d * ceil(input_shape[i] / d) for i in range(len(input_shape))]
+        new_shape = torch.Size(new_shape)
 
         return new_shape == input_shape, new_shape
 
     @cached_property
-    def _num_pool_layers(self) -> int:
+    def _num_pool_layers(self):
         # introspective, looks at the code of forword and
         # counts the number of max pool calls
         source_code = inspect.getsource(self.forward)
@@ -233,13 +232,13 @@ class UNet(BaseModel, AutoPaddingModel):
 @dataclass_json
 @dataclass(slots=True)
 class CustomUnetSettings:
-    encoder_name: Literal["resnet18", "resnet34", "resnet50"] = "resnet18"
+    encoder_name: str = "resnet18"
     encoder_depth: int = 5
     encoder_weights: bool = True
     autopad_enabled: bool = False
 
 
-class CustomUnet(BaseModel, AutoPaddingModel):
+class CustomUnet(ModelABC, AutoPaddingModel, nn.Module):
     settings_kls = CustomUnetSettings
     onnx_supported = True
     supported_num_spatial_dims = (2,)
@@ -250,11 +249,11 @@ class CustomUnet(BaseModel, AutoPaddingModel):
 
     def __init__(
         self,
-        input_shape: tuple[int, ...],
         in_channels: int = 1,
         out_channels: int = 1,
+        input_shape: Union[None, Tuple[int, int]] = None,
         settings: CustomUnetSettings = CustomUnetSettings(),
-    ) -> None:
+    ):
         super().__init__()
 
         self.in_channels = in_channels
@@ -263,7 +262,7 @@ class CustomUnet(BaseModel, AutoPaddingModel):
         self._settings = settings
 
         self.encoder = get_resnet_encoder(
-            name=settings.encoder_name,
+            settings.encoder_name,
             in_channels=in_channels,
             depth=settings.encoder_depth,
             weights=settings.encoder_weights,
@@ -297,7 +296,7 @@ class CustomUnet(BaseModel, AutoPaddingModel):
     def settings(self) -> CustomUnetSettings:
         return self._settings
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x):
         x, old_shape = self._maybe_padding(data_tensor=x)
         # Encoder part
         encoder_outputs = self.encoder(x)
@@ -317,13 +316,12 @@ class CustomUnet(BaseModel, AutoPaddingModel):
         out = self.final_conv(x)
         return self._maybe_unpadding(out, old_shape=old_shape)
 
-    def validate_input_shape(self, input_shape: torch.Size) -> Tuple[bool, torch.Size]:
+    def validate_input_shape(self, input_shape: torch.Size) -> Tuple[bool | torch.Size]:
         number_pool_layers = self._settings.encoder_depth
         print(number_pool_layers)
         d = 2**number_pool_layers
 
-        new_shape = torch.Size(
-            [d * ceil(input_shape[i] / d) for i in range(len(input_shape))]
-        )
+        new_shape = [d * ceil(input_shape[i] / d) for i in range(len(input_shape))]
+        new_shape = torch.Size(new_shape)
 
         return new_shape == input_shape, new_shape

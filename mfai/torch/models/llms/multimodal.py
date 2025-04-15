@@ -165,7 +165,7 @@ class MultiModalLM(nn.Module):
                 )
 
                 for i in range(timestep_nt.dim_size("features")):
-                    timestep_tensor = timestep_nt.select_dim("features", i)
+                    timestep_tensor = timestep_nt.select_tensor_dim("features", i)
                     timestep_tensor = self.downsampler(timestep_tensor)
                     timestep_tensor = timestep_tensor.flatten(1, 2)
                     if self.layer_norm_vis:

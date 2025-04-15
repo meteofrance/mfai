@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Tuple, Union, Any
+from typing import Tuple, Any
 
 import torch
 from dataclasses_json import dataclass_json

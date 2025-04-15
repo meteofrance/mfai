@@ -6,7 +6,7 @@ from copy import deepcopy
 from collections.abc import Iterable
 from dataclasses import dataclass
 from itertools import chain
-from typing import List, Union
+from typing import Any, List, Sequence, Union
 
 import einops
 import torch
@@ -230,14 +230,14 @@ class NamedTensor(TensorWrapper):
         try:
             return self.tensor.select(
                 self.names.index(self.feature_dim_name),
-                self.feature_names_to_idx[feature_name]
+                self.feature_names_to_idx[feature_name],
             ).unsqueeze(self.names.index(self.feature_dim_name))
         except KeyError:
             raise ValueError(
                 f"Feature {feature_name} not found in {self.feature_names}"
             )
 
-    def type_(self, new_type):
+    def type_(self, new_type: str | torch.dtype) -> None:
         """
         Modify the type of the underlying torch tensor
         by calling torch's .type method
@@ -247,7 +247,7 @@ class NamedTensor(TensorWrapper):
         """
         self.tensor = self.tensor.type(new_type)
 
-    def flatten_(self, flatten_dim_name: str, start_dim: int, end_dim: int):
+    def flatten_(self, flatten_dim_name: str, start_dim: int, end_dim: int) -> None:
         """
         Flatten the underlying tensor from start_dim to end_dim.
         Deletes flattened dimension names and insert
@@ -262,8 +262,8 @@ class NamedTensor(TensorWrapper):
         )
 
     def unflatten_(
-        self, dim: int, unflattened_size: torch.Size, unflatten_dim_name: List
-    ):
+        self, dim: int, unflattened_size: torch.Size, unflatten_dim_name: Sequence[str]
+    ) -> None:
         """
         Unflatten the dimension dim of the underlying tensor.
         Insert unflattened_size dimension instead
@@ -271,7 +271,7 @@ class NamedTensor(TensorWrapper):
         self.tensor = self.tensor.unflatten(dim, unflattened_size)
         self.names = self.names[:dim] + [*unflatten_dim_name] + self.names[dim + 1 :]
 
-    def squeeze_(self, dim_name: Union[List[str], str]):
+    def squeeze_(self, dim_name: Union[List[str], str]) -> None:
         """
         Squeeze the underlying tensor along the dimension(s)
         given its/their name(s).
@@ -283,7 +283,7 @@ class NamedTensor(TensorWrapper):
         for name in dim_name:
             self.names.remove(name)
 
-    def unsqueeze_(self, dim_name: str, dim_index: int):
+    def unsqueeze_(self, dim_name: str, dim_index: int) -> None:
         """
         Insert a new dimension dim_name of size 1 at dim_index
         """
@@ -298,8 +298,10 @@ class NamedTensor(TensorWrapper):
         See https://pytorch.org/docs/stable/generated/torch.select.html
         """
         if dim_name == self.feature_dim_name:
-            raise ValueError('Impossible to select the feature dimension of a NamedTensor.')
-        
+            raise ValueError(
+                "Impossible to select the feature dimension of a NamedTensor."
+            )
+
         return NamedTensor(
             self.tensor.select(self.names.index(dim_name), index),
             self.names[: self.names.index(dim_name)]
@@ -307,17 +309,15 @@ class NamedTensor(TensorWrapper):
             self.feature_names,
             feature_dim_name=self.feature_dim_name,
         )
-    
+
     def select_tensor_dim(self, dim_name: str, index: int) -> torch.Tensor:
         """
         Same as select_dim but returns a torch.Tensor.
         Allows the selection of the feature dimension.
-        """        
+        """
         return self.tensor.select(self.names.index(dim_name), index)
 
-    def index_select_dim(
-            self, dim_name: str, indices: torch.Tensor
-        ) -> "NamedTensor":
+    def index_select_dim(self, dim_name: str, indices: torch.Tensor) -> "NamedTensor":
         """
         Return the tensor indexed along the dimension dim_name
         with the indices tensor.
@@ -339,18 +339,17 @@ class NamedTensor(TensorWrapper):
             ),
             feature_dim_name=self.feature_dim_name,
         )
-    
-    
+
     def index_select_tensor_dim(
-            self, dim_name: str, indices: torch.Tensor
-        ) -> torch.Tensor:
+        self, dim_name: str, indices: torch.Tensor
+    ) -> torch.Tensor:
         """
         Same as index_select_dim but returns a torch.tensor, but returns a torch.Tensor.
         """
         return self.tensor.index_select(
-                self.names.index(dim_name),
-                torch.Tensor(indices).type(torch.int64).to(self.device),
-            )
+            self.names.index(dim_name),
+            torch.Tensor(indices).type(torch.int64).to(self.device),
+        )
 
     def dim_size(self, dim_name: str) -> int:
         """
@@ -371,7 +370,7 @@ class NamedTensor(TensorWrapper):
             for name in set(self.SPATIAL_DIM_NAMES).intersection(set(self.names))
         )
 
-    def unsqueeze_and_expand_from_(self, other: "NamedTensor"):
+    def unsqueeze_and_expand_from_(self, other: "NamedTensor") -> None:
         """
         Unsqueeze and expand the tensor to have the same number of spatial dimensions
         as another NamedTensor.
@@ -394,32 +393,28 @@ class NamedTensor(TensorWrapper):
 
             self.tensor = self.tensor.expand(*expander)
 
-    def iter_dim(
-        self, dim_name: str
-    ) -> Iterable["NamedTensor"]:
+    def iter_dim(self, dim_name: str) -> Iterable["NamedTensor"]:
         """
         Iterate over the tensor along a given dimension.
         """
         for i in range(self.dim_size(dim_name)):
             yield self.select_dim(dim_name, i)
-    
-    def iter_tensor_dim(
-        self, dim_name: str
-    ) -> Iterable[torch.Tensor]:
+
+    def iter_tensor_dim(self, dim_name: str) -> Iterable[torch.Tensor]:
         """
         Iterate over the tensor along a given dimension.
         """
         for i in range(self.dim_size(dim_name)):
             yield self.select_tensor_dim(dim_name, i)
 
-    def rearrange_(self, einops_str: str):
+    def rearrange_(self, einops_str: str) -> None:
         """
         Rearrange in place the underlying tensor dimensions using einops syntax.
         For now only supports re-ordering of dimensions.
         """
-        old_dims, new_dims = einops_str.split("->")
-        old_dims = old_dims.split(" ")[:-1]
-        new_dims = new_dims.split(" ")[1:]
+        old_dims_str, new_dims_str = einops_str.split("->")
+        old_dims = old_dims_str.split(" ")[:-1]
+        new_dims = new_dims_str.split(" ")[1:]
         # check that the number of dims and dim names match
         if not set(self.names) == set(old_dims) == set(new_dims):
             raise ValueError(
@@ -456,13 +451,13 @@ class NamedTensor(TensorWrapper):
     def device(self) -> torch.device:
         return self.tensor.device
 
-    def pin_memory_(self):
+    def pin_memory_(self) -> None:
         """
         'In place' operation to pin the underlying tensor to memory.
         """
         self.tensor = self.tensor.pin_memory()
 
-    def to_(self, *args, **kwargs):
+    def to_(self, *args: Any, **kwargs: Any) -> None:
         """
         'In place' operation to call torch's 'to' method on the underlying tensor.
         """

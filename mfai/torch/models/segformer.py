@@ -258,8 +258,8 @@ class Segformer(BaseModel):
         out_channels: int,
         input_shape: tuple[int, int],
         settings: SegformerSettings = SegformerSettings(),
-        *args: dict[str, Any],
-        **kwargs: dict[str, Any],
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
 

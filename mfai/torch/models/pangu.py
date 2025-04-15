@@ -12,7 +12,7 @@
 
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
-from typing import Sequence, Tuple, Union
+from typing import Tuple
 
 import torch
 from torch.nn import (

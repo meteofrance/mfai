@@ -308,7 +308,7 @@ class NamedTensor(TensorWrapper):
             feature_dim_name=self.feature_dim_name,
         )
     
-    def select_bare_dim(self, dim_name: str, index: int) -> torch.Tensor:
+    def select_tensor_dim(self, dim_name: str, index: int) -> torch.Tensor:
         """
         Same as select_dim but returns a torch.Tensor.
         Allows the selection of the feature dimension.
@@ -341,7 +341,7 @@ class NamedTensor(TensorWrapper):
         )
     
     
-    def index_select_bare_dim(
+    def index_select_tensor_dim(
             self, dim_name: str, indices: torch.Tensor
         ) -> torch.Tensor:
         """
@@ -403,14 +403,14 @@ class NamedTensor(TensorWrapper):
         for i in range(self.dim_size(dim_name)):
             yield self.select_dim(dim_name, i)
     
-    def iter_bare_dim(
+    def iter_tensor_dim(
         self, dim_name: str
     ) -> Iterable[torch.Tensor]:
         """
         Iterate over the tensor along a given dimension.
         """
         for i in range(self.dim_size(dim_name)):
-            yield self.select_bare_dim(dim_name, i)
+            yield self.select_tensor_dim(dim_name, i)
 
     def rearrange_(self, einops_str: str):
         """

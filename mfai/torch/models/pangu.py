@@ -30,7 +30,7 @@ from torch.nn import (
 )
 from torch import nn, Tensor
 from torch.utils.checkpoint import checkpoint
-from timm.models.layers import drop_path
+from timm.layers import drop_path
 
 
 from .base import BaseModel, ModelType

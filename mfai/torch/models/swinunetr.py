@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Tuple, Any
+from typing import Any, Literal
 
 import torch
 from dataclasses_json import dataclass_json
@@ -13,8 +13,8 @@ from .base import ModelABC, ModelType
 @dataclass_json
 @dataclass(slots=True)
 class SwinUNETRSettings:
-    depths: Tuple[int, ...] = (2, 2, 2, 2)
-    num_heads: Tuple[int, ...] = (3, 6, 12, 24)
+    depths: tuple[int, ...] = (2, 2, 2, 2)
+    num_heads: tuple[int, ...] = (3, 6, 12, 24)
     feature_size: int = 24
     norm_name: tuple | str = "instance"
     drop_rate: float = 0.0
@@ -22,7 +22,7 @@ class SwinUNETRSettings:
     dropout_path_rate: float = 0.0
     normalize: bool = True
     use_checkpoint: bool = False
-    downsample: str = "merging"
+    downsample: Literal['merging', 'merginv2'] | nn.Module = "merging"
     use_v2: bool = False
 
 

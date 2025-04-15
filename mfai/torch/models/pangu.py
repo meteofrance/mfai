@@ -88,7 +88,7 @@ def define_3d_earth_position_index(window_size: Tuple[int, int, int]) -> Tensor:
 def generate_3d_attention_mask(
         x: Tensor,
         window_size: Tuple[int, int, int],
-        shift_size: Tuple[int, int, int],
+        shift_size: Tuple[int, ...],
         lam: bool = False
         ) -> Tensor:
     """Method to generate attention mask for sliding window attention in the context of 3D data.
@@ -97,7 +97,7 @@ def generate_3d_attention_mask(
     Args:
         x (Tensor): input data, used to generate the mask on the same device
         window_size (Tuple[int, int, int]): size of the sliding window
-        shift_size (Tuple[int, int, int]): size of the shift for the sliding window
+        shift_size (Tuple[int, ...]): size of the shift for the sliding window
 
     Returns:
         Tensor: attention mask
@@ -604,7 +604,7 @@ class EarthSpecificLayer(nn.Module):
             self.blocks.append(EarthSpecificBlock(
                 data_size=data_size, 
                 dim=dim, 
-                drop_path_ratio=drop_path_ratio_list[i], 
+                drop_path_ratio=drop_path_ratio_list[i].item(), 
                 num_heads=num_heads, 
                 window_size=window_size, 
                 dropout_rate=dropout_rate, 
@@ -883,5 +883,5 @@ class DropPath(nn.Module):
         return drop_path(x, self.drop_prob, self.training, self.scale_by_keep)
 
     def extra_repr(self) -> str:
-        return f'drop_prob={torch.round(self.drop_prob, decimals=3):0.3f}'
-        
+        return f'drop_prob={round(self.drop_prob, ndigits=3):0.3f}'
+    

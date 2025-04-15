@@ -803,6 +803,7 @@ class EarthAttention3D(nn.Module):
         self.attention = query @ key.mT  # @ denotes matrix multiplication ; B*num_windows_lon*num_windows, head_number, window_size, window_size
 
         # self.earth_specific_bias is a set of neural network parameters to optimize.
+        assert isinstance(self.position_index, Tensor)
         earth_specific_bias = self.earth_specific_bias[self.position_index]
 
         # Reshape the learnable bias to the same shape as the attention matrix

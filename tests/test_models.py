@@ -255,7 +255,10 @@ def test_torch_pangu_training_loop(model_kls):
         # See https://pytorch.org/tutorials/beginner/onnx/export_simple_model_to_onnx_tutorial.html
         if model.onnx_supported:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".onnx") as dst:
-                sample = torch.rand(1, NUM_INPUTS, *INPUT_SHAPE[:spatial_dims])
+                sample_surface = torch.rand(1, SURFACE_VARIABLES, *INPUT_SHAPE[:spatial_dims])
+                sample_plevel = torch.rand(1, PLEVEL_VARIABLES, PLEVELS, *INPUT_SHAPE[:spatial_dims])
+                sample_static = torch.rand(1, STATIC_LENGTH, *INPUT_SHAPE[:spatial_dims])
+                sample = (sample_plevel, sample_surface, sample_static)
                 export_to_onnx(model, sample, dst.name)
                 onnx_load_and_infer(dst.name, sample)
 

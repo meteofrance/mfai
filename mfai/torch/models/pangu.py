@@ -12,7 +12,7 @@
 
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
-from typing import Tuple
+from typing import Tuple, Optional
 
 import torch
 from torch.nn import (
@@ -113,7 +113,7 @@ def generate_3d_attention_mask(
     attention_mask = x.new_zeros((pad_z, pad_h, pad_w))
     z_slices = ((0, -shift_size[0]), (-shift_size[0], None))
     h_slices = ((0, -shift_size[1]), (-shift_size[1], None))
-
+    w_slices: Tuple[Tuple[int, Optional[int]], ...]
     if lam:
         w_slices = ((0, -shift_size[2]), (-shift_size[2], None))
     else:

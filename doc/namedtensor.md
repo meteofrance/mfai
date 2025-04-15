@@ -56,8 +56,12 @@ Returns a string representation of the **NamedTensor** with useful statistics.
 ### `select(self, dim_name: str, index: int) -> "NamedTensor"`
 Returns the tensor indexed along the dimension `dim_name` with the desired index. The given dimension is removed from the tensor.
 
-### `index_select(self, dim_name: str, indices: torch.Tensor) -> "NamedTensor"`
+### `index_select_dim(self, dim_name: str, indices: torch.Tensor) -> "NamedTensor"`
 Returns the tensor indexed along the dimension `dim_name` with the indices tensor. The returned tensor has the same number of dimensions as the original tensor. The `dim_name` dimension has the same size as the length of `indices`; other dimensions have the same size as in the original tensor.
+See https://pytorch.org/docs/stable/generated/torch.index_select.html.
+
+### `index_select_tensor_dim(self, dim_name: str, indices: torch.Tensor) -> torch.Tensor`
+Same as [index_select_dim](#index_select_dimself-dim_name-str-indices-torchtensor---namedtensor) but returns a torch.tensor, but returns a torch.Tensor.
 
 ### `new_like(cls, tensor: torch.Tensor, other: "NamedTensor") -> "NamedTensor"`
 Creates a new **NamedTensor** with the same names but different data.
@@ -79,6 +83,9 @@ Stacks a list of **NamedTensor** instances along a new dimension.
 
 ### `iter_dim(self, dim_name: str) -> Iterable["NamedTensor"]`
 Iterates over the specified dimension, yielding **NamedTensor** instances.
+
+### `iter_tensor_dim(self, dim_name: str) -> Iterable[torch.Tensor]`
+Iterates over the specified dimension, yielding **torch.Tensor** instances.
 
 ### `type_(self, new_type)`
 Modifies the type of the underlying torch tensor by calling torch's `.type` method. This is an in-place operation for this class, the internal tensor is replaced by the new one.
@@ -149,7 +156,9 @@ nt = NamedTensor(
 )
 
 # Return the tensor indexed along the dimension dim_name with the desired index. The given dimension is removed from the tensor.
-selected_tensor = nt.select_dim("features", 0)
+selected_named_tensor = nt.select_dim("lat", 0)
+selected_tensor = nt.select_tensor_dim("lat", 0)
+assert selected_named_tensor.tensor == selected_tensor
 
 # Return the tensor indexed along the dimension dim_name with the indices tensor. The returned tensor has the same number of dimensions as the original tensor (input). The dim_name dimension has the same size as the length of indices; other dimensions have the same size as in the original tensor.
 indexed_tensor = nt.index_select_dim("features", torch.tensor([0, 2]))
@@ -168,6 +177,10 @@ nt = NamedTensor(
 # Iterate over the 'batch' dimension, yielding NamedTensor instances
 for named_tensor in nt.iter_dim("batch"):
     print(named_tensor)
+
+# Iterate over the 'batch' dimension, yielding torch.Tensor instances
+for tensor in nt.iter_tensor_dim("batch"):
+    print(tensor.shape)
 ```
 
 ### Collation

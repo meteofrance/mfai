@@ -61,7 +61,7 @@ Returns the tensor indexed along the dimension `dim_name` with the indices tenso
 See https://pytorch.org/docs/stable/generated/torch.index_select.html.
 
 ### `index_select_tensor_dim(self, dim_name: str, indices: torch.Tensor) -> torch.Tensor`
-Same as [index_select_dim](#index_select_dimself-dim_name-str-indices-torchtensor---namedtensor) but returns a torch.tensor, but returns a torch.Tensor.
+Same as [index_select_dim](#index_select_dimself-dim_name-str-indices-torchtensor---namedtensor) but returns a torch.Tensor.
 
 ### `new_like(cls, tensor: torch.Tensor, other: "NamedTensor") -> "NamedTensor"`
 Creates a new **NamedTensor** with the same names but different data.

@@ -10,6 +10,7 @@ from typing import Any, List, Sequence, Union
 
 import einops
 import torch
+from torch import Tensor
 from tabulate import tabulate
 
 
@@ -22,7 +23,7 @@ class TensorWrapper:
     "Trying to infer the `batch_size` from an ambiguous collection ..."
     """
 
-    tensor: torch.Tensor
+    tensor: Tensor
 
 
 class NamedTensor(TensorWrapper):
@@ -47,7 +48,7 @@ class NamedTensor(TensorWrapper):
 
     def __init__(
         self,
-        tensor: torch.Tensor,
+        tensor: Tensor,
         names: List[str],
         feature_names: List[str],
         feature_dim_name: str = "features",
@@ -222,7 +223,7 @@ class NamedTensor(TensorWrapper):
             feature_names=self.feature_names.copy(),
         )
 
-    def __getitem__(self, feature_name: str) -> torch.Tensor:
+    def __getitem__(self, feature_name: str) -> Tensor:
         """
         Get one feature from the features dimension of the tensor by name.
         The returned tensor has the same number of dimensions as the original tensor.
@@ -310,14 +311,14 @@ class NamedTensor(TensorWrapper):
             feature_dim_name=self.feature_dim_name,
         )
 
-    def select_tensor_dim(self, dim_name: str, index: int) -> torch.Tensor:
+    def select_tensor_dim(self, dim_name: str, index: int) -> Tensor:
         """
-        Same as select_dim but returns a torch.Tensor.
+        Same as select_dim but returns a Tensor.
         Allows the selection of the feature dimension.
         """
         return self.tensor.select(self.names.index(dim_name), index)
 
-    def index_select_dim(self, dim_name: str, indices: torch.Tensor) -> "NamedTensor":
+    def index_select_dim(self, dim_name: str, indices: Tensor) -> "NamedTensor":
         """
         Return the tensor indexed along the dimension dim_name
         with the indices tensor.
@@ -329,7 +330,7 @@ class NamedTensor(TensorWrapper):
         return NamedTensor(
             self.tensor.index_select(
                 self.names.index(dim_name),
-                torch.Tensor(indices).type(torch.int64).to(self.device),
+                Tensor(indices).type(torch.int64).to(self.device),
             ),
             self.names,
             (
@@ -340,15 +341,13 @@ class NamedTensor(TensorWrapper):
             feature_dim_name=self.feature_dim_name,
         )
 
-    def index_select_tensor_dim(
-        self, dim_name: str, indices: torch.Tensor
-    ) -> torch.Tensor:
+    def index_select_tensor_dim(self, dim_name: str, indices: Tensor) -> Tensor:
         """
-        Same as index_select_dim but returns a torch.tensor, but returns a torch.Tensor.
+        Same as index_select_dim but returns a Tensor, but returns a Tensor.
         """
         return self.tensor.index_select(
             self.names.index(dim_name),
-            torch.Tensor(indices).type(torch.int64).to(self.device),
+            Tensor(indices).type(torch.int64).to(self.device),
         )
 
     def dim_size(self, dim_name: str) -> int:
@@ -400,7 +399,7 @@ class NamedTensor(TensorWrapper):
         for i in range(self.dim_size(dim_name)):
             yield self.select_dim(dim_name, i)
 
-    def iter_tensor_dim(self, dim_name: str) -> Iterable[torch.Tensor]:
+    def iter_tensor_dim(self, dim_name: str) -> Iterable[Tensor]:
         """
         Iterate over the tensor along a given dimension.
         """
@@ -424,7 +423,7 @@ class NamedTensor(TensorWrapper):
         self.names = new_dims
 
     @staticmethod
-    def new_like(tensor: torch.Tensor, other: "NamedTensor") -> "NamedTensor":
+    def new_like(tensor: Tensor, other: "NamedTensor") -> "NamedTensor":
         """
         Create a new NamedTensor with the same names and feature names as another NamedTensor
         and a tensor of the same shape as the input tensor.
@@ -432,9 +431,7 @@ class NamedTensor(TensorWrapper):
         return NamedTensor(tensor, other.names.copy(), other.feature_names.copy())
 
     @staticmethod
-    def expand_to_batch_like(
-        tensor: torch.Tensor, other: "NamedTensor"
-    ) -> "NamedTensor":
+    def expand_to_batch_like(tensor: Tensor, other: "NamedTensor") -> "NamedTensor":
         """
         Create a new NamedTensor with the same names and feature names as another NamedTensor
         with an extra first dimension called 'batch' using the supplied tensor.

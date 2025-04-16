@@ -6,6 +6,7 @@ from typing import Literal, Tuple
 
 import lightning.pytorch as pl
 import torch
+from torch import Tensor
 import torch.nn.functional as F
 from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
 from torch.optim import AdamW
@@ -32,14 +33,12 @@ class CLIPLightningModule(pl.LightningModule):
 
         self.save_hyperparameters()
 
-    def forward(
-        self, images: NamedTensor, texts: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, images: NamedTensor, texts: Tensor) -> Tuple[Tensor, Tensor]:
         return self.model(texts, images)
 
     def _shared_forward_step(
-        self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self, batch: Tuple[NamedTensor, Tensor, Tensor]
+    ) -> Tuple[Tensor, Tensor]:
         images, texts, _ = batch
 
         if len(images.tensor.shape) == 5:
@@ -99,8 +98,8 @@ class CLIPLightningModule(pl.LightningModule):
             return optimizer
 
     def training_step(
-        self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor], batch_idx: int
-    ) -> torch.Tensor:
+        self, batch: Tuple[NamedTensor, Tensor, Tensor], batch_idx: int
+    ) -> Tensor:
         _, loss = self._shared_forward_step(batch)
 
         self.log(
@@ -109,8 +108,8 @@ class CLIPLightningModule(pl.LightningModule):
         return loss
 
     def validation_step(
-        self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor], batch_idx: int
-    ) -> torch.Tensor:
+        self, batch: Tuple[NamedTensor, Tensor, Tensor], batch_idx: int
+    ) -> Tensor:
         _, loss = self._shared_forward_step(batch)
 
         self.log("val_loss", loss, on_epoch=True, logger=True, sync_dist=True)

@@ -5,7 +5,7 @@ import torch
 from dataclasses_json import dataclass_json
 from monai.networks.blocks.dynunet_block import UnetResBlock
 from monai.networks.nets.swin_unetr import SwinUNETR as MonaiSwinUNETR
-from torch import nn
+from torch import Tensor, nn
 
 from .base import ModelABC, ModelType
 
@@ -22,7 +22,7 @@ class SwinUNETRSettings:
     dropout_path_rate: float = 0.0
     normalize: bool = True
     use_checkpoint: bool = False
-    downsample: Literal['merging', 'merginv2'] | nn.Module = "merging"
+    downsample: Literal["merging", "merginv2"] | nn.Module = "merging"
     use_v2: bool = False
 
 
@@ -50,7 +50,7 @@ class UpsampleBlock(nn.Module):
             norm_name=norm_name,
         )
 
-    def forward(self, inp: torch.Tensor, skip: torch.Tensor) -> torch.Tensor:
+    def forward(self, inp: Tensor, skip: Tensor) -> Tensor:
         out = self.upsampler(inp)
         # concat along the channels/features dimension
         out = torch.cat((out, skip), dim=1)
@@ -63,9 +63,10 @@ class SwinUNETR(ModelABC, MonaiSwinUNETR):
     Wrapper around the SwinUNETR from MONAI.
     Instanciated in 2D for now, with a custom decoder.
     """
+
     settings_kls = SwinUNETRSettings
     onnx_supported: bool = False
-    supported_num_spatial_dims: tuple[int,...] = (2,)
+    supported_num_spatial_dims: tuple[int, ...] = (2,)
     features_last: bool = False
     model_type: ModelType = ModelType.VISION_TRANSFORMER
     num_spatial_dims: int = 2
@@ -77,8 +78,8 @@ class SwinUNETR(ModelABC, MonaiSwinUNETR):
         out_channels: int,
         input_shape: tuple[int, ...] = (1,),
         settings: SwinUNETRSettings = SwinUNETRSettings(),
-        *args:Any,
-        **kwargs:Any,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         super().__init__(
             in_channels=in_channels,

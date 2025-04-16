@@ -36,7 +36,7 @@ autopad_nn_architectures = {
 
 pangu_nn_architectures = set()
 for obj in all_nn_architectures:
-    if hasattr(obj, 'model_type'):
+    if hasattr(obj, "model_type"):
         if obj.model_type == ModelType.PANGU:
             pangu_nn_architectures.add(obj)
 

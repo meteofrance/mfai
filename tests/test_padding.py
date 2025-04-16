@@ -1,5 +1,6 @@
 import pytest
 import torch
+from torch import Tensor
 
 from mfai.torch.padding import pad_batch, undo_padding
 
@@ -7,12 +8,10 @@ from mfai.torch.padding import pad_batch, undo_padding
 @pytest.mark.parametrize("dims", [2, 3])
 def test_pad(dims):
     # get all the True/False combinations
-    combinations = torch.cartesian_prod(*[torch.tensor([0, 1]) for _ in range(dims)])
+    combinations = torch.cartesian_prod(*[Tensor([0, 1]) for _ in range(dims)])
     even = 8
     odd = 9
-    mapped_combinations = torch.where(
-        combinations == 1, torch.tensor(even), torch.tensor(odd)
-    )
+    mapped_combinations = torch.where(combinations == 1, Tensor(even), Tensor(odd))
 
     for comb in mapped_combinations:
         # initial data with 8 batch elements, 3 channels and a combination of even and odd data dimensions

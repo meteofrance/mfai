@@ -1,24 +1,25 @@
 import torch.nn.functional as F
 import torch
+from torch import Tensor
 from typing import Tuple, Optional
 
 
 def pad_batch(
-    batch: torch.Tensor,
+    batch: Tensor,
     new_shape: torch.Size,
     mode: str = "constant",
     pad_value: Optional[float] = 0,
-) -> torch.Tensor:
+) -> Tensor:
     """Given batch of 2D or 3D data and a shape new_shape,
         pads the tensor with the given pad_value.
 
     Args:
-        batch (torch.Tensor): the batch of values of shape (B, C, D, H, W) or (B, C, H, W).
+        batch (Tensor): the batch of values of shape (B, C, D, H, W) or (B, C, H, W).
         new_shape (torch.Size): Target shape (D, H, W) for 3D tensors or (H, W) for 2D tensors to be given.
         pad_value (float, optional): the padding value to be used. Defaults to 0.
 
     Returns:
-        torch.Tensor: The padded tensor.
+        Tensor: The padded tensor.
     """
 
     fits = batch.shape[-len(new_shape) :] == new_shape
@@ -84,13 +85,11 @@ def _get_3D_padding(
     return left, right, top, bottom, front, back
 
 
-def undo_padding(
-    batch: torch.Tensor, old_shape: torch.Size, inplace: bool = False
-) -> torch.Tensor:
+def undo_padding(batch: Tensor, old_shape: torch.Size, inplace: bool = False) -> Tensor:
     """Removes the padding added by pad_batch
 
     Args:
-        batch (torch.Tensor): The padded batch of data
+        batch (Tensor): The padded batch of data
         old_shape (torch.Size): The original shape of the data
         inplace (bool): Whether the returned tensor is just a sliced view of the
                         given tensor or a new copy.

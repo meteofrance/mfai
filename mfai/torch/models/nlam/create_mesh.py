@@ -5,6 +5,7 @@ import networkx
 import numpy as np
 import scipy.spatial
 import torch
+from torch import Tensor
 import torch_geometric as pyg
 from torch_geometric.utils.convert import from_networkx
 
@@ -290,7 +291,7 @@ def monolevel_mesh(G, nx, plot):
 
 
 def build_graph_for_grid(
-    grid_xy: torch.Tensor,
+    grid_xy: Tensor,
     cache_dir_path: str,
     plot: bool = False,
     levels: int = None,
@@ -304,7 +305,7 @@ def build_graph_for_grid(
     """
 
     xy = grid_xy.numpy()
-    grid_xy = torch.tensor(xy)
+    grid_xy = Tensor(xy)
     pos_max = torch.max(torch.abs(grid_xy))
 
     # graph geometry

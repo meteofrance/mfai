@@ -5,6 +5,7 @@ import warnings
 import lightning.pytorch as pl
 import pandas as pd
 import torch
+from torch import Tensor
 import torchmetrics as tm
 from pytorch_lightning.utilities import rank_zero_only
 
@@ -49,7 +50,7 @@ class SegmentationLightningModule(pl.LightningModule):
         self.save_hyperparameters(ignore=["loss", "model"])
 
         # example array to get input / output size in model summary and graph of model:
-        self.example_input_array = torch.Tensor(
+        self.example_input_array = Tensor(
             8,
             self.model.in_channels,
             self.model.input_shape[0],
@@ -108,7 +109,7 @@ class SegmentationLightningModule(pl.LightningModule):
             }
             return torch.nn.ModuleDict(metrics_dict)
 
-    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+    def forward(self, inputs: Tensor) -> Tensor:
         """Runs data through the model. Separate from training step."""
         if self.channels_last:
             inputs = inputs.to(memory_format=torch.channels_last)
@@ -118,9 +119,7 @@ class SegmentationLightningModule(pl.LightningModule):
         y_hat = self.model(inputs)
         return self.last_activation(y_hat)
 
-    def _shared_forward_step(
-        self, x: torch.Tensor, y: torch.Tensor
-    ) -> tuple[torch.Tensor, Any]:
+    def _shared_forward_step(self, x: Tensor, y: Tensor) -> tuple[Tensor, Any]:
         """Computes forward pass and loss for a batch.
         Step shared by training, validation and test steps"""
         if self.channels_last:
@@ -144,7 +143,7 @@ class SegmentationLightningModule(pl.LightningModule):
             self.logger.experiment.add_custom_scalars(layout)
             self.logger.log_hyperparams(hparams, {"val_loss": 0, "val_f1": 0})
 
-    def _shared_epoch_end(self, outputs: list[torch.Tensor], label: str) -> None:
+    def _shared_epoch_end(self, outputs: list[Tensor], label: str) -> None:
         """Computes and logs the averaged loss at the end of an epoch on custom layout.
         Step shared by training and validation epochs.
         """
@@ -152,9 +151,7 @@ class SegmentationLightningModule(pl.LightningModule):
         tb = self.logger.experiment  # type: ignore[union-attr]
         tb.add_scalar(f"loss/{label}", avg_loss, self.current_epoch)
 
-    def training_step(
-        self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
-    ) -> Any:
+    def training_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> Any:
         x, y = batch
         _, loss = self._shared_forward_step(x, y)
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
@@ -165,9 +162,7 @@ class SegmentationLightningModule(pl.LightningModule):
         self._shared_epoch_end(self.training_loss, "train")
         self.training_loss.clear()  # free memory
 
-    def val_plot_step(
-        self, batch_idx: int, y: torch.Tensor, y_hat: torch.Tensor
-    ) -> None:
+    def val_plot_step(self, batch_idx: int, y: Tensor, y_hat: Tensor) -> None:
         """Plots images on first batch of validation and log them in logger.
         Should be overwrited for each specific project, with matplotlib plots."""
         if batch_idx == 0:
@@ -178,9 +173,7 @@ class SegmentationLightningModule(pl.LightningModule):
                 tb.add_image("val_plots/true_image", y[0], dataformats=dformat)
             tb.add_image("val_plots/pred_image", y_hat[0], step, dataformats=dformat)
 
-    def validation_step(
-        self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
-    ) -> Any:
+    def validation_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> Any:
         x, y = batch
         y_hat, loss = self._shared_forward_step(x, y)
         self.log("val_loss", loss, on_epoch=True, sync_dist=True)
@@ -202,9 +195,7 @@ class SegmentationLightningModule(pl.LightningModule):
             tb.add_scalar(f"val_{metric_name}", metric.compute(), self.current_epoch)
             metric.reset()
 
-    def test_step(
-        self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
-    ) -> None:
+    def test_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> None:
         """Computes metrics for each sample, at the end of the run."""
         x, y = batch
         y_hat, loss = self._shared_forward_step(x, y)
@@ -243,7 +234,7 @@ class SegmentationLightningModule(pl.LightningModule):
         self.save_test_metrics_as_csv(df)
         df = df.drop("Name", axis=1)
 
-    def last_activation(self, y_hat: torch.Tensor) -> torch.Tensor:
+    def last_activation(self, y_hat: Tensor) -> Tensor:
         """Applies appropriate activation according to task."""
         if self.type_segmentation == "multiclass":
             y_hat = y_hat.log_softmax(dim=1).exp()
@@ -251,7 +242,7 @@ class SegmentationLightningModule(pl.LightningModule):
             y_hat = torch.nn.functional.logsigmoid(y_hat).exp()
         return y_hat
 
-    def probabilities_to_classes(self, y_hat: torch.Tensor) -> torch.Tensor:
+    def probabilities_to_classes(self, y_hat: Tensor) -> Tensor:
         """Transfrom probalistics predictions to discrete classes"""
         if self.type_segmentation == "multiclass":
             y_hat = y_hat.argmax(dim=1)

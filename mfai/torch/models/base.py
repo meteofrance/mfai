@@ -5,8 +5,7 @@ Interface contract for our models.
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Tuple
-from torch import Size
-from torch import nn
+from torch import Tensor, Size, nn
 import torch
 
 from mfai.torch.padding import pad_batch, undo_padding
@@ -134,18 +133,16 @@ class AutoPaddingModel(ABC):
                                 shape that fits the model, otherwise it will be None.
         """
 
-    def _maybe_padding(
-        self, data_tensor: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Size]:
+    def _maybe_padding(self, data_tensor: Tensor) -> tuple[Tensor, torch.Size]:
         """Performs an optional padding to ensure that the data tensor can be fed
             to the underlying model. Padding will happen only if
             autopadding was enabled via the settings.
 
         Args:
-            data_tensor (torch.Tensor): the input data to be potentially padded.
+            data_tensor (Tensor): the input data to be potentially padded.
 
         Returns:
-            tuple[torch.Tensor, torch.Size]: the padded tensor, where the original data is found in the center,
+            tuple[Tensor, torch.Size]: the padded tensor, where the original data is found in the center,
             and the old size. If padding not possible or the shape is already fine,
             the data is returned untouched with it's old shape, which is unchanged.
         """
@@ -165,19 +162,19 @@ class AutoPaddingModel(ABC):
 
     def _maybe_unpadding(
         self,
-        data_tensor: torch.Tensor,
+        data_tensor: Tensor,
         old_shape: torch.Size,
-    ) -> torch.Tensor:
+    ) -> Tensor:
         """Potentially removes the padding previously added to the given tensor. This action
            is only carried out if autopadding was enabled via the settings.
 
         Args:
-            data_tensor (torch.Tensor): The data tensor from which padding is to be removed.
+            data_tensor (Tensor): The data tensor from which padding is to be removed.
             old_shape (torch.Size): The previous shape of the data tensor. It can either be
             [W,H] or [W,H,D] for 2D and 3D data respectively. old_shape is returned by self._maybe_padding.
 
         Returns:
-            torch.Tensor: The data tensor with the padding removed, or untouched if already at the right shape.
+            Tensor: The data tensor with the padding removed, or untouched if already at the right shape.
         """
         if self.settings.autopad_enabled:
             return undo_padding(data_tensor, old_shape=old_shape)

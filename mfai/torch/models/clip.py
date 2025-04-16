@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Tuple, Union
 
 import torch
+from torch import Tensor
 
 import torch.nn as nn
 from dataclasses_json import dataclass_json
@@ -49,12 +50,12 @@ class Clip(nn.Module):
         )
         nn.init.normal_(self.text_projection, std=self.text_encoder.emb_dim**-0.5)
         self.temperature = nn.Parameter(
-            torch.ones([]) * torch.log(torch.Tensor([settings.init_temperature]))
+            torch.ones([]) * torch.log(Tensor([settings.init_temperature]))
         )
 
     def forward(
-        self, text_tokens: torch.Tensor, image_input: NamedTensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self, text_tokens: Tensor, image_input: NamedTensor
+    ) -> Tuple[Tensor, Tensor]:
         text_tokens = text_tokens[
             :, -self.text_encoder.context_length :
         ]  # Keep only the last context_length tokens

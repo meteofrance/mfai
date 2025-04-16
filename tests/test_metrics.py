@@ -5,6 +5,7 @@ Tests for our pytorch metrics
 import numpy as np
 import pytest
 import torch
+from torch import Tensor
 from mfai.torch.metrics import CSINeighborood, PR_AUC, FAR, FNR
 
 
@@ -14,7 +15,7 @@ def test_csi_binary(num_neighbors: int, expected_value: float):
     Build tensors of size (2, 1, 5, 5), compute the CSI for binary task and check if the output is
     the result expected.
     """
-    y_true = torch.tensor(
+    y_true = Tensor(
         np.array(
             [
                 [
@@ -38,7 +39,7 @@ def test_csi_binary(num_neighbors: int, expected_value: float):
             ]
         )
     )
-    y_hat = torch.tensor(
+    y_hat = Tensor(
         np.array(
             [
                 [
@@ -71,12 +72,12 @@ def test_csi_binary(num_neighbors: int, expected_value: float):
 
 
 @pytest.mark.parametrize("num_neighbors,expected_value", [(0, 0.43), (1, 0.79)])
-def test_csi_multiclass(num_neighbors: int, expected_value: torch.Tensor):
+def test_csi_multiclass(num_neighbors: int, expected_value: Tensor):
     """
     Build tensors of size (1, 1, 5, 5), compute the CSI for multiclass taskand check if the output is
     the result expected.
     """
-    y_true = torch.tensor(
+    y_true = Tensor(
         np.array(
             [
                 [
@@ -91,7 +92,7 @@ def test_csi_multiclass(num_neighbors: int, expected_value: torch.Tensor):
             ]
         )
     )
-    y_hat = torch.tensor(
+    y_hat = Tensor(
         np.array(
             [
                 [
@@ -115,12 +116,12 @@ def test_csi_multiclass(num_neighbors: int, expected_value: torch.Tensor):
 
 
 @pytest.mark.parametrize("num_neighbors,expected_value", [(0, 0.36), (1, 0.81)])
-def test_csi_multilabel(num_neighbors: int, expected_value: torch.Tensor):
+def test_csi_multilabel(num_neighbors: int, expected_value: Tensor):
     """
     Build tensors of size (1, 3, 5, 5), compute the CSI for multilabel task and check if the output is
     the result expected.
     """
-    y_true = torch.tensor(
+    y_true = Tensor(
         np.array(
             [
                 [
@@ -149,7 +150,7 @@ def test_csi_multilabel(num_neighbors: int, expected_value: torch.Tensor):
             ]
         )
     )
-    y_hat = torch.tensor(
+    y_hat = Tensor(
         np.array(
             [
                 [
@@ -190,8 +191,8 @@ def test_pr_auc():
     """
     Test of the compute of the Precision-Recall Area Under the Curve.
     """
-    preds = torch.tensor([0.0, 1.0, 0.0, 1.0])
-    targets = torch.tensor([0, 0, 1, 1])
+    preds = Tensor([0.0, 1.0, 0.0, 1.0])
+    targets = Tensor([0, 0, 1, 1])
     far = PR_AUC()
     far.update(preds, targets)
     auc_value = far.compute()
@@ -203,8 +204,8 @@ def test_far():
     """
     Test of the compute of the False Alarm Rate.
     """
-    preds = torch.tensor([0.0, 1.0, 0.0, 1.0])
-    targets = torch.tensor([0, 0, 1, 1])
+    preds = Tensor([0.0, 1.0, 0.0, 1.0])
+    targets = Tensor([0, 0, 1, 1])
     far = FAR("binary")
     far.update(preds, targets)
     auc_value = far.compute()
@@ -216,8 +217,8 @@ def test_fnr():
     """
     Test of the compute of the False Alarm Rate.
     """
-    preds = torch.tensor([0.0, 1.0, 0.0, 1.0])
-    targets = torch.tensor([0, 0, 1, 1])
+    preds = Tensor([0.0, 1.0, 0.0, 1.0])
+    targets = Tensor([0, 0, 1, 1])
     fnr = FNR()
     fnr.update(preds, targets)
     auc_value = fnr.compute()

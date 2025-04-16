@@ -8,8 +8,9 @@ from dataclasses import dataclass
 from typing import Union
 
 import torch
+from torch import Tensor
 from dataclasses_json import dataclass_json
-from torch import Tensor, nn
+from torch import nn
 
 from mfai.torch.models.base import ModelType
 
@@ -43,7 +44,7 @@ class GELU(nn.Module):
             * (
                 1
                 + torch.tanh(
-                    torch.sqrt(torch.tensor(2.0 / torch.pi))
+                    torch.sqrt(Tensor(2.0 / torch.pi))
                     * (x + 0.044715 * torch.pow(x, 3))
                 )
             )
@@ -346,8 +347,8 @@ class MultiHeadAttentionPySDPALlama2(nn.Module):
     Mutli Head Attention using Pytorch's scaled_dot_product_attention
     """
 
-    cos: torch.Tensor
-    sin: torch.Tensor
+    cos: Tensor
+    sin: Tensor
 
     def __init__(
         self,

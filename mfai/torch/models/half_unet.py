@@ -6,7 +6,7 @@ from typing import Any, Literal, Sequence
 
 import torch
 from dataclasses_json import dataclass_json
-from torch import nn
+from torch import Tensor, nn
 
 from mfai.torch.models.base import AutoPaddingModel, BaseModel, ModelType
 from mfai.torch.models.utils import AbsolutePosEmdebding
@@ -55,7 +55,7 @@ class GhostModule(nn.Module):
         self.bn = nn.BatchNorm2d(num_features=out_channels)
         self.relu = nn.ReLU(inplace=True)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         x = self.conv(x)
         x2 = self.sepconv(x)
         x = torch.cat([x, x2], dim=1)
@@ -66,7 +66,7 @@ class GhostModule(nn.Module):
 class HalfUNet(BaseModel, AutoPaddingModel):
     settings_kls = HalfUNetSettings
     onnx_supported: bool = True
-    supported_num_spatial_dims: tuple[int,...] = (2,)
+    supported_num_spatial_dims: tuple[int, ...] = (2,)
     num_spatial_dims: int = 2
     features_last: bool = False
     model_type: ModelType = ModelType.CONVOLUTIONAL
@@ -179,7 +179,7 @@ class HalfUNet(BaseModel, AutoPaddingModel):
     def settings(self) -> HalfUNetSettings:
         return self._settings
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         x, old_shape = self._maybe_padding(data_tensor=x)
 
         enc1 = self.encoder1(x)
@@ -189,7 +189,7 @@ class HalfUNet(BaseModel, AutoPaddingModel):
         enc5 = self.encoder5(self.pool4(enc4))
 
         summed = reduce(
-            torch.Tensor.add_,
+            Tensor.add_,
             [enc1, self.up2(enc2), self.up3(enc3), self.up4(enc4), self.up5(enc5)],
             torch.zeros_like(enc1),
         )

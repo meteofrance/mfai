@@ -7,6 +7,8 @@ from torch import Tensor, nn
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer
 from mfai.torch.models.llms.multimodal import MultiModalLM, MultiModalLMSettings
 from mfai.torch.namedtensor import NamedTensor
+
+
 def generate_text_simple(
     model: nn.Module,
     idx: Tensor,
@@ -96,7 +98,7 @@ def test_multimodal_llm(
             feature_names=("u",),
         )
         encoded = tokenizer.encode("Sustine et abstine")
-        encoded_tensor = torch.tensor(encoded).unsqueeze(0)
+        encoded_tensor = Tensor(encoded).unsqueeze(0)
 
         out = generate_text_simple(
             model=model,
@@ -133,7 +135,7 @@ def test_multimodal_clip():
         feature_names=("u",),
     )
     encoded = tokenizer.encode("Sustine et abstine")
-    encoded_tensor = torch.tensor(encoded).unsqueeze(0)
+    encoded_tensor = Tensor(encoded).unsqueeze(0)
 
     out = generate_text_simple(
         model=model,

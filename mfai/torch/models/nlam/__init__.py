@@ -10,7 +10,7 @@ import torch
 import torch_geometric as pyg
 from dataclasses_json import dataclass_json
 from mfai.torch.models.base import BaseModel, ModelType
-from torch import nn
+from torch import Tensor, nn
 from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import offload_wrapper
 
 from mfai.torch.models.utils import expand_to_batch
@@ -193,7 +193,7 @@ class BaseGraphModel(BaseModel):
     features_last: bool = True
 
     @classmethod
-    def rank_zero_setup(cls, settings: GraphLamSettings, meshgrid: torch.Tensor):
+    def rank_zero_setup(cls, settings: GraphLamSettings, meshgrid: Tensor):
         """
         This is a static method to allow multi-GPU
         trainig frameworks to call this method once
@@ -229,7 +229,7 @@ class BaseGraphModel(BaseModel):
             )
         for name, attr_value in graph_ldict.items():
             # Make BufferLists module members and register tensors as buffers
-            if isinstance(attr_value, torch.Tensor):
+            if isinstance(attr_value, Tensor):
                 print(f"Registering buffer {name}")
                 self.register_buffer(name, attr_value, persistent=False)
             else:
@@ -338,8 +338,8 @@ class BaseGraphModel(BaseModel):
 
     def forward(
         self,
-        x: torch.tensor,
-    ) -> torch.tensor:
+        x: Tensor,
+    ) -> Tensor:
         """
         Step state one step ahead using prediction model, X_{t-1}, X_t -> X_t+1
         prev_state: (B, N_grid, feature_dim), X_t
@@ -394,7 +394,7 @@ class BaseHiGraphModel(BaseGraphModel):
         self.N_mesh_levels = [
             mesh_feat.shape[0] for mesh_feat in self.mesh_static_features
         ]  # Needs as python list for later
-        # N_mesh_levels_torch = torch.tensor(self.N_mesh_levels)
+        # N_mesh_levels_torch = Tensor(self.N_mesh_levels)
 
         # Print some useful info
         print("Loaded hierachical graph with structure:")

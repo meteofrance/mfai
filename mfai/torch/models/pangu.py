@@ -30,7 +30,7 @@ from torch.nn import (
 )
 from torch import nn, Tensor
 from torch.utils.checkpoint import checkpoint
-from timm.layers import drop_path
+from timm.layers import DropPath
 
 
 from .base import BaseModel, ModelType
@@ -870,19 +870,3 @@ class MLP(nn.Module):
         x = self.drop(x)
         return x
 
-
-class DropPath(nn.Module):
-    """Drop paths (Stochastic Depth) per sample  (when applied in main path of residual blocks). From timm.
-        Reimplementation to solve "type Tensor doesn't define __round__ method" error.
-    """
-    def __init__(self, drop_prob: float = 0., scale_by_keep: bool = True) -> None:
-        super(DropPath, self).__init__()
-        self.drop_prob = drop_prob
-        self.scale_by_keep = scale_by_keep
-
-    def forward(self, x: Tensor) -> Tensor:
-        return drop_path(x, self.drop_prob, self.training, self.scale_by_keep)
-
-    def extra_repr(self) -> str:
-        return f'drop_prob={round(self.drop_prob, ndigits=3):0.3f}'
-    

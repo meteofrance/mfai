@@ -66,7 +66,7 @@ class GhostModule(nn.Module):
 class HalfUNet(BaseModel, AutoPaddingModel):
     settings_kls = HalfUNetSettings
     onnx_supported: bool = True
-    supported_num_spatial_dims = (2,)
+    supported_num_spatial_dims: tuple[int,...] = (2,)
     num_spatial_dims: int = 2
     features_last: bool = False
     model_type: ModelType = ModelType.CONVOLUTIONAL
@@ -78,8 +78,8 @@ class HalfUNet(BaseModel, AutoPaddingModel):
         out_channels: int,
         input_shape: tuple[int, ...],
         settings: HalfUNetSettings = HalfUNetSettings(),
-        *args: dict[str, Any],
-        **kwargs: dict[str, Any],
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
 

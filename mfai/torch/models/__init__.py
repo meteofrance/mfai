@@ -28,17 +28,17 @@ for module_info in pkgutil.walk_packages(package.__path__, package.__name__ + ".
             registry[kls.__name__] = kls
 all_nn_architectures = list(registry.values())
 
+nn_architectures: dict[ModelType, list[ModelABC]] = {
+    model_type: [
+        architecture for architecture in all_nn_architectures
+        if architecture.model_type == model_type
+    ]
+    for model_type in ModelType
+}
 
 autopad_nn_architectures = {
     obj for obj in all_nn_architectures if issubclass(obj, AutoPaddingModel)
 }
-
-
-pangu_nn_architectures = set()
-for obj in all_nn_architectures:
-    if hasattr(obj, 'model_type'):
-        if obj.model_type == ModelType.PANGU:
-            pangu_nn_architectures.add(obj)
 
 
 def load_from_settings_file(

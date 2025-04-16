@@ -148,11 +148,7 @@ class MultiModalLM(nn.Module):
                 self.resnet50 = ResNet50(
                     num_channels=checkpoint["num_channels"],
                     num_classes=checkpoint["num_classes"],
-                    settings=ResNet50Settings(
-                        encoder_depth=checkpoint["encoder_depth"],
-                        encoder_weights=False,
-                        encoder_stride=checkpoint["encoder_stride"],
-                    ),
+                    settings=ResNet50Settings(**checkpoint["settings"]),
                 )
                 # Load the pretrained weights
                 self.resnet50.load_state_dict(checkpoint["model_state_dict"])

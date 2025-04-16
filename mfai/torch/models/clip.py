@@ -2,7 +2,7 @@
 Implementation of CLIP (Contrastive Langage-Image Pre-training) model. Based on the original https://arxiv.org/abs/2103.00020
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Tuple, Union
 
@@ -93,7 +93,6 @@ class Clip(nn.Module):
             "model_state_dict": self.image_encoder.state_dict(),
             "num_channels": self.image_encoder.num_channels,
             "num_classes": self.image_encoder.num_classes,
-            "encoder_depth": self.image_encoder.settings.encoder_depth,
-            "encoder_stride": self.image_encoder.settings.encoder_stride,
+            "settings": asdict(self.image_encoder.settings),
         }
         torch.save(ckpt, path)

@@ -24,6 +24,7 @@ class ModelType(Enum):
     VISION_TRANSFORMER = 3
     LLM = 4
     MULTIMODAL_LLM = 5
+    PANGU = 6
 
 
 class ModelABC(ABC):

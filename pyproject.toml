@@ -35,9 +35,7 @@ Homepage = "https://github.com/meteofrance/mfai"
 exclude = [
   '^mfai/torch/models/nlam/*$',
   '^mfai/torch/models/deeplabv3.py$',
-  '^mfai/torch/models/swinunetr.py$',
   '^mfai/torch/models/unetrpp.py$',
-  '^mfai/torch/namedtensor.py$',
 ]
 
 # Disallows defining functions without type annotations or with incomplete type annotations.

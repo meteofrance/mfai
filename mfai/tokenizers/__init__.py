@@ -79,7 +79,7 @@ class GPT2Tokenizer(Tokenizer):
         return "gpt2"
 
     def encode(self, text: str, *args: Any, **kwargs: Any) -> List[int]:
-        return self.tokenizer.encode(text, allowed_special="all")
+        return self.tokenizer.encode(text, *args, **kwargs, allowed_special="all")
 
     def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
         return self.tokenizer.decode(tokens, *args, **kwargs)

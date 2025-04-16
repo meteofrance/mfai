@@ -18,7 +18,6 @@ from marshmallow.exceptions import ValidationError
 
 from mfai.torch import export_to_onnx, onnx_load_and_infer
 from mfai.torch.models import (
-    all_nn_architectures,
     nn_architectures,
     autopad_nn_architectures,
     load_from_settings_file,
@@ -51,13 +50,13 @@ class FakeSumDataset(torch.utils.data.Dataset):
 
 class FakePanguDataset(torch.utils.data.Dataset):
     def __init__(
-            self,
-            input_shape: Tuple[int, ...],
-            surface_variables: int,
-            plevel_variables: int,
-            plevels: int,
-            static_length: int,
-            ):
+        self,
+        input_shape: Tuple[int, ...],
+        surface_variables: int,
+        plevel_variables: int,
+        plevels: int,
+        static_length: int,
+    ):
         self.surface_shape = (surface_variables, *input_shape)
         self.plevel_shape = (plevel_variables, plevels, *input_shape)
         self.static_shape = (static_length, *input_shape)
@@ -73,12 +72,12 @@ class FakePanguDataset(torch.utils.data.Dataset):
         target_surface = torch.rand(*self.surface_shape)
         target_plevel = torch.rand(*self.plevel_shape)
         return {
-            'input_surface': input_surface,
-            'input_plevel': input_plevel,
-            'input_static': input_static,
-            'target_surface': target_surface,
-            'target_plevel': target_plevel
-            }
+            "input_surface": input_surface,
+            "input_plevel": input_plevel,
+            "input_static": input_static,
+            "target_surface": target_surface,
+            "target_plevel": target_plevel,
+        }
 
 
 def train_model(model: torch.nn.Module, input_shape: Tuple[int, ...]):
@@ -127,7 +126,6 @@ def test_torch_graph_training_loop(model_kls):
     """
     Checks that our models are trainable on a toy problem (sum).
     """
-    INPUT_SHAPE = (64, 64, 64)
     NUM_INPUTS = 2
     NUM_OUTPUTS = 1
 
@@ -153,8 +151,10 @@ def test_torch_graph_training_loop(model_kls):
 
 
 @pytest.mark.parametrize(
-        "model_kls",
-        nn_architectures[ModelType.CONVOLUTIONAL] + nn_architectures[ModelType.VISION_TRANSFORMER])
+    "model_kls",
+    nn_architectures[ModelType.CONVOLUTIONAL]
+    + nn_architectures[ModelType.VISION_TRANSFORMER],
+)
 def test_torch_convolutional_and_vision_transformer_training_loop(model_kls):
     """
     Checks that our models are trainable on a toy problem (sum).
@@ -186,6 +186,7 @@ def test_torch_convolutional_and_vision_transformer_training_loop(model_kls):
                 export_to_onnx(model, sample, dst.name)
                 onnx_load_and_infer(dst.name, sample)
 
+
 @pytest.mark.parametrize("model_kls", nn_architectures[ModelType.PANGU])
 def test_torch_pangu_training_loop(model_kls):
     """
@@ -199,10 +200,12 @@ def test_torch_pangu_training_loop(model_kls):
     PLEVELS = 2
     STATIC_LENGTH = 1
 
-    settings = model_kls.settings_kls(surface_variables=SURFACE_VARIABLES,
-                                      plevel_variables=PLEVEL_VARIABLES,
-                                      plevels=PLEVELS,
-                                      static_length=STATIC_LENGTH)
+    settings = model_kls.settings_kls(
+        surface_variables=SURFACE_VARIABLES,
+        plevel_variables=PLEVEL_VARIABLES,
+        plevels=PLEVELS,
+        static_length=STATIC_LENGTH,
+    )
 
     # We test the model for all supported input spatial dimensions
     for spatial_dims in model_kls.supported_num_spatial_dims:
@@ -224,7 +227,7 @@ def test_torch_pangu_training_loop(model_kls):
             surface_variables=SURFACE_VARIABLES,
             plevel_variables=PLEVEL_VARIABLES,
             plevels=PLEVELS,
-            static_length=STATIC_LENGTH
+            static_length=STATIC_LENGTH,
         )
 
         training_loader = torch.utils.data.DataLoader(ds, batch_size=2)
@@ -236,10 +239,14 @@ def test_torch_pangu_training_loop(model_kls):
                 optimizer.zero_grad()
 
                 # Make predictions for this batch
-                output_plevel, output_surface = model(data['input_plevel'], data['input_surface'], data['input_static'])
+                output_plevel, output_surface = model(
+                    data["input_plevel"], data["input_surface"], data["input_static"]
+                )
 
                 # Compute the loss and its gradients
-                loss = loss_fn(output_plevel, data['target_plevel']) + loss_fn(output_surface, data['target_surface'])
+                loss = loss_fn(output_plevel, data["target_plevel"]) + loss_fn(
+                    output_surface, data["target_surface"]
+                )
                 loss.backward()
 
                 # Adjust learning weights
@@ -248,15 +255,25 @@ def test_torch_pangu_training_loop(model_kls):
         # Make a prediction in eval mode
         model.eval()
         sample = ds[0]
-        model(sample['input_plevel'].unsqueeze(0), sample['input_surface'].unsqueeze(0), sample['input_static'].unsqueeze(0))
+        model(
+            sample["input_plevel"].unsqueeze(0),
+            sample["input_surface"].unsqueeze(0),
+            sample["input_static"].unsqueeze(0),
+        )
 
         # We test if models claiming to be onnx exportable really are post training.
         # See https://pytorch.org/tutorials/beginner/onnx/export_simple_model_to_onnx_tutorial.html
         if model.onnx_supported:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".onnx") as dst:
-                sample_surface = torch.rand(1, SURFACE_VARIABLES, *INPUT_SHAPE[:spatial_dims])
-                sample_plevel = torch.rand(1, PLEVEL_VARIABLES, PLEVELS, *INPUT_SHAPE[:spatial_dims])
-                sample_static = torch.rand(1, STATIC_LENGTH, *INPUT_SHAPE[:spatial_dims])
+                sample_surface = torch.rand(
+                    1, SURFACE_VARIABLES, *INPUT_SHAPE[:spatial_dims]
+                )
+                sample_plevel = torch.rand(
+                    1, PLEVEL_VARIABLES, PLEVELS, *INPUT_SHAPE[:spatial_dims]
+                )
+                sample_static = torch.rand(
+                    1, STATIC_LENGTH, *INPUT_SHAPE[:spatial_dims]
+                )
                 sample = (sample_plevel, sample_surface, sample_static)
                 export_to_onnx(model, sample, dst.name)
                 onnx_load_and_infer(dst.name, sample)

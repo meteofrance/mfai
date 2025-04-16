@@ -30,7 +30,8 @@ all_nn_architectures: list[type[ModelABC]] = list(registry.values())
 
 nn_architectures: dict[ModelType, list[type[ModelABC]]] = {
     model_type: [
-        architecture for architecture in all_nn_architectures
+        architecture
+        for architecture in all_nn_architectures
         if architecture.model_type == model_type
     ]
     for model_type in ModelType

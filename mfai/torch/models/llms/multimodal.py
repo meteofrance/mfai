@@ -1,15 +1,17 @@
-import torch
-from torch import nn
-from torch import Tensor
-from dataclasses import dataclass, asdict
-from dataclasses_json import dataclass_json
 import math
-import einops
-from mfai.torch.models.llms import GPT2, Llama2
-from mfai.torch.models.base import ModelType
-from mfai.torch.namedtensor import NamedTensor
-from mfai.torch.models.resnet import ResNet50
+from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Literal
+
+import einops
+import torch
+from dataclasses_json import dataclass_json
+from torch import Tensor, nn
+
+from mfai.torch.models.base import ModelType
+from mfai.torch.models.llms import GPT2, Llama2
+from mfai.torch.models.resnet import ResNet50, ResNet50Settings
+from mfai.torch.namedtensor import NamedTensor
 
 
 @dataclass_json
@@ -43,6 +45,8 @@ class MultiModalLMSettings:
     # choice of vision encoder
     # "resnet50", "linear"
     vision_encoder: Literal["resnet50", "linear"] = "linear"
+    # Optional checkpoint path for the resnet encoder
+    resnet_checkpoint: None | Path = None
 
 
 class MultiModalLM(nn.Module):
@@ -124,11 +128,41 @@ class MultiModalLM(nn.Module):
                     ]
                 )
         elif self.settings.vision_encoder == "resnet50":
-            self.resnet50 = ResNet50(
-                num_channels=settings.vision_input_shape[3]
-                * settings.vision_input_shape[2],
-                num_classes=settings.emb_dim,
+            num_classes = settings.emb_dim
+            num_channels = (
+                settings.vision_input_shape[2] * settings.vision_input_shape[3]
             )
+
+            if settings.resnet_checkpoint:
+                # Load the checkpoint of the pretrained resnet encoder if a path is provided
+                checkpoint = torch.load(settings.resnet_checkpoint, weights_only=True)
+                if checkpoint["num_channels"] != num_channels:
+                    raise ValueError(
+                        f"Checkpoint num_channels {checkpoint['num_channels']} does not match the model num_channels {num_channels}."
+                    )
+                if checkpoint["num_classes"] != num_classes:
+                    raise ValueError(
+                        f"Checkpoint num_classes {checkpoint['num_classes']} does not match the model num_classes {num_classes}."
+                    )
+                # Instantiate the ResNet50 encoder with the same parameters as the checkpoint
+                self.resnet50 = ResNet50(
+                    num_channels=checkpoint["num_channels"],
+                    num_classes=checkpoint["num_classes"],
+                    settings=ResNet50Settings(
+                        encoder_depth=checkpoint["encoder_depth"],
+                        encoder_weights=False,
+                        encoder_stride=checkpoint["encoder_stride"],
+                    ),
+                )
+                # Load the pretrained weights
+                self.resnet50.load_state_dict(checkpoint["model_state_dict"])
+
+            else:
+                self.resnet50 = ResNet50(
+                    num_channels=num_channels,
+                    num_classes=num_classes,
+                )
+
         else:
             raise ValueError(
                 f"Unknown vision encoder: {self.settings.vision_encoder}. Use 'linear' or 'resnet50'."
@@ -194,7 +228,6 @@ class MultiModalLM(nn.Module):
             raise ValueError(
                 f"Unknown vision encoder: {self.settings.vision_encoder}. Use 'linear' or 'resnet50'."
             )
-
 
         text_embeds = self.backend.tok_emb(text_tokens)
 

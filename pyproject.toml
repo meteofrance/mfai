@@ -82,7 +82,7 @@ module = [
   "pl_bolts.*",
   "torchvision.*",
   "torch_geometric.*",
-  "networkx",
+  "networkx.*",
   "scipy.spatial",
 ]
 ignore_missing_imports = true

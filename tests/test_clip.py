@@ -1,7 +1,7 @@
+from lightning.pytorch.cli import ArgsType, LightningCLI
+
 from mfai.torch.dummy_dataset import DummyMultiModalDataModule
 from mfai.torch.lightning_modules.clip import CLIPLightningModule
-
-from lightning.pytorch.cli import LightningCLI, ArgsType
 
 
 class ClipCLI(LightningCLI):
@@ -31,4 +31,4 @@ def cli_main(args: ArgsType = None):
 
 
 def test_clip_training():
-    cli_main(["--config=mfai/config/clip.yaml", "--trainer.fast_dev_run=True"])
+    cli_main(["--config=mfai/config/clip.yaml"])

@@ -37,6 +37,3 @@ trainer:
         monitor: val_loss
         filename: "ckpt-{epoch:02d}-{val_loss:.2f}"
         save_top_k: 1
-  limit_train_batches: 3    # Limit num of batches per epoch (to do very short training)
-  limit_val_batches: 3
-  limit_test_batches: 3

@@ -31,4 +31,9 @@ def cli_main(args: ArgsType = None):
 
 
 def test_clip_training():
-    cli_main(["--config=mfai/config/clip.yaml"])
+    cli_main([
+        "--config=mfai/config/clip.yaml",
+        "--trainer.limit_train_batches=3",
+        "--trainer.limit_val_batches=3",
+        "--trainer.limit_test_batches=3",
+        ])

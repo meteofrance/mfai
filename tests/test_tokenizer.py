@@ -13,7 +13,7 @@ LOREM_IPSUM_SPECIAL_TOKENS = "<|Lorem ipsum|> dolor sit amet, consectetur adipis
 class LoremMiniTokenizer(MiniGPT2Tokenizer):
     def tokens(self) -> set:
         unique_tokens = set()
-        tokens = self.base_tokenizer.encode(LOREM_IPSUM)
+        tokens = self.gpt2_tokenizer.encode(LOREM_IPSUM)
         unique_tokens.update(tokens)
         return unique_tokens
 

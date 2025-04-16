@@ -350,11 +350,11 @@ class PanguWeather(BaseModel):
 class CustomPad3d(ConstantPad3d):
     """Custom 3d padding based on token embedding patch size. Padding direction is center.
 
-        Args:
-            data_size (torch.Size): data size
-            patch_size (Tuple[int, int, int]): patch size for the token embedding operation
-            value (float, optional): padding value. Defaults to 0.
-        """
+    Args:
+        data_size (torch.Size): data size
+        patch_size (Tuple[int, int, int]): patch size for the token embedding operation
+        value (float, optional): padding value. Defaults to 0.
+    """
 
     def __init__(self, data_size: torch.Size, patch_size: Tuple[int, int, int], value: float = 0.) -> None:
         # Compute paddings, starts from the last dim and goes backward
@@ -379,11 +379,11 @@ class CustomPad3d(ConstantPad3d):
 class CustomPad2d(ConstantPad2d):
     """Custom 2d padding based on token embedding patch size. Padding direction is center.
 
-        Args:
-            data_size (torch.Size): data size
-            patch_size (Tuple[int, int]): patch size for the token embedding operation
-            value (float, optional): padding value. Defaults to 0.
-        """
+    Args:
+        data_size (torch.Size): data size
+        patch_size (Tuple[int, int]): patch size for the token embedding operation
+        value (float, optional): padding value. Defaults to 0.
+    """
 
     def __init__(self, data_size: torch.Size, patch_size: Tuple[int, int], value: float = 0.) -> None:
         # Compute paddings, starts from the last dim and goes backward
@@ -406,12 +406,12 @@ class PatchEmbedding(nn.Module):
     """Patch embedding operation. Apply a linear projection for patch_size[0]*patch_size[1]*patch_size[2] patches, 
         patch_size = (2, 4, 4) in the original paper
 
-        Args:
-            c_dim (_type_): embeeding channel size
-            patch_size (Tuple[int, int, int]): patch size for pressure level data
-            plevel_size (torch.Size): pressure level data size
-            surface_size (torch.Size): surface data size
-        """
+    Args:
+        c_dim (_type_): embeeding channel size
+        patch_size (Tuple[int, int, int]): patch size for pressure level data
+        plevel_size (torch.Size): pressure level data size
+        surface_size (torch.Size): surface data size
+    """
 
     def __init__(self, c_dim: int, patch_size: Tuple[int, int, int], plevel_size: torch.Size, surface_size: torch.Size) -> None:
         super().__init__()
@@ -455,12 +455,12 @@ class PatchEmbedding(nn.Module):
 class PatchRecovery(nn.Module):
     """Patch recovery operation. The inverse operation of the patch embedding operation.
 
-        Args:
-            dim (int): number of channels
-            patch_size (Tuple[int, int, int]): pressure level patch size, e. g., (2, 4, 4) as in the original paper
-            plevel_channels (int, optional): pressure level data channel size
-            surface_channels (int, optional): surface data channel size
-        """
+    Args:
+        dim (int): number of channels
+        patch_size (Tuple[int, int, int]): pressure level patch size, e. g., (2, 4, 4) as in the original paper
+        plevel_channels (int, optional): pressure level data channel size
+        surface_channels (int, optional): surface data channel size
+    """
 
     def __init__(self, dim: int, patch_size: Tuple[int, int, int], plevel_channels: int = 5, surface_channels: int = 4) -> None:
         super().__init__()
@@ -487,10 +487,10 @@ class DownSample(nn.Module):
     """Down-sampling operation. The number of tokens is divided by 4 while their size in multiplied by 2.
     E. g., from (8x360x181) tokens of size 192 to (8x180x91) tokens of size 384.
 
-        Args:
-            data_size (torch.Size): data size in terms of embeded plevel, latitude, longitude
-            dim (int): initial size of the tokens
-        """
+    Args:
+        data_size (torch.Size): data size in terms of embeded plevel, latitude, longitude
+        dim (int): initial size of the tokens
+    """
 
     def __init__(self, data_size: torch.Size, dim: int) -> None:
         super().__init__()
@@ -580,17 +580,17 @@ class UpSample(nn.Module):
 class EarthSpecificLayer(nn.Module):
     """Basic layer of our network, contains 2 or 6 blocks
 
-        Args:
-            depth (int): number of blocks
-            data_size (torch.Size): see EarthSpecificBlock
-            dim (int): see EarthSpecificBlock
-            drop_path_ratio_list (Tensor]): see EarthSpecificBlock
-            num_heads (int): see EarthSpecificBlock
-            window_size (Tuple[int, int, int], optional): see EarthSpecificBlock
-            dropout_rate (float, optional): see EarthSpecificBlock
-            checkpoint_activation (bool, optional): see EarthSpecificBlock
-            lam (bool, optional): see EarthSpecificBlock
-        """
+    Args:
+        depth (int): number of blocks
+        data_size (torch.Size): see EarthSpecificBlock
+        dim (int): see EarthSpecificBlock
+        drop_path_ratio_list (Tensor]): see EarthSpecificBlock
+        num_heads (int): see EarthSpecificBlock
+        window_size (Tuple[int, int, int], optional): see EarthSpecificBlock
+        dropout_rate (float, optional): see EarthSpecificBlock
+        checkpoint_activation (bool, optional): see EarthSpecificBlock
+        lam (bool, optional): see EarthSpecificBlock
+    """
 
 
     def __init__(self, depth: int, data_size: torch.Size, dim: int, drop_path_ratio_list: Tensor, num_heads: int, window_size: Tuple[int, int, int], 
@@ -628,16 +628,16 @@ class EarthSpecificBlock(nn.Module):
         see https://github.com/microsoft/Swin-Transformer for the official implementation of 2D window attention.
         The major difference is that we expand the dimensions to 3 and replace the relative position bias with Earth-Specific bias.
 
-        Args:
-            data_size (torch.Size): data size in terms of plevel, latitude, longitude
-            dim (int): token size
-            drop_path_ratio (float): ratio to apply to drop path
-            num_heads (int): number of attention heads
-            window_size (Tuple[int, int, int], optional): window size for the sliding window attention. Defaults to (2, 6, 12).
-            dropout_rate (float, optional): dropout rate in the MLP. Defaults to 0..
-            checkpoint_activation (bool, optional): whether to use checkpoint activation. Defaults to False.
-            lam (bool, optional): whether to use the limited area attention mask. Defaults to False.
-        """
+    Args:
+        data_size (torch.Size): data size in terms of plevel, latitude, longitude
+        dim (int): token size
+        drop_path_ratio (float): ratio to apply to drop path
+        num_heads (int): number of attention heads
+        window_size (Tuple[int, int, int], optional): window size for the sliding window attention. Defaults to (2, 6, 12).
+        dropout_rate (float, optional): dropout rate in the MLP. Defaults to 0..
+        checkpoint_activation (bool, optional): whether to use checkpoint activation. Defaults to False.
+        lam (bool, optional): whether to use the limited area attention mask. Defaults to False.
+    """
 
     def __init__(self, data_size: torch.Size, dim: int, drop_path_ratio: float, num_heads: int, window_size: Tuple[int, int, int] = (2, 6, 12), 
                  dropout_rate: float = 0., checkpoint_activation: bool = False, lam: bool = False) -> None:
@@ -741,13 +741,13 @@ class EarthAttention3D(nn.Module):
     """3D sliding window attention with the Earth-Specific bias, 
         see https://github.com/microsoft/Swin-Transformer for the official implementation of 2D sliding window attention.
 
-        Args:
-            data_size (torch.Size): data size in terms of plevel, latitude, longitude
-            dim (int): token size
-            num_heads (int): number of heads
-            dropout_rate (float): dropout rate
-            window_size (Tuple[int, int, int]): window size (z, h ,w)
-        """
+    Args:
+        data_size (torch.Size): data size in terms of plevel, latitude, longitude
+        dim (int): token size
+        num_heads (int): number of heads
+        dropout_rate (float): dropout rate
+        window_size (Tuple[int, int, int]): window size (z, h ,w)
+    """
 
     def __init__(self, data_size: torch.Size, dim: int, num_heads: int, dropout_rate: float, window_size: Tuple[int, int, int]) -> None:
         super().__init__()
@@ -850,10 +850,10 @@ class EarthAttention3D(nn.Module):
 class MLP(nn.Module):
     """MLP layers, same as most vision transformer architectures.
 
-        Args:
-            dim (int): input and output token size
-            dropout_rate (float): dropout rate applied after each linear layer
-        """
+    Args:
+        dim (int): input and output token size
+        dropout_rate (float): dropout rate applied after each linear layer
+    """
 
     def __init__(self, dim: int, dropout_rate: float) -> None:
         super().__init__()

@@ -3,10 +3,10 @@ Implementation of CLIP (Contrastive Langage-Image Pre-training) model. Based on 
 """
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Tuple, Union
 
 import torch
-
 import torch.nn as nn
 from dataclasses_json import dataclass_json
 
@@ -84,3 +84,16 @@ class Clip(nn.Module):
         text_logits = image_logits.T
 
         return text_logits, image_logits
+
+    def save_vision_encoder(self, path: Path) -> None:
+        """
+        Save the weights and parameters of the image encoder ResNet50
+        """
+        ckpt = {
+            "model_state_dict": self.image_encoder.state_dict(),
+            "num_channels": self.image_encoder.num_channels,
+            "num_classes": self.image_encoder.num_classes,
+            "encoder_depth": self.image_encoder.settings.encoder_depth,
+            "encoder_stride": self.image_encoder.settings.encoder_stride,
+        }
+        torch.save(ckpt, path)

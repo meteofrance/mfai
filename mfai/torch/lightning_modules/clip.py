@@ -2,14 +2,15 @@
 LightningModule used to train a Clip model.
 """
 
+from pathlib import Path
 from typing import Literal, Tuple
 
 import lightning.pytorch as pl
 import torch
 import torch.nn.functional as F
+from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
 from torch.optim import AdamW
-from lightning.pytorch.utilities.types import OptimizerLRScheduler
 
 from mfai.torch.models.clip import Clip, ClipSettings
 from mfai.torch.namedtensor import NamedTensor
@@ -116,3 +117,34 @@ class CLIPLightningModule(pl.LightningModule):
         self.log("val_loss", loss, on_epoch=True, logger=True, sync_dist=True)
 
         return loss
+
+
+class SaveCLIPVisualEncoderWeights(pl.Callback):
+    """Callback to save the weights of the visual encoder during training."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.best_val_loss = float("inf")
+
+    def on_validation_epoch_end(
+        self, trainer: pl.Trainer, pl_module: pl.LightningModule
+    ) -> None:
+        """Called at the end of the validation epoch.
+        Saves the visual encoder weights of CLIP if the validation loss has improved.
+        """
+        current_val_loss = trainer.callback_metrics["val_loss"].item()
+        if current_val_loss < self.best_val_loss:
+            self.best_val_loss = current_val_loss
+
+            if trainer.logger and isinstance(pl_module, CLIPLightningModule):
+                if trainer.logger.log_dir:
+                    # remove the previous checkpoint
+                    dst_folder = Path(trainer.logger.log_dir)
+                    previous_paths = list(dst_folder.glob("visual_encoder_ep-*.tar"))
+                    if previous_paths:
+                        previous_paths[0].unlink()
+
+                    # Store the encoder state dict (weights) and its parameters:
+                    path = dst_folder / f"visual_encoder_ep-{trainer.current_epoch}.tar"
+                    pl_module.model.save_vision_encoder(path)
+                    print("Saved visual encoder weights to", path)

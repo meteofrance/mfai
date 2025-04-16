@@ -33,9 +33,10 @@ Homepage = "https://github.com/meteofrance/mfai"
 [tool.mypy]
 # [mypy configuration file doc](https://mypy.readthedocs.io/en/stable/config_file.html#confval-exclude)
 exclude = [
-  '^mfai/torch/models/*$',
+  '^mfai/torch/models/nlam/*$',
+  '^mfai/torch/models/deeplabv3.py$',
+  '^mfai/torch/models/unetrpp.py$',
   '^mfai/torch/namedtensor.py$',
-  '^mfai/torch/segmentation_module.py$',
 ]
 
 # Disallows defining functions without type annotations or with incomplete type annotations.
@@ -62,7 +63,9 @@ warn_unreachable = true
 
 # Disable the check for dynamically defined attributes, for more details see link below
 # [attr-defined](https://mypy.readthedocs.io/en/stable/error_code_list.html#check-that-attribute-exists-attr-defined)
-disable_error_code = "attr-defined"
+disable_error_code = [
+  "attr-defined"
+]
 
 # Configure mypy output styling
 show_error_code_links = true
@@ -73,10 +76,10 @@ pretty = true
 # Has the effect of silencing `import-untyped` error
 [[tool.mypy.overrides]]
 module = [
-  "tiktoken_ext",
-  "tiktoken_ext.openai_public",
+  "tiktoken_ext.*",
   "sentencepiece",
   "onnxruntime",
   "pl_bolts.*",
+  "torchvision.*"
 ]
 ignore_missing_imports = true

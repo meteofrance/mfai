@@ -10,7 +10,7 @@ from .base import AutoPaddingModel, ModelABC, ModelType
 
 # Load all models from the torch.models package
 # which are ModelABC subclasses and have the register attribute set to True
-registry: dict[str, type[ModelABC] | type[AutoPaddingModel]] = dict()
+registry: dict[str, type[ModelABC]] = dict()
 package: ModuleType = importlib.import_module("mfai.torch.models")
 for module_info in pkgutil.walk_packages(package.__path__, package.__name__ + "."):
     module: ModuleType = importlib.import_module(module_info.name)
@@ -26,9 +26,9 @@ for module_info in pkgutil.walk_packages(package.__path__, package.__name__ + ".
                     f"Model {kls.__name__} from plugin {object_name} already exists in the registry."
                 )
             registry[kls.__name__] = kls
-all_nn_architectures = list(registry.values())
+all_nn_architectures: list[type[ModelABC]] = list(registry.values())
 
-nn_architectures: dict[ModelType, list[ModelABC]] = {
+nn_architectures: dict[ModelType, list[type[ModelABC]]] = {
     model_type: [
         architecture for architecture in all_nn_architectures
         if architecture.model_type == model_type

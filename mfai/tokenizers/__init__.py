@@ -144,7 +144,7 @@ class MiniGPT2Tokenizer(Tokenizer, ABC):
     """
 
     def __init__(self) -> None:
-        self.base_tokenizer = GPT2Tokenizer()
+        self.gpt2_tokenizer = GPT2Tokenizer()
 
         self.token_to_id: dict[int, int] = dict()
         self.id_to_token: dict[int, int] = dict()
@@ -161,7 +161,7 @@ class MiniGPT2Tokenizer(Tokenizer, ABC):
                 unique_tokens = set()
                 texts: list[str] = ...  # Load all texts you want to encode
                 for text in texts:
-                    tokens = self.base_tokenizer.encode(text)
+                    tokens = self.gpt2_tokenizer.encode(text)
                     unique_tokens.update(tokens)
                 return unique_tokens
         """
@@ -185,12 +185,12 @@ class MiniGPT2Tokenizer(Tokenizer, ABC):
         For more details about extending a tiktoken.Encoding
         https://github.com/openai/tiktoken/tree/main?tab=readme-ov-file#extending-tiktoken
         """
-        self.base_tokenizer.add_special_tokens(special_tokens)
+        self.gpt2_tokenizer.add_special_tokens(special_tokens)
  
         vocab_size = self.vocab_size
-        for i, special_token in enumerate(self.base_tokenizer.special_tokens):
+        for i, special_token in enumerate(self.gpt2_tokenizer.special_tokens):
             mini_tok_id = vocab_size + i
-            base_tok_id = self.base_tokenizer.encode(special_token)[0]
+            base_tok_id = self.gpt2_tokenizer.encode(special_token)[0]
             if base_tok_id in self.token_to_id.keys():
                 vocab_size -= 1
             else:
@@ -198,19 +198,19 @@ class MiniGPT2Tokenizer(Tokenizer, ABC):
                 self.id_to_token[mini_tok_id] = base_tok_id
 
     def name(self) -> str:
-        return "mini_" + self.base_tokenizer.name()
+        return "mini_" + self.gpt2_tokenizer.name()
 
     def encode(self, text: str, *args: Any, **kwargs: Any) -> List[int]:
-        base_token_ids = self.base_tokenizer.encode(text)
+        base_token_ids = self.gpt2_tokenizer.encode(text)
         return [self.token_to_id[x] for x in base_token_ids]
 
     def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
         base_tokens = [self.id_to_token[x] for x in tokens]
-        return self.base_tokenizer.decode(base_tokens)
+        return self.gpt2_tokenizer.decode(base_tokens)
 
     @property
     def eot_token(self) -> int:
-        return self.token_to_id[self.base_tokenizer.eot_token]
+        return self.token_to_id[self.gpt2_tokenizer.eot_token]
 
     @property
     def vocab_size(self) -> int:

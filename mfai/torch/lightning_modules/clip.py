@@ -138,13 +138,22 @@ class SaveCLIPVisualEncoderWeights(pl.Callback):
 
             if trainer.logger and isinstance(pl_module, CLIPLightningModule):
                 if trainer.logger.log_dir:
-                    # remove the previous checkpoint
                     dst_folder = Path(trainer.logger.log_dir)
-                    previous_paths = list(dst_folder.glob("visual_encoder_ep-*.tar"))
-                    if previous_paths:
-                        previous_paths[0].unlink()
+
+                    # rename the eventual old checkpoints
+                    old_ckpt_paths = list(dst_folder.glob("visual_encoder_ep-*.tar"))
+                    for old_path in old_ckpt_paths:
+                        new_name = old_path.stem + "_old" + old_path.suffix
+                        old_path.rename(dst_folder / new_name)
 
                     # Store the encoder state dict (weights) and its parameters:
-                    path = dst_folder / f"visual_encoder_ep-{trainer.current_epoch}.tar"
-                    pl_module.model.save_vision_encoder(path)
-                    print("Saved visual encoder weights to", path)
+                    epoch = trainer.current_epoch
+                    ckpt_path = dst_folder / f"visual_encoder_ep-{epoch}.tar"
+                    pl_module.model.save_vision_encoder(ckpt_path)
+                    print("Saved visual encoder weights to", ckpt_path)
+
+                    # remove the old checkpoints
+                    if ckpt_path.exists():
+                        old_ckpts = list(dst_folder.glob("visual_encoder_ep-*_old.tar"))
+                        for old_ckpt in old_ckpts:
+                            old_ckpt.unlink()

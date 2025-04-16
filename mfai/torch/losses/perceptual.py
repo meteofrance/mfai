@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 # type: ignore
 import torch
+from torch import Tensor
 from typing import Sequence
 from collections import OrderedDict
 from itertools import chain
-import torch.nn as Tensor
-import nn
+import torch.nn as nn
 import torchvision.models as models
 from urllib.error import URLError
 

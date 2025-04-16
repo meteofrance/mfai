@@ -80,7 +80,7 @@ module = [
   "sentencepiece",
   "onnxruntime",
   "pl_bolts.*",
-  "torchvision.*"
+  "torchvision.*",
   "torch_geometric.*",
   "networkx",
   "scipy.spatial",

@@ -7,6 +7,7 @@ from scipy.spatial import KDTree
 import torch
 import torch_geometric as pyg
 from torch_geometric.utils.convert import from_networkx
+from networkx.classes.reportviews import NodeView
 
 
 def torch_save(data: torch.Tensor| list[torch.Tensor], path: Path) -> None:
@@ -147,7 +148,7 @@ def save_edges_list(graphs: list[pyg.data.Data], name: str, base_path: Path) -> 
 ########################################################################################
 
 
-def hierarchical_mesh(G: list[networkx.DiGraph], mesh_levels: int, plot: bool, cache_dir_path: Path) -> tuple[list[pyg.data.Data], list[torch.Tensor], networkx.DiGraph, networkx.NodeView]:
+def hierarchical_mesh(G: list[networkx.DiGraph], mesh_levels: int, plot: bool, cache_dir_path: Path) -> tuple[list[pyg.data.Data], list[torch.Tensor], networkx.DiGraph, NodeView]:
     # Relabel nodes of each level with level index first
     G = [prepend_node_index(graph, level_i) for level_i, graph in enumerate(G)]
 
@@ -247,7 +248,7 @@ def hierarchical_mesh(G: list[networkx.DiGraph], mesh_levels: int, plot: bool, c
 ########################################################################################
 
 
-def monolevel_mesh(G: list[networkx.DiGraph], nx: int, plot: bool) -> tuple[list[pyg.data.Data], list[torch.Tensor], networkx.DiGraph, networkx.NodeView]:
+def monolevel_mesh(G: list[networkx.DiGraph], nx: int, plot: bool) -> tuple[list[pyg.data.Data], list[torch.Tensor], networkx.DiGraph, NodeView]:
     # combine all levels to one graph
     G_tot = G[0]
     for lev in range(1, len(G)):
@@ -363,7 +364,7 @@ def build_graph_for_grid(
 ########################################################################################
 
 
-def grid2mesh(G_bottom_mesh: networkx.DiGraph, all_mesh_nodes: networkx.NodeView, xy: np.ndarray, plot: bool, cache_dir_path: Path) -> tuple[networkx.DiGraph, networkx.NodeView, np.ndarray, list[networkx.NodeView]]:
+def grid2mesh(G_bottom_mesh: networkx.DiGraph, all_mesh_nodes: NodeView, xy: np.ndarray, plot: bool, cache_dir_path: Path) -> tuple[networkx.DiGraph, NodeView, np.ndarray, list[NodeView]]:
     # radius within which grid nodes are associated with a mesh node
     # (in terms of mesh distance)
     DM_SCALE = 0.67
@@ -437,7 +438,7 @@ def grid2mesh(G_bottom_mesh: networkx.DiGraph, all_mesh_nodes: networkx.NodeView
 ########################################################################################
 
 
-def mesh2grid(G_g2m: networkx.DiGraph, vm: networkx.NodeView, vm_xy: np.ndarray, vg_list: list[networkx.NodeView], plot: bool, cache_dir_path: Path) -> None:
+def mesh2grid(G_g2m: networkx.DiGraph, vm: NodeView, vm_xy: np.ndarray, vg_list: list[NodeView], plot: bool, cache_dir_path: Path) -> None:
     G_m2g = G_g2m.copy()
     G_m2g.clear_edges()
 

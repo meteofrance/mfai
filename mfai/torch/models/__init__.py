@@ -6,7 +6,7 @@ from types import ModuleType
 
 from torch import nn
 
-from .base import AutoPaddingModel, ModelABC
+from .base import AutoPaddingModel, ModelABC, ModelType
 
 # Load all models from the torch.models package
 # which are ModelABC subclasses and have the register attribute set to True
@@ -32,6 +32,13 @@ all_nn_architectures = list(registry.values())
 autopad_nn_architectures = {
     obj for obj in all_nn_architectures if issubclass(obj, AutoPaddingModel)
 }
+
+
+pangu_nn_architectures = set()
+for obj in all_nn_architectures:
+    if hasattr(obj, 'model_type'):
+        if obj.model_type == ModelType.PANGU:
+            pangu_nn_architectures.add(obj)
 
 
 def load_from_settings_file(

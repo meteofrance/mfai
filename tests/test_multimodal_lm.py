@@ -62,8 +62,8 @@ def generate_text_simple(
             "gpt2",
             GPT2Tokenizer(),
             (
-                "Sustine et abstinegreg LXamm Local addition Immun GlassrikeFal Resurrection",
-                "Sustine et abstineohoorphLE updates� Oaks Coconut VC Privacy backward",
+                "Sustine et abstinegru notionsickenburgrant Iz Everybodyعcontact ig",
+                "Sustine et abstine GingLocal acids swallowAsset Investigatorothermaladanwebopath",
             ),
         ),
         (
@@ -72,14 +72,6 @@ def generate_text_simple(
             (
                 "Sustine et abstine współ terrestführtrange지edتズ ownershipantal",
                 "Sustine et abstine detected *rit україн dernièreistoryikalcorüssknow",
-            ),
-        ),
-        (
-            "gpt2",
-            GPT2Tokenizer(),
-            (
-                "Sustine et abstinegreg LXamm Local addition Immun GlassrikeFal Resurrection",
-                "Sustine et abstineohoorphLE updates� Oaks Coconut VC Privacy backward",
             ),
         ),
     ],

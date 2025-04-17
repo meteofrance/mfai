@@ -80,5 +80,6 @@ module = [
   "pl_bolts.*",
   "torchvision.*",
   "timm.*",
+  "flash_attn.*",
 ]
 ignore_missing_imports = true

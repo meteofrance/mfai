@@ -27,10 +27,10 @@ from torch.nn.functional import scaled_dot_product_attention
 from .base import BaseModel, ModelType
 
 
-def _trunc_normal_(tensor, mean, std, a, b):
+def _trunc_normal_(tensor: torch.Tensor, mean: float, std: float, a:float, b: float) -> torch.Tensor:
     # Cut & paste from PyTorch official master until it's in a few official releases - RW
     # Method based on https://people.sc.fsu.edu/~jburkardt/presentations/truncated_normal.pdf
-    def norm_cdf(x):
+    def norm_cdf(x: float) -> float:
         # Computes standard normal cumulative distribution function
         return (1.0 + math.erf(x / math.sqrt(2.0))) / 2.0
 
@@ -64,8 +64,7 @@ def _trunc_normal_(tensor, mean, std, a, b):
     return tensor
 
 
-def trunc_normal_(tensor, mean=0.0, std=1.0, a=-2.0, b=2.0):
-    # type: (torch.Tensor, float, float, float, float) -> torch.Tensor
+def trunc_normal_(tensor: torch.Tensor, mean:float =0.0, std: float =1.0, a: float =-2.0, b: float=2.0) -> torch.Tensor:
     r"""Fills the input Tensor with values drawn from a truncated
     normal distribution. The values are effectively drawn from the
     normal distribution :math:`\mathcal{N}(\text{mean}, \text{std}^2)`
@@ -92,7 +91,7 @@ def trunc_normal_(tensor, mean=0.0, std=1.0, a=-2.0, b=2.0):
 
 
 class LayerNorm(nn.Module):
-    def __init__(self, normalized_shape, eps=1e-6, data_format="channels_last"):
+    def __init__(self, normalized_shape: int, eps: float=1e-6, data_format: str="channels_last") -> None:
         super().__init__()
         self.weight = nn.Parameter(torch.ones(normalized_shape))
         self.bias = nn.Parameter(torch.zeros(normalized_shape))
@@ -102,7 +101,7 @@ class LayerNorm(nn.Module):
             raise NotImplementedError
         self.normalized_shape = (normalized_shape,)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.data_format == "channels_last":
             return F.layer_norm(
                 x, self.normalized_shape, self.weight, self.bias, self.eps
@@ -113,6 +112,10 @@ class LayerNorm(nn.Module):
             x = (x - u) / torch.sqrt(s + self.eps)
             x = self.weight[:, None, None] * x + self.bias[:, None, None]
             return x
+        else:
+            raise NotImplementedError(
+                f"LayerNorm with data_format {self.data_format} is not supported."
+            )
 
 
 class TransformerBlock(nn.Module):
@@ -128,8 +131,8 @@ class TransformerBlock(nn.Module):
         hidden_size: int,
         num_heads: int,
         dropout_rate: float = 0.0,
-        pos_embed=False,
-        spatial_dims=2,
+        pos_embed: bool = False,
+        spatial_dims: int = 2,
         proj_size: int = 64,
         attention_code: str = "torch",
     ) -> None:
@@ -188,7 +191,7 @@ class TransformerBlock(nn.Module):
         if pos_embed:
             self.pos_embed = nn.Parameter(torch.zeros(1, input_size, hidden_size))
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.spatial_dims == 2:
             B, C, H, W = x.shape
             x = x.reshape(B, C, H * W).permute(0, 2, 1)
@@ -211,7 +214,7 @@ class TransformerBlock(nn.Module):
         return x
 
 
-def init_(tensor):
+def init_(tensor: torch.Tensor) -> torch.Tensor:
     dim = tensor.shape[-1]
     std = 1 / math.sqrt(dim)
     tensor.uniform_(-std, std)
@@ -230,12 +233,12 @@ class EPA(nn.Module):
 
     def __init__(
         self,
-        input_size,
-        hidden_size,
-        num_heads=4,
-        qkv_bias=False,
-        channel_attn_drop=0.1,
-        spatial_attn_drop=0.1,
+        input_size: int,
+        hidden_size : int,
+        num_heads: int = 4,
+        qkv_bias: bool = False,
+        channel_attn_drop: float = 0.1,
+        spatial_attn_drop: float = 0.1,
         proj_size: int = 64,
         attention_code: str = "torch",
     ):
@@ -273,7 +276,7 @@ class EPA(nn.Module):
         self.attn_drop = nn.Dropout(channel_attn_drop)
         self.attn_drop_2 = nn.Dropout(spatial_attn_drop)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         # TODO: fully optimize this function for each attention code
         B, N, C = x.shape
 
@@ -343,7 +346,7 @@ class EPA(nn.Module):
         return x_CA + x_SA
 
     @torch.jit.ignore
-    def no_weight_decay(self):
+    def no_weight_decay(self) -> set[str]:
         return {"temperature", "temperature2"}
 
 
@@ -353,16 +356,16 @@ einops, _ = optional_import("einops")
 class UnetrPPEncoder(nn.Module):
     def __init__(
         self,
-        input_size=[32 * 32 * 32, 16 * 16 * 16, 8 * 8 * 8, 4 * 4 * 4],
-        dims=[32, 64, 128, 256],
-        depths=[3, 3, 3, 3],
-        num_heads=4,
-        spatial_dims=2,
-        in_channels=4,
-        dropout=0.0,
-        transformer_dropout_rate=0.1,
+        input_size: list[int]=[32 * 32 * 32, 16 * 16 * 16, 8 * 8 * 8, 4 * 4 * 4],
+        dims: list[int]=[32, 64, 128, 256],
+        depths: list[int]=[3, 3, 3, 3],
+        num_heads: int=4,
+        spatial_dims: int=2,
+        in_channels: int=4,
+        dropout: float=0.0,
+        transformer_dropout_rate: float=0.1,
         downsampling_rate: int = 4,
-        proj_sizes: Tuple[int, ...] = (64, 64, 64, 32),
+        proj_sizes: tuple[int, ...] = (64, 64, 64, 32),
         attention_code: str = "torch",
     ):
         super().__init__()
@@ -419,11 +422,11 @@ class UnetrPPEncoder(nn.Module):
                     )
                 )
             self.stages.append(nn.Sequential(*stage_blocks))
-        self.hidden_states = []
+        self.hidden_states: list[torch.Tensor] = []
         self.apply(self._init_weights)
         self.spatial_dims = spatial_dims
 
-    def _init_weights(self, m):
+    def _init_weights(self, m: nn.Module) -> None:
         if isinstance(m, (nn.Conv2d, nn.Linear)):
             trunc_normal_(m.weight, std=0.02)
             if m.bias is not None:
@@ -432,7 +435,7 @@ class UnetrPPEncoder(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
-    def forward_features(self, x):
+    def forward_features(self, x: torch.Tensor) -> tuple[torch.Tensor, list[torch.Tensor]]:
         hidden_states = []
 
         x = self.downsample_layers[0](x)
@@ -451,7 +454,7 @@ class UnetrPPEncoder(nn.Module):
             hidden_states.append(x)
         return x, hidden_states
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, list[torch.Tensor]]:
         x, hidden_states = self.forward_features(x)
         return x, hidden_states
 
@@ -462,9 +465,9 @@ class UnetrUpBlock(nn.Module):
         spatial_dims: int,
         in_channels: int,
         out_channels: int,
-        kernel_size: Union[Sequence[int], int],
-        upsample_kernel_size: Union[Sequence[int], int],
-        norm_name: Union[Tuple, str],
+        kernel_size: tuple[int, int] | tuple[int, int, int] | int,
+        upsample_kernel_size: tuple[int, int, int ] | tuple[int, int] | int,
+        norm_name: tuple | str,
         num_heads: int = 4,
         out_size: int = 0,
         depth: int = 3,
@@ -488,27 +491,60 @@ class UnetrUpBlock(nn.Module):
 
         super().__init__()
         padding = get_padding(upsample_kernel_size, upsample_kernel_size)
+        self.transp_conv: nn.Module
         if spatial_dims == 2:
             if linear_upsampling:
+                if isinstance(kernel_size, tuple):
+                    scale_factor: tuple[float, float] | float = (float(kernel_size[0]), float(kernel_size[1]))
+                    kernel_size = kernel_size[:2]
+                else:
+                    scale_factor = float(kernel_size)
                 self.transp_conv = nn.Sequential(
-                    nn.UpsamplingBilinear2d(scale_factor=upsample_kernel_size),
+                    nn.UpsamplingBilinear2d(scale_factor=scale_factor),
                     nn.Conv2d(
                         in_channels, out_channels, kernel_size=kernel_size, padding=1
                     ),
                 )
             else:
+                if isinstance(padding, tuple):
+                    if len(padding) != 2:
+                        raise ValueError(
+                            "padding should be a tuple of 2 integers for 2D data."
+                        )
+                
+                output_padding=get_output_padding(upsample_kernel_size, upsample_kernel_size, padding)
+                if isinstance(output_padding, tuple):
+                    if len(output_padding) != 2:
+                        raise ValueError(
+                            "output_padding should be a tuple of 2 integers for 2D data."
+                        )
+
+                if isinstance(upsample_kernel_size, tuple):
+                    if len(upsample_kernel_size) != 2:
+                        raise ValueError(
+                            "upsample_kernel_size should be a tuple of 2 integers for 2D data."
+                        )
+ 
                 self.transp_conv = nn.ConvTranspose2d(
                     in_channels,
                     out_channels,
                     kernel_size=upsample_kernel_size,
                     stride=upsample_kernel_size,
                     padding=padding,
-                    output_padding=get_output_padding(
-                        upsample_kernel_size, upsample_kernel_size, padding
-                    ),
+                    output_padding=output_padding,
                     dilation=1,
                 )
         else:
+            if isinstance(kernel_size, tuple):
+                if len(kernel_size) != 3:
+                    raise ValueError(
+                        "kernel_size should be a tuple of 3 integers for 3D data."
+                    )
+            if isinstance(upsample_kernel_size, tuple):
+                if len(upsample_kernel_size) != 3:
+                    raise ValueError(
+                        "upsample_kernel_size should be a tuple of 3 integers for 3D data."
+                    )
             if linear_upsampling:
                 self.transp_conv = nn.Sequential(
                     nn.Upsample(scale_factor=upsample_kernel_size, mode="trilinear"),
@@ -517,15 +553,26 @@ class UnetrUpBlock(nn.Module):
                     ),
                 )
             else:
+                if isinstance(padding, tuple):
+                    if len(padding) != 3:
+                        raise ValueError(
+                            "padding should be a tuple of 3 integers for 3D data."
+                        )
+                output_padding=get_output_padding(
+                        upsample_kernel_size, upsample_kernel_size, padding
+                    )
+                if isinstance(output_padding, tuple):
+                    if len(output_padding) != 3:
+                        raise ValueError(
+                            "output_padding should be a tuple of 3 integers for 3D data."
+                        )
                 self.transp_conv = nn.ConvTranspose3d(
                     in_channels,
                     out_channels,
                     kernel_size=upsample_kernel_size,
                     stride=upsample_kernel_size,
                     padding=padding,
-                    output_padding=get_output_padding(
-                        upsample_kernel_size, upsample_kernel_size, padding
-                    ),
+                    output_padding=output_padding,
                     dilation=1,
                 )
 
@@ -562,7 +609,7 @@ class UnetrUpBlock(nn.Module):
                 )
             self.decoder_block.append(nn.Sequential(*stage_blocks))
 
-    def _init_weights(self, m):
+    def _init_weights(self, m: nn.Module) -> None:
         if isinstance(m, (nn.Conv2d, nn.Linear)):
             trunc_normal_(m.weight, std=0.02)
             if m.bias is not None:
@@ -571,7 +618,7 @@ class UnetrUpBlock(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
-    def forward(self, inp, skip=None):
+    def forward(self, inp: torch.Tensor, skip: torch.Tensor|None = None) -> torch.Tensor:
         """
         Forward pass:
         1. Upsampling using bi/tri-linear OR Conv{2,3}dTranspose
@@ -594,7 +641,7 @@ class UNETRPPSettings:
     pos_embed: str = "perceptron"
     norm_name: Union[Tuple, str] = "instance"
     dropout_rate: float = 0.0
-    depths: Tuple[int, ...] = (3, 3, 3, 3)
+    depths: list[int] = [3, 3, 3, 3]
     conv_op: str = "Conv2d"
     do_ds = False
     spatial_dims = 2
@@ -669,6 +716,7 @@ class UNETRPP(BaseModel):
         # we have first a stem layer with stride=subsampling_rate and k_size=subsampling_rate
         # followed by 3 successive downsampling layer (k=2, stride=2)
         dim_divider = (2**3) * settings.downsampling_rate
+        self.feat_size: tuple[int, ...]
         if settings.spatial_dims == 2:
             self.feat_size = (
                 input_shape[0] // dim_divider,
@@ -706,12 +754,12 @@ class UNETRPP(BaseModel):
 
         self.unetr_pp_encoder = UnetrPPEncoder(
             input_size=encoder_input_size,
-            dims=(
+            dims=[
                 h_size // 8,
                 h_size // 4,
                 h_size // 2,
                 h_size,
-            ),
+            ],
             depths=settings.depths,
             num_heads=settings.num_heads_encoder,
             spatial_dims=settings.spatial_dims,
@@ -808,7 +856,7 @@ class UNETRPP(BaseModel):
     def num_spatial_dims(self) -> int:
         return self.settings.spatial_dims
 
-    def proj_feat(self, x):
+    def proj_feat(self, x: torch.Tensor) -> torch.Tensor:
         if self.spatial_dims == 2:
             x = x.view(
                 x.size(0), self.feat_size[0], self.feat_size[1], self.hidden_size
@@ -829,7 +877,7 @@ class UNETRPP(BaseModel):
 
         return x
 
-    def forward(self, x_in):
+    def forward(self, x_in: torch.Tensor) -> torch.Tensor | list[torch.Tensor]:
         _, hidden_states = self.unetr_pp_encoder(x_in)
         convBlock = self.encoder1(x_in)
 

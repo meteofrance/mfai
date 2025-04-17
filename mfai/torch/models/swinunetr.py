@@ -22,7 +22,7 @@ class SwinUNETRSettings:
     dropout_path_rate: float = 0.0
     normalize: bool = True
     use_checkpoint: bool = False
-    downsample: Literal['merging', 'merginv2'] | nn.Module = "merging"
+    downsample: Literal["merging", "merginv2"] | nn.Module = "merging"
     use_v2: bool = False
 
 
@@ -63,9 +63,10 @@ class SwinUNETR(ModelABC, MonaiSwinUNETR):
     Wrapper around the SwinUNETR from MONAI.
     Instanciated in 2D for now, with a custom decoder.
     """
+
     settings_kls = SwinUNETRSettings
     onnx_supported: bool = False
-    supported_num_spatial_dims: tuple[int,...] = (2,)
+    supported_num_spatial_dims: tuple[int, ...] = (2,)
     features_last: bool = False
     model_type: ModelType = ModelType.VISION_TRANSFORMER
     num_spatial_dims: int = 2
@@ -77,8 +78,8 @@ class SwinUNETR(ModelABC, MonaiSwinUNETR):
         out_channels: int,
         input_shape: tuple[int, ...] = (1,),
         settings: SwinUNETRSettings = SwinUNETRSettings(),
-        *args:Any,
-        **kwargs:Any,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         super().__init__(
             in_channels=in_channels,

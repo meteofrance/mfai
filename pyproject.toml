@@ -78,6 +78,7 @@ module = [
   "sentencepiece",
   "onnxruntime",
   "pl_bolts.*",
-  "torchvision.*"
+  "torchvision.*",
+  "timm.*",
 ]
 ignore_missing_imports = true

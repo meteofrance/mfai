@@ -49,7 +49,7 @@ class ResNetEncoder(ResNet):
         return features
 
     def load_state_dict(
-        self, state_dict: dict[str, Any], **kwargs: dict[str, Any]
+        self, state_dict: dict[str, Any], **kwargs: Any
     ) -> None:
         state_dict.pop("fc.bias", None)
         state_dict.pop("fc.weight", None)

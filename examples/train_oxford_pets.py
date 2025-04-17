@@ -1,15 +1,14 @@
+from pathlib import Path
+
+import lightning.pytorch as L
 import torch
 import torchvision
-import lightning.pytorch as L
-
 import torchvision.transforms as T
+from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
+from lightning.pytorch.loggers import TensorBoardLogger
 
 from mfai.torch.models import UNet
 from mfai.torch.segmentation_module import SegmentationLightningModule
-from lightning.pytorch.loggers import TensorBoardLogger
-from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
-
-from pathlib import Path
 
 BASE_PATH = Path("/scratch/shared/OxfordPets/")
 IMG_SIZE = 64

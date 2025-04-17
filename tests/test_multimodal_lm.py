@@ -76,8 +76,6 @@ def generate_text_simple(
         ),
     ],
 )
-
-
 def test_multimodal_llm(
     llm_backend: Literal["llama2", "gpt2"],
     tokenizer: Union[GPT2Tokenizer, LlamaTokenizer],
@@ -122,7 +120,7 @@ def test_multimodal_with_pretrained_clip():
     torch.manual_seed(666)
     embed_dim: int = 32
     vision_input_shape: tuple[int] = (128, 128, 2, 1)
-    num_channels:int = vision_input_shape[2] * vision_input_shape[3]
+    num_channels: int = vision_input_shape[2] * vision_input_shape[3]
     path_checkpoint: Path = Path("checkpoint.tar")
 
     # Setup the CLIP model
@@ -163,7 +161,7 @@ def test_multimodal_with_pretrained_clip():
             context_length=32,
             inject_vision_each_stage=False,
             vision_encoder="resnet50",
-            resnet_checkpoint=path_checkpoint
+            resnet_checkpoint=path_checkpoint,
         ),
         vocab_size=tokenizer.vocab_size,
     )

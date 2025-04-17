@@ -27,7 +27,7 @@
       - LLama2
     - Multimodal Language Models:
       - A custom Fuyu inspired model
-  
+
 - [SegmentationLightningModule](#segmentationlightningmodule)
 - [NamedTensors](#namedtensors)
 - [Metrics](#metrics)
@@ -54,7 +54,7 @@ Currently we support the following neural network architectures:
 | [DeepLabV3Plus](mfai/torch/models/deeplabv3.py#L1) | [arxiv link](https://arxiv.org/abs/1802.02611) | (Batch, features, Height, Width)    | Yes | As a very large receptive field versus U-Net, Half-Unet, ... | Front Detection, Nowcasting |
 | [HalfUNet](mfai/torch/models/half_unet.py#L1) | [researchgate link](https://www.researchgate.net/publication/361186968_Half-UNet_A_Simplified_U-Net_Architecture_for_Medical_Image_Segmentation) | (Batch, features, Height, Width)    | Yes | In prod/oper on [Espresso](https://www.mdpi.com/2674-0494/2/4/25) V2 with 128 filters and standard conv blocks instead of ghost | Satellite channels to rain estimation |
 | [UNet](mfai/torch/models/unet.py#L1) | [arxiv link](https://arxiv.org/pdf/1505.04597.pdf) | (Batch, features, Height, Width)    | Yes | Vanilla U-Net | Radar image cleaning |
-| [CustomUnet](mfai/torch/models/unet.py#L1) | [arxiv link](https://arxiv.org/pdf/1505.04597.pdf) | (Batch, features, Height, Width)    | Yes | U-Net like architecture with a variety of resnet encoder choices | Radar image cleaning 
+| [CustomUnet](mfai/torch/models/unet.py#L1) | [arxiv link](https://arxiv.org/pdf/1505.04597.pdf) | (Batch, features, Height, Width)    | Yes | U-Net like architecture with a variety of resnet encoder choices | Radar image cleaning
 
 
 ## Vision Transformers
@@ -170,7 +170,7 @@ Pytorch already provide some Loss like Mean Squared Error (torch.nn.MSELoss) or 
 
 ## Perceptual Loss
 
-It was introduced by Johnson et al. - Perceptual losses for real-time style transfer and super-resolution. (https://arxiv.org/pdf/1603.08155).  
+It was introduced by Johnson et al. - Perceptual losses for real-time style transfer and super-resolution. (https://arxiv.org/pdf/1603.08155).
 
 The [**PerceptualLoss**](mfai/torch/losses/perceptual.py#L28) class is a `torch.nn.Module` that allows to initialize a VGG-16 and compute directly the perceptual loss between a given input and target.
 
@@ -220,7 +220,7 @@ perceptual_loss_class = PerceptualLoss(channel_iterative_mode=True, in_channels=
 perceptual_loss_class.compute_perceptual_features(inputs)
 
 for _ in range():
-  
+
   targets = torch.rand(25, 5, 128, 128)
 
   # The features of the targets are computed and compared to the input features
@@ -606,7 +606,7 @@ We welcome contributions to this package. Our guidelines are the following:
 
 - Submit a PR with a clear description of the changes and the motivation behind them.
 - Make sure the current tests pass and add new tests if necessary to cover the new features. Our CI will fail with a **test coverage below 80%**.
-- Make sure the code is formatted with [ruff](https://docs.astral.sh/ruff/) : `ruff format` and `ruff check`
+- Make sure the code is formatted with [ruff](https://docs.astral.sh/ruff/) : `ruff format` and `ruff check --select I --fix`
 - Make sure the code respects our mypy type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
 
 # Publishing

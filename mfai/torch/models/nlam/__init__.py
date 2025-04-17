@@ -9,11 +9,12 @@ from typing import Tuple
 import torch
 import torch_geometric as pyg
 from dataclasses_json import dataclass_json
-from mfai.torch.models.base import BaseModel, ModelType
 from torch import nn
 from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import offload_wrapper
 
+from mfai.torch.models.base import BaseModel, ModelType
 from mfai.torch.models.utils import expand_to_batch
+
 from .create_mesh import build_graph_for_grid
 from .interaction_net import InteractionNet, make_mlp
 

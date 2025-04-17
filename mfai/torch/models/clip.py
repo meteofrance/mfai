@@ -2,7 +2,7 @@
 Implementation of CLIP (Contrastive Langage-Image Pre-training) model. Based on the original https://arxiv.org/abs/2103.00020
 """
 
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Tuple, Union
 

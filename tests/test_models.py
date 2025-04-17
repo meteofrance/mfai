@@ -6,24 +6,22 @@ Test our pure PyTorch models to make sure they can be :
 4. onnx loaded and used for inference
 """
 
-import numpy as np
 import tempfile
 from pathlib import Path
 from typing import Tuple
 
-from mfai.torch.models.base import ModelType
+import numpy as np
 import pytest
 import torch
 from marshmallow.exceptions import ValidationError
 
-from mfai.torch import export_to_onnx, onnx_load_and_infer
+from mfai.torch import export_to_onnx, onnx_load_and_infer, padding
 from mfai.torch.models import (
-    nn_architectures,
     autopad_nn_architectures,
     load_from_settings_file,
+    nn_architectures,
 )
-
-from mfai.torch import padding
+from mfai.torch.models.base import ModelType
 from mfai.torch.models.deeplabv3 import DeepLabV3Plus
 from mfai.torch.models.half_unet import HalfUNet
 

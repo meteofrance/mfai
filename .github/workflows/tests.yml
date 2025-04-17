@@ -31,7 +31,8 @@ jobs:
         pip install -r requirements_dev.txt
     - name: Lint with ruff
       run: |
-        ruff check mfai
+        ruff format --check .
+        ruff check . --select I
     - name: Type hinting with mypy
       run: |
         mypy mfai/

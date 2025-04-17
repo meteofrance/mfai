@@ -234,7 +234,7 @@ def test_torch_pangu_training_loop(model_kls):
 
         # Simulate 2 EPOCHS of training
         for _ in range(2):
-            for _, data in enumerate(training_loader):
+            for data in training_loader:
                 # Zero your gradients for every batch!
                 optimizer.zero_grad()
 

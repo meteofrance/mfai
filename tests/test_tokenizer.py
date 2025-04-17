@@ -1,7 +1,8 @@
-import pytest
 import copy
 
-from mfai.tokenizers import MiniGPT2Tokenizer, Tokenizer, GPT2Tokenizer
+import pytest
+
+from mfai.tokenizers import GPT2Tokenizer, MiniGPT2Tokenizer, Tokenizer
 
 LOREM_IPSUM = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
 LOREM_IPSUM_SPECIAL_TOKENS = "<|Lorem ipsum|> dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<|endoftext|>"

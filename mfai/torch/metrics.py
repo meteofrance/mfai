@@ -1,8 +1,8 @@
 from typing import Any, Literal, Optional
 
-from einops import rearrange
 import torch
 import torch.nn.functional as F
+from einops import rearrange
 from torchmetrics import Metric, Precision, PrecisionRecallCurve
 from torchmetrics.utilities.compute import _auc_compute
 

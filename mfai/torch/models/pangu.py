@@ -11,27 +11,26 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from dataclasses_json import dataclass_json
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 import torch
+from dataclasses_json import dataclass_json
+from timm.layers import DropPath
+from torch import Tensor, nn
 from torch.nn import (
-    Linear,
-    Conv3d,
-    Conv2d,
-    ConvTranspose3d,
-    ConvTranspose2d,
     GELU,
+    ConstantPad2d,
+    ConstantPad3d,
+    Conv2d,
+    Conv3d,
+    ConvTranspose2d,
+    ConvTranspose3d,
     Dropout,
     LayerNorm,
+    Linear,
     Softmax,
-    ConstantPad3d,
-    ConstantPad2d,
 )
-from torch import nn, Tensor
 from torch.utils.checkpoint import checkpoint
-from timm.layers import DropPath
-
 
 from .base import BaseModel, ModelType
 

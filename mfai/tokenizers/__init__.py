@@ -7,9 +7,8 @@ from pathlib import Path
 from typing import Any, List
 
 import sentencepiece as spm
-from huggingface_hub import hf_hub_download, login
 import tiktoken  # noqa
-
+from huggingface_hub import hf_hub_download, login
 
 from mfai.encoding import get_tiktoken_encoding
 

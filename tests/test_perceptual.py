@@ -1,6 +1,7 @@
 import pytest
 import torch
-from mfai.torch.losses.perceptual import PerceptualLoss, LPIPS
+
+from mfai.torch.losses.perceptual import LPIPS, PerceptualLoss
 
 
 def test_perceptual_loss_on_same_img():

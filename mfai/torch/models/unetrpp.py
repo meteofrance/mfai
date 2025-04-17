@@ -663,14 +663,14 @@ class UNETRPPSettings:
     pos_embed: str = "perceptron"
     norm_name: Union[Tuple, str] = "instance"
     dropout_rate: float = 0.0
-    depths: list[int] = [3, 3, 3, 3]
+    depths: tuple[int, ...] = (3, 3, 3, 3)
     conv_op: str = "Conv2d"
     do_ds = False
     spatial_dims = 2
     linear_upsampling: bool = False
     downsampling_rate: int = 4
     decoder_proj_size: int = 64
-    encoder_proj_sizes: Tuple[int, ...] = (64, 64, 64, 32)
+    encoder_proj_sizes: tuple[int, ...] = (64, 64, 64, 32)
     # Adds skip connection between encoder layers outputs
     # and corresponding decoder layers inputs
     add_skip_connections: bool = True
@@ -782,7 +782,7 @@ class UNETRPP(BaseModel):
                 h_size // 2,
                 h_size,
             ],
-            depths=settings.depths,
+            depths=list(settings.depths),
             num_heads=settings.num_heads_encoder,
             spatial_dims=settings.spatial_dims,
             in_channels=in_channels,

@@ -108,7 +108,7 @@ class DeepLabV3PlusDecoder(nn.Module):
             nn.ReLU(),
         )
 
-    def forward(self, *features: list[torch.Tensor]) -> torch.Tensor:
+    def forward(self, *features: tuple[torch.Tensor]) -> torch.Tensor:
         aspp_features = self.aspp(features[-1])
         aspp_features = self.up(aspp_features)
         high_res_features = self.block1(features[-4])

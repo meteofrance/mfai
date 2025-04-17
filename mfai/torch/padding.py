@@ -1,6 +1,7 @@
-import torch.nn.functional as F
+from typing import Optional, Tuple
+
 import torch
-from typing import Tuple, Optional
+import torch.nn.functional as F
 
 
 def pad_batch(

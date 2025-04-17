@@ -27,7 +27,9 @@ from torch.nn.functional import scaled_dot_product_attention
 from .base import BaseModel, ModelType
 
 
-def _trunc_normal_(tensor: torch.Tensor, mean: float, std: float, a:float, b: float) -> torch.Tensor:
+def _trunc_normal_(
+    tensor: torch.Tensor, mean: float, std: float, a: float, b: float
+) -> torch.Tensor:
     # Cut & paste from PyTorch official master until it's in a few official releases - RW
     # Method based on https://people.sc.fsu.edu/~jburkardt/presentations/truncated_normal.pdf
     def norm_cdf(x: float) -> float:
@@ -64,7 +66,13 @@ def _trunc_normal_(tensor: torch.Tensor, mean: float, std: float, a:float, b: fl
     return tensor
 
 
-def trunc_normal_(tensor: torch.Tensor, mean:float =0.0, std: float =1.0, a: float =-2.0, b: float=2.0) -> torch.Tensor:
+def trunc_normal_(
+    tensor: torch.Tensor,
+    mean: float = 0.0,
+    std: float = 1.0,
+    a: float = -2.0,
+    b: float = 2.0,
+) -> torch.Tensor:
     r"""Fills the input Tensor with values drawn from a truncated
     normal distribution. The values are effectively drawn from the
     normal distribution :math:`\mathcal{N}(\text{mean}, \text{std}^2)`
@@ -91,7 +99,12 @@ def trunc_normal_(tensor: torch.Tensor, mean:float =0.0, std: float =1.0, a: flo
 
 
 class LayerNorm(nn.Module):
-    def __init__(self, normalized_shape: int, eps: float=1e-6, data_format: str="channels_last") -> None:
+    def __init__(
+        self,
+        normalized_shape: int,
+        eps: float = 1e-6,
+        data_format: str = "channels_last",
+    ) -> None:
         super().__init__()
         self.weight = nn.Parameter(torch.ones(normalized_shape))
         self.bias = nn.Parameter(torch.zeros(normalized_shape))
@@ -234,7 +247,7 @@ class EPA(nn.Module):
     def __init__(
         self,
         input_size: int,
-        hidden_size : int,
+        hidden_size: int,
         num_heads: int = 4,
         qkv_bias: bool = False,
         channel_attn_drop: float = 0.1,
@@ -356,14 +369,14 @@ einops, _ = optional_import("einops")
 class UnetrPPEncoder(nn.Module):
     def __init__(
         self,
-        input_size: list[int]=[32 * 32 * 32, 16 * 16 * 16, 8 * 8 * 8, 4 * 4 * 4],
-        dims: list[int]=[32, 64, 128, 256],
-        depths: list[int]=[3, 3, 3, 3],
-        num_heads: int=4,
-        spatial_dims: int=2,
-        in_channels: int=4,
-        dropout: float=0.0,
-        transformer_dropout_rate: float=0.1,
+        input_size: list[int] = [32 * 32 * 32, 16 * 16 * 16, 8 * 8 * 8, 4 * 4 * 4],
+        dims: list[int] = [32, 64, 128, 256],
+        depths: list[int] = [3, 3, 3, 3],
+        num_heads: int = 4,
+        spatial_dims: int = 2,
+        in_channels: int = 4,
+        dropout: float = 0.0,
+        transformer_dropout_rate: float = 0.1,
         downsampling_rate: int = 4,
         proj_sizes: tuple[int, ...] = (64, 64, 64, 32),
         attention_code: str = "torch",
@@ -435,7 +448,9 @@ class UnetrPPEncoder(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
-    def forward_features(self, x: torch.Tensor) -> tuple[torch.Tensor, list[torch.Tensor]]:
+    def forward_features(
+        self, x: torch.Tensor
+    ) -> tuple[torch.Tensor, list[torch.Tensor]]:
         hidden_states = []
 
         x = self.downsample_layers[0](x)
@@ -466,7 +481,7 @@ class UnetrUpBlock(nn.Module):
         in_channels: int,
         out_channels: int,
         kernel_size: tuple[int, int] | tuple[int, int, int] | int,
-        upsample_kernel_size: tuple[int, int, int ] | tuple[int, int] | int,
+        upsample_kernel_size: tuple[int, int, int] | tuple[int, int] | int,
         norm_name: tuple | str,
         num_heads: int = 4,
         out_size: int = 0,
@@ -495,7 +510,10 @@ class UnetrUpBlock(nn.Module):
         if spatial_dims == 2:
             if linear_upsampling:
                 if isinstance(kernel_size, tuple):
-                    scale_factor: tuple[float, float] | float = (float(kernel_size[0]), float(kernel_size[1]))
+                    scale_factor: tuple[float, float] | float = (
+                        float(kernel_size[0]),
+                        float(kernel_size[1]),
+                    )
                     kernel_size = kernel_size[:2]
                 else:
                     scale_factor = float(kernel_size)
@@ -511,8 +529,10 @@ class UnetrUpBlock(nn.Module):
                         raise ValueError(
                             "padding should be a tuple of 2 integers for 2D data."
                         )
-                
-                output_padding=get_output_padding(upsample_kernel_size, upsample_kernel_size, padding)
+
+                output_padding = get_output_padding(
+                    upsample_kernel_size, upsample_kernel_size, padding
+                )
                 if isinstance(output_padding, tuple):
                     if len(output_padding) != 2:
                         raise ValueError(
@@ -524,7 +544,7 @@ class UnetrUpBlock(nn.Module):
                         raise ValueError(
                             "upsample_kernel_size should be a tuple of 2 integers for 2D data."
                         )
- 
+
                 self.transp_conv = nn.ConvTranspose2d(
                     in_channels,
                     out_channels,
@@ -558,9 +578,9 @@ class UnetrUpBlock(nn.Module):
                         raise ValueError(
                             "padding should be a tuple of 3 integers for 3D data."
                         )
-                output_padding=get_output_padding(
-                        upsample_kernel_size, upsample_kernel_size, padding
-                    )
+                output_padding = get_output_padding(
+                    upsample_kernel_size, upsample_kernel_size, padding
+                )
                 if isinstance(output_padding, tuple):
                     if len(output_padding) != 3:
                         raise ValueError(
@@ -618,7 +638,9 @@ class UnetrUpBlock(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
-    def forward(self, inp: torch.Tensor, skip: torch.Tensor|None = None) -> torch.Tensor:
+    def forward(
+        self, inp: torch.Tensor, skip: torch.Tensor | None = None
+    ) -> torch.Tensor:
         """
         Forward pass:
         1. Upsampling using bi/tri-linear OR Conv{2,3}dTranspose

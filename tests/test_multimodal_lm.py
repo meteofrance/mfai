@@ -62,8 +62,8 @@ def generate_text_simple(
             "gpt2",
             GPT2Tokenizer(),
             (
-                "Sustine et abstinegru notionsickenburgrant Iz Everybodyعcontact ig",
-                "Sustine et abstine GingLocal acids swallowAsset Investigatorothermaladanwebopath",
+                "Sustine et abstinegreg LXamm Local addition Immun GlassrikeFal Resurrection",
+                "Sustine et abstineohoorphLE updates� Oaks Coconut VC Privacy backward",
             ),
         ),
         (

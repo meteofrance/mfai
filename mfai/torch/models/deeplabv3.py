@@ -54,7 +54,7 @@ class DeepLabV3Decoder(nn.Sequential):
         )
         self.out_channels = out_channels
 
-    def forward(self, *features: list[torch.Tensor]) -> torch.Tensor:
+    def forward(self, *features: tuple[torch.Tensor]) -> torch.Tensor:
         return super().forward(features[-1])
 
 

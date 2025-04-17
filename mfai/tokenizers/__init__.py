@@ -58,20 +58,22 @@ class GPT2Tokenizer(Tokenizer):
         https://github.com/openai/tiktoken/tree/main?tab=readme-ov-file#extending-tiktoken
         """
         for tok in new_special_tokens:
-            if tok not in self.special_tokens and tok not in self.base_tokenizer._special_tokens:
+            if (
+                tok not in self.special_tokens
+                and tok not in self.base_tokenizer._special_tokens
+            ):
                 self.special_tokens.append(tok)
 
         special_tokens = {
-                tok: self.base_tokenizer.n_vocab + i
-                for i, tok in enumerate(self.special_tokens)
-            }
-        
+            tok: self.base_tokenizer.n_vocab + i
+            for i, tok in enumerate(self.special_tokens)
+        }
 
         self.tokenizer = tiktoken.Encoding(
             name=f"custom_{self.name()}",
             pat_str=self.base_tokenizer._pat_str,
             mergeable_ranks=self.base_tokenizer._mergeable_ranks,
-            special_tokens= {**self.base_tokenizer._special_tokens} | special_tokens,
+            special_tokens={**self.base_tokenizer._special_tokens} | special_tokens,
         )
 
     def name(self) -> str:

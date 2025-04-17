@@ -48,5 +48,7 @@ def test_add_special_tokens(tokenizer: Tokenizer):
 
     # Check that the EOT doesn't change his ID after adding some new tokens
     assert base_tokenizer.encode("<|endoftext|>") == tokenizer.encode("<|endoftext|>")
-    assert base_tokenizer.decode(base_tokenizer.encode("<|endoftext|>")) == tokenizer.decode(tokenizer.encode("<|endoftext|>"))
+    assert base_tokenizer.decode(
+        base_tokenizer.encode("<|endoftext|>")
+    ) == tokenizer.decode(tokenizer.encode("<|endoftext|>"))
     assert tokenizer.decode([base_tokenizer.vocab_size - 1]) == "<|endoftext|>"

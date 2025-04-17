@@ -394,7 +394,7 @@ class BaseHiGraphModel(BaseGraphModel):
         self.N_mesh_levels = [
             mesh_feat.shape[0] for mesh_feat in self.mesh_static_features
         ]  # Needs as python list for later
-        # N_mesh_levels_torch = Tensor(self.N_mesh_levels)
+        # N_mesh_levels_torch = torch.tensor(self.N_mesh_levels)
 
         # Print some useful info
         print("Loaded hierachical graph with structure:")

@@ -40,8 +40,8 @@ class FNR(Metric):
         full_state_update = True  # noqa
         self.true_positives: Tensor
         self.false_negatives: Tensor
-        self.add_state("true_positives", default=Tensor(0), dist_reduce_fx="sum")
-        self.add_state("false_negatives", default=Tensor(0), dist_reduce_fx="sum")
+        self.add_state("true_positives", default=torch.tensor(0), dist_reduce_fx="sum")
+        self.add_state("false_negatives", default=torch.tensor(0), dist_reduce_fx="sum")
 
     def update(self, preds: Tensor, target: Tensor) -> None:
         assert preds.shape == target.shape

@@ -28,7 +28,7 @@ def test_llms(model_target_tokenizer):
     model = model()
     start_context = "Hello, I am"
     encoded = tokenizer.encode(start_context)
-    encoded_tensor = Tensor(encoded).unsqueeze(0)
+    encoded_tensor = torch.tensor(encoded).unsqueeze(0)
 
     out = generate_text_simple(
         model=model,

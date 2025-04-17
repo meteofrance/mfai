@@ -15,7 +15,7 @@ def test_csi_binary(num_neighbors: int, expected_value: float):
     Build tensors of size (2, 1, 5, 5), compute the CSI for binary task and check if the output is
     the result expected.
     """
-    y_true = Tensor(
+    y_true = torch.tensor(
         np.array(
             [
                 [
@@ -39,7 +39,7 @@ def test_csi_binary(num_neighbors: int, expected_value: float):
             ]
         )
     )
-    y_hat = Tensor(
+    y_hat = torch.tensor(
         np.array(
             [
                 [
@@ -77,7 +77,7 @@ def test_csi_multiclass(num_neighbors: int, expected_value: Tensor):
     Build tensors of size (1, 1, 5, 5), compute the CSI for multiclass taskand check if the output is
     the result expected.
     """
-    y_true = Tensor(
+    y_true = torch.tensor(
         np.array(
             [
                 [
@@ -92,7 +92,7 @@ def test_csi_multiclass(num_neighbors: int, expected_value: Tensor):
             ]
         )
     )
-    y_hat = Tensor(
+    y_hat = torch.tensor(
         np.array(
             [
                 [
@@ -121,7 +121,7 @@ def test_csi_multilabel(num_neighbors: int, expected_value: Tensor):
     Build tensors of size (1, 3, 5, 5), compute the CSI for multilabel task and check if the output is
     the result expected.
     """
-    y_true = Tensor(
+    y_true = torch.tensor(
         np.array(
             [
                 [
@@ -150,7 +150,7 @@ def test_csi_multilabel(num_neighbors: int, expected_value: Tensor):
             ]
         )
     )
-    y_hat = Tensor(
+    y_hat = torch.tensor(
         np.array(
             [
                 [
@@ -191,8 +191,8 @@ def test_pr_auc():
     """
     Test of the compute of the Precision-Recall Area Under the Curve.
     """
-    preds = Tensor([0.0, 1.0, 0.0, 1.0])
-    targets = Tensor([0, 0, 1, 1])
+    preds = torch.tensor([0.0, 1.0, 0.0, 1.0])
+    targets = torch.tensor([0, 0, 1, 1])
     far = PR_AUC()
     far.update(preds, targets)
     auc_value = far.compute()
@@ -204,8 +204,8 @@ def test_far():
     """
     Test of the compute of the False Alarm Rate.
     """
-    preds = Tensor([0.0, 1.0, 0.0, 1.0])
-    targets = Tensor([0, 0, 1, 1])
+    preds = torch.tensor([0.0, 1.0, 0.0, 1.0])
+    targets = torch.tensor([0, 0, 1, 1])
     far = FAR("binary")
     far.update(preds, targets)
     auc_value = far.compute()
@@ -217,8 +217,8 @@ def test_fnr():
     """
     Test of the compute of the False Alarm Rate.
     """
-    preds = Tensor([0.0, 1.0, 0.0, 1.0])
-    targets = Tensor([0, 0, 1, 1])
+    preds = torch.tensor([0.0, 1.0, 0.0, 1.0])
+    targets = torch.tensor([0, 0, 1, 1])
     fnr = FNR()
     fnr.update(preds, targets)
     auc_value = fnr.compute()

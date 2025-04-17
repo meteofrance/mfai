@@ -98,7 +98,7 @@ def test_multimodal_llm(
             feature_names=("u",),
         )
         encoded = tokenizer.encode("Sustine et abstine")
-        encoded_tensor = Tensor(encoded).unsqueeze(0)
+        encoded_tensor = torch.tensor(encoded).unsqueeze(0)
 
         out = generate_text_simple(
             model=model,
@@ -135,7 +135,7 @@ def test_multimodal_clip():
         feature_names=("u",),
     )
     encoded = tokenizer.encode("Sustine et abstine")
-    encoded_tensor = Tensor(encoded).unsqueeze(0)
+    encoded_tensor = torch.tensor(encoded).unsqueeze(0)
 
     out = generate_text_simple(
         model=model,

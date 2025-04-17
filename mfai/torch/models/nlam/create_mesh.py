@@ -305,7 +305,7 @@ def build_graph_for_grid(
     """
 
     xy = grid_xy.numpy()
-    grid_xy = Tensor(xy)
+    grid_xy = torch.tensor(xy)
     pos_max = torch.max(torch.abs(grid_xy))
 
     # graph geometry

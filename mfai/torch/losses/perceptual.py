@@ -273,7 +273,7 @@ class PerceptualLoss(torch.nn.Module):
 
         features_x, styles_x = self._forward_net_single_img(x)
 
-        loss = Tensor(0.0).to(self.device)
+        loss = torch.tensor(0.0).to(self.device)
         for i, _ in enumerate(self.blocks):
             if i in self.feature_block_ids:
                 x = features_x[i]
@@ -314,7 +314,7 @@ class PerceptualLoss(torch.nn.Module):
 
         """
 
-        perceptual_loss = Tensor(0.0).to(self.device)
+        perceptual_loss = torch.tensor(0.0).to(self.device)
 
         # Check that tensors are normalized
         if x.max() > 1 or x.min() < 0:

@@ -133,27 +133,34 @@ class SaveCLIPVisualEncoderWeights(pl.Callback):
         Saves the visual encoder weights of CLIP if the validation loss has improved.
         """
         current_val_loss = trainer.callback_metrics["val_loss"].item()
-        if current_val_loss < self.best_val_loss:
-            self.best_val_loss = current_val_loss
+        if current_val_loss >= self.best_val_loss:
+            return  # No improvement of val loss, no saving
 
-            if trainer.logger and isinstance(pl_module, CLIPLightningModule):
-                if trainer.logger.log_dir:
-                    dst_folder = Path(trainer.logger.log_dir)
+        if trainer.logger is None:
+            return  # No logger, no saving
 
-                    # rename the eventual old checkpoints
-                    old_ckpt_paths = list(dst_folder.glob("visual_encoder_ep-*.tar"))
-                    for old_path in old_ckpt_paths:
-                        new_name = old_path.stem + "_old" + old_path.suffix
-                        old_path.rename(dst_folder / new_name)
+        if trainer.logger.log_dir is None:
+            return  # No log_dir initialized, no saving
 
-                    # Store the encoder state dict (weights) and its parameters:
-                    epoch = trainer.current_epoch
-                    ckpt_path = dst_folder / f"visual_encoder_ep-{epoch}.tar"
-                    pl_module.model.save_vision_encoder(ckpt_path)
-                    print("Saved visual encoder weights to", ckpt_path)
+        if not isinstance(pl_module, CLIPLightningModule):
+            return  # Not a CLIP model, no saving
 
-                    # remove the old checkpoints
-                    if ckpt_path.exists():
-                        old_ckpts = list(dst_folder.glob("visual_encoder_ep-*_old.tar"))
-                        for old_ckpt in old_ckpts:
-                            old_ckpt.unlink()
+        dst_folder = Path(trainer.logger.log_dir)
+
+        # rename the eventual old checkpoints
+        old_ckpt_paths = list(dst_folder.glob("visual_encoder_ep-*.tar"))
+        for old_path in old_ckpt_paths:
+            new_name = old_path.stem + "_old" + old_path.suffix
+            old_path.rename(dst_folder / new_name)
+
+        # Store the encoder state dict (weights) and its parameters:
+        epoch = trainer.current_epoch
+        ckpt_path = dst_folder / f"visual_encoder_ep-{epoch}.tar"
+        pl_module.model.save_vision_encoder(ckpt_path)
+        print("Saved visual encoder weights to", ckpt_path)
+
+        # remove the old checkpoints
+        if ckpt_path.exists():
+            old_ckpts = list(dst_folder.glob("visual_encoder_ep-*_old.tar"))
+            for old_ckpt in old_ckpts:
+                old_ckpt.unlink()

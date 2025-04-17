@@ -3,7 +3,6 @@ import pkgutil
 from pathlib import Path
 from types import ModuleType
 
-
 from torch import nn
 
 from .base import AutoPaddingModel, ModelABC, ModelType

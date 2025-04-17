@@ -5,9 +5,9 @@ Interface contract for our models.
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Tuple
-from torch import Size
-from torch import nn
+
 import torch
+from torch import Size, nn
 
 from mfai.torch.padding import pad_batch, undo_padding
 

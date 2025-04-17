@@ -20,9 +20,7 @@ class ResNetEncoder(ResNet):
     - patching first convolution for arbitrary input channels
     """
 
-    def __init__(
-        self, out_channels: tuple[int, ...], depth: int = 5, **kwargs: Any
-    ):
+    def __init__(self, out_channels: tuple[int, ...], depth: int = 5, **kwargs: Any):
         super().__init__(**kwargs)
         self._depth = depth
         self._out_channels = out_channels
@@ -48,9 +46,7 @@ class ResNetEncoder(ResNet):
 
         return features
 
-    def load_state_dict(
-        self, state_dict: dict[str, Any], **kwargs: Any
-    ) -> None:
+    def load_state_dict(self, state_dict: dict[str, Any], **kwargs: Any) -> None:
         state_dict.pop("fc.bias", None)
         state_dict.pop("fc.weight", None)
         super().load_state_dict(state_dict, **kwargs)

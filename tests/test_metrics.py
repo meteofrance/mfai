@@ -5,7 +5,8 @@ Tests for our pytorch metrics
 import numpy as np
 import pytest
 import torch
-from mfai.torch.metrics import CSINeighborood, PR_AUC, FAR, FNR
+
+from mfai.torch.metrics import FAR, FNR, PR_AUC, CSINeighborood
 
 
 @pytest.mark.parametrize("num_neighbors,expected_value", [(0, 0.36), (1, 0.91)])

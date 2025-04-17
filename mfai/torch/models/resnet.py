@@ -21,7 +21,7 @@ class ResNetEncoder(ResNet):
     """
 
     def __init__(
-        self, out_channels: tuple[int, ...], depth: int = 5, **kwargs: dict[str, Any]
+        self, out_channels: tuple[int, ...], depth: int = 5, **kwargs: Any
     ):
         super().__init__(**kwargs)
         self._depth = depth

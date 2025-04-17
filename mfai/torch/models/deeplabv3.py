@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Literal, Optional, Tuple, Union
+from typing import Any, Callable, Literal, Optional
 
 import torch
 import torch.nn as nn
@@ -11,8 +11,10 @@ from .resnet import get_resnet_encoder
 
 
 class Activation(nn.Module):
-    def __init__(self, name, **params):
+    def __init__(self, name: str | None, **params: Any) -> None:
         super().__init__()
+
+        self.activation: nn.Module | Callable
 
         if name is None or name == "identity":
             self.activation = nn.Identity(**params)
@@ -33,12 +35,17 @@ class Activation(nn.Module):
                 f"Activation should be callable/sigmoid/softmax/logsoftmax/tanh/None; got {name}"
             )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.activation(x)
 
 
 class DeepLabV3Decoder(nn.Sequential):
-    def __init__(self, in_channels, out_channels=256, atrous_rates=(12, 24, 36)):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int = 256,
+        atrous_rates: tuple[int, int, int] = (12, 24, 36),
+    ) -> None:
         super().__init__(
             ASPP(in_channels, out_channels, atrous_rates),
             nn.Conv2d(out_channels, out_channels, 3, padding=1, bias=False),
@@ -47,18 +54,18 @@ class DeepLabV3Decoder(nn.Sequential):
         )
         self.out_channels = out_channels
 
-    def forward(self, *features):
+    def forward(self, *features: tuple[torch.Tensor]) -> torch.Tensor:
         return super().forward(features[-1])
 
 
 class DeepLabV3PlusDecoder(nn.Module):
     def __init__(
         self,
-        encoder_channels,
-        out_channels=256,
-        atrous_rates=(12, 24, 36),
-        output_stride=16,
-    ):
+        encoder_channels: tuple[int, ...],
+        out_channels: int = 256,
+        atrous_rates: tuple[int, int, int] = (12, 24, 36),
+        output_stride: int = 16,
+    ) -> None:
         super().__init__()
         if output_stride not in (8, 16):
             raise ValueError(
@@ -101,7 +108,7 @@ class DeepLabV3PlusDecoder(nn.Module):
             nn.ReLU(),
         )
 
-    def forward(self, *features):
+    def forward(self, *features: tuple[torch.Tensor]) -> torch.Tensor:
         aspp_features = self.aspp(features[-1])
         aspp_features = self.up(aspp_features)
         high_res_features = self.block1(features[-4])
@@ -111,7 +118,7 @@ class DeepLabV3PlusDecoder(nn.Module):
 
 
 class ASPPConv(nn.Sequential):
-    def __init__(self, in_channels, out_channels, dilation):
+    def __init__(self, in_channels: int, out_channels: int, dilation: int) -> None:
         super().__init__(
             nn.Conv2d(
                 in_channels,
@@ -127,7 +134,7 @@ class ASPPConv(nn.Sequential):
 
 
 class ASPPSeparableConv(nn.Sequential):
-    def __init__(self, in_channels, out_channels, dilation):
+    def __init__(self, in_channels: int, out_channels: int, dilation: int) -> None:
         super().__init__(
             SeparableConv2d(
                 in_channels,
@@ -143,7 +150,7 @@ class ASPPSeparableConv(nn.Sequential):
 
 
 class ASPPPooling(nn.Sequential):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels: int, out_channels: int) -> None:
         super().__init__(
             nn.AdaptiveAvgPool2d(1),
             nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False),
@@ -151,7 +158,7 @@ class ASPPPooling(nn.Sequential):
             nn.ReLU(),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         size = x.shape[-2:]
         for mod in self:
             x = mod(x)
@@ -159,7 +166,13 @@ class ASPPPooling(nn.Sequential):
 
 
 class ASPP(nn.Module):
-    def __init__(self, in_channels, out_channels, atrous_rates, separable=False):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        atrous_rates: tuple[int, int, int],
+        separable: bool = False,
+    ) -> None:
         super().__init__()
         modules = []
         modules.append(
@@ -187,25 +200,25 @@ class ASPP(nn.Module):
             nn.Dropout(0.5),
         )
 
-    def forward(self, x):
-        res = []
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        res_list = []
         for conv in self.convs:
-            res.append(conv(x))
-        res = torch.cat(res, dim=1)
+            res_list.append(conv(x))
+        res = torch.cat(res_list, dim=1)
         return self.project(res)
 
 
 class SeparableConv2d(nn.Sequential):
     def __init__(
         self,
-        in_channels,
-        out_channels,
-        kernel_size,
-        stride=1,
-        padding=0,
-        dilation=1,
-        bias=True,
-    ):
+        in_channels: int,
+        out_channels: int,
+        kernel_size: tuple[int, int] | int,
+        stride: int = 1,
+        padding: Literal["valid", "same"] | int = 0,
+        dilation: int = 1,
+        bias: bool = True,
+    ) -> None:
         dephtwise_conv = nn.Conv2d(
             in_channels,
             in_channels,
@@ -252,11 +265,11 @@ class DeepLabV3Settings:
                 (could be **None** to return logits)
     """
 
-    encoder_name: str = "resnet18"
+    encoder_name: Literal["resnet18", "resnet34", "resnet50"] = "resnet18"
     encoder_depth: int = 5
     encoder_weights: bool = True
     decoder_channels: int = 256
-    activation: Optional[str] = None
+    activation: str | None = None
     upsampling: int = 8
     aux_params: Optional[dict] = None
 
@@ -281,17 +294,17 @@ class DeepLabV3(BaseModel):
     settings_kls = DeepLabV3Settings
     supported_num_spatial_dims = (2,)
     features_last: bool = False
-    model_type: int = ModelType.CONVOLUTIONAL
+    model_type: ModelType = ModelType.CONVOLUTIONAL
     num_spatial_dims: int = 2
     register: bool = True
 
     def __init__(
         self,
+        input_shape: tuple[int, ...],
         in_channels: int = 3,
         out_channels: int = 1,
-        input_shape: Union[None, Tuple[int, int]] = None,
         settings: DeepLabV3Settings = DeepLabV3Settings(),
-    ):
+    ) -> None:
         super().__init__()
 
         self.in_channels = in_channels
@@ -307,7 +320,7 @@ class DeepLabV3(BaseModel):
             output_stride=8,
         )
 
-        self.decoder = self.get_decoder(
+        self.decoder: DeepLabV3Decoder = self.get_decoder(
             in_channels=self.encoder.out_channels[-1],
             out_channels=settings.decoder_channels,
         )
@@ -315,13 +328,13 @@ class DeepLabV3(BaseModel):
         self.segmentation_head = self.get_segmentation_head(
             in_channels=self.decoder.out_channels,
             out_channels=out_channels,
-            activation=settings.activation,
+            activation_name=settings.activation,
             kernel_size=1,
             upsampling=settings.upsampling,
         )
 
         if settings.aux_params is not None:
-            self.classification_head = self.get_classification_head(
+            self.classification_head: nn.Module | None = self.get_classification_head(
                 in_channels=self.encoder.out_channels[-1], **settings.aux_params
             )
         else:
@@ -336,13 +349,13 @@ class DeepLabV3(BaseModel):
         """
         return self._settings
 
-    def initialize(self):
+    def initialize(self) -> None:
         self.initialize_decoder(self.decoder)
         self.initialize_head(self.segmentation_head)
         if self.classification_head is not None:
             self.initialize_head(self.classification_head)
 
-    def initialize_decoder(self, module):
+    def initialize_decoder(self, module: nn.Module) -> None:
         for m in module.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_uniform_(m.weight, mode="fan_in", nonlinearity="relu")
@@ -358,14 +371,14 @@ class DeepLabV3(BaseModel):
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
 
-    def initialize_head(self, module):
+    def initialize_head(self, module: nn.Module) -> None:
         for m in module.modules():
             if isinstance(m, (nn.Linear, nn.Conv2d)):
                 nn.init.xavier_uniform_(m.weight)
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
 
-    def check_input_shape(self, x):
+    def check_input_shape(self, x: torch.Tensor) -> None:
         h, w = x.shape[-2:]
         output_stride = self.encoder.output_stride
         if h % output_stride != 0 or w % output_stride != 0:
@@ -384,7 +397,9 @@ class DeepLabV3(BaseModel):
                 f"divisible by {output_stride}. Consider pad your images to shape ({new_h}, {new_w})."
             )
 
-    def forward(self, x):
+    def forward(
+        self, x: torch.Tensor
+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """Sequentially pass `x` trough model`s encoder, decoder and heads"""
 
         self.check_input_shape(x)
@@ -401,7 +416,7 @@ class DeepLabV3(BaseModel):
         return masks
 
     @torch.no_grad()
-    def predict(self, x):
+    def predict(self, x: torch.Tensor) -> torch.Tensor:
         """Inference method. Switch model to `eval` mode, call `.forward(x)` with `torch.no_grad()`
 
         Args:
@@ -414,28 +429,32 @@ class DeepLabV3(BaseModel):
         if self.training:
             self.eval()
 
-        x = self.forward(x)
+        result = self.forward(x)
 
-        return x
+        # forward may return tuple of (masks, labels) or just masks
+        if isinstance(result, tuple):
+            x, _ = result
+            return x
+        return result
 
     def get_segmentation_head(
         self,
         in_channels: int,
         out_channels: int,
         kernel_size: int = 3,
-        activation: Literal[None, str] = None,
+        activation_name: str | None = None,
         upsampling: int = 1,
     ) -> nn.Sequential:
         conv2d = nn.Conv2d(
             in_channels, out_channels, kernel_size=kernel_size, padding=kernel_size // 2
         )
-        upsampling = (
+        upsampling_layer = (
             nn.UpsamplingBilinear2d(scale_factor=upsampling)
             if upsampling > 1
             else nn.Identity()
         )
-        activation = Activation(activation)
-        return nn.Sequential(conv2d, upsampling, activation)
+        activation = Activation(activation_name)
+        return nn.Sequential(conv2d, upsampling_layer, activation)
 
     def get_classification_head(
         self,
@@ -443,7 +462,7 @@ class DeepLabV3(BaseModel):
         out_channels: int,
         pooling: str = "avg",
         dropout: float = 0.2,
-        activation: Literal[None, str] = None,
+        activation_name: str | None = None,
     ) -> nn.Sequential:
         if pooling not in ("max", "avg"):
             raise ValueError(
@@ -451,12 +470,14 @@ class DeepLabV3(BaseModel):
             )
         pool = nn.AdaptiveAvgPool2d(1) if pooling == "avg" else nn.AdaptiveMaxPool2d(1)
         flatten = nn.Flatten()
-        dropout = nn.Dropout(p=dropout, inplace=True) if dropout else nn.Identity()
+        dropout_layer = (
+            nn.Dropout(p=dropout, inplace=True) if dropout else nn.Identity()
+        )
         linear = nn.Linear(in_channels, out_channels, bias=True)
-        activation = Activation(activation)
-        return nn.Sequential(pool, flatten, dropout, linear, activation)
+        activation = Activation(activation_name)
+        return nn.Sequential(pool, flatten, dropout_layer, linear, activation)
 
-    def get_decoder(self, in_channels: int, out_channels: int) -> nn.Sequential:
+    def get_decoder(self, in_channels: int, out_channels: int) -> DeepLabV3Decoder:
         return DeepLabV3Decoder(in_channels=in_channels, out_channels=out_channels)
 
 
@@ -495,12 +516,12 @@ class DeepLabV3Plus(DeepLabV3):
 
     def __init__(
         self,
+        input_shape: tuple[int, ...],
         in_channels: int = 3,
         out_channels: int = 1,
-        input_shape: Union[None, Tuple[int, int]] = None,
         settings: DeepLabV3PlusSettings = DeepLabV3PlusSettings(),
     ):
-        super().__init__(in_channels, out_channels, input_shape, settings)
+        super().__init__(input_shape, in_channels, out_channels, settings)
 
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -514,7 +535,8 @@ class DeepLabV3Plus(DeepLabV3):
             output_stride=settings.encoder_output_stride,
         )
 
-        self.decoder = DeepLabV3PlusDecoder(
+        # According to the Liskov substitution principle we can't change the type of the decoder
+        self.decoder = DeepLabV3PlusDecoder(  # type: ignore[assignment]
             encoder_channels=self.encoder.out_channels,
             out_channels=settings.decoder_channels,
             atrous_rates=settings.decoder_atrous_rates,
@@ -524,7 +546,7 @@ class DeepLabV3Plus(DeepLabV3):
         self.check_required_attributes()
 
     @property
-    def settings(self) -> DeepLabV3PlusSettings:
+    def settings(self) -> DeepLabV3Settings:
         """
         Returns the settings instance used to configure the model.
         """

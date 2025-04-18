@@ -6,14 +6,45 @@ from pathlib import Path
 from typing import Literal, Tuple
 
 import lightning.pytorch as pl
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn.functional as F
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
 from torch.optim import AdamW
+from torchmetrics import Metric
 
 from mfai.torch.models.clip import Clip, ClipSettings
 from mfai.torch.namedtensor import NamedTensor
+
+
+class CLIPAccuracy(Metric):
+    """CLIP Accuracy, computed from the cosine similarity matrix returned by CLIP."""
+
+    def __init__(self, top_k: int) -> None:
+        super().__init__()
+        # full_state_update = True  # noqa
+        self.top_k = top_k
+        self.count_positives: torch.Tensor
+        self.count_total: torch.Tensor
+        self.add_state("count_positives", default=torch.tensor(0), dist_reduce_fx="sum")
+        self.add_state("count_total", default=torch.tensor(0), dist_reduce_fx="sum")
+
+    def update(self, similarity: torch.Tensor) -> None:
+        """Update the metric state with stats from the cosine similarity matrix."""
+        # Compute the top_k text indices for each image
+        top_k_indices = torch.argsort(similarity, axis=1)[:, -self.top_k :]
+        # Create an array of the correct indices for each image (assuming order matches)
+        correct_indices = torch.arange(similarity.shape[0], device=self.device)
+        correct_indices = correct_indices.reshape(-1, 1)  # shape (N, 1)
+        # List of bool that checks if the correct index is within the top-k for each image
+        matches_top_k = torch.any(top_k_indices == correct_indices, axis=1)
+        self.count_positives += torch.sum(matches_top_k)
+        self.count_total += matches_top_k.shape[0]
+
+    def compute(self) -> torch.Tensor:
+        return self.count_positives / self.count_total
 
 
 class CLIPLightningModule(pl.LightningModule):
@@ -30,6 +61,8 @@ class CLIPLightningModule(pl.LightningModule):
         self.learning_rate = learning_rate
         self.min_learning_rate = min_learning_rate
         self.lr_scheduler_interval = lr_scheduler_interval
+        self.top_1_accuracy = CLIPAccuracy(top_k=1)
+        self.top_3_accuracy = CLIPAccuracy(top_k=3)
 
         self.save_hyperparameters()
 
@@ -99,6 +132,18 @@ class CLIPLightningModule(pl.LightningModule):
         else:
             return optimizer
 
+    def plot_cosine_similarity(self, sim_matrix: torch.Tensor) -> None:
+        """
+        Plot the cosine similarity matrix.
+        """
+
+        plt.imshow(sim_matrix.cpu(), cmap="hot", interpolation="none")
+        plt.ylabel("Image Index")
+        plt.xlabel("Text Index")
+        plt.title(f"Cosine Similarity Matrix at epoch {self.current_epoch}")
+        plt.tight_layout()
+        return plt.gcf()
+
     def training_step(
         self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
@@ -112,9 +157,20 @@ class CLIPLightningModule(pl.LightningModule):
     def validation_step(
         self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
-        _, loss = self._shared_forward_step(batch)
+        cosine_similarity, loss = self._shared_forward_step(batch)
 
         self.log("val_loss", loss, on_epoch=True, logger=True, sync_dist=True)
+
+        # Plot cosine similarity matrix for the first validation batch
+        if batch_idx == 0 and self.logger:
+            fig = self.plot_cosine_similarity(cosine_similarity)
+            tb = self.logger.experiment
+            tb.add_figure(f"val_plots/similarity_{batch_idx}", fig, self.current_epoch)
+
+        self.top_1_accuracy(cosine_similarity)
+        self.top_3_accuracy(cosine_similarity)
+        self.log("top_1_acc", self.top_1_accuracy, on_epoch=True)
+        self.log("top_3_acc", self.top_3_accuracy, on_epoch=True)
 
         return loss
 

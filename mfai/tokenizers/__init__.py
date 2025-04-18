@@ -7,9 +7,8 @@ from pathlib import Path
 from typing import Any, List
 
 import sentencepiece as spm
-from huggingface_hub import hf_hub_download, login
 import tiktoken  # noqa
-
+from huggingface_hub import hf_hub_download, login
 
 from mfai.encoding import get_tiktoken_encoding
 
@@ -177,7 +176,6 @@ class MiniGPT2Tokenizer(Tokenizer, ABC):
 
         self.add_special_tokens(["<|endoftext|>"])
 
-
     def add_special_tokens(self, special_tokens: list[str]) -> None:
         """
         Method to add some special tokens to the tokenizer.
@@ -186,7 +184,7 @@ class MiniGPT2Tokenizer(Tokenizer, ABC):
         https://github.com/openai/tiktoken/tree/main?tab=readme-ov-file#extending-tiktoken
         """
         self.gpt2_tokenizer.add_special_tokens(special_tokens)
- 
+
         vocab_size = self.vocab_size
         for i, special_token in enumerate(self.gpt2_tokenizer.special_tokens):
             mini_tok_id = vocab_size + i

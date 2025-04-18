@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 # type: ignore
-import torch
-from typing import Sequence
 from collections import OrderedDict
 from itertools import chain
+from typing import Sequence
+from urllib.error import URLError
+
+import torch
 import torch.nn as nn
 import torchvision.models as models
-from urllib.error import URLError
 
 
 class PerceptualLoss(torch.nn.Module):

@@ -1,6 +1,6 @@
+import warnings
 from pathlib import Path
 from typing import Any, Literal, Tuple
-import warnings
 
 import lightning.pytorch as pl
 import pandas as pd

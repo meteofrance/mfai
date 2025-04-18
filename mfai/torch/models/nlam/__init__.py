@@ -590,8 +590,8 @@ class BaseHiGraphModel(BaseGraphModel):
         return mesh_rep_levels[0]  # (B, N_mesh[0], d_h)
 
     def hi_processor_step(
-        self, mesh_rep_levels: torch.Tensor, mesh_same_rep: torch.Tensor, mesh_up_rep: torch.Tensor, mesh_down_rep: torch.Tensor
-    ) -> None:
+        self, mesh_rep_levels: list[torch.Tensor], mesh_same_rep: list[torch.Tensor], mesh_up_rep: list[torch.Tensor], mesh_down_rep: list[torch.Tensor]
+    ) -> tuple[list[torch.Tensor], list[torch.Tensor], list[torch.Tensor], list[torch.Tensor]]:
         """
         Internal processor step of hierarchical graph models.
         Between mesh init and read out.
@@ -866,8 +866,8 @@ class HiLAM(BaseHiGraphModel):
         return model
 
     def mesh_down_step(
-        self, mesh_rep_levels, mesh_same_rep, mesh_down_rep, down_gnns, same_gnns
-    ):
+        self, mesh_rep_levels: list[torch.Tensor], mesh_same_rep: list[torch.Tensor], mesh_down_rep: list[torch.Tensor], down_gnns: nn.ModuleList, same_gnns: nn.ModuleList
+    ) -> tuple[list[torch.Tensor], list[torch.Tensor], list[torch.Tensor]]:
         """
         Run down-part of vertical processing, sequentially alternating between processing
         using down edges and same-level edges.
@@ -903,8 +903,8 @@ class HiLAM(BaseHiGraphModel):
         return mesh_rep_levels, mesh_same_rep, mesh_down_rep
 
     def mesh_up_step(
-        self, mesh_rep_levels, mesh_same_rep, mesh_up_rep, up_gnns, same_gnns
-    ):
+        self, mesh_rep_levels: list[torch.Tensor], mesh_same_rep: list[torch.Tensor], mesh_up_rep: list[torch.Tensor], up_gnns: nn.ModuleList, same_gnns: nn.ModuleList
+    ) -> tuple[list[torch.Tensor], list[torch.Tensor], list[torch.Tensor]]:
         """
         Run up-part of vertical processing, sequentially alternating between processing
         using up edges and same-level edges.
@@ -940,8 +940,8 @@ class HiLAM(BaseHiGraphModel):
         return mesh_rep_levels, mesh_same_rep, mesh_up_rep
 
     def hi_processor_step(
-        self, mesh_rep_levels, mesh_same_rep, mesh_up_rep, mesh_down_rep
-    ):
+        self, mesh_rep_levels: list[torch.Tensor], mesh_same_rep: list[torch.Tensor], mesh_up_rep: list[torch.Tensor], mesh_down_rep: list[torch.Tensor]
+    ) -> tuple[list[torch.Tensor], list[torch.Tensor], list[torch.Tensor], list[torch.Tensor]]:
         """
         Internal processor step of hierarchical graph models.
         Between mesh init and read out.

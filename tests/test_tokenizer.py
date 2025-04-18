@@ -45,3 +45,10 @@ def test_add_special_tokens(tokenizer: Tokenizer):
     assert text_encoded[0] == tokenizer.vocab_size - 1
     # Check that the encoding of <|endoftext|> is unchanged after adding some new token
     assert text_encoded[-1] == base_tokenizer.eot_token
+
+    # Check that the EOT doesn't change his ID after adding some new tokens
+    assert base_tokenizer.encode("<|endoftext|>") == tokenizer.encode("<|endoftext|>")
+    assert base_tokenizer.decode(
+        base_tokenizer.encode("<|endoftext|>")
+    ) == tokenizer.decode(tokenizer.encode("<|endoftext|>"))
+    assert tokenizer.decode([base_tokenizer.vocab_size - 1]) == "<|endoftext|>"

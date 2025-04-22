@@ -9,7 +9,7 @@ from lightning.pytorch.loggers import TensorBoardLogger
 
 from mfai.torch.dummy_dataset import DummyDataModule
 from mfai.torch.models.unet import UNet
-from mfai.torch.segmentation_module import SegmentationLightningModule
+from mfai.torch.lightning_modules import SegmentationLightningModule
 
 
 @pytest.mark.parametrize(

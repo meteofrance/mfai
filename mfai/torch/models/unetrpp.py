@@ -520,7 +520,10 @@ class UnetrUpBlock(nn.Module):
                 self.transp_conv = nn.Sequential(
                     nn.UpsamplingBilinear2d(scale_factor=scale_factor),
                     nn.Conv2d(
-                        in_channels, out_channels, kernel_size=upsample_kernel_size, padding=1
+                        in_channels,
+                        out_channels,
+                        kernel_size=upsample_kernel_size,
+                        padding=1,
                     ),
                 )
             else:

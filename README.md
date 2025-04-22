@@ -153,7 +153,7 @@ Obviously, if one of the implemented methods, metrics, etc. is not suitable for 
 
 **Example:**
 
-We want here to log some figures in the TensorBoard, so we orverload the default `val_plot_step()` method.
+We want here to log some figures in the TensorBoard, so we overload the default `val_plot_step()` method.
 ```python
 from mfai.torch.lightning_modules import SegmentationLightningModule
 

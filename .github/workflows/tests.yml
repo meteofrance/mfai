@@ -35,7 +35,7 @@ jobs:
         ruff check . --select I
     - name: Gather Python changed files
       id: changed-py-files
-      uses: tj-actions/changed-files@v23
+      uses: tj-actions/changed-files@ed68ef82c095e0d48ec87eccea555d944a631a4c # v46
       with:
         files: |
           *.py

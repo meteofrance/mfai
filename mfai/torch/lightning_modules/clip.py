@@ -34,7 +34,7 @@ class CLIPAccuracy(Metric):
     def update(self, similarity: torch.Tensor) -> None:
         """Update the metric state with stats from the cosine similarity matrix."""
         # Compute the top_k text indices for each image
-        top_k_indices = torch.argsort(similarity, axis=1)[:, -self.top_k :]
+        top_k_indices = similarity.topk(self.top_k, dim=1).indices
         # Create an array of the correct indices for each image (assuming order matches)
         correct_indices = torch.arange(similarity.shape[0], device=self.device)
         correct_indices = correct_indices.reshape(-1, 1)  # shape (N, 1)
@@ -68,6 +68,7 @@ class CLIPLightningModule(pl.LightningModule):
 
 
     def setup(self, stage: str):
+        # Log hparams and metrics in "hparams" tab of tensorboard
         if stage == "fit" and self.logger:
             metrics, params = {}, {}
             metrics["val_loss"] = 0.0
@@ -75,6 +76,7 @@ class CLIPLightningModule(pl.LightningModule):
             metrics["top_3_acc"] = 0.0
             params["batch_size"] = self.trainer.datamodule.batch_size
             params["embed_dim"] = self.model.text_encoder.emb_dim
+            params["context_len"] = self.model.text_encoder.context_length
             params["learning_rate"] = self.learning_rate
             params["min_learning_rate"] = self.min_learning_rate
             params["lr_scheduler_interval"] = self.lr_scheduler_interval
@@ -98,7 +100,7 @@ class CLIPLightningModule(pl.LightningModule):
                 "batch lat lon features_timesteps -> batch features_timesteps lat lon"
             )
 
-        text_logits, image_logits = self(images, texts)
+        text_logits, image_logits, text_features, image_features = self(images, texts)
 
         # Compute contrastive loss
         labels = torch.arange(len(texts), device=self.device)
@@ -106,7 +108,7 @@ class CLIPLightningModule(pl.LightningModule):
         loss_txt = F.cross_entropy(text_logits, labels)
         loss = (loss_img + loss_txt) / 2
 
-        return image_logits, loss
+        return loss, text_features, image_features
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
         """
@@ -152,10 +154,10 @@ class CLIPLightningModule(pl.LightningModule):
         """
         Plot the cosine similarity matrix.
         """
-
-        plt.imshow(sim_matrix.cpu(), cmap="hot", interpolation="none")
+        plt.imshow(sim_matrix.cpu(), cmap="hot", interpolation="none", vmin=0, vmax=0.3)
         plt.ylabel("Image Index")
         plt.xlabel("Text Index")
+        plt.colorbar(label="Cosine Similarity")
         plt.title(f"Cosine Similarity Matrix at epoch {self.current_epoch}")
         plt.tight_layout()
         return plt.gcf()
@@ -163,7 +165,7 @@ class CLIPLightningModule(pl.LightningModule):
     def training_step(
         self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
-        _, loss = self._shared_forward_step(batch)
+        loss, _, _ = self._shared_forward_step(batch)
 
         self.log(
             "train_loss", loss, on_step=True, prog_bar=True, logger=True, sync_dist=True
@@ -173,18 +175,19 @@ class CLIPLightningModule(pl.LightningModule):
     def validation_step(
         self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
-        cosine_similarity, loss = self._shared_forward_step(batch)
+        loss, text_features, image_features = self._shared_forward_step(batch)
+        similarity = (100.0 * image_features @ text_features.T).softmax(dim=-1)
 
         self.log("val_loss", loss, on_epoch=True, logger=True, sync_dist=True)
 
         # Plot cosine similarity matrix for the first validation batch
         if batch_idx == 0 and self.logger:
-            fig = self.plot_cosine_similarity(cosine_similarity)
+            fig = self.plot_cosine_similarity(similarity)
             tb = self.logger.experiment
             tb.add_figure(f"val_plots/similarity_{batch_idx}", fig, self.current_epoch)
 
-        self.top_1_accuracy(cosine_similarity)
-        self.top_3_accuracy(cosine_similarity)
+        self.top_1_accuracy(similarity)
+        self.top_3_accuracy(similarity)
         self.log("top_1_acc", self.top_1_accuracy, on_epoch=True)
         self.log("top_3_acc", self.top_3_accuracy, on_epoch=True)
 

@@ -33,9 +33,17 @@ jobs:
       run: |
         ruff format --check .
         ruff check . --select I
-    - name: Type hinting with mypy
+    - name: Gather Python changed files
+      id: changed-py-files
+      uses: tj-actions/changed-files@v23
+      with:
+        files: |
+          *.py
+          **/*.py
+    - name: Type hinting with mypy on changed files
+      if: steps.changed-py-files.outputs.any_changed == 'true'
       run: |
-        mypy mfai/
+        mypy ${{ steps.changed-py-files.outputs.all_changed_files }}
     - name: Test with pytest
       run: |
         pytest --cov=mfai --cov-fail-under=85 tests/

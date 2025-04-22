@@ -517,12 +517,14 @@ class UnetrUpBlock(nn.Module):
                     upsample_kernel_size = upsample_kernel_size[:2]
                 else:
                     scale_factor = float(upsample_kernel_size)
+                if isinstance(kernel_size, tuple):
+                    kernel_size = kernel_size[:2]
                 self.transp_conv = nn.Sequential(
                     nn.UpsamplingBilinear2d(scale_factor=scale_factor),
                     nn.Conv2d(
                         in_channels,
                         out_channels,
-                        kernel_size=upsample_kernel_size,
+                        kernel_size=kernel_size,
                         padding=1,
                     ),
                 )

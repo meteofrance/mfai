@@ -138,11 +138,9 @@ class HalfUNet(BaseModel):
 </details>
 
 
-# SegmentationLightningModule
+# Lightning Modules
 
-We provide **SegmentationLightningModule** a lightning module adapted to supervised Deep Learning projects where the input of the neural network is made of one or multiple images and the target is also one or multiple images.
-
-The module can be instanciated with any of the aforementioned neural networks architetures and used in 4 different modes : binary classification, multiclass classification, multilabel classification and regression.
+A Lightning Module is a high-level interface in PyTorch Lightning that encapsulates the model, training, validation, and testing logic, promoting modularity and ease of use in deep learning projects.
 
 The module provides:
 - customization for each stage of the training
@@ -150,6 +148,36 @@ The module provides:
 - logging of configuration and hyperparameters
 - computation of several metrics during validation stage
 - test stage: compute metrics for each sample individualy and save them in CSV file
+
+Obviously, if one of the implemented methods, metrics, etc. is not suitable for your problem, it is always possible to overload them so that the lightningmodule adapts to your needs.
+
+**Example:**
+
+We want here to log some figures in the TensorBoard, so we orverload the default `val_plot_step()` method.
+```python
+from mfai.torch.lightning_modules import SegmentationLightningModule
+
+class MyProjectLightningModule(SegmentationLightningModule):
+    def val_plot_step(self, batch_idx, y, y_hat):
+        """Log prediction made for the first image of batches (6, 14, 48, 78) in tensorboard."""
+        interesting_batches = [6, 14, 48, 78]
+        if batch_idx in interesting_batches:
+            fig = plot_pred_and_target(y=y[0], y_hat=y_hat[0])
+
+            tb = self.logger.experiment
+            tb.add_figure(f"val_plots/test_figure_{batch_idx}", fig, self.current_epoch)
+```
+
+## Segmentation
+We provide [**SegmentationLightningModule**](/mfai/torch/lightning_modules/segmentation.py#21) a lightning module adapted to supervised Deep Learning projects where the input of the neural network is made of one or multiple images and the target is also one or multiple images.
+
+The module can be instanciated with any of the aforementioned neural networks architetures and used in 4 different modes : binary classification, multiclass classification, multilabel classification and regression.
+
+## Clip
+We also provide a [**CLIPLightningModule**](/mfai/torch/lightning_modules/clip.py#19) a lightning module dedicated to the training of CLIP models. 
+
+This module can be instancied with a simple [ClipSettings](/mfai/torch/models/clip.py#19) that inform which image and text encoders to use as well as the embedding size and the initial temperature.
+
 
 # Lightning CLI
 
@@ -341,7 +369,7 @@ The lightning module can be instantiated and used in a forward pass as follows:
 ```python
 import torch
 from mfai.torch.models import UNet
-from mfai.torch.segmentation_module import SegmentationLightningModule
+from mfai.torch.lightning_modules import SegmentationLightningModule
 
 arch = UNet(in_channels=1, out_channels=1, input_shape=[64, 64])
 loss = torch.nn.MSELoss()
@@ -364,7 +392,7 @@ Setting up lightning CLI is as easy as our `examples/main_cli_dummy.py` script:
 from lightning.pytorch.cli import LightningCLI
 
 from mfai.torch.dummy_dataset import DummyDataModule
-from mfai.torch.segmentation_module import SegmentationLightningModule
+from mfai.torch.lightning_modules import SegmentationLightningModule
 
 
 def cli_main():

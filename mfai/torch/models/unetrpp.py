@@ -509,14 +509,14 @@ class UnetrUpBlock(nn.Module):
         self.transp_conv: nn.Module
         if spatial_dims == 2:
             if linear_upsampling:
-                if isinstance(kernel_size, tuple):
+                if isinstance(upsample_kernel_size, tuple):
                     scale_factor: tuple[float, float] | float = (
-                        float(kernel_size[0]),
-                        float(kernel_size[1]),
+                        float(upsample_kernel_size[0]),
+                        float(upsample_kernel_size[1]),
                     )
-                    kernel_size = kernel_size[:2]
+                    upsample_kernel_size = upsample_kernel_size[:2]
                 else:
-                    scale_factor = float(kernel_size)
+                    scale_factor = float(upsample_kernel_size)
                 self.transp_conv = nn.Sequential(
                     nn.UpsamplingBilinear2d(scale_factor=scale_factor),
                     nn.Conv2d(

@@ -27,20 +27,29 @@
       - LLama2
     - Multimodal Language Models:
       - A custom Fuyu inspired model
+    - Vision Language Models:
+      - CLIP
 
 - [SegmentationLightningModule](#segmentationlightningmodule)
+- [Lightning CLI](#lightning-cli)
 - [NamedTensors](#namedtensors)
 - [Metrics](#metrics)
     - Critical Sucess Index
     - False Alarm Rate
     - False Negative Rate
     - Precision-Recall Area Under Curve
+- [Losses](#losses)
+  - Perceptual loss
+  - LPIPS
 - [Installation](#installation)
 - [Usage](#usage)
     - [Instanciate a model](#instanciate-a-model)
     - [Export to onnx](#export-to-onnx)
     - [NamedTensors](#namedtensors-example)
 - [Running tests](#running-tests)
+- [Contributing](#contributing)
+- [Publishing](#publishing)
+- [Acknowledgements](#acknowledgements)
 
 # Neural Network Architectures
 
@@ -591,15 +600,6 @@ docker build . -f Dockerfile -t mfai
 docker run -it --rm mfai python3 -m pytest tests
 ```
 
-# Running mypy
-Mypy is used to check the project type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
-
-To run mypy:
-```bash
-docker build . -f Dockerfile -t mfai
-docker run -it --rm mfai mypy mfai/
-```
-
 # Contributing
 
 We welcome contributions to this package. Our guidelines are the following:
@@ -608,6 +608,15 @@ We welcome contributions to this package. Our guidelines are the following:
 - Make sure the current tests pass and add new tests if necessary to cover the new features. Our CI will fail with a **test coverage below 80%**.
 - Make sure the code is formatted with [ruff](https://docs.astral.sh/ruff/) : `ruff format` and `ruff check --select I --fix`
 - Make sure the code respects our mypy type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
+
+## Running mypy
+Mypy is used to check the project type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
+
+To run mypy:
+```bash
+docker build . -f Dockerfile -t mfai
+docker run -it --rm mfai mypy mfai/
+```
 
 # Publishing
 

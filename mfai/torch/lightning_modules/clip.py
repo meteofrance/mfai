@@ -66,6 +66,22 @@ class CLIPLightningModule(pl.LightningModule):
 
         self.save_hyperparameters()
 
+
+    def setup(self, stage: str):
+        if stage == "fit" and self.logger:
+            metrics, params = {}, {}
+            metrics["val_loss"] = 0.0
+            metrics["top_1_acc"] = 0.0
+            metrics["top_3_acc"] = 0.0
+            params["batch_size"] = self.trainer.datamodule.batch_size
+            params["embed_dim"] = self.model.text_encoder.emb_dim
+            params["learning_rate"] = self.learning_rate
+            params["min_learning_rate"] = self.min_learning_rate
+            params["lr_scheduler_interval"] = self.lr_scheduler_interval
+            params["temperature"] = self.model.temperature
+            self.logger.log_hyperparams(params, metrics=metrics)
+
+
     def forward(
         self, images: NamedTensor, texts: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:

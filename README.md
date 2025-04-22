@@ -171,7 +171,7 @@ class MyProjectLightningModule(SegmentationLightningModule):
 ## Segmentation
 We provide [**SegmentationLightningModule**](/mfai/torch/lightning_modules/segmentation.py#21) a lightning module adapted to supervised Deep Learning projects where the input of the neural network is made of one or multiple images and the target is also one or multiple images.
 
-The module can be instanciated with any of the aforementioned neural networks architetures and used in 4 different modes : binary classification, multiclass classification, multilabel classification and regression.
+The module can be instanciated with any of the aforementioned vision neural networks architetures and used in 4 different modes : binary classification, multiclass classification, multilabel classification and regression.
 
 ## Clip
 We also provide a [**CLIPLightningModule**](/mfai/torch/lightning_modules/clip.py#19) a lightning module dedicated to the training of CLIP models. 

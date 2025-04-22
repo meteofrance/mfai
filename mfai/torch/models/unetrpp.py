@@ -7,7 +7,7 @@ Added 2d support and Bilinear interpolation for upsampling.
 import math
 import warnings
 from dataclasses import dataclass
-from typing import Sequence, Tuple, Union
+from typing import Tuple, Union
 
 import torch
 import torch.nn as nn

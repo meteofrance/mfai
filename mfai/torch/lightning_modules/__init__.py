@@ -1,7 +1,7 @@
-from .segmentation import SegmentationLightningModule
 from .clip import CLIPLightningModule
+from .segmentation import SegmentationLightningModule
 
 __all__ = [
-    "SegmentationLightningModule",
     "CLIPLightningModule",
+    "SegmentationLightningModule",
 ]

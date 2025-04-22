@@ -174,9 +174,9 @@ We provide [**SegmentationLightningModule**](/mfai/torch/lightning_modules/segme
 The module can be instanciated with any of the aforementioned vision neural networks architetures and used in 4 different modes : binary classification, multiclass classification, multilabel classification and regression.
 
 ## Clip
-We also provide a [**CLIPLightningModule**](/mfai/torch/lightning_modules/clip.py#19) a lightning module dedicated to the training of CLIP models. 
+We also provide [**CLIPLightningModule**](/mfai/torch/lightning_modules/clip.py#19), a lightning module dedicated to the training of CLIP models. 
 
-This module can be instancied with a simple [ClipSettings](/mfai/torch/models/clip.py#19) that inform which image and text encoders to use as well as the embedding size and the initial temperature.
+This module can be instanciated with a simple [ClipSettings](/mfai/torch/models/clip.py#19) that informs which image and text encoders to use as well as the embedding size and the initial temperature.
 
 
 # Lightning CLI

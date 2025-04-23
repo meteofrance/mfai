@@ -7,7 +7,6 @@ from typing import Literal, Tuple
 
 import lightning.pytorch as pl
 import matplotlib.pyplot as plt
-import numpy as np
 import torch
 import torch.nn.functional as F
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
@@ -75,6 +74,7 @@ class CLIPLightningModule(pl.LightningModule):
             metrics["top_1_acc"] = 0.0
             metrics["top_3_acc"] = 0.0
             params["batch_size"] = self.trainer.datamodule.batch_size
+            params["pretrained_encoder"] = self.model.image_encoder.settings.encoder_weights
             params["embed_dim"] = self.model.text_encoder.emb_dim
             params["context_len"] = self.model.text_encoder.context_length
             params["learning_rate"] = self.learning_rate
@@ -108,7 +108,7 @@ class CLIPLightningModule(pl.LightningModule):
         loss_txt = F.cross_entropy(text_logits, labels)
         loss = (loss_img + loss_txt) / 2
 
-        return loss, text_features, image_features
+        return loss, text_features, image_features, texts
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
         """
@@ -162,10 +162,22 @@ class CLIPLightningModule(pl.LightningModule):
         plt.tight_layout()
         return plt.gcf()
 
+    def plot_features(self, sim_matrix: torch.Tensor, title:str) -> None:
+        """
+        Plot the cosine similarity matrix.
+        """
+        plt.imshow(sim_matrix.cpu(), cmap="hot", interpolation="none")
+        plt.ylabel("Batch length")
+        plt.xlabel("Sequence length")
+        plt.colorbar(label="Token Index Values")
+        plt.title(title)
+        plt.tight_layout()
+        return plt.gcf()
+
     def training_step(
         self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
-        loss, _, _ = self._shared_forward_step(batch)
+        loss, _, _, _ = self._shared_forward_step(batch)
 
         self.log(
             "train_loss", loss, on_step=True, prog_bar=True, logger=True, sync_dist=True
@@ -175,16 +187,18 @@ class CLIPLightningModule(pl.LightningModule):
     def validation_step(
         self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
-        loss, text_features, image_features = self._shared_forward_step(batch)
+        loss, text_features, image_features, texts = self._shared_forward_step(batch)
         similarity = (100.0 * image_features @ text_features.T).softmax(dim=-1)
 
         self.log("val_loss", loss, on_epoch=True, logger=True, sync_dist=True)
 
         # Plot cosine similarity matrix for the first validation batch
         if batch_idx == 0 and self.logger:
-            fig = self.plot_cosine_similarity(similarity)
             tb = self.logger.experiment
+            fig = self.plot_cosine_similarity(similarity)
             tb.add_figure(f"val_plots/similarity_{batch_idx}", fig, self.current_epoch)
+            fig = self.plot_features(texts, "texts")
+            tb.add_figure(f"val_plots/texts_{batch_idx}", fig, self.current_epoch)
 
         self.top_1_accuracy(similarity)
         self.top_3_accuracy(similarity)

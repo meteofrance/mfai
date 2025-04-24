@@ -18,13 +18,15 @@ from mfai.torch.models.clip import Clip, ClipSettings
 from mfai.torch.namedtensor import NamedTensor
 
 
-class CLIPAccuracy(Metric):
-    """CLIP Accuracy, computed from the cosine similarity matrix returned by CLIP."""
+class CLIPAccuracySkillScore(Metric):
+    """CLIP Accuracy Skill Score.
+    The accuracy is computed from the cosine similarity matrix returned by CLIP.
+    Then we use a uniformly random model as a reference for the skill score."""
 
-    def __init__(self, top_k: int) -> None:
+    def __init__(self, top_k: int, batch_size:int) -> None:
         super().__init__()
-        # full_state_update = True  # noqa
         self.top_k = top_k
+        self.batch_size = batch_size
         self.count_positives: torch.Tensor
         self.count_total: torch.Tensor
         self.add_state("count_positives", default=torch.tensor(0), dist_reduce_fx="sum")
@@ -43,7 +45,10 @@ class CLIPAccuracy(Metric):
         self.count_total += matches_top_k.shape[0]
 
     def compute(self) -> torch.Tensor:
-        return self.count_positives / self.count_total
+        accuracy = self.count_positives / self.count_total
+        random_accuracy = 1 / self.batch_size
+        skill_score = (accuracy - random_accuracy) / (1 - random_accuracy)
+        return skill_score
 
 
 class CLIPLightningModule(pl.LightningModule):
@@ -60,55 +65,28 @@ class CLIPLightningModule(pl.LightningModule):
         self.learning_rate = learning_rate
         self.min_learning_rate = min_learning_rate
         self.lr_scheduler_interval = lr_scheduler_interval
-        self.top_1_accuracy = CLIPAccuracy(top_k=1)
-        self.top_3_accuracy = CLIPAccuracy(top_k=3)
 
         self.save_hyperparameters()
 
 
     def setup(self, stage: str):
-        # Log hparams and metrics in "hparams" tab of tensorboard
+        """Setup metrics and loggers after the trainer and datamodule are defined."""
+        batch_size = self.trainer.datamodule.batch_size
+        self.skill_score = CLIPAccuracySkillScore(top_k=1, batch_size=batch_size)
         if stage == "fit" and self.logger:
+            # Log hparams and metrics in "hparams" tab of tensorboard:
             metrics, params = {}, {}
             metrics["val_loss"] = 0.0
-            metrics["top_1_acc"] = 0.0
-            metrics["top_3_acc"] = 0.0
-            params["batch_size"] = self.trainer.datamodule.batch_size
+            metrics["val_skill_score"] = 0.0
+            params["batch_size"] = batch_size
             params["pretrained_encoder"] = self.model.image_encoder.settings.encoder_weights
             params["embed_dim"] = self.model.text_encoder.emb_dim
             params["context_len"] = self.model.text_encoder.context_length
             params["learning_rate"] = self.learning_rate
             params["min_learning_rate"] = self.min_learning_rate
             params["lr_scheduler_interval"] = self.lr_scheduler_interval
-            params["temperature"] = self.model.temperature
             self.logger.log_hyperparams(params, metrics=metrics)
 
-
-    def forward(
-        self, images: NamedTensor, texts: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        return self.model(texts, images)
-
-    def _shared_forward_step(
-        self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        images, texts, _ = batch
-
-        if len(images.tensor.shape) == 5:
-            images.flatten_("features_timesteps", 3, 4)
-            images.rearrange_(
-                "batch lat lon features_timesteps -> batch features_timesteps lat lon"
-            )
-
-        text_logits, image_logits, text_features, image_features = self(images, texts)
-
-        # Compute contrastive loss
-        labels = torch.arange(len(texts), device=self.device)
-        loss_img = F.cross_entropy(image_logits, labels)
-        loss_txt = F.cross_entropy(text_logits, labels)
-        loss = (loss_img + loss_txt) / 2
-
-        return loss, text_features, image_features, texts
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
         """
@@ -174,6 +152,33 @@ class CLIPLightningModule(pl.LightningModule):
         plt.tight_layout()
         return plt.gcf()
 
+    def forward(
+        self, images: NamedTensor, texts: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        return self.model(texts, images)
+
+    def _shared_forward_step(
+        self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        images, texts, _ = batch
+
+        if len(images.tensor.shape) == 5:
+            images.flatten_("features_timesteps", 3, 4)
+            images.rearrange_(
+                "batch lat lon features_timesteps -> batch features_timesteps lat lon"
+            )
+
+        text_logits, image_logits, text_features, image_features = self(images, texts)
+
+        # Compute contrastive loss
+        labels = torch.arange(len(texts), device=self.device)
+        loss_img = F.cross_entropy(image_logits, labels)
+        loss_txt = F.cross_entropy(text_logits, labels)
+        loss = (loss_img + loss_txt) / 2
+
+        return loss, text_features, image_features, texts
+
+
     def training_step(
         self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
@@ -184,6 +189,7 @@ class CLIPLightningModule(pl.LightningModule):
         )
         return loss
 
+
     def validation_step(
         self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
@@ -192,7 +198,7 @@ class CLIPLightningModule(pl.LightningModule):
 
         self.log("val_loss", loss, on_epoch=True, logger=True, sync_dist=True)
 
-        # Plot cosine similarity matrix for the first validation batch
+        # Plot cosine similarity matrix for the first evaluation batch
         if batch_idx == 0 and self.logger:
             tb = self.logger.experiment
             fig = self.plot_cosine_similarity(similarity)
@@ -200,10 +206,8 @@ class CLIPLightningModule(pl.LightningModule):
             fig = self.plot_features(texts, "texts")
             tb.add_figure(f"val_plots/texts_{batch_idx}", fig, self.current_epoch)
 
-        self.top_1_accuracy(similarity)
-        self.top_3_accuracy(similarity)
-        self.log("top_1_acc", self.top_1_accuracy, on_epoch=True)
-        self.log("top_3_acc", self.top_3_accuracy, on_epoch=True)
+        self.skill_score(similarity)
+        self.log("val_skill_score", self.skill_score, on_epoch=True)
 
         return loss
 

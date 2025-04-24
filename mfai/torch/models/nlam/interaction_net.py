@@ -25,13 +25,13 @@ class InteractionNet(pyg.nn.MessagePassing):
         self,
         edge_index: torch.Tensor,
         input_dim: int,
-        update_edges: bool=True,
-        hidden_layers: int=1,
-        hidden_dim: int=None,
-        edge_chunk_sizes: list[int]=None,
-        aggr_chunk_sizes: list[int]=None,
-        aggr: Literal["sum", "mean"]="sum",
-        checkpoint: bool=False,
+        update_edges: bool = True,
+        hidden_layers: int = 1,
+        hidden_dim: int = None,
+        edge_chunk_sizes: list[int] = None,
+        aggr_chunk_sizes: list[int] = None,
+        aggr: Literal["sum", "mean"] = "sum",
+        checkpoint: bool = False,
     ):
         """
         Create a new InteractionNet
@@ -97,7 +97,9 @@ class InteractionNet(pyg.nn.MessagePassing):
 
         self.update_edges = update_edges
 
-    def forward(self, send_rep: torch.Tensor, rec_rep: torch.Tensor, edge_rep: torch.Tensor) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self, send_rep: torch.Tensor, rec_rep: torch.Tensor, edge_rep: torch.Tensor
+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """
         Apply interaction network to update the representations of receiver nodes,
         and optionally the edge representations.
@@ -129,13 +131,21 @@ class InteractionNet(pyg.nn.MessagePassing):
 
         return rec_rep
 
-    def message(self, x_j: torch.Tensor, x_i: torch.Tensor, edge_attr: torch.Tensor) -> torch.Tensor:
+    def message(
+        self, x_j: torch.Tensor, x_i: torch.Tensor, edge_attr: torch.Tensor
+    ) -> torch.Tensor:
         """
         Compute messages from node j to node i.
         """
         return self.edge_mlp(torch.cat((edge_attr, x_j, x_i), dim=-1))
 
-    def aggregate(self, messages: torch.Tensor, index: torch.Tensor, ptr: torch.Tensor, dim_size: int) -> tuple[torch.Tensor, torch.Tensor]:
+    def aggregate(
+        self,
+        messages: torch.Tensor,
+        index: torch.Tensor,
+        ptr: torch.Tensor,
+        dim_size: int,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Overridden aggregation function to:
         * return both aggregated and original messages,
@@ -152,7 +162,9 @@ class SplitMLPs(nn.Module):
     each chunk through separate MLPs.
     """
 
-    def __init__(self, mlps: list[nn.Sequential | CheckpointWrapper], chunk_sizes: list[int]) -> None:
+    def __init__(
+        self, mlps: list[nn.Sequential | CheckpointWrapper], chunk_sizes: list[int]
+    ) -> None:
         super().__init__()
         assert len(mlps) == len(
             chunk_sizes
@@ -177,7 +189,9 @@ class SplitMLPs(nn.Module):
         return torch.cat(chunk_outputs, dim=-2)
 
 
-def make_mlp(blueprint: list[int], layer_norm: bool=True, checkpoint: bool=False) -> nn.Sequential | CheckpointWrapper:
+def make_mlp(
+    blueprint: list[int], layer_norm: bool = True, checkpoint: bool = False
+) -> nn.Sequential | CheckpointWrapper:
     """
     Create MLP from list blueprint, with
     input dimensionality: blueprint[0]

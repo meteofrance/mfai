@@ -50,9 +50,6 @@ class GPT2Tokenizer(Tokenizer):
         self.special_tokens: list[str] = []
         self.tokenizer = self.base_tokenizer
 
-        # Always add the <|endoftext|> token
-        self.add_special_tokens(["<|endoftext|>"])
-
     def add_special_tokens(self, new_special_tokens: list[str]) -> None:
         """
         Method to add some special tokens to the tokenizer.
@@ -61,24 +58,29 @@ class GPT2Tokenizer(Tokenizer):
         https://github.com/openai/tiktoken/tree/main?tab=readme-ov-file#extending-tiktoken
         """
         for tok in new_special_tokens:
-            if tok not in self.special_tokens:
+            if (
+                tok not in self.special_tokens
+                and tok not in self.base_tokenizer._special_tokens
+            ):
                 self.special_tokens.append(tok)
+
+        special_tokens = {
+            tok: self.base_tokenizer.n_vocab + i
+            for i, tok in enumerate(self.special_tokens)
+        }
 
         self.tokenizer = tiktoken.Encoding(
             name=f"custom_{self.name()}",
             pat_str=self.base_tokenizer._pat_str,
             mergeable_ranks=self.base_tokenizer._mergeable_ranks,
-            special_tokens={
-                tok: self.base_tokenizer.n_vocab + i
-                for i, tok in enumerate(self.special_tokens)
-            },
+            special_tokens={**self.base_tokenizer._special_tokens} | special_tokens,
         )
 
     def name(self) -> str:
         return "gpt2"
 
     def encode(self, text: str, *args: Any, **kwargs: Any) -> List[int]:
-        return self.tokenizer.encode(text, *args, **kwargs, allowed_special="all")
+        return self.tokenizer.encode(text, allowed_special="all", *args, **kwargs)
 
     def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
         return self.tokenizer.decode(tokens, *args, **kwargs)
@@ -174,7 +176,12 @@ class MiniGPT2Tokenizer(Tokenizer, ABC):
             self.token_to_id[token_id] = idx
             self.id_to_token[idx] = token_id
 
-        self.add_special_tokens(["<|endoftext|>"])
+        # Add manually the EOT token if needed
+        mini_eot_id = self.vocab_size
+        base_eot_id = self.gpt2_tokenizer.encode("<|endoftext|>")[0]
+        if base_eot_id not in self.token_to_id.keys():
+            self.token_to_id[base_eot_id] = mini_eot_id
+            self.id_to_token[mini_eot_id] = base_eot_id
 
     def add_special_tokens(self, special_tokens: list[str]) -> None:
         """

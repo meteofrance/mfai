@@ -34,7 +34,6 @@ Homepage = "https://github.com/meteofrance/mfai"
 # [mypy configuration file doc](https://mypy.readthedocs.io/en/stable/config_file.html#confval-exclude)
 exclude = [
   '^mfai/torch/models/nlam/__init__.py',
-  '^mfai/torch/models/unetrpp.py$',
 ]
 
 # Disallows defining functions without type annotations or with incomplete type annotations.
@@ -83,5 +82,6 @@ module = [
   "networkx.*",
   "scipy.spatial",
   "timm.*",
+  "flash_attn.*",
 ]
 ignore_missing_imports = true

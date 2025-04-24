@@ -27,20 +27,29 @@
       - LLama2
     - Multimodal Language Models:
       - A custom Fuyu inspired model
+    - Vision Language Models:
+      - CLIP
 
 - [SegmentationLightningModule](#segmentationlightningmodule)
+- [Lightning CLI](#lightning-cli)
 - [NamedTensors](#namedtensors)
 - [Metrics](#metrics)
     - Critical Sucess Index
     - False Alarm Rate
     - False Negative Rate
     - Precision-Recall Area Under Curve
+- [Losses](#losses)
+  - Perceptual loss
+  - LPIPS
 - [Installation](#installation)
 - [Usage](#usage)
     - [Instanciate a model](#instanciate-a-model)
     - [Export to onnx](#export-to-onnx)
     - [NamedTensors](#namedtensors-example)
 - [Running tests](#running-tests)
+- [Contributing](#contributing)
+- [Publishing](#publishing)
+- [Acknowledgements](#acknowledgements)
 
 # Neural Network Architectures
 
@@ -129,11 +138,9 @@ class HalfUNet(BaseModel):
 </details>
 
 
-# SegmentationLightningModule
+# Lightning Modules
 
-We provide **SegmentationLightningModule** a lightning module adapted to supervised Deep Learning projects where the input of the neural network is made of one or multiple images and the target is also one or multiple images.
-
-The module can be instanciated with any of the aforementioned neural networks architetures and used in 4 different modes : binary classification, multiclass classification, multilabel classification and regression.
+A Lightning Module is a high-level interface in PyTorch Lightning that encapsulates the model, training, validation, and testing logic, promoting modularity and ease of use in deep learning projects.
 
 The module provides:
 - customization for each stage of the training
@@ -141,6 +148,36 @@ The module provides:
 - logging of configuration and hyperparameters
 - computation of several metrics during validation stage
 - test stage: compute metrics for each sample individualy and save them in CSV file
+
+Obviously, if one of the implemented methods, metrics, etc. is not suitable for your problem, it is always possible to overload them so that the lightningmodule adapts to your needs.
+
+**Example:**
+
+We want here to log some figures in the TensorBoard, so we overload the default `val_plot_step()` method.
+```python
+from mfai.torch.lightning_modules import SegmentationLightningModule
+
+class MyProjectLightningModule(SegmentationLightningModule):
+    def val_plot_step(self, batch_idx, y, y_hat):
+        """Log prediction made for the first image of batches (6, 14, 48, 78) in tensorboard."""
+        interesting_batches = [6, 14, 48, 78]
+        if batch_idx in interesting_batches:
+            fig = plot_pred_and_target(y=y[0], y_hat=y_hat[0])
+
+            tb = self.logger.experiment
+            tb.add_figure(f"val_plots/test_figure_{batch_idx}", fig, self.current_epoch)
+```
+
+## Segmentation
+We provide [**SegmentationLightningModule**](/mfai/torch/lightning_modules/segmentation.py#21) a lightning module adapted to supervised Deep Learning projects where the input of the neural network is made of one or multiple images and the target is also one or multiple images.
+
+The module can be instanciated with any of the aforementioned vision neural networks architetures and used in 4 different modes : binary classification, multiclass classification, multilabel classification and regression.
+
+## Clip
+We also provide [**CLIPLightningModule**](/mfai/torch/lightning_modules/clip.py#19), a lightning module dedicated to the training of CLIP models. 
+
+This module can be instanciated with a simple [ClipSettings](/mfai/torch/models/clip.py#19) that informs which image and text encoders to use as well as the embedding size and the initial temperature.
+
 
 # Lightning CLI
 
@@ -332,7 +369,7 @@ The lightning module can be instantiated and used in a forward pass as follows:
 ```python
 import torch
 from mfai.torch.models import UNet
-from mfai.torch.segmentation_module import SegmentationLightningModule
+from mfai.torch.lightning_modules import SegmentationLightningModule
 
 arch = UNet(in_channels=1, out_channels=1, input_shape=[64, 64])
 loss = torch.nn.MSELoss()
@@ -355,7 +392,7 @@ Setting up lightning CLI is as easy as our `examples/main_cli_dummy.py` script:
 from lightning.pytorch.cli import LightningCLI
 
 from mfai.torch.dummy_dataset import DummyDataModule
-from mfai.torch.segmentation_module import SegmentationLightningModule
+from mfai.torch.lightning_modules import SegmentationLightningModule
 
 
 def cli_main():
@@ -591,15 +628,6 @@ docker build . -f Dockerfile -t mfai
 docker run -it --rm mfai python3 -m pytest tests
 ```
 
-# Running mypy
-Mypy is used to check the project type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
-
-To run mypy:
-```bash
-docker build . -f Dockerfile -t mfai
-docker run -it --rm mfai mypy mfai/
-```
-
 # Contributing
 
 We welcome contributions to this package. Our guidelines are the following:
@@ -608,6 +636,15 @@ We welcome contributions to this package. Our guidelines are the following:
 - Make sure the current tests pass and add new tests if necessary to cover the new features. Our CI will fail with a **test coverage below 80%**.
 - Make sure the code is formatted with [ruff](https://docs.astral.sh/ruff/) : `ruff format` and `ruff check --select I --fix`
 - Make sure the code respects our mypy type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
+
+## Running mypy
+Mypy is used to check the project type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
+
+To run mypy:
+```bash
+docker build . -f Dockerfile -t mfai
+docker run -it --rm mfai mypy mfai/
+```
 
 # Publishing
 

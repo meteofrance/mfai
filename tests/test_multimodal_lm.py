@@ -63,7 +63,7 @@ def generate_text_simple(
             GPT2Tokenizer(),
             (
                 "Sustine et abstine Patron nationalist grease Carly Detectiveuceditta Mysteryolationitivity",
-                "Sustine et abstineohoorphLE updates� Oaks Coconut VC Privacy backward",
+                "Sustine et abstine grinned Supporters strife dissemination crewsrush error paternalirementsuania",
             ),
         ),
         (
@@ -71,7 +71,7 @@ def generate_text_simple(
             LlamaTokenizer(),
             (
                 "Sustine et abstine współ terrestführt substantial arrow atoms introduction mil стар sze",
-                "Sustine et abstine detected *rit україн dernièreistoryikalcorüssknow",
+                "Sustine et abstine logging extremdan={\glyское elabor commissionategymapping",
             ),
         ),
     ],

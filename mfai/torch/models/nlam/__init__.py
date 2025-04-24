@@ -2,10 +2,9 @@
 Graph Neural Network architectures adapted from https://github.com/mllam/neural-lam
 """
 
-from ctypes import Union
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Generator, Generic, Literal, Tuple, TypeVar, overload
+from typing import Any, Generator, Literal
 
 import torch
 import torch_geometric as pyg
@@ -49,7 +48,7 @@ class BufferList(nn.Module):
         return (self[i] for i in range(len(self)))
 
 
-def load_graph(graph_dir: Path, device: torch.device | Literal["cpu", "cuda"]="cpu") -> Tuple[bool, dict]:
+def load_graph(graph_dir: Path, device: torch.device | Literal["cpu", "cuda"]="cpu") -> tuple[bool, dict]:
     """
     Loads a graph from its disk serialised format into a dict of Tensors.
     """

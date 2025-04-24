@@ -30,6 +30,9 @@ dependencies = {file = ["requirements.txt"]}
 [project.urls]
 Homepage = "https://github.com/meteofrance/mfai"
 
+[tool.ruff.lint]
+select = ["I"]  # I = isort
+
 [tool.mypy]
 # [mypy configuration file doc](https://mypy.readthedocs.io/en/stable/config_file.html#confval-exclude)
 exclude = [

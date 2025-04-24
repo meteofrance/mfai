@@ -260,8 +260,8 @@ def monolevel_mesh(G: list[networkx.DiGraph], nx: int, plot: bool) -> tuple[list
             .reshape((n, n, 2))[1::nx, 1::nx, :]
             .reshape(int(n / nx) ** 2, 2)
         )
-        ij = [tuple(x) for x in ij]
-        G[lev] = networkx.relabel_nodes(G[lev], dict(zip(G[lev].nodes, ij)))
+        nodes_values = [tuple(x) for x in ij]
+        G[lev] = networkx.relabel_nodes(G[lev], mapping=dict(zip(G[lev].nodes, nodes_values)))
         G_tot = networkx.compose(G_tot, G[lev])
 
     # Relabel mesh nodes to start with 0

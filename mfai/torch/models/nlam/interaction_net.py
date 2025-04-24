@@ -1,5 +1,3 @@
-from typing import Any, Literal
-
 import torch
 import torch_geometric as pyg
 from torch import nn
@@ -13,7 +11,7 @@ class CheckpointWrapper(nn.Module):
         super().__init__()
         self.module = module
 
-    def forward(self, *args: Any, **kwargs: Any) -> nn.Sequential:
+    def forward(self, *args, **kwargs):
         return checkpoint(self.module, *args, **kwargs, use_reentrant=False)
 
 
@@ -24,15 +22,15 @@ class InteractionNet(pyg.nn.MessagePassing):
 
     def __init__(
         self,
-        edge_index: torch.Tensor,
-        input_dim: int,
-        update_edges: bool = True,
-        hidden_layers: int = 1,
-        hidden_dim: int = None,
-        edge_chunk_sizes: list[int] = None,
-        aggr_chunk_sizes: list[int] = None,
-        aggr: Literal["sum", "mean"] = "sum",
-        checkpoint: bool = False,
+        edge_index,
+        input_dim,
+        update_edges=True,
+        hidden_layers=1,
+        hidden_dim=None,
+        edge_chunk_sizes=None,
+        aggr_chunk_sizes=None,
+        aggr="sum",
+        checkpoint=False,
     ):
         """
         Create a new InteractionNet
@@ -66,7 +64,6 @@ class InteractionNet(pyg.nn.MessagePassing):
         edge_mlp_recipe = [3 * input_dim] + [hidden_dim] * (hidden_layers + 1)
         aggr_mlp_recipe = [2 * input_dim] + [hidden_dim] * (hidden_layers + 1)
 
-        self.edge_mlp: nn.Sequential | SplitMLPs | CheckpointWrapper
         if edge_chunk_sizes is None:
             self.edge_mlp = make_mlp(edge_mlp_recipe, checkpoint=checkpoint)
         else:
@@ -81,7 +78,6 @@ class InteractionNet(pyg.nn.MessagePassing):
             if checkpoint:
                 self.edge_mlp = CheckpointWrapper(self.edge_mlp)
 
-        self.aggr_mlp: nn.Sequential | SplitMLPs | CheckpointWrapper
         if aggr_chunk_sizes is None:
             self.aggr_mlp = make_mlp(aggr_mlp_recipe, checkpoint=checkpoint)
         else:
@@ -98,9 +94,7 @@ class InteractionNet(pyg.nn.MessagePassing):
 
         self.update_edges = update_edges
 
-    def forward(
-        self, send_rep: torch.Tensor, rec_rep: torch.Tensor, edge_rep: torch.Tensor
-    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, send_rep, rec_rep, edge_rep):
         """
         Apply interaction network to update the representations of receiver nodes,
         and optionally the edge representations.
@@ -132,21 +126,13 @@ class InteractionNet(pyg.nn.MessagePassing):
 
         return rec_rep
 
-    def message(
-        self, x_j: torch.Tensor, x_i: torch.Tensor, edge_attr: torch.Tensor
-    ) -> torch.Tensor:
+    def message(self, x_j, x_i, edge_attr):
         """
         Compute messages from node j to node i.
         """
         return self.edge_mlp(torch.cat((edge_attr, x_j, x_i), dim=-1))
 
-    def aggregate(
-        self,
-        messages: torch.Tensor,
-        index: torch.Tensor,
-        ptr: torch.Tensor,
-        dim_size: int,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def aggregate(self, messages, index, ptr, dim_size):
         """
         Overridden aggregation function to:
         * return both aggregated and original messages,
@@ -163,9 +149,7 @@ class SplitMLPs(nn.Module):
     each chunk through separate MLPs.
     """
 
-    def __init__(
-        self, mlps: list[nn.Sequential | CheckpointWrapper], chunk_sizes: list[int]
-    ) -> None:
+    def __init__(self, mlps, chunk_sizes):
         super().__init__()
         assert len(mlps) == len(
             chunk_sizes
@@ -174,7 +158,7 @@ class SplitMLPs(nn.Module):
         self.mlps = nn.ModuleList(mlps)
         self.chunk_sizes = chunk_sizes
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x):
         """
         Chunk up input and feed through MLPs
 
@@ -190,9 +174,7 @@ class SplitMLPs(nn.Module):
         return torch.cat(chunk_outputs, dim=-2)
 
 
-def make_mlp(
-    blueprint: list[int], layer_norm: bool = True, checkpoint: bool = False
-) -> nn.Sequential | CheckpointWrapper:
+def make_mlp(blueprint, layer_norm=True, checkpoint=False):
     """
     Create MLP from list blueprint, with
     input dimensionality: blueprint[0]
@@ -205,7 +187,7 @@ def make_mlp(
     hidden_layers = len(blueprint) - 2
     assert hidden_layers >= 0, "Invalid MLP blueprint"
 
-    layers: list[nn.Module] = []
+    layers = []
     for layer_i, (dim1, dim2) in enumerate(zip(blueprint[:-1], blueprint[1:])):
         layers.append(nn.Linear(dim1, dim2))
         if layer_i != hidden_layers:
@@ -215,7 +197,7 @@ def make_mlp(
     if layer_norm:
         layers.append(nn.LayerNorm(blueprint[-1]))
 
-    mlp: nn.Sequential | CheckpointWrapper = nn.Sequential(*layers)
+    mlp = nn.Sequential(*layers)
     if checkpoint:
         mlp = CheckpointWrapper(mlp)
     return mlp

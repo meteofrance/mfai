@@ -46,7 +46,7 @@ class BufferList(nn.Module):
     def __len__(self) -> int:
         return self.n_buffers
 
-    def __iter__(self) -> Generator[Any]:
+    def __iter__(self) -> Generator[Any, None, None]:
         return (self[i] for i in range(len(self)))
 
 

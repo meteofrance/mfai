@@ -1,4 +1,5 @@
 from typing import Any, Literal
+
 import torch
 import torch_geometric as pyg
 from torch import nn

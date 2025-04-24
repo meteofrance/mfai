@@ -4,11 +4,11 @@ import matplotlib
 import matplotlib.pyplot as plt
 import networkx
 import numpy as np
-from scipy.spatial import KDTree
 import torch
 import torch_geometric as pyg
-from torch_geometric.utils.convert import from_networkx
 from networkx.classes.reportviews import NodeView
+from scipy.spatial import KDTree
+from torch_geometric.utils.convert import from_networkx
 
 
 def torch_save(data: torch.Tensor | list[torch.Tensor], path: Path) -> None:

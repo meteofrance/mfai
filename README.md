@@ -18,6 +18,7 @@
       - segformer
       - swinunetr
       - unetr++
+      - PanguWeather
     - Graph Neural Networks:
       - HiLAM
       - GraphLAM
@@ -26,20 +27,29 @@
       - LLama2
     - Multimodal Language Models:
       - A custom Fuyu inspired model
-  
+    - Vision Language Models:
+      - CLIP
+
 - [SegmentationLightningModule](#segmentationlightningmodule)
+- [Lightning CLI](#lightning-cli)
 - [NamedTensors](#namedtensors)
 - [Metrics](#metrics)
     - Critical Sucess Index
     - False Alarm Rate
     - False Negative Rate
     - Precision-Recall Area Under Curve
+- [Losses](#losses)
+  - Perceptual loss
+  - LPIPS
 - [Installation](#installation)
 - [Usage](#usage)
     - [Instanciate a model](#instanciate-a-model)
     - [Export to onnx](#export-to-onnx)
     - [NamedTensors](#namedtensors-example)
 - [Running tests](#running-tests)
+- [Contributing](#contributing)
+- [Publishing](#publishing)
+- [Acknowledgements](#acknowledgements)
 
 # Neural Network Architectures
 
@@ -53,7 +63,7 @@ Currently we support the following neural network architectures:
 | [DeepLabV3Plus](mfai/torch/models/deeplabv3.py#L1) | [arxiv link](https://arxiv.org/abs/1802.02611) | (Batch, features, Height, Width)    | Yes | As a very large receptive field versus U-Net, Half-Unet, ... | Front Detection, Nowcasting |
 | [HalfUNet](mfai/torch/models/half_unet.py#L1) | [researchgate link](https://www.researchgate.net/publication/361186968_Half-UNet_A_Simplified_U-Net_Architecture_for_Medical_Image_Segmentation) | (Batch, features, Height, Width)    | Yes | In prod/oper on [Espresso](https://www.mdpi.com/2674-0494/2/4/25) V2 with 128 filters and standard conv blocks instead of ghost | Satellite channels to rain estimation |
 | [UNet](mfai/torch/models/unet.py#L1) | [arxiv link](https://arxiv.org/pdf/1505.04597.pdf) | (Batch, features, Height, Width)    | Yes | Vanilla U-Net | Radar image cleaning |
-| [CustomUnet](mfai/torch/models/unet.py#L1) | [arxiv link](https://arxiv.org/pdf/1505.04597.pdf) | (Batch, features, Height, Width)    | Yes | U-Net like architecture with a variety of resnet encoder choices | Radar image cleaning 
+| [CustomUnet](mfai/torch/models/unet.py#L1) | [arxiv link](https://arxiv.org/pdf/1505.04597.pdf) | (Batch, features, Height, Width)    | Yes | U-Net like architecture with a variety of resnet encoder choices | Radar image cleaning
 
 
 ## Vision Transformers
@@ -62,7 +72,8 @@ Currently we support the following neural network architectures:
 | :---:   | :---: | :---: | :---: | :---: | :---: |
 | [Segformer](mfai/torch/models/segformer.py#L1) | [arxiv link](https://arxiv.org/abs/2105.15203)   | (Batch, features, Height, Width) | Yes | On par with u-net like on Deepsyg (MF internal), added an upsampling stage. Adapted from [Lucidrains' github](https://github.com/lucidrains/segformer-pytorch) | Segmentation tasks |
 | [SwinUNETR](mfai/torch/models/swinunetr.py#L1) | [arxiv link](https://arxiv.org/abs/2201.01266)   | (Batch, features, Height, Width)  | No | 2D Swin  Unet transformer (Pangu and archweather uses customised 3D versions of Swin Transformers). Plugged in from [MONAI](https://github.com/Project-MONAI/MONAI/). The decoders use Bilinear2D + Conv2d instead of Conv2dTranspose to remove artefacts/checkerboard effects | Segmentation tasks  |
-| [UNETRPP](mfai/torch/models/unetrpp.py#L1) | [arxiv link](https://arxiv.org/abs/2212.04497)  | (Batch, features, Height, Width) or  (Batch, features, Height, Width, Depth) | Yes | Vision transformer with a reduced GFLOPS footprint adapted from [author's github](https://github.com/Amshaker/unetr_plus_plus). Modified to work both with 2d and 3d inputs. The decoders use Bilinear2D + Conv2d instead of Conv2dTranspose to remove artefacts/checkerboard effects  | Front Detection, LAM Weather Forecasting |
+| [UNETRPP](mfai/torch/models/unetrpp.py#L1) | [arxiv link](https://arxiv.org/abs/2212.04497)  | (Batch, features, Height, Width) or (Batch, features, Height, Width, Depth) | Yes | Vision transformer with a reduced GFLOPS footprint adapted from [author's github](https://github.com/Amshaker/unetr_plus_plus). Modified to work both with 2d and 3d inputs. The decoders use Bilinear2D + Conv2d instead of Conv2dTranspose to remove artefacts/checkerboard effects  | Front Detection, LAM Weather Forecasting |
+| [PanguWeather](mfai/torch/models/pangu.py#L1) | [arxiv link](http://arxiv.org/abs/2211.02556)  | (Batch, features, Height, Width) and (Batch, features, Height, Width, Depth) | Yes | 3D Earth-specific transformer based on Swin transformers adapted from [author's github](https://github.com/198808xc/Pangu-Weather) pseudo-code.  | (LAM) Weather Forecasting |
 
 ## Graph Neural Networks
 
@@ -83,6 +94,12 @@ Currently we support the following neural network architectures:
 | :---:   | :---: | :---: | :---: | :---: | :---: |
 |[Custom Fuyu Like Model](mfai/torch/models/llms/multimodal.py#L37)| [arxiv link](https://arxiv.org/abs/2307.09288)  | (Batch, token_id) for text, (Batch, Lat, Lon, Timestep, Features) for weather inputs | No | Inspired from [Adept AI blog post](https://www.adept.ai/blog/fuyu-8b)  and [Sebastian Raschka's blog](https://magazine.sebastianraschka.com/p/understanding-multimodal-llms) | Marine text product generation |
 
+## Vision Language Models
+
+| Model  | Research Paper  | Input Shape    | ONNX exportable ? | Notes | Use-Cases at MF |
+| :---:   | :---: | :---: | :---: | :---: | :---: |
+|[CLIP](mfai/torch/models/clip.py#30)| [arxiv link](https://arxiv.org/abs/2103.00020)  | (Batch, token_id) for text, (Batch, Features, Lat, Lon) | No | Usefull to pre-train a Vision Encoder | Marine text product generation |
+
 <details>
 <summary>Details about our models</summary>
 
@@ -96,7 +113,7 @@ Except for LLMs and MLLMs, each model we provide is a subclass of [torch.nn.Modu
 - **features_last**: a boolean that indicates if the features dimension is the last dimension of the input/output tensor. If False, the features dimension is the second dimension of the input/output tensor.
 - **register**: a boolean that indicates if the model should be registered in the **MODELS** registry. By default, it is set to False which allows the creation of intermediate subclasses not meant for direct use.
 
-The Python interface contract for our model is enforced using [Python ABC](https://docs.python.org/3/library/abc.html) and in our case [ModelABC](mfai/torch/models/base.py#L1) class.
+The Python interface contract for our model is enforced using [Python ABC](https://docs.python.org/3/library/abc.html) and in our case [ModelABC](mfai/torch/models/base.py#L1) class. This class is combined to `torch.nn.Module` in [BaseModel](mfai/torch/models/base.py#L1).
 
 ```python
 @dataclass_json
@@ -109,7 +126,7 @@ class HalfUNetSettings:
     last_activation: str = "Identity"
     absolute_pos_embed: bool = False
 
-class HalfUNet(ModelABC, nn.Module):
+class HalfUNet(BaseModel):
     settings_kls = HalfUNetSettings
     onnx_supported: bool = True
     supported_num_spatial_dims = (2,)
@@ -121,11 +138,9 @@ class HalfUNet(ModelABC, nn.Module):
 </details>
 
 
-# SegmentationLightningModule
+# Lightning Modules
 
-We provide **SegmentationLightningModule** a lightning module adapted to supervised Deep Learning projects where the input of the neural network is made of one or multiple images and the target is also one or multiple images.
-
-The module can be instanciated with any of the aforementioned neural networks architetures and used in 4 different modes : binary classification, multiclass classification, multilabel classification and regression.
+A Lightning Module is a high-level interface in PyTorch Lightning that encapsulates the model, training, validation, and testing logic, promoting modularity and ease of use in deep learning projects.
 
 The module provides:
 - customization for each stage of the training
@@ -133,6 +148,36 @@ The module provides:
 - logging of configuration and hyperparameters
 - computation of several metrics during validation stage
 - test stage: compute metrics for each sample individualy and save them in CSV file
+
+Obviously, if one of the implemented methods, metrics, etc. is not suitable for your problem, it is always possible to overload them so that the lightningmodule adapts to your needs.
+
+**Example:**
+
+We want here to log some figures in the TensorBoard, so we overload the default `val_plot_step()` method.
+```python
+from mfai.torch.lightning_modules import SegmentationLightningModule
+
+class MyProjectLightningModule(SegmentationLightningModule):
+    def val_plot_step(self, batch_idx, y, y_hat):
+        """Log prediction made for the first image of batches (6, 14, 48, 78) in tensorboard."""
+        interesting_batches = [6, 14, 48, 78]
+        if batch_idx in interesting_batches:
+            fig = plot_pred_and_target(y=y[0], y_hat=y_hat[0])
+
+            tb = self.logger.experiment
+            tb.add_figure(f"val_plots/test_figure_{batch_idx}", fig, self.current_epoch)
+```
+
+## Segmentation
+We provide [**SegmentationLightningModule**](/mfai/torch/lightning_modules/segmentation.py#21) a lightning module adapted to supervised Deep Learning projects where the input of the neural network is made of one or multiple images and the target is also one or multiple images.
+
+The module can be instanciated with any of the aforementioned vision neural networks architetures and used in 4 different modes : binary classification, multiclass classification, multilabel classification and regression.
+
+## Clip
+We also provide [**CLIPLightningModule**](/mfai/torch/lightning_modules/clip.py#19), a lightning module dedicated to the training of CLIP models. 
+
+This module can be instanciated with a simple [ClipSettings](/mfai/torch/models/clip.py#19) that informs which image and text encoders to use as well as the embedding size and the initial temperature.
+
 
 # Lightning CLI
 
@@ -155,6 +200,75 @@ In addition to metrics available in [**torchmetrics**](https://lightning.ai/docs
 - False Alarm Rate (FAR) is given by: FP / (FP + TP).
 - False Negative Rate (FNR) is given by: FN / (FN + TP).
 - Precision-Recall Area Under the Curve (PR AUC). This metric summarize the overall performance of a model without depending on a threshold. It can be used in place of the Area Under ROC Curve when the dataset is too unbalanced.
+
+# Losses
+
+Pytorch already provide some Loss like Mean Squared Error (torch.nn.MSELoss) or Mean Absolute Error (torch.nn.L1Loss). Here we add two loss functions that focus on perceptual similarity of tensors.
+
+## Perceptual Loss
+
+It was introduced by Johnson et al. - Perceptual losses for real-time style transfer and super-resolution. (https://arxiv.org/pdf/1603.08155).
+
+The [**PerceptualLoss**](mfai/torch/losses/perceptual.py#L28) class is a `torch.nn.Module` that allows to initialize a VGG-16 and compute directly the perceptual loss between a given input and target.
+
+### Multi Scale :
+The VGG-16 was originally designed for ImageNet dataset that contains 224x224 images. It can still be used with image dimensionned differently. But in case your tensors are high dimensional (ex:1024x1024) the VGG-16 features might not be able to catch fine-scale details. The *multi_scale* mode allows to compute the Perceptual Loss on different downscale version of your original tensors. For example, if your tensors are 1024x1024, the perceptual loss will be computed both on the original dimension and on its downscaled versions : 512x512 and 256x256.
+
+### Channel handling case :
+
+Because the VGG-16 was designed for RGB images, the perceptual loss can be computed differently depending on your tensors channel dimension. \
+The *channel_iterative_mode* is done so that the loss is iteratively computed by replicating three times each channel (RGB like) so that it is compatible with VGG-16 original architecture. \
+
+**(Case 1)** : Tensors with N!=3 channels \
+**(Case 1.1)** : *channel_iterative_mode*=False : \
+The VGG-16 architecture is adapted so that it can forward tensors with N channels. There will be a single forward of the network per tensor to compute the features. \
+**(Case 1.2)** : *channel_iterative_mode*=True : \
+The original VGG-16 architecture is kept. There will be N forwards of the network per tensor to compute the features.
+
+**(Case 2)** : Tensors with N=3 channels \
+**(Case 2.1)** : *channel_iterative_mode*=False : \
+The original VGG-16 architecture is kept. There will be a single forward of the network per tensor to compute the features. \
+**(Case 2.2)** : *channel_iterative_mode*=True : \
+The original VGG-16 architecture is kept. There will be N forwards of the network per tensor to compute the features.
+
+### Pre Trained
+You can either choose to compute the Perceptual Loss with the ImageNet Pre-trained version of the VGG-16 or use a random version of it.
+
+## Example
+An example of PerceptualLoss usage :
+```python
+# In case the target and input are different everytime
+inputs = torch.rand(25, 5, 128, 128)
+targets = torch.rand(25, 5, 128, 128)
+
+# Initialize the perceptual loss class
+perceptual_loss_class = PerceptualLoss(channel_iterative_mode=True, in_channels=5)
+
+# Computing Perceptual Loss
+perceptual_loss = perceptual_loss_class(inputs, targets)
+
+```
+```python
+# In case you need to compare different targets to the same input
+inputs = torch.rand(25, 5, 128, 128)
+perceptual_loss_class = PerceptualLoss(channel_iterative_mode=True, in_channels=5)
+
+# The features of the inputs are computed and stored in the memory
+perceptual_loss_class.compute_perceptual_features(inputs)
+
+for _ in range():
+
+  targets = torch.rand(25, 5, 128, 128)
+
+  # The features of the targets are computed and compared to the input features
+  perceptual_loss = perceptual_loss_class(targets)
+
+```
+
+## LPIPS
+
+The [**LPIPS**](mfai/torch/losses/perceptual.py#L28) class is a `torch.nn.Module` that computes the Learned Perceptual Image Patch Similarity metric. It is using the aforementionned PerceptualLoss class so it contains the same modes.
+
 
 # Installation
 
@@ -255,7 +369,7 @@ The lightning module can be instantiated and used in a forward pass as follows:
 ```python
 import torch
 from mfai.torch.models import UNet
-from mfai.torch.segmentation_module import SegmentationLightningModule
+from mfai.torch.lightning_modules import SegmentationLightningModule
 
 arch = UNet(in_channels=1, out_channels=1, input_shape=[64, 64])
 loss = torch.nn.MSELoss()
@@ -278,7 +392,7 @@ Setting up lightning CLI is as easy as our `examples/main_cli_dummy.py` script:
 from lightning.pytorch.cli import LightningCLI
 
 from mfai.torch.dummy_dataset import DummyDataModule
-from mfai.torch.segmentation_module import SegmentationLightningModule
+from mfai.torch.lightning_modules import SegmentationLightningModule
 
 
 def cli_main():
@@ -511,15 +625,26 @@ Our tests are written using [pytest](https://docs.pytest.org). We check that:
 
 ```bash
 docker build . -f Dockerfile -t mfai
-docker run -it --rm mfai python -m pytest tests
+docker run -it --rm mfai python3 -m pytest tests
 ```
+
 # Contributing
 
 We welcome contributions to this package. Our guidelines are the following:
 
 - Submit a PR with a clear description of the changes and the motivation behind them.
 - Make sure the current tests pass and add new tests if necessary to cover the new features. Our CI will fail with a **test coverage below 80%**.
-- Make sure the code is formatted with [ruff](https://docs.astral.sh/ruff/) : `ruff format` and `ruff check`
+- Make sure the code is formatted with [ruff](https://docs.astral.sh/ruff/) : `ruff format` and `ruff check --select I --fix`
+- Make sure the code respects our mypy type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
+
+## Running mypy
+Mypy is used to check the project type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
+
+To run mypy:
+```bash
+docker build . -f Dockerfile -t mfai
+docker run -it --rm mfai mypy mfai/
+```
 
 # Publishing
 

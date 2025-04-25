@@ -7,35 +7,41 @@ Used as the default model for diffusion
 
 import math
 from functools import partial, wraps
-from packaging import version #type: ignore
+from packaging import version  # type: ignore
 import torch
 from torch import nn
-import torch.nn.functional as F #type: ignore
+import torch.nn.functional as F  # type: ignore
 from typing import Tuple, Union
 from dataclasses import dataclass
-from dataclasses_json import dataclass_json # type: ignore
+from dataclasses_json import dataclass_json  # type: ignore
 from mfai.torch.models.base import ModelABC, AutoPaddingModel, ModelType
 
-from einops import rearrange, repeat, pack, unpack # type: ignore
+from einops import rearrange, repeat, pack, unpack  # type: ignore
 from collections import namedtuple
 
-#from https://github.com/lucidrains/denoising-diffusion-pytorch/blob/main/denoising_diffusion_pytorch/attend.py
-#for Attend
+# from https://github.com/lucidrains/denoising-diffusion-pytorch/blob/main/denoising_diffusion_pytorch/attend.py
+# for Attend
 
 # constants
 
-AttentionConfig = namedtuple('AttentionConfig', ['enable_flash', 'enable_math', 'enable_mem_efficient'])
+AttentionConfig = namedtuple(
+    "AttentionConfig", ["enable_flash", "enable_math", "enable_mem_efficient"]
+)
 
 # helpers
+
 
 def exists(val):
     return val is not None
 
+
 def default(val, d):
     return val if exists(val) else d
 
+
 def once(fn):
     called = False
+
     @wraps(fn)
     def inner(x):
         nonlocal called
@@ -43,26 +49,26 @@ def once(fn):
             return
         called = True
         return fn(x)
+
     return inner
+
 
 print_once = once(print)
 
 # main class
 
+
 class Attend(nn.Module):
-    def __init__(
-        self,
-        dropout = 0.,
-        flash = False,
-        scale = None
-    ):
+    def __init__(self, dropout=0.0, flash=False, scale=None):
         super().__init__()
         self.dropout = dropout
         self.scale = scale
         self.attn_dropout = nn.Dropout(dropout)
 
         self.flash = flash
-        assert not (flash and version.parse(torch.__version__) < version.parse('2.0.0')), 'in order to use flash attention, you must be using pytorch 2.0 or above'
+        assert not (
+            flash and version.parse(torch.__version__) < version.parse("2.0.0")
+        ), "in order to use flash attention, you must be using pytorch 2.0 or above"
 
         # determine efficient attention configs for cuda and cpu
 
@@ -72,19 +78,30 @@ class Attend(nn.Module):
         if not torch.cuda.is_available() or not flash:
             return
 
-        device_properties = torch.cuda.get_device_properties(torch.device('cuda'))
+        device_properties = torch.cuda.get_device_properties(torch.device("cuda"))
 
-        device_version = version.parse(f'{device_properties.major}.{device_properties.minor}')
+        device_version = version.parse(
+            f"{device_properties.major}.{device_properties.minor}"
+        )
 
-        if device_version > version.parse('8.0'):
-            print_once('A100 GPU detected, using flash attention if input tensor is on cuda')
+        if device_version > version.parse("8.0"):
+            print_once(
+                "A100 GPU detected, using flash attention if input tensor is on cuda"
+            )
             self.cuda_config = AttentionConfig(True, False, False)
         else:
-            print_once('Non-A100 GPU detected, using math or mem efficient attention if input tensor is on cuda')
+            print_once(
+                "Non-A100 GPU detected, using math or mem efficient attention if input tensor is on cuda"
+            )
             self.cuda_config = AttentionConfig(False, True, True)
 
     def flash_attn(self, q, k, v):
-        _, heads, q_len, _, k_len, is_cuda, device = *q.shape, k.shape[-2], q.is_cuda, q.device
+        _, heads, q_len, _, k_len, is_cuda, device = (
+            *q.shape,
+            k.shape[-2],
+            q.is_cuda,
+            q.device,
+        )
 
         if exists(self.scale):
             default_scale = q.shape[-1]
@@ -100,8 +117,7 @@ class Attend(nn.Module):
 
         with torch.backends.cuda.sdp_kernel(**config._asdict()):
             out = F.scaled_dot_product_attention(
-                q, k, v,
-                dropout_p = self.dropout if self.training else 0.
+                q, k, v, dropout_p=self.dropout if self.training else 0.0
             )
 
         return out
@@ -128,7 +144,7 @@ class Attend(nn.Module):
 
         # attention
 
-        attn = sim.softmax(dim = -1)
+        attn = sim.softmax(dim=-1)
         attn = self.attn_dropout(attn)
 
         # aggregate values
@@ -137,49 +153,63 @@ class Attend(nn.Module):
 
         return out
 
-#building blocks
+
+# building blocks
+
 
 def exists(x):
     return x is not None
+
 
 def default(val, d):
     if exists(val):
         return val
     return d() if callable(d) else d
 
+
 def xnor(x, y):
     return not (x ^ y)
+
 
 def append(arr, el):
     arr.append(el)
 
+
 def prepend(arr, el):
     arr.insert(0, el)
+
 
 def pack_one(t, pattern):
     return pack([t], pattern)
 
+
 def unpack_one(t, ps, pattern):
     return unpack(t, ps, pattern)[0]
 
-def cast_tuple(t, length = 1):
+
+def cast_tuple(t, length=1):
     if isinstance(t, tuple):
         return t
-    return ((t,) * length)
+    return (t,) * length
+
 
 def divisible_by(numer, denom):
     return (numer % denom) == 0
 
+
 # in paper, they use eps 1e-4 for pixelnorm
 
-def l2norm(t, dim = -1, eps = 1e-12):
-    return F.normalize(t, dim = dim, eps = eps)
 
-def normalize_weight(weight, eps = 1e-4):
-    weight, ps = pack_one(weight, 'o *')
-    normed_weight = l2norm(weight, eps = eps)
+def l2norm(t, dim=-1, eps=1e-12):
+    return F.normalize(t, dim=dim, eps=eps)
+
+
+def normalize_weight(weight, eps=1e-4):
+    weight, ps = pack_one(weight, "o *")
+    normed_weight = l2norm(weight, eps=eps)
     normed_weight = normed_weight * math.sqrt(weight.numel() / weight.shape[0])
-    return unpack_one(normed_weight, ps, 'o *')
+    return unpack_one(normed_weight, ps, "o *")
+
 
 class Conv2d(nn.Module):
     def __init__(
@@ -187,53 +217,57 @@ class Conv2d(nn.Module):
         dim_in,
         dim_out,
         kernel_size,
-        eps = 1e-4,
-        concat_ones_to_input = False   # they use this in the input block to protect against loss of expressivity due to removal of all biases, even though they claim they observed none
+        eps=1e-4,
+        concat_ones_to_input=False,  # they use this in the input block to protect against loss of expressivity due to removal of all biases, even though they claim they observed none
     ):
         super().__init__()
-        weight = torch.randn(dim_out, dim_in + int(concat_ones_to_input), kernel_size, kernel_size)
+        weight = torch.randn(
+            dim_out, dim_in + int(concat_ones_to_input), kernel_size, kernel_size
+        )
         self.weight = nn.Parameter(weight)
 
         self.eps = eps
-        self.fan_in = dim_in * kernel_size ** 2
+        self.fan_in = dim_in * kernel_size**2
         self.concat_ones_to_input = concat_ones_to_input
 
     def forward(self, x):
-
         if self.training:
             with torch.no_grad():
-                normed_weight = normalize_weight(self.weight, eps = self.eps)
+                normed_weight = normalize_weight(self.weight, eps=self.eps)
                 self.weight.copy_(normed_weight)
 
-        weight = normalize_weight(self.weight, eps = self.eps) / math.sqrt(self.fan_in)
+        weight = normalize_weight(self.weight, eps=self.eps) / math.sqrt(self.fan_in)
 
         if self.concat_ones_to_input:
-            x = F.pad(x, (0, 0, 0, 0, 1, 0), value = 1.)
+            x = F.pad(x, (0, 0, 0, 0, 1, 0), value=1.0)
 
-        return F.conv2d(x, weight, padding='same')
+        return F.conv2d(x, weight, padding="same")
+
 
 class Gain(nn.Module):
     def __init__(self):
         super().__init__()
-        self.gain = nn.Parameter(torch.tensor(0.))
+        self.gain = nn.Parameter(torch.tensor(0.0))
 
     def forward(self, x):
         return x * self.gain
+
 
 class MPFourierEmbedding(nn.Module):
     def __init__(self, dim):
         super().__init__()
         assert divisible_by(dim, 2)
         half_dim = dim // 2
-        self.weights = nn.Parameter(torch.randn(half_dim), requires_grad = False)
+        self.weights = nn.Parameter(torch.randn(half_dim), requires_grad=False)
 
     def forward(self, x):
-        x = rearrange(x, 'b -> b 1')
-        freqs = x * rearrange(self.weights, 'd -> 1 d') * 2 * math.pi
-        return torch.cat((freqs.sin(), freqs.cos()), dim = -1) * math.sqrt(2)
+        x = rearrange(x, "b -> b 1")
+        freqs = x * rearrange(self.weights, "d -> 1 d") * 2 * math.pi
+        return torch.cat((freqs.sin(), freqs.cos()), dim=-1) * math.sqrt(2)
+
 
 class Linear(nn.Module):
-    def __init__(self, dim_in, dim_out, eps = 1e-4):
+    def __init__(self, dim_in, dim_out, eps=1e-4):
         super().__init__()
         weight = torch.randn(dim_out, dim_in)
         self.weight = nn.Parameter(weight)
@@ -243,11 +277,12 @@ class Linear(nn.Module):
     def forward(self, x):
         if self.training:
             with torch.no_grad():
-                normed_weight = normalize_weight(self.weight, eps = self.eps)
+                normed_weight = normalize_weight(self.weight, eps=self.eps)
                 self.weight.copy_(normed_weight)
 
-        weight = normalize_weight(self.weight, eps = self.eps) / math.sqrt(self.fan_in)
+        weight = normalize_weight(self.weight, eps=self.eps) / math.sqrt(self.fan_in)
         return F.linear(x, weight)
+
 
 class MPAdd(nn.Module):
     def __init__(self, t):
@@ -256,9 +291,10 @@ class MPAdd(nn.Module):
 
     def forward(self, x, res):
         a, b, t = x, res, self.t
-        num = a * (1. - t) + b * t
-        den = math.sqrt((1 - t) ** 2 + t ** 2)
+        num = a * (1.0 - t) + b * t
+        den = math.sqrt((1 - t) ** 2 + t**2)
         return num / den
+
 
 class MPSiLU(nn.Module):
     def forward(self, x):
@@ -266,7 +302,7 @@ class MPSiLU(nn.Module):
 
 
 class MPCat(nn.Module):
-    def __init__(self, t = 0.5, dim = -1):
+    def __init__(self, t=0.5, dim=-1):
         super().__init__()
         self.t = t
         self.dim = dim
@@ -275,15 +311,16 @@ class MPCat(nn.Module):
         dim, t = self.dim, self.t
         Na, Nb = a.shape[dim], b.shape[dim]
 
-        C = math.sqrt((Na + Nb) / ((1. - t) ** 2 + t ** 2))
+        C = math.sqrt((Na + Nb) / ((1.0 - t) ** 2 + t**2))
 
-        a = a * (1. - t) / math.sqrt(Na)
+        a = a * (1.0 - t) / math.sqrt(Na)
         b = b * t / math.sqrt(Nb)
 
-        return C * torch.cat((a, b), dim = dim)
+        return C * torch.cat((a, b), dim=dim)
+
 
 class PixelNorm(nn.Module):
-    def __init__(self, dim, eps = 1e-4):
+    def __init__(self, dim, eps=1e-4):
         super().__init__()
         # high epsilon for the pixel norm in the paper
         self.dim = dim
@@ -291,32 +328,34 @@ class PixelNorm(nn.Module):
 
     def forward(self, x):
         dim = self.dim
-        return l2norm(x, dim = dim, eps = self.eps) * math.sqrt(x.shape[dim])
+        return l2norm(x, dim=dim, eps=self.eps) * math.sqrt(x.shape[dim])
+
 
 # forced weight normed conv2d and linear
 # algorithm 1 in paper
 
-def normalize_weight(weight, eps = 1e-4):
-    weight, ps = pack_one(weight, 'o *')
-    normed_weight = l2norm(weight, eps = eps)
+
+def normalize_weight(weight, eps=1e-4):
+    weight, ps = pack_one(weight, "o *")
+    normed_weight = l2norm(weight, eps=eps)
     normed_weight = normed_weight * math.sqrt(weight.numel() / weight.shape[0])
-    return unpack_one(normed_weight, ps, 'o *')
+    return unpack_one(normed_weight, ps, "o *")
 
 
 class Encoder(nn.Module):
     def __init__(
         self,
         dim,
-        dim_out = None,
+        dim_out=None,
         *,
-        emb_dim = None,
-        dropout = 0.1,
-        mp_add_t = 0.3,
-        has_attn = False,
-        attn_dim_head = 64,
-        attn_res_mp_add_t = 0.3,
-        attn_flash = False,
-        downsample = False
+        emb_dim=None,
+        dropout=0.1,
+        mp_add_t=0.3,
+        has_attn=False,
+        attn_dim_head=64,
+        attn_res_mp_add_t=0.3,
+        attn_flash=False,
+        downsample=False,
     ):
         super().__init__()
         dim_out = default(dim_out, dim)
@@ -329,46 +368,34 @@ class Encoder(nn.Module):
             self.downsample_conv = Conv2d(curr_dim, dim_out, 1)
             curr_dim = dim_out
 
-        self.pixel_norm = PixelNorm(dim = 1)
+        self.pixel_norm = PixelNorm(dim=1)
 
         self.to_emb = None
         if exists(emb_dim):
-            self.to_emb = nn.Sequential(
-                Linear(emb_dim, dim_out),
-                Gain()
-            )
+            self.to_emb = nn.Sequential(Linear(emb_dim, dim_out), Gain())
 
-        self.block1 = nn.Sequential(
-            MPSiLU(),
-            Conv2d(curr_dim, dim_out, 3)
-        )
+        self.block1 = nn.Sequential(MPSiLU(), Conv2d(curr_dim, dim_out, 3))
 
         self.block2 = nn.Sequential(
-            MPSiLU(),
-            nn.Dropout(dropout),
-            Conv2d(dim_out, dim_out, 3)
+            MPSiLU(), nn.Dropout(dropout), Conv2d(dim_out, dim_out, 3)
         )
 
-        self.res_mp_add = MPAdd(t = mp_add_t)
+        self.res_mp_add = MPAdd(t=mp_add_t)
 
         self.attn = None
         if has_attn:
             self.attn = Attention(
-                dim = dim_out,
-                heads = max(math.ceil(dim_out / attn_dim_head), 2),
-                dim_head = attn_dim_head,
-                mp_add_t = attn_res_mp_add_t,
-                flash = attn_flash
+                dim=dim_out,
+                heads=max(math.ceil(dim_out / attn_dim_head), 2),
+                dim_head=attn_dim_head,
+                mp_add_t=attn_res_mp_add_t,
+                flash=attn_flash,
             )
 
-    def forward(
-        self,
-        x,
-        emb = None
-    ):
+    def forward(self, x, emb=None):
         if self.downsample:
             h, w = x.shape[-2:]
-            x = F.interpolate(x, (h // 2, w // 2), mode = 'bilinear')
+            x = F.interpolate(x, (h // 2, w // 2), mode="bilinear")
             x = self.downsample_conv(x)
 
         x = self.pixel_norm(x)
@@ -379,7 +406,7 @@ class Encoder(nn.Module):
 
         if exists(emb):
             scale = self.to_emb(emb) + 1
-            x = x * rearrange(scale, 'b c -> b c 1 1')
+            x = x * rearrange(scale, "b c -> b c 1 1")
 
         x = self.block2(x)
 
@@ -390,20 +417,21 @@ class Encoder(nn.Module):
 
         return x
 
+
 class Decoder(nn.Module):
     def __init__(
         self,
         dim,
-        dim_out = None,
+        dim_out=None,
         *,
-        emb_dim = None,
-        dropout = 0.1,
-        mp_add_t = 0.3,
-        has_attn = False,
-        attn_dim_head = 64,
-        attn_res_mp_add_t = 0.3,
-        attn_flash = False,
-        upsample = False
+        emb_dim=None,
+        dropout=0.1,
+        mp_add_t=0.3,
+        has_attn=False,
+        attn_dim_head=64,
+        attn_res_mp_add_t=0.3,
+        attn_flash=False,
+        upsample=False,
     ):
         super().__init__()
         dim_out = default(dim_out, dim)
@@ -413,44 +441,32 @@ class Decoder(nn.Module):
 
         self.to_emb = None
         if exists(emb_dim):
-            self.to_emb = nn.Sequential(
-                Linear(emb_dim, dim_out),
-                Gain()
-            )
+            self.to_emb = nn.Sequential(Linear(emb_dim, dim_out), Gain())
 
-        self.block1 = nn.Sequential(
-            MPSiLU(),
-            Conv2d(dim, dim_out, 3)
-        )
+        self.block1 = nn.Sequential(MPSiLU(), Conv2d(dim, dim_out, 3))
 
         self.block2 = nn.Sequential(
-            MPSiLU(),
-            nn.Dropout(dropout),
-            Conv2d(dim_out, dim_out, 3)
+            MPSiLU(), nn.Dropout(dropout), Conv2d(dim_out, dim_out, 3)
         )
 
         self.res_conv = Conv2d(dim, dim_out, 1) if dim != dim_out else nn.Identity()
 
-        self.res_mp_add = MPAdd(t = mp_add_t)
+        self.res_mp_add = MPAdd(t=mp_add_t)
 
         self.attn = None
         if has_attn:
             self.attn = Attention(
-                dim = dim_out,
-                heads = max(math.ceil(dim_out / attn_dim_head), 2),
-                dim_head = attn_dim_head,
-                mp_add_t = attn_res_mp_add_t,
-                flash = attn_flash
+                dim=dim_out,
+                heads=max(math.ceil(dim_out / attn_dim_head), 2),
+                dim_head=attn_dim_head,
+                mp_add_t=attn_res_mp_add_t,
+                flash=attn_flash,
             )
 
-    def forward(
-        self,
-        x,
-        emb = None
-    ):
+    def forward(self, x, emb=None):
         if self.upsample:
             h, w = x.shape[-2:]
-            x = F.interpolate(x, (h * 2, w * 2), mode = 'bilinear')
+            x = F.interpolate(x, (h * 2, w * 2), mode="bilinear")
 
         res = self.res_conv(x)
 
@@ -458,7 +474,7 @@ class Decoder(nn.Module):
 
         if exists(emb):
             scale = self.to_emb(emb) + 1
-            x = x * rearrange(scale, 'b c -> b c 1 1')
+            x = x * rearrange(scale, "b c -> b c 1 1")
 
         x = self.block2(x)
 
@@ -469,60 +485,59 @@ class Decoder(nn.Module):
 
         return x
 
+
 # attention
+
 
 class Attention(nn.Module):
     def __init__(
-        self,
-        dim,
-        heads = 4,
-        dim_head = 64,
-        num_mem_kv = 4,
-        flash = False,
-        mp_add_t = 0.3
+        self, dim, heads=4, dim_head=64, num_mem_kv=4, flash=False, mp_add_t=0.3
     ):
         super().__init__()
         self.heads = heads
         hidden_dim = dim_head * heads
 
-        self.pixel_norm = PixelNorm(dim = -1)
+        self.pixel_norm = PixelNorm(dim=-1)
 
-        self.attend = Attend(flash = flash)
+        self.attend = Attend(flash=flash)
 
         self.mem_kv = nn.Parameter(torch.randn(2, heads, num_mem_kv, dim_head))
         self.to_qkv = Conv2d(dim, hidden_dim * 3, 1)
         self.to_out = Conv2d(hidden_dim, dim, 1)
 
-        self.mp_add = MPAdd(t = mp_add_t)
+        self.mp_add = MPAdd(t=mp_add_t)
 
     def forward(self, x):
         res, b, c, h, w = x, *x.shape
 
-        qkv = self.to_qkv(x).chunk(3, dim = 1)
-        q, k, v = map(lambda t: rearrange(t, 'b (h c) x y -> b h (x y) c', h = self.heads), qkv)
+        qkv = self.to_qkv(x).chunk(3, dim=1)
+        q, k, v = map(
+            lambda t: rearrange(t, "b (h c) x y -> b h (x y) c", h=self.heads), qkv
+        )
 
-        mk, mv = map(lambda t: repeat(t, 'h n d -> b h n d', b = b), self.mem_kv)
-        k, v = map(partial(torch.cat, dim = -2), ((mk, k), (mv, v)))
+        mk, mv = map(lambda t: repeat(t, "h n d -> b h n d", b=b), self.mem_kv)
+        k, v = map(partial(torch.cat, dim=-2), ((mk, k), (mv, v)))
 
         q, k, v = map(self.pixel_norm, (q, k, v))
 
         out = self.attend(q, k, v)
 
-        out = rearrange(out, 'b h (x y) d -> b (h d) x y', x = h, y = w)
+        out = rearrange(out, "b h (x y) d -> b (h d) x y", x=h, y=w)
         out = self.to_out(out)
 
         return self.mp_add(out, res)
 
-#mfai implementation
+
+# mfai implementation
 @dataclass_json
 @dataclass(slots=True)
 class UNetKarrasSettings:
-    #default settings from implementation
-    #image_size = ?
+    # default settings from implementation
+    # image_size = ?
     dim = 192
-    dim_max = 768            # channels will double every downsample and cap out to this value
-    num_classes = None       # in paper, they do 1000 classes for a popular benchmark
-    channels = 4             # 4 channels in paper for some reason, must be alpha channel?
+    dim_max = 768  # channels will double every downsample and cap out to this value
+    num_classes = None  # in paper, they do 1000 classes for a popular benchmark
+    channels = 4  # 4 channels in paper for some reason, must be alpha channel?
     num_downsamples = 3
     num_blocks_per_stage = 4
     attn_res = (16, 8)
@@ -536,6 +551,7 @@ class UNetKarrasSettings:
     dropout = 0.1
     self_condition = False
 
+
 class UNetKarras(ModelABC, nn.Module):
     settings_kls = UNetKarrasSettings
     onnx_supported: bool = True
@@ -544,7 +560,8 @@ class UNetKarras(ModelABC, nn.Module):
     features_last: bool = False
     model_type: int = ModelType.DIFFUSION
     register: bool = True
-    #forced signature
+
+    # forced signature
     def __init__(
         self,
         in_channels: int,
@@ -567,11 +584,12 @@ class UNetKarras(ModelABC, nn.Module):
 
         # input and output blocks
 
-        self.input_block = Conv2d(input_channels, settings.dim, 3, concat_ones_to_input = True)
+        self.input_block = Conv2d(
+            input_channels, settings.dim, 3, concat_ones_to_input=True
+        )
 
         self.output_block = nn.Sequential(
-            Conv2d(settings.dim, settings.channels, 3),
-            Gain()
+            Conv2d(settings.dim, settings.channels, 3), Gain()
         )
 
         # time embedding
@@ -580,7 +598,7 @@ class UNetKarras(ModelABC, nn.Module):
 
         self.to_time_emb = nn.Sequential(
             MPFourierEmbedding(settings.fourier_dim),
-            Linear(settings.fourier_dim, emb_dim)
+            Linear(settings.fourier_dim, emb_dim),
         )
 
         # class embedding
@@ -590,7 +608,7 @@ class UNetKarras(ModelABC, nn.Module):
 
         if self.needs_class_labels:
             self.to_class_emb = Linear(settings.num_classes, 4 * settings.dim)
-            self.add_class_emb = MPAdd(t = settings.mp_add_emb_t)
+            self.add_class_emb = MPAdd(t=settings.mp_add_emb_t)
 
         # final embedding activations
 
@@ -607,11 +625,11 @@ class UNetKarras(ModelABC, nn.Module):
         # resnet block
 
         block_kwargs = dict(
-            dropout = settings.dropout,
-            emb_dim = emb_dim,
-            attn_dim_head = settings.attn_dim_head,
-            attn_res_mp_add_t = settings.attn_res_mp_add_t,
-            attn_flash = settings.attn_flash
+            dropout=settings.dropout,
+            emb_dim=emb_dim,
+            attn_dim_head=settings.attn_dim_head,
+            attn_res_mp_add_t=settings.attn_res_mp_add_t,
+            attn_flash=settings.attn_flash,
         )
 
         # unet encoder and decoders
@@ -622,7 +640,7 @@ class UNetKarras(ModelABC, nn.Module):
         curr_dim = settings.dim
         curr_res = settings.image_size
 
-        self.skip_mp_cat = MPCat(t = settings.mp_cat_t, dim = 1)
+        self.skip_mp_cat = MPCat(t=settings.mp_cat_t, dim=1)
 
         # take care of skip connection for initial input block and first three encoder blocks
 
@@ -641,20 +659,31 @@ class UNetKarras(ModelABC, nn.Module):
 
         for _ in range(self.num_downsamples):
             dim_out = min(settings.dim_max, curr_dim * 2)
-            upsample = Decoder(dim_out, curr_dim, has_attn = curr_res in attn_res, upsample = True, **block_kwargs)
+            upsample = Decoder(
+                dim_out,
+                curr_dim,
+                has_attn=curr_res in attn_res,
+                upsample=True,
+                **block_kwargs,
+            )
 
             curr_res //= 2
             has_attn = curr_res in attn_res
 
-            downsample = Encoder(curr_dim, dim_out, downsample = True, has_attn = has_attn, **block_kwargs)
+            downsample = Encoder(
+                curr_dim, dim_out, downsample=True, has_attn=has_attn, **block_kwargs
+            )
 
             append(self.downs, downsample)
             prepend(self.ups, upsample)
-            prepend(self.ups, Decoder(dim_out * 2, dim_out, has_attn = has_attn, **block_kwargs))
+            prepend(
+                self.ups,
+                Decoder(dim_out * 2, dim_out, has_attn=has_attn, **block_kwargs),
+            )
 
             for _ in range(settings.num_blocks_per_stage):
-                enc = Encoder(dim_out, dim_out, has_attn = has_attn, **block_kwargs)
-                dec = Decoder(dim_out * 2, dim_out, has_attn = has_attn, **block_kwargs)
+                enc = Encoder(dim_out, dim_out, has_attn=has_attn, **block_kwargs)
+                dec = Decoder(dim_out * 2, dim_out, has_attn=has_attn, **block_kwargs)
 
                 settings.append(self.downs, enc)
                 settings.prepend(self.ups, dec)
@@ -665,24 +694,20 @@ class UNetKarras(ModelABC, nn.Module):
 
         mid_has_attn = curr_res in attn_res
 
-        self.mids = nn.ModuleList([
-            Decoder(curr_dim, curr_dim, has_attn = mid_has_attn, **block_kwargs),
-            Decoder(curr_dim, curr_dim, has_attn = mid_has_attn, **block_kwargs),
-        ])
+        self.mids = nn.ModuleList(
+            [
+                Decoder(curr_dim, curr_dim, has_attn=mid_has_attn, **block_kwargs),
+                Decoder(curr_dim, curr_dim, has_attn=mid_has_attn, **block_kwargs),
+            ]
+        )
 
         self.out_dim = settings.channels
 
     @property
     def downsample_factor(self):
-        return 2 ** self.num_downsamples
+        return 2**self.num_downsamples
 
-    def forward(
-        self,
-        x,
-        time,
-        self_cond = None,
-        class_labels = None
-    ):
+    def forward(self, x, time, self_cond=None, class_labels=None):
         # validate image shape
 
         assert x.shape[1:] == (self.channels, self.image_size, self.image_size)
@@ -691,7 +716,7 @@ class UNetKarras(ModelABC, nn.Module):
 
         if self.self_condition:
             self_cond = default(self_cond, lambda: torch.zeros_like(x))
-            x = torch.cat((self_cond, x), dim = 1)
+            x = torch.cat((self_cond, x), dim=1)
         else:
             assert not exists(self_cond)
 
@@ -731,13 +756,13 @@ class UNetKarras(ModelABC, nn.Module):
         # down
 
         for encoder in self.downs:
-            x = encoder(x, emb = emb)
+            x = encoder(x, emb=emb)
             skips.append(x)
 
         # mid
 
         for decoder in self.mids:
-            x = decoder(x, emb = emb)
+            x = decoder(x, emb=emb)
 
         # up
 
@@ -746,7 +771,7 @@ class UNetKarras(ModelABC, nn.Module):
                 skip = skips.pop()
                 x = self.skip_mp_cat(x, skip)
 
-            x = decoder(x, emb = emb)
+            x = decoder(x, emb=emb)
 
         # output block
 

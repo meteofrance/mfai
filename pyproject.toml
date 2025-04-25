@@ -30,10 +30,13 @@ dependencies = {file = ["requirements.txt"]}
 [project.urls]
 Homepage = "https://github.com/meteofrance/mfai"
 
+[tool.ruff.lint]
+select = ["I"]  # I = isort
+
 [tool.mypy]
 # [mypy configuration file doc](https://mypy.readthedocs.io/en/stable/config_file.html#confval-exclude)
 exclude = [
-  '^mfai/torch/models/nlam/*$',
+  '^mfai/torch/models/nlam/__init__.py',
 ]
 
 # Disallows defining functions without type annotations or with incomplete type annotations.
@@ -78,6 +81,9 @@ module = [
   "onnxruntime",
   "pl_bolts.*",
   "torchvision.*",
+  "torch_geometric.*",
+  "networkx.*",
+  "scipy.spatial",
   "timm.*",
   "flash_attn.*",
 ]

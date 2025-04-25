@@ -1,8 +1,8 @@
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
-from einops import rearrange
 import torch
 import torch.nn.functional as F
+from einops import rearrange
 from torchmetrics import Metric, Precision, PrecisionRecallCurve
 from torchmetrics.utilities.compute import _auc_compute
 
@@ -14,12 +14,12 @@ class FAR(Metric):
     FAR = FP / (TP + FP) = 1 - (TP / (TP + FP)) = 1 - Precision
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__()
         # we do this instead of subclassing because of the way Precision is instanciated
-        self.p = Precision(*args, **kwargs)
+        self.p: Metric = Precision(*args, **kwargs)
 
-    def update(self, *args, **kwargs):
+    def update(self, *args: Any, **kwargs: Any) -> None:
         self.p.update(*args, **kwargs)
 
     def compute(self) -> torch.Tensor:
@@ -34,35 +34,37 @@ class FNR(Metric):
     torchmetrics.Sensitivity is not available yet so we implement the calculation.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         full_state_update = True  # noqa
+        self.true_positives: torch.Tensor
+        self.false_negatives: torch.Tensor
         self.add_state("true_positives", default=torch.tensor(0), dist_reduce_fx="sum")
         self.add_state("false_negatives", default=torch.tensor(0), dist_reduce_fx="sum")
 
-    def update(self, preds: torch.Tensor, target: torch.Tensor):
+    def update(self, preds: torch.Tensor, target: torch.Tensor) -> None:
         assert preds.shape == target.shape
         preds = torch.where(preds >= 0.5, 1, 0)
         self.true_positives += torch.sum((preds == 1) & (target == 1))
         self.false_negatives += torch.sum((preds == 0) & (target == 1))
 
-    def compute(self):
+    def compute(self) -> torch.Tensor:
         return self.false_negatives / (self.true_positives + self.false_negatives)
 
 
 class PR_AUC(Metric):
     """Area Under the Precsion-Recall Curve."""
 
-    def __init__(self, task: str = "binary"):
+    def __init__(self, task: Literal["binary", "multiclass", "multilabel"] = "binary"):
         super().__init__()
         full_state_update = True  # noqa
         self.task = task
 
-    def update(self, preds: torch.Tensor, targets: torch.Tensor):
+    def update(self, preds: torch.Tensor, targets: torch.Tensor) -> None:
         pr_curve = PrecisionRecallCurve(task=self.task)
         self.precision, self.recall, _ = pr_curve(preds, targets)
 
-    def compute(self):
+    def compute(self) -> torch.Tensor:
         return _auc_compute(self.precision, self.recall, reorder=True)
 
 
@@ -101,6 +103,9 @@ class CSINeighborood(Metric):
         if torch.cuda.is_available():
             self._device = torch.device("cuda")
 
+        self.true_positives: torch.Tensor
+        self.false_positives: torch.Tensor
+        self.false_negatives: torch.Tensor
         self.add_state(
             "true_positives",
             default=torch.zeros(self.num_classes).to(device=self.device),
@@ -141,14 +146,20 @@ class CSINeighborood(Metric):
         output_tensor.squeeze_(1)
         return output_tensor
 
-    def update(self, preds: torch.Tensor, targets: torch.Tensor):
+    def update(self, preds: torch.Tensor, targets: torch.Tensor) -> None:
         """
         preds and targets are torch.Tensors of shape (H, w) or (B,C,H,W).
         If multiclass, takes int value in [0, nb_output_channels] interval.
         """
 
-        def compute_sub_results(preds, targets):
-            exp_targets = targets.type(torch.FloatTensor).to(device=self.device)
+        def compute_sub_results(
+            preds: torch.Tensor, targets: torch.Tensor
+        ) -> tuple[
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+        ]:
+            exp_targets = targets.type(torch.FloatTensor.dtype).to(device=self.device)
             targets_extend = self.binary_dilation_(exp_targets)
             true_positives = torch.sum((preds == 1) & (targets_extend == 1))
             false_positives = torch.sum((preds == 1) & (targets_extend == 0))

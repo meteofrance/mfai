@@ -1,14 +1,15 @@
 import tempfile
-import torch
-from lightning.pytorch.cli import ArgsType, LightningCLI
-import pytest
+
 import lightning.pytorch as L
+import pytest
+import torch
+from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
+from lightning.pytorch.cli import ArgsType, LightningCLI
+from lightning.pytorch.loggers import TensorBoardLogger
 
 from mfai.torch.dummy_dataset import DummyDataModule
+from mfai.torch.lightning_modules import SegmentationLightningModule
 from mfai.torch.models.unet import UNet
-from mfai.torch.segmentation_module import SegmentationLightningModule
-from lightning.pytorch.loggers import TensorBoardLogger
-from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
 
 
 @pytest.mark.parametrize(
@@ -57,7 +58,6 @@ def test_lightning_training_loop(config):
         trainer.fit(model, datamodule.train_dataloader(), datamodule.val_dataloader())
         trainer.test(model, datamodule.test_dataloader(), ckpt_path="best")
 
-    
 
 def cli_main(args: ArgsType = None):
     cli = LightningCLI(

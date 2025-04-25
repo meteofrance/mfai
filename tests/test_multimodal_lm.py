@@ -62,16 +62,16 @@ def generate_text_simple(
             "gpt2",
             GPT2Tokenizer(),
             (
-                "Sustine et abstinegreg LXamm Local addition Immun GlassrikeFal Resurrection",
-                "Sustine et abstineohoorphLE updates� Oaks Coconut VC Privacy backward",
+                "Sustine et abstine Patron nationalist grease Carly Detectiveuceditta Mysteryolationitivity",
+                "Sustine et abstine grinned Supporters strife dissemination crewsrush error paternalirementsuania",
             ),
         ),
         (
             "gpt2",
             LlamaTokenizer(),
             (
-                "Sustine et abstine współ terrestführtrange지edتズ ownershipantal",
-                "Sustine et abstine detected *rit україн dernièreistoryikalcorüssknow",
+                "Sustine et abstine współ terrestführt substantial arrow atoms introduction mil стар sze",
+                "Sustine et abstine logging extremdan={\glyское elabor commissionategymapping",
             ),
         ),
     ],

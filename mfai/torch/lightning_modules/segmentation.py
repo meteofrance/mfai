@@ -40,6 +40,9 @@ class SegmentationLightningModule(pl.LightningModule):
         self.type_segmentation = type_segmentation
         self.loss = loss
         self.metrics = self.get_metrics()
+        self.train_metrics = self.metrics.clone(prefix='train_')
+        self.valid_metrics = self.metrics.clone(prefix='val_')
+        self.test_metrics = self.metrics.clone(prefix='test_')
 
         # class variables to log metrics for each sample during train/test step
         self.test_metrics: dict[int, dict[str, Any]] = {}
@@ -56,16 +59,16 @@ class SegmentationLightningModule(pl.LightningModule):
             self.model.input_shape[1],
         )
 
-    def get_metrics(self) -> torch.nn.ModuleDict:
+    def get_metrics(self) -> tm.MetricCollection:
         """Defines the metrics that will be computed during valid and test steps."""
 
         if self.type_segmentation == "regression":
-            return torch.nn.ModuleDict(
-                {
-                    "rmse": tm.MeanSquaredError(squared=False),
-                    "mae": tm.MeanAbsoluteError(),
-                    "mape": tm.MeanAbsolutePercentageError(),
-                }
+            return tm.MetricCollection(
+                [
+                    tm.MeanSquaredError(squared=False),
+                    tm.MeanAbsoluteError(),
+                    tm.MeanAbsolutePercentageError(),
+                ]
             )
         else:
             num_classes: int | None = None
@@ -81,32 +84,33 @@ class SegmentationLightningModule(pl.LightningModule):
             elif self.type_segmentation == "multilabel":
                 num_labels = self.model.out_channels
 
-            metrics_dict = {
-                "acc": tm.Accuracy(
-                    task=self.type_segmentation,
-                    num_classes=num_classes,
-                    num_labels=num_labels,
-                ),
-                "f1": tm.F1Score(
-                    task=self.type_segmentation,
-                    num_classes=num_classes,
-                    average=average,
-                    num_labels=num_labels,
-                ),
-                "recall_pod": tm.Recall(
-                    task=self.type_segmentation,
-                    num_classes=num_classes,
-                    average=average,
-                    num_labels=num_labels,
-                ),
-                "precision": tm.Precision(  # Precision = 1 - FAR
-                    task=self.type_segmentation,
-                    num_classes=num_classes,
-                    average=average,
-                    num_labels=num_labels,
-                ),
-            }
-            return torch.nn.ModuleDict(metrics_dict)
+            return tm.MetricCollection(
+                [
+                    tm.Accuracy(
+                        task=self.type_segmentation,
+                        num_classes=num_classes,
+                        num_labels=num_labels,
+                    ),
+                    tm.F1Score(
+                        task=self.type_segmentation,
+                        num_classes=num_classes,
+                        average=average,
+                        num_labels=num_labels,
+                    ),
+                    tm.Recall(
+                        task=self.type_segmentation,
+                        num_classes=num_classes,
+                        average=average,
+                        num_labels=num_labels,
+                    ),
+                    tm.Precision(  # Precision = 1 - FAR
+                        task=self.type_segmentation,
+                        num_classes=num_classes,
+                        average=average,
+                        num_labels=num_labels,
+                    ),
+                ]
+            )
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         """Runs data through the model. Separate from training step."""
@@ -142,7 +146,7 @@ class SegmentationLightningModule(pl.LightningModule):
         if self.logger and self.logger.log_dir:
             print(f"Logs will be saved in \033[96m{self.logger.log_dir}\033[0m")
             self.logger.experiment.add_custom_scalars(layout)
-            self.logger.log_hyperparams(hparams, {"val_loss": 0, "val_f1": 0})
+            self.logger.log_hyperparams(hparams, {"val_loss": 0})
 
     def _shared_epoch_end(self, outputs: list[torch.Tensor], label: str) -> None:
         """Computes and logs the averaged loss at the end of an epoch on custom layout.
@@ -186,8 +190,7 @@ class SegmentationLightningModule(pl.LightningModule):
         self.log("val_loss", loss, on_epoch=True, sync_dist=True)
         self.validation_loss.append(loss)
         y_hat = self.probabilities_to_classes(y_hat)
-        for metric in self.metrics.values():
-            metric.update(y_hat, y)
+        self.valid_metrics.update(y_hat, y)
         self.val_plot_step(batch_idx, y, y_hat)
         return loss
 
@@ -196,11 +199,9 @@ class SegmentationLightningModule(pl.LightningModule):
         self.validation_loss.clear()  # free memory
         if self.logger is None:
             return
-        for metric_name, metric in self.metrics.items():
-            tb = self.logger.experiment  # type: ignore[attr-defined]
-            # Use add scalar to log at step=current_epoch
-            tb.add_scalar(f"val_{metric_name}", metric.compute(), self.current_epoch)
-            metric.reset()
+        metrics = self.valid_metrics.compute()
+        self.log_dict(metrics, logger=self.logger)
+        self.valid_metrics.reset()
 
     def test_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int

@@ -30,7 +30,9 @@
     - Vision Language Models:
       - CLIP
 
-- [SegmentationLightningModule](#segmentationlightningmodule)
+- [LightningModule](#lightning-modules)
+    - Segmentation
+    - CLIP
 - [Lightning CLI](#lightning-cli)
 - [NamedTensors](#namedtensors)
 - [Metrics](#metrics)
@@ -172,6 +174,10 @@ class MyProjectLightningModule(SegmentationLightningModule):
 We provide [**SegmentationLightningModule**](/mfai/torch/lightning_modules/segmentation.py#21) a lightning module adapted to supervised Deep Learning projects where the input of the neural network is made of one or multiple images and the target is also one or multiple images.
 
 The module can be instanciated with any of the aforementioned vision neural networks architetures and used in 4 different modes : binary classification, multiclass classification, multilabel classification and regression.
+
+By default, some metrics are computed in function of the mode of segmentation you use:
+- Binary, Multiclass, Multilabel: [`Accuracy`](https://lightning.ai/docs/torchmetrics/stable/classification/accuracy.html), [`F1Score`](https://lightning.ai/docs/torchmetrics/stable/classification/f1_score.html#torchmetrics.F1Score), [`Recall`](https://lightning.ai/docs/torchmetrics/stable/classification/recall.html), [`Precision`](https://lightning.ai/docs/torchmetrics/stable/classification/precision.html),
+- Regression: [`MeanSquaredError`](https://lightning.ai/docs/torchmetrics/stable/regression/mean_squared_error.html), [`MeanAbsoluteError`](https://lightning.ai/docs/torchmetrics/stable/regression/mean_absolute_error.html#torchmetrics.MeanAbsoluteError), [`MeanAbsolutePercentageError`](https://lightning.ai/docs/torchmetrics/stable/regression/mean_absolute_percentage_error.html#torchmetrics.MeanAbsolutePercentageError).
 
 ## Clip
 We also provide [**CLIPLightningModule**](/mfai/torch/lightning_modules/clip.py#19), a lightning module dedicated to the training of CLIP models. 
@@ -383,6 +389,22 @@ The script `examples/train_oxford_pets.py` provides an example of how to instant
 You can also look at our unit tests in `tests/test_lightning.py` for example of usage.
 
 See [pytorch lightning documentation](https://lightning.ai/docs/overview/getting-started) for how to configure the Trainer and customize the module to suit your needs.
+
+### Add a new metric
+
+The SegmentationLightningModule use a MetricCollection to compute (and log) metrics over validation and test dataset. To add a new metric (sould be a `torchmetrics.Metric`), you just have to add the line below in your `__init__`.
+```python
+class MyLightningModule(SegmentationLightningModule):
+    def __init__(
+        self,
+        model: ModelABC,
+        type_segmentation: Literal["binary", "multiclass", "multilabel", "regression"],
+        loss: Callable,
+    ) -> None:
+        super().__init__(model, type_segmentation, loss)
+
+        self.metrics.add_metrics(AUROC(task="binary", thresholds=100))
+```
 
 ## Lightning CLI
 

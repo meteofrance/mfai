@@ -254,7 +254,7 @@ class SegmentationLightningModule(pl.LightningModule):
         if self.logger is None:
             return
         metrics = self.valid_metrics.compute()
-        self.log_dict(metrics, logger=self.logger)
+        self.log_dict(metrics, logger=True if self.logger else False)
         self.valid_metrics.reset()
 
     ########################################################################################
@@ -292,7 +292,8 @@ class SegmentationLightningModule(pl.LightningModule):
     def on_test_epoch_end(self) -> None:
         """Logs metrics in logger hparams view, at the end of run."""
         metrics = self.test_metrics.compute()
-        self.logger.log_hyperparams(self.get_hparams(), metrics=metrics)
+        if self.logger:
+            self.logger.log_hyperparams(self.get_hparams(), metrics=metrics)
         df = self.build_metrics_dataframe()
         self.save_test_metrics_as_csv(df)
         df = df.drop("Name", axis=1)

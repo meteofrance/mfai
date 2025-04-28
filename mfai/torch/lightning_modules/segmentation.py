@@ -40,12 +40,12 @@ class SegmentationLightningModule(pl.LightningModule):
         self.type_segmentation = type_segmentation
         self.loss = loss
         self.metrics = self.get_metrics()
-        self.train_metrics = self.metrics.clone(prefix='train_')
-        self.valid_metrics = self.metrics.clone(prefix='val_')
-        self.test_metrics = self.metrics.clone(prefix='test_')
+        self.train_metrics = self.metrics.clone(prefix="train_")
+        self.valid_metrics = self.metrics.clone(prefix="val_")
+        self.test_metrics = self.metrics.clone()
+        self.list_test_metrics: list[dict[str, Any]] = []
 
         # class variables to log metrics for each sample during train/test step
-        self.test_metrics: dict[int, dict[str, Any]] = {}
         self.training_loss: list[Any] = []
         self.validation_loss: list[Any] = []
 
@@ -137,16 +137,21 @@ class SegmentationLightningModule(pl.LightningModule):
 
         return y_hat, loss
 
-    def on_train_start(self) -> None:
-        """Setup custom scalars panel on tensorboard and log hparams.
-        Useful to easily compare train and valid loss and detect overtfitting."""
+    def get_hparams(self) -> dict:
+        """Return the hparams we want to save in logger"""
         hparams = dict(self.hparams)
         hparams["loss"] = self.loss.__class__.__name__
         hparams["model"] = self.model.__class__.__name__
+        return hparams
+
+    def on_train_start(self) -> None:
+        """Setup custom scalars panel on tensorboard and log hparams.
+        Useful to easily compare train and valid loss and detect overtfitting."""
+        hparams = self.get_hparams()
         if self.logger and self.logger.log_dir:
             print(f"Logs will be saved in \033[96m{self.logger.log_dir}\033[0m")
             self.logger.experiment.add_custom_scalars(layout)
-            self.logger.log_hyperparams(hparams, {"val_loss": 0})
+            self.logger.log_hyperparams(hparams)
 
     def _shared_epoch_end(self, outputs: list[torch.Tensor], label: str) -> None:
         """Computes and logs the averaged loss at the end of an epoch on custom layout.
@@ -203,6 +208,9 @@ class SegmentationLightningModule(pl.LightningModule):
         self.log_dict(metrics, logger=self.logger)
         self.valid_metrics.reset()
 
+    def on_test_start(self) -> None:
+        self.sample_metrics = self.test_metrics.clone()
+
     def test_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
     ) -> None:
@@ -211,21 +219,21 @@ class SegmentationLightningModule(pl.LightningModule):
         y_hat, loss = self._shared_forward_step(x, y)
         y_hat = self.probabilities_to_classes(y_hat)
 
+        self.test_metrics.update(y_hat, y)
+
         # Save metrics values for each sample
-        batch_dict = {"loss": loss}
-        for metric_name, metric in self.metrics.items():
-            metric.update(y_hat, y)
-            batch_dict[metric_name] = metric.compute()
-            metric.reset()
-        self.test_metrics[batch_idx] = batch_dict
+        self.sample_metrics.update(y_hat, y)
+        batch_dict = {"Name": batch_idx, "loss": loss.item()}
+        metrics = self.sample_metrics.compute()
+        metrics_dict = {
+            key: value.item() for key, value in metrics.items()
+        }  # Convert torch.Tensor to float
+        self.list_test_metrics.append(batch_dict | metrics_dict)
+        self.sample_metrics.reset()
 
     def build_metrics_dataframe(self) -> pd.DataFrame:
-        data = []
-        first_sample = list(self.test_metrics.keys())[0]
-        metrics = list(self.test_metrics[first_sample].keys())
-        for name_sample, metrics_dict in self.test_metrics.items():
-            data.append([name_sample] + [metrics_dict[m].item() for m in metrics])
-        return pd.DataFrame(data, columns=["Name"] + metrics)
+        columns_name = list(self.list_test_metrics[0].keys())
+        return pd.DataFrame(self.list_test_metrics, columns=columns_name)
 
     @rank_zero_only
     def save_test_metrics_as_csv(self, df: pd.DataFrame) -> None:
@@ -240,6 +248,8 @@ class SegmentationLightningModule(pl.LightningModule):
 
     def on_test_epoch_end(self) -> None:
         """Logs metrics in logger hparams view, at the end of run."""
+        metrics = self.test_metrics.compute()
+        self.logger.log_hyperparams(self.get_hparams(), metrics=metrics)
         df = self.build_metrics_dataframe()
         self.save_test_metrics_as_csv(df)
         df = df.drop("Name", axis=1)

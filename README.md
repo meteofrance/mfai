@@ -392,7 +392,7 @@ See [pytorch lightning documentation](https://lightning.ai/docs/overview/getting
 
 ### Add a new metric
 
-The SegmentationLightningModule use a MetricCollection to compute (and log) metrics over validation and test dataset. To add a new metric (sould be a `torchmetrics.Metric`), you just have to add the line below in your `__init__`.
+The SegmentationLightningModule uses a MetricCollection to compute (and log) metrics over validation and test datasets. To add a new metric (should be `torchmetrics.Metric`), you just have to add the line below in your `__init__`.
 ```python
 class MyLightningModule(SegmentationLightningModule):
     def __init__(

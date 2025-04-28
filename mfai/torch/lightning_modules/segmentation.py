@@ -59,6 +59,33 @@ class SegmentationLightningModule(pl.LightningModule):
             self.model.input_shape[1],
         )
 
+    def get_hparams(self) -> dict:
+        """Return the hparams we want to save in logger"""
+        hparams = dict(self.hparams)
+        hparams["loss"] = self.loss.__class__.__name__
+        hparams["model"] = self.model.__class__.__name__
+        return hparams
+
+    def last_activation(self, y_hat: torch.Tensor) -> torch.Tensor:
+        """Applies appropriate activation according to task."""
+        if self.type_segmentation == "multiclass":
+            y_hat = y_hat.log_softmax(dim=1).exp()
+        elif self.type_segmentation in ["binary", "multilabel"]:
+            y_hat = torch.nn.functional.logsigmoid(y_hat).exp()
+        return y_hat
+
+    def probabilities_to_classes(self, y_hat: torch.Tensor) -> torch.Tensor:
+        """Transfrom probalistics predictions to discrete classes"""
+        if self.type_segmentation == "multiclass":
+            y_hat = y_hat.argmax(dim=1)
+        elif self.type_segmentation in ["binary", "multilabel"]:
+            # Default detection threshold = 0.5
+            y_hat = (y_hat > 0.5).int()
+        return y_hat
+
+    ########################################################################################
+    #                                        METRICS                                       #
+    ########################################################################################
     def get_metrics(self) -> tm.MetricCollection:
         """Defines the metrics that will be computed during valid and test steps."""
 
@@ -112,6 +139,30 @@ class SegmentationLightningModule(pl.LightningModule):
                 ]
             )
 
+    def build_metrics_dataframe(self) -> pd.DataFrame:
+        columns_name = list(self.list_test_metrics[0].keys())
+        return pd.DataFrame(self.list_test_metrics, columns=columns_name)
+
+    @rank_zero_only
+    def save_test_metrics_as_csv(self, df: pd.DataFrame) -> None:
+        if self.logger is None or self.logger.log_dir is None:
+            warnings.warn(
+                "SegmentationLightningModule.save_test_metrics_as_csv() called with no logger or no local save path."
+            )
+            return
+        path_csv = Path(self.logger.log_dir) / "metrics_test_set.csv"
+        df.to_csv(path_csv, index=False)
+        print(f"--> Metrics for all samples saved in \033[91m\033[1m{path_csv}\033[0m")
+
+    ########################################################################################
+    #                                       OPTIMIZER                                      #
+    ########################################################################################
+    def configure_optimizers(self) -> torch.optim.Adam:
+        return torch.optim.Adam(self.parameters(), lr=0.001)
+
+    ########################################################################################
+    #                                   SHARED STEPS                                       #
+    ########################################################################################
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         """Runs data through the model. Separate from training step."""
         if self.channels_last:
@@ -137,13 +188,17 @@ class SegmentationLightningModule(pl.LightningModule):
 
         return y_hat, loss
 
-    def get_hparams(self) -> dict:
-        """Return the hparams we want to save in logger"""
-        hparams = dict(self.hparams)
-        hparams["loss"] = self.loss.__class__.__name__
-        hparams["model"] = self.model.__class__.__name__
-        return hparams
+    def _shared_epoch_end(self, outputs: list[torch.Tensor], label: str) -> None:
+        """Computes and logs the averaged loss at the end of an epoch on custom layout.
+        Step shared by training and validation epochs.
+        """
+        avg_loss = torch.stack(outputs).mean()
+        tb = self.logger.experiment  # type: ignore[union-attr]
+        tb.add_scalar(f"loss/{label}", avg_loss, self.current_epoch)
 
+    ########################################################################################
+    #                                      TRAIN STEPS                                     #
+    ########################################################################################
     def on_train_start(self) -> None:
         """Setup custom scalars panel on tensorboard and log hparams.
         Useful to easily compare train and valid loss and detect overtfitting."""
@@ -152,14 +207,6 @@ class SegmentationLightningModule(pl.LightningModule):
             print(f"Logs will be saved in \033[96m{self.logger.log_dir}\033[0m")
             self.logger.experiment.add_custom_scalars(layout)
             self.logger.log_hyperparams(hparams)
-
-    def _shared_epoch_end(self, outputs: list[torch.Tensor], label: str) -> None:
-        """Computes and logs the averaged loss at the end of an epoch on custom layout.
-        Step shared by training and validation epochs.
-        """
-        avg_loss = torch.stack(outputs).mean()
-        tb = self.logger.experiment  # type: ignore[union-attr]
-        tb.add_scalar(f"loss/{label}", avg_loss, self.current_epoch)
 
     def training_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
@@ -174,6 +221,9 @@ class SegmentationLightningModule(pl.LightningModule):
         self._shared_epoch_end(self.training_loss, "train")
         self.training_loss.clear()  # free memory
 
+    ########################################################################################
+    #                                      VALID STEPS                                     #
+    ########################################################################################
     def val_plot_step(
         self, batch_idx: int, y: torch.Tensor, y_hat: torch.Tensor
     ) -> None:
@@ -208,6 +258,9 @@ class SegmentationLightningModule(pl.LightningModule):
         self.log_dict(metrics, logger=self.logger)
         self.valid_metrics.reset()
 
+    ########################################################################################
+    #                                      TEST STEPS                                      #
+    ########################################################################################
     def on_test_start(self) -> None:
         self.sample_metrics = self.test_metrics.clone()
 
@@ -231,21 +284,6 @@ class SegmentationLightningModule(pl.LightningModule):
         self.list_test_metrics.append(batch_dict | metrics_dict)
         self.sample_metrics.reset()
 
-    def build_metrics_dataframe(self) -> pd.DataFrame:
-        columns_name = list(self.list_test_metrics[0].keys())
-        return pd.DataFrame(self.list_test_metrics, columns=columns_name)
-
-    @rank_zero_only
-    def save_test_metrics_as_csv(self, df: pd.DataFrame) -> None:
-        if self.logger is None or self.logger.log_dir is None:
-            warnings.warn(
-                "SegmentationLightningModule.save_test_metrics_as_csv() called with no logger or no local save path."
-            )
-            return
-        path_csv = Path(self.logger.log_dir) / "metrics_test_set.csv"
-        df.to_csv(path_csv, index=False)
-        print(f"--> Metrics for all samples saved in \033[91m\033[1m{path_csv}\033[0m")
-
     def on_test_epoch_end(self) -> None:
         """Logs metrics in logger hparams view, at the end of run."""
         metrics = self.test_metrics.compute()
@@ -253,23 +291,3 @@ class SegmentationLightningModule(pl.LightningModule):
         df = self.build_metrics_dataframe()
         self.save_test_metrics_as_csv(df)
         df = df.drop("Name", axis=1)
-
-    def last_activation(self, y_hat: torch.Tensor) -> torch.Tensor:
-        """Applies appropriate activation according to task."""
-        if self.type_segmentation == "multiclass":
-            y_hat = y_hat.log_softmax(dim=1).exp()
-        elif self.type_segmentation in ["binary", "multilabel"]:
-            y_hat = torch.nn.functional.logsigmoid(y_hat).exp()
-        return y_hat
-
-    def probabilities_to_classes(self, y_hat: torch.Tensor) -> torch.Tensor:
-        """Transfrom probalistics predictions to discrete classes"""
-        if self.type_segmentation == "multiclass":
-            y_hat = y_hat.argmax(dim=1)
-        elif self.type_segmentation in ["binary", "multilabel"]:
-            # Default detection threshold = 0.5
-            y_hat = (y_hat > 0.5).int()
-        return y_hat
-
-    def configure_optimizers(self) -> torch.optim.Adam:
-        return torch.optim.Adam(self.parameters(), lr=0.001)

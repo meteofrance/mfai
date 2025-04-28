@@ -40,10 +40,6 @@ class SegmentationLightningModule(pl.LightningModule):
         self.type_segmentation = type_segmentation
         self.loss = loss
         self.metrics = self.get_metrics()
-        self.train_metrics = self.metrics.clone(prefix="train_")
-        self.valid_metrics = self.metrics.clone(prefix="val_")
-        self.test_metrics = self.metrics.clone()
-        self.list_test_metrics: list[dict[str, Any]] = []
 
         # class variables to log metrics for each sample during train/test step
         self.training_loss: list[Any] = []
@@ -140,8 +136,8 @@ class SegmentationLightningModule(pl.LightningModule):
             )
 
     def build_metrics_dataframe(self) -> pd.DataFrame:
-        columns_name = list(self.list_test_metrics[0].keys())
-        return pd.DataFrame(self.list_test_metrics, columns=columns_name)
+        columns_name = list(self.list_sample_metrics[0].keys())
+        return pd.DataFrame(self.list_sample_metrics, columns=columns_name)
 
     @rank_zero_only
     def save_test_metrics_as_csv(self, df: pd.DataFrame) -> None:
@@ -224,6 +220,9 @@ class SegmentationLightningModule(pl.LightningModule):
     ########################################################################################
     #                                      VALID STEPS                                     #
     ########################################################################################
+    def on_validation_start(self) -> None:
+        self.valid_metrics = self.metrics.clone(prefix="val_")
+
     def val_plot_step(
         self, batch_idx: int, y: torch.Tensor, y_hat: torch.Tensor
     ) -> None:
@@ -262,7 +261,13 @@ class SegmentationLightningModule(pl.LightningModule):
     #                                      TEST STEPS                                      #
     ########################################################################################
     def on_test_start(self) -> None:
-        self.sample_metrics = self.test_metrics.clone()
+        self.test_metrics = (
+            self.metrics.clone()
+        )  # Used to compute overall metrics on test dataset
+        self.sample_metrics = (
+            self.test_metrics.clone()
+        )  # Used to compute metrics on each sample
+        self.list_sample_metrics: list[dict[str, Any]] = []
 
     def test_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
@@ -281,7 +286,7 @@ class SegmentationLightningModule(pl.LightningModule):
         metrics_dict = {
             key: value.item() for key, value in metrics.items()
         }  # Convert torch.Tensor to float
-        self.list_test_metrics.append(batch_dict | metrics_dict)
+        self.list_sample_metrics.append(batch_dict | metrics_dict)
         self.sample_metrics.reset()
 
     def on_test_epoch_end(self) -> None:

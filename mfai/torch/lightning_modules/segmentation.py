@@ -266,7 +266,7 @@ class SegmentationLightningModule(pl.LightningModule):
         )  # Used to compute overall metrics on test dataset
         self.sample_metrics = (
             self.test_metrics.clone()
-        )  # Used to compute metrics on each sample
+        )  # Used to compute metrics on each sample, to log metrics in CSV file
         self.list_sample_metrics: list[dict[str, Any]] = []
 
     def test_step(

@@ -148,7 +148,9 @@ class SegmentationLightningModule(pl.LightningModule):
             return
         path_csv = Path(self.logger.log_dir) / "metrics_test_set.csv"
         df.to_csv(path_csv, index=False)
-        print(f"--> Metrics for all samples saved in \033[91;1m{path_csv}\033[0m")  # bold red
+        print(
+            f"--> Metrics for all samples saved in \033[91;1m{path_csv}\033[0m"
+        )  # bold red
 
     ########################################################################################
     #                                       OPTIMIZER                                      #
@@ -200,7 +202,9 @@ class SegmentationLightningModule(pl.LightningModule):
         Useful to easily compare train and valid loss and detect overtfitting."""
         hparams = self.get_hparams()
         if self.logger and self.logger.log_dir:
-            print(f"Logs will be saved in \033[96m{self.logger.log_dir}\033[0m")  # bright cyan
+            print(
+                f"Logs will be saved in \033[96m{self.logger.log_dir}\033[0m"
+            )  # bright cyan
             self.logger.experiment.add_custom_scalars(layout)
             self.logger.log_hyperparams(hparams)
 

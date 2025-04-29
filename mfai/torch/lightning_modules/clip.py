@@ -25,7 +25,7 @@ class CLIPAccuracySkillScore(Metric):
     * 0 or negative = worse than random model
     * 1 = perfect model"""
 
-    def __init__(self, top_k: int, batch_size:int) -> None:
+    def __init__(self, top_k: int, batch_size: int) -> None:
         super().__init__()
         self.top_k = top_k
         self.batch_size = batch_size
@@ -71,27 +71,27 @@ class CLIPLightningModule(pl.LightningModule):
 
         self.save_hyperparameters()
 
-
     def get_hparams(self) -> dict:
-            """Return the hparams we want to save in logger"""
-            model_params = {}
-            model_params["model/name"] = self.model.__class__.__name__
-            model_params["img_encoder/name"] = self.model.image_encoder.__class__.__name__
-            model_params["img_encoder/pretrained"] = self.model.image_encoder.settings.encoder_weights
-            model_params["img_encoder/num_channels"] = self.model.image_encoder.num_channels
-            model_params["txt_encoder/name"] = self.model.text_encoder.__class__.__name__
-            model_params["txt_encoder/context_len"] = self.model.text_encoder.context_length
-            model_params["model/embed_dim"] = self.model.text_encoder.emb_dim
-            model_params["model/learning_rate"] = self.learning_rate
-            model_params["model/min_learning_rate"] = self.min_learning_rate
-            model_params["model/lr_scheduler_interval"] = self.lr_scheduler_interval
-            if hasattr(self.trainer.datamodule, "get_hparams"):
-                data_hparams = self.trainer.datamodule.get_hparams()
-            else:
-                data_hparams = {}
-            data_hparams = {f"data/{key}": value for key, value in data_hparams.items()}
-            return model_params | data_hparams
-
+        """Return the hparams we want to save in logger"""
+        model_params = {}
+        model_params["model/name"] = self.model.__class__.__name__
+        model_params["img_encoder/name"] = self.model.image_encoder.__class__.__name__
+        model_params["img_encoder/pretrained"] = (
+            self.model.image_encoder.settings.encoder_weights
+        )
+        model_params["img_encoder/num_channels"] = self.model.image_encoder.num_channels
+        model_params["txt_encoder/name"] = self.model.text_encoder.__class__.__name__
+        model_params["txt_encoder/context_len"] = self.model.text_encoder.context_length
+        model_params["model/embed_dim"] = self.model.text_encoder.emb_dim
+        model_params["model/learning_rate"] = self.learning_rate
+        model_params["model/min_learning_rate"] = self.min_learning_rate
+        model_params["model/lr_scheduler_interval"] = self.lr_scheduler_interval
+        if hasattr(self.trainer.datamodule, "get_hparams"):
+            data_hparams = self.trainer.datamodule.get_hparams()
+        else:
+            data_hparams = {}
+        data_hparams = {f"data/{key}": value for key, value in data_hparams.items()}
+        return model_params | data_hparams
 
     def setup(self, stage: str):
         """Setup metrics and loggers after the trainer and datamodule are defined."""
@@ -99,9 +99,8 @@ class CLIPLightningModule(pl.LightningModule):
         self.skill_score = CLIPAccuracySkillScore(top_k=1, batch_size=val_batch_size)
         if stage == "fit" and self.logger:
             # Log hparams and metrics in "hparams" tab of tensorboard:
-            metrics = {"val_loss": float('inf'), "val_skill_score": 0.0}
+            metrics = {"val_loss": float("inf"), "val_skill_score": 0.0}
             self.logger.log_hyperparams(self.get_hparams(), metrics)
-
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
         """
@@ -181,7 +180,6 @@ class CLIPLightningModule(pl.LightningModule):
 
         return loss, image_logits
 
-
     def training_step(
         self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
@@ -191,7 +189,6 @@ class CLIPLightningModule(pl.LightningModule):
             "train_loss", loss, on_step=True, prog_bar=True, logger=True, sync_dist=True
         )
         return loss
-
 
     def validation_step(
         self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor], batch_idx: int

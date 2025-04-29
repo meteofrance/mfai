@@ -55,10 +55,12 @@ class Clip(nn.Module):
     def encode_text(self, text_tokens: torch.Tensor) -> torch.Tensor:
         # Keep only the last context_length tokens:
         text_tokens = text_tokens[:, -self.text_encoder.context_length :]
-        x = self.text_encoder.embed_tokens(text_tokens)  # [batch_size, seq_len, emb_dim]
+        x = self.text_encoder.embed_tokens(
+            text_tokens
+        )  # [batch_size, seq_len, emb_dim]
         x = self.text_encoder.drop_emb(x)
         x = self.text_encoder.trf_blocks(x)  # Apply transformer model
-        x = self.text_norm(x) # [batch_size, seq_len, emb_dim]
+        x = self.text_norm(x)  # [batch_size, seq_len, emb_dim]
 
         # We consider that EOT token (in practice the highest number in each sequence) represents
         # the sentence, as it said in the original article (p.5):
@@ -68,12 +70,11 @@ class Clip(nn.Module):
             x[torch.arange(len(text_tokens)), text_tokens.argmax(dim=-1)]
             @ self.text_projection
         )
-        return x # [batch_size, emb_dim]
+        return x  # [batch_size, emb_dim]
 
     def forward(
         self, text_tokens: torch.Tensor, image_input: NamedTensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-
         image_features = self.image_encoder(image_input.tensor)
         text_features = self.encode_text(text_tokens)
 

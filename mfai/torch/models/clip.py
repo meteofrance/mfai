@@ -85,7 +85,7 @@ class Clip(nn.Module):
         image_logits = image_features @ text_features.T * torch.exp(self.temperature)
         text_logits = image_logits.T
 
-        return text_logits, image_logits, text_features, image_features
+        return text_logits, image_logits
 
     def save_vision_encoder(self, path: Path) -> None:
         """

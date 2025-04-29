@@ -21,7 +21,9 @@ from mfai.torch.namedtensor import NamedTensor
 class CLIPAccuracySkillScore(Metric):
     """CLIP Accuracy Skill Score.
     The accuracy is computed from the cosine similarity matrix returned by CLIP.
-    Then we use a uniformly random model as a reference for the skill score."""
+    Then we use a uniformly random model as a reference for the skill score.
+    * 0 or negative = worse than random model
+    * 1 = perfect model"""
 
     def __init__(self, top_k: int, batch_size:int) -> None:
         super().__init__()
@@ -46,8 +48,9 @@ class CLIPAccuracySkillScore(Metric):
 
     def compute(self) -> torch.Tensor:
         accuracy = self.count_positives / self.count_total
-        random_accuracy = 1 / self.batch_size
-        skill_score = (accuracy - random_accuracy) / (1 - random_accuracy)
+        random_acc = 1 / self.batch_size
+        perfect_acc = 1
+        skill_score = (accuracy - random_acc) / (perfect_acc - random_acc)
         return skill_score
 
 
@@ -69,23 +72,35 @@ class CLIPLightningModule(pl.LightningModule):
         self.save_hyperparameters()
 
 
+    def get_hparams(self) -> dict:
+            """Return the hparams we want to save in logger"""
+            model_params = {}
+            model_params["model/name"] = self.model.__class__.__name__
+            model_params["img_encoder/name"] = self.model.image_encoder.__class__.__name__
+            model_params["img_encoder/pretrained"] = self.model.image_encoder.settings.encoder_weights
+            model_params["img_encoder/num_channels"] = self.model.image_encoder.num_channels
+            model_params["txt_encoder/name"] = self.model.text_encoder.__class__.__name__
+            model_params["txt_encoder/context_len"] = self.model.text_encoder.context_length
+            model_params["model/embed_dim"] = self.model.text_encoder.emb_dim
+            model_params["model/learning_rate"] = self.learning_rate
+            model_params["model/min_learning_rate"] = self.min_learning_rate
+            model_params["model/lr_scheduler_interval"] = self.lr_scheduler_interval
+            if hasattr(self.trainer.datamodule, "get_hparams"):
+                data_hparams = self.trainer.datamodule.get_hparams()
+            else:
+                data_hparams = {}
+            data_hparams = {f"data/{key}": value for key, value in data_hparams.items()}
+            return model_params | data_hparams
+
+
     def setup(self, stage: str):
         """Setup metrics and loggers after the trainer and datamodule are defined."""
-        batch_size = self.trainer.datamodule.batch_size
-        self.skill_score = CLIPAccuracySkillScore(top_k=1, batch_size=batch_size)
+        val_batch_size = self.trainer.datamodule.val_dataloader().batch_size
+        self.skill_score = CLIPAccuracySkillScore(top_k=1, batch_size=val_batch_size)
         if stage == "fit" and self.logger:
             # Log hparams and metrics in "hparams" tab of tensorboard:
-            metrics, params = {}, {}
-            metrics["val_loss"] = 0.0
-            metrics["val_skill_score"] = 0.0
-            params["batch_size"] = batch_size
-            params["pretrained_encoder"] = self.model.image_encoder.settings.encoder_weights
-            params["embed_dim"] = self.model.text_encoder.emb_dim
-            params["context_len"] = self.model.text_encoder.context_length
-            params["learning_rate"] = self.learning_rate
-            params["min_learning_rate"] = self.min_learning_rate
-            params["lr_scheduler_interval"] = self.lr_scheduler_interval
-            self.logger.log_hyperparams(params, metrics=metrics)
+            metrics = {"val_loss": float('inf'), "val_skill_score": 0.0}
+            self.logger.log_hyperparams(self.get_hparams(), metrics)
 
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
@@ -128,27 +143,15 @@ class CLIPLightningModule(pl.LightningModule):
         else:
             return optimizer
 
-    def plot_cosine_similarity(self, sim_matrix: torch.Tensor) -> None:
+    def plot_probabilities_matrix(self, sim_matrix: torch.Tensor) -> None:
         """
-        Plot the cosine similarity matrix.
+        Plot the clip pair probabilities matrix.
         """
         plt.imshow(sim_matrix.cpu(), cmap="hot", interpolation="none", vmin=0, vmax=0.3)
         plt.ylabel("Image Index")
         plt.xlabel("Text Index")
-        plt.colorbar(label="Cosine Similarity")
-        plt.title(f"Cosine Similarity Matrix at epoch {self.current_epoch}")
-        plt.tight_layout()
-        return plt.gcf()
-
-    def plot_features(self, sim_matrix: torch.Tensor, title:str) -> None:
-        """
-        Plot the cosine similarity matrix.
-        """
-        plt.imshow(sim_matrix.cpu(), cmap="hot", interpolation="none")
-        plt.ylabel("Batch length")
-        plt.xlabel("Sequence length")
-        plt.colorbar(label="Token Index Values")
-        plt.title(title)
+        plt.colorbar(label="Probabilities")
+        plt.title(f"Probabilities Matrix at epoch {self.current_epoch}")
         plt.tight_layout()
         return plt.gcf()
 
@@ -168,7 +171,7 @@ class CLIPLightningModule(pl.LightningModule):
                 "batch lat lon features_timesteps -> batch features_timesteps lat lon"
             )
 
-        text_logits, image_logits, text_features, image_features = self(images, texts)
+        text_logits, image_logits = self(images, texts)
 
         # Compute contrastive loss
         labels = torch.arange(len(texts), device=self.device)
@@ -176,13 +179,13 @@ class CLIPLightningModule(pl.LightningModule):
         loss_txt = F.cross_entropy(text_logits, labels)
         loss = (loss_img + loss_txt) / 2
 
-        return loss, text_features, image_features, texts
+        return loss, image_logits
 
 
     def training_step(
         self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
-        loss, _, _, _ = self._shared_forward_step(batch)
+        loss, _ = self._shared_forward_step(batch)
 
         self.log(
             "train_loss", loss, on_step=True, prog_bar=True, logger=True, sync_dist=True
@@ -193,20 +196,18 @@ class CLIPLightningModule(pl.LightningModule):
     def validation_step(
         self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
-        loss, text_features, image_features, texts = self._shared_forward_step(batch)
-        similarity = (100.0 * image_features @ text_features.T).softmax(dim=-1)
+        loss, image_logits = self._shared_forward_step(batch)
+        probas = image_logits.softmax(dim=-1)
 
         self.log("val_loss", loss, on_epoch=True, logger=True, sync_dist=True)
 
-        # Plot cosine similarity matrix for the first evaluation batch
+        # Plot proba matrix for the first validation batch
         if batch_idx == 0 and self.logger:
             tb = self.logger.experiment
-            fig = self.plot_cosine_similarity(similarity)
-            tb.add_figure(f"val_plots/similarity_{batch_idx}", fig, self.current_epoch)
-            fig = self.plot_features(texts, "texts")
-            tb.add_figure(f"val_plots/texts_{batch_idx}", fig, self.current_epoch)
+            fig = self.plot_probabilities_matrix(probas)
+            tb.add_figure(f"val_plots/probas_{batch_idx}", fig, self.current_epoch)
 
-        self.skill_score(similarity)
+        self.skill_score(probas)
         self.log("val_skill_score", self.skill_score, on_epoch=True)
 
         return loss

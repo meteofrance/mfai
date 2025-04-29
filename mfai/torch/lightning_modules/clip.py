@@ -3,10 +3,11 @@ LightningModule used to train a Clip model.
 """
 
 from pathlib import Path
-from typing import Literal, Tuple
+from typing import Any, Literal, Tuple
 
 import lightning.pytorch as pl
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 import torch
 import torch.nn.functional as F
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
@@ -45,6 +46,7 @@ class CLIPAccuracySkillScore(Metric):
         matches_top_k = torch.any(top_k_indices == correct_indices, axis=1)
         self.count_positives += torch.sum(matches_top_k)
         self.count_total += matches_top_k.shape[0]
+        # TODO : transform to simple Top 1 accuracy and nique mypy
 
     def compute(self) -> torch.Tensor:
         accuracy = self.count_positives / self.count_total
@@ -71,9 +73,9 @@ class CLIPLightningModule(pl.LightningModule):
 
         self.save_hyperparameters()
 
-    def get_hparams(self) -> dict:
-        """Return the hparams we want to save in logger"""
-        model_params = {}
+    def get_hparams(self) -> dict[str, Any]:
+        """Return the hparams we want to save in tensorboard logger"""
+        model_params: dict[str, Any] = {}
         model_params["model/name"] = self.model.__class__.__name__
         model_params["img_encoder/name"] = self.model.image_encoder.__class__.__name__
         model_params["img_encoder/pretrained"] = (
@@ -93,7 +95,7 @@ class CLIPLightningModule(pl.LightningModule):
         data_hparams = {f"data/{key}": value for key, value in data_hparams.items()}
         return model_params | data_hparams
 
-    def setup(self, stage: str):
+    def setup(self, stage: str) -> None:
         """Setup metrics and loggers after the trainer and datamodule are defined."""
         val_batch_size = self.trainer.datamodule.val_dataloader().batch_size
         self.skill_score = CLIPAccuracySkillScore(top_k=1, batch_size=val_batch_size)
@@ -142,7 +144,7 @@ class CLIPLightningModule(pl.LightningModule):
         else:
             return optimizer
 
-    def plot_probabilities_matrix(self, sim_matrix: torch.Tensor) -> None:
+    def plot_probabilities_matrix(self, sim_matrix: torch.Tensor) -> Figure:
         """
         Plot the clip pair probabilities matrix.
         """

@@ -26,7 +26,7 @@ class PerceptualLoss(torch.nn.Module):
         alpha_style: float = 0,
         alpha_feature: float = 1,
     ) -> None:
-        r"""Class that computes the Perceptual Loss based on selected Network.
+        """Class that computes the Perceptual Loss based on selected Network.
             For more details : See Johnson et al. - Perceptual losses for real-time style transfer and super-resolution.
             (https://arxiv.org/pdf/1603.08155)
 
@@ -55,8 +55,6 @@ class PerceptualLoss(torch.nn.Module):
             perceptual_loss = perceptual_loss_class(inputs, targets)
 
         ```
-
-
         """
         super().__init__()
 
@@ -94,7 +92,7 @@ class PerceptualLoss(torch.nn.Module):
         self._set_network()
 
     def _set_blocks(self) -> list:
-        r"""Set the blocks of layers from the neural network
+        """Set the blocks of layers from the neural network
 
         Return :
             blocks: (list)
@@ -139,7 +137,7 @@ class PerceptualLoss(torch.nn.Module):
         return x
 
     def _set_network(self) -> None:
-        r"""Set the VGG16 from torchvision.
+        """Set the VGG16 from torchvision.
 
         Trained version obtained : "https://download.pytorch.org/models/vgg16-397923af.pth"
         """
@@ -157,7 +155,7 @@ class PerceptualLoss(torch.nn.Module):
         self.blocks = torch.nn.ModuleList(blocks)
 
     def _forward_net_single_img(self, x: torch.Tensor) -> tuple:
-        r"""Forward the Network features and styles for a single image.
+        """Forward the Network features and styles for a single image.
 
         Arguments :
             x: (torch.Tensor)
@@ -206,7 +204,7 @@ class PerceptualLoss(torch.nn.Module):
     def compute_perceptual_features(
         self, x: torch.Tensor, return_features_and_styles: bool = False
     ) -> tuple:
-        r"""Compute the features of a single image.
+        """Compute the features of a single image.
 
         Arguments :
             x: (torch.Tensor)
@@ -227,9 +225,7 @@ class PerceptualLoss(torch.nn.Module):
 
                 # The features of the targets are computed and compared to the input features
                 perceptual_loss = perceptual_loss_class(targets)
-
         ```
-
         """
         features = []
         styles = []
@@ -260,7 +256,7 @@ class PerceptualLoss(torch.nn.Module):
     def _perceptual_loss_given_features_and_target(
         self, x: torch.Tensor, features_y: list, styles_y: list
     ) -> torch.Tensor:
-        r"""Computes the Perceptual Loss given features and a target image.
+        """Computes the Perceptual Loss given features and a target image.
 
         Arguments :
             x: (torch.Tensor)
@@ -290,14 +286,15 @@ class PerceptualLoss(torch.nn.Module):
     def _perceptual_loss_given_input_and_target(
         self, x: torch.Tensor, y: torch.Tensor
     ) -> torch.Tensor:
-        r"""Computes the Perceptual Loss between two images
+        """Computes the Perceptual Loss between two images
 
         Arguments :
             x: (torch.Tensor)
             y: (torch.Tensor)
 
         Return :
-            loss : (troch.Tensor)"""
+            loss : (troch.Tensor)
+        """
 
         features_x, styles_x = self._forward_net_single_img(x)
 
@@ -313,7 +310,6 @@ class PerceptualLoss(torch.nn.Module):
 
         Note :
             If y is None, the features of y needs to be computed before by calling the function : compute_perceptual_features
-
         """
 
         perceptual_loss = torch.tensor(0.0).to(self.device)
@@ -390,7 +386,7 @@ class PerceptualLoss(torch.nn.Module):
 
 
 class LPIPS(nn.Module):
-    r"""Creates a criterion that measures Learned Perceptual Image Patch Similarity (LPIPS).
+    """Creates a criterion that measures Learned Perceptual Image Patch Similarity (LPIPS).
     For more info see : Zhang et al. The Unreasonable Effectiveness of Deep Features as a Perceptual Metric
     (https://arxiv.org/pdf/1801.03924)
 

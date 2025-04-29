@@ -671,6 +671,7 @@ docker run -it --rm mfai mypy mfai/
 # Publishing
 
 We provide a script **build_and_publish.sh** to build the package and publish it to PyPI (**TestPyPI** by default). For now it uses Docker and our private/internal wrapper runai.
+(See [Semantic Versioning](https://semver.org/) rules to help you choose version when creating a tag)
 
 The full process is as follows (adjust the tag name and message to your needs):
 

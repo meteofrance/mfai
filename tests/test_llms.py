@@ -13,7 +13,7 @@ from mfai.torch.models.llms import GPT2, GPT2Settings, Llama2, Llama2Settings
     [
         (
             partial(GPT2, GPT2Settings()),
-            "Hello, I am CHrazinosaur hypothesized Masonic Helen Stef convin emerged Lexington",
+            "Hello, I amisi invincible collided 1500 tenomenotinables thinks republic",
             GPT2Tokenizer(),
         ),
         (

@@ -20,22 +20,41 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Gather Python changed files
+      id: changed-py-files
+      uses: tj-actions/changed-files@ed68ef82c095e0d48ec87eccea555d944a631a4c # v46
+      with:
+        files: |
+          *.py
+          **/*.py
+
     - name: Set up Python 3.10
-      uses: actions/setup-python@v3
+      if: steps.changed-py-files.outputs.any_changed == 'true'
+      uses: actions/setup-python@v5
       with:
         python-version: "3.10"
+        cache: 'pip'
+
     - name: Install dependencies
+      if: steps.changed-py-files.outputs.any_changed == 'true'
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r requirements_dev.txt
+
     - name: Lint with ruff
+      if: steps.changed-py-files.outputs.any_changed == 'true'
       run: |
-        ruff format --check .
-        ruff check . --select I
-    - name: Type hinting with mypy
+        ruff format --check ${{ steps.changed-py-files.outputs.all_changed_files }}
+        ruff check ${{ steps.changed-py-files.outputs.all_changed_files }} --select I
+
+    - name: Type hinting with mypy on changed files
+      if: steps.changed-py-files.outputs.any_changed == 'true'
       run: |
-        mypy mfai/
+        mypy ${{ steps.changed-py-files.outputs.all_changed_files }}
+
     - name: Test with pytest
+      if: steps.changed-py-files.outputs.any_changed == 'true'
       run: |
         pytest --cov=mfai --cov-fail-under=85 tests/

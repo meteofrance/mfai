@@ -20,7 +20,7 @@ from mfai.torch.namedtensor import NamedTensor
 
 class CLIPAccuracySkillScore(Metric):
     """CLIP Accuracy Skill Score.
-    The accuracy is computed from the cosine similarity matrix returned by CLIP.
+    The accuracy is computed from the probabilities matrix returned by CLIP.
     Then we use a uniformly random model as a reference for the skill score.
     * 0 or negative = worse than random model
     * 1 = perfect model"""

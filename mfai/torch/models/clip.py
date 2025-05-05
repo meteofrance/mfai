@@ -58,7 +58,7 @@ class Clip(nn.Module):
         x = self.text_encoder.embed_tokens(
             text_tokens
         )  # [batch_size, seq_len, emb_dim]
-        x = self.text_encoder.drop_emb(x)
+        x = self.text_encoder.drop_emb(x)  # type: ignore[operator]
         x = self.text_encoder.trf_blocks(x)  # Apply transformer model
         x = self.text_norm(x)  # [batch_size, seq_len, emb_dim]
 

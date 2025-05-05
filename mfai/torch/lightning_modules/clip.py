@@ -43,7 +43,7 @@ class CLIPAccuracySkillScore(Metric):
         correct_indices = torch.arange(similarity.shape[0], device=self.device)
         correct_indices = correct_indices.reshape(-1, 1)  # shape (N, 1)
         # List of bool that checks if the correct index is within the top-k for each image
-        matches_top_k = torch.any(top_k_indices == correct_indices, axis=1)
+        matches_top_k = torch.any(top_k_indices == correct_indices, axis=1)  # type: ignore[call-overload]
         self.count_positives += torch.sum(matches_top_k)
         self.count_total += matches_top_k.shape[0]
         # TODO : transform to simple Top 1 accuracy and nique mypy

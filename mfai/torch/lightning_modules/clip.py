@@ -7,10 +7,10 @@ from typing import Any, Literal, Tuple
 
 import lightning.pytorch as pl
 import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
 import torch
 import torch.nn.functional as F
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
+from matplotlib.figure import Figure
 from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
 from torch.optim import AdamW
 from torchmetrics import Metric

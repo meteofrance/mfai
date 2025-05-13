@@ -81,9 +81,9 @@ class UNet(BaseModel, AutoPaddingModel):
 
     def __init__(
         self,
+        in_channels: int,
+        out_channels: int,
         input_shape: tuple[int, ...],
-        in_channels: int = 3,
-        out_channels: int = 1,
         settings: UnetSettings = UnetSettings(),
     ) -> None:
         print(type(out_channels))
@@ -252,9 +252,9 @@ class CustomUnet(BaseModel, AutoPaddingModel):
 
     def __init__(
         self,
+        in_channels: int,
+        out_channels: int,
         input_shape: tuple[int, ...],
-        in_channels: int = 1,
-        out_channels: int = 1,
         settings: CustomUnetSettings = CustomUnetSettings(),
     ) -> None:
         super().__init__()

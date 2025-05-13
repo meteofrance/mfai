@@ -86,6 +86,8 @@ class UNet(BaseModel, AutoPaddingModel):
         out_channels: int = 1,
         settings: UnetSettings = UnetSettings(),
     ) -> None:
+        print(type(out_channels))
+        print(out_channels)
         super().__init__()
 
         self.in_channels = in_channels

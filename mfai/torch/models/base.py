@@ -5,9 +5,9 @@ Interface contract for our models.
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Tuple
-from torch import Size
-from torch import nn
+
 import torch
+from torch import Size, nn
 
 from mfai.torch.padding import pad_batch, undo_padding
 
@@ -24,6 +24,7 @@ class ModelType(Enum):
     VISION_TRANSFORMER = 3
     LLM = 4
     MULTIMODAL_LLM = 5
+    PANGU = 6
 
 
 class ModelABC(ABC):

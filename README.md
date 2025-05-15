@@ -18,6 +18,7 @@
       - segformer
       - swinunetr
       - unetr++
+      - PanguWeather
     - Graph Neural Networks:
       - HiLAM
       - GraphLAM
@@ -26,20 +27,31 @@
       - LLama2
     - Multimodal Language Models:
       - A custom Fuyu inspired model
-  
-- [SegmentationLightningModule](#segmentationlightningmodule)
+    - Vision Language Models:
+      - CLIP
+
+- [LightningModule](#lightning-modules)
+    - Segmentation
+    - CLIP
+- [Lightning CLI](#lightning-cli)
 - [NamedTensors](#namedtensors)
 - [Metrics](#metrics)
     - Critical Sucess Index
     - False Alarm Rate
     - False Negative Rate
     - Precision-Recall Area Under Curve
+- [Losses](#losses)
+  - Perceptual loss
+  - LPIPS
 - [Installation](#installation)
 - [Usage](#usage)
     - [Instanciate a model](#instanciate-a-model)
     - [Export to onnx](#export-to-onnx)
     - [NamedTensors](#namedtensors-example)
 - [Running tests](#running-tests)
+- [Contributing](#contributing)
+- [Publishing](#publishing)
+- [Acknowledgements](#acknowledgements)
 
 # Neural Network Architectures
 
@@ -53,7 +65,7 @@ Currently we support the following neural network architectures:
 | [DeepLabV3Plus](mfai/torch/models/deeplabv3.py#L1) | [arxiv link](https://arxiv.org/abs/1802.02611) | (Batch, features, Height, Width)    | Yes | As a very large receptive field versus U-Net, Half-Unet, ... | Front Detection, Nowcasting |
 | [HalfUNet](mfai/torch/models/half_unet.py#L1) | [researchgate link](https://www.researchgate.net/publication/361186968_Half-UNet_A_Simplified_U-Net_Architecture_for_Medical_Image_Segmentation) | (Batch, features, Height, Width)    | Yes | In prod/oper on [Espresso](https://www.mdpi.com/2674-0494/2/4/25) V2 with 128 filters and standard conv blocks instead of ghost | Satellite channels to rain estimation |
 | [UNet](mfai/torch/models/unet.py#L1) | [arxiv link](https://arxiv.org/pdf/1505.04597.pdf) | (Batch, features, Height, Width)    | Yes | Vanilla U-Net | Radar image cleaning |
-| [CustomUnet](mfai/torch/models/unet.py#L1) | [arxiv link](https://arxiv.org/pdf/1505.04597.pdf) | (Batch, features, Height, Width)    | Yes | U-Net like architecture with a variety of resnet encoder choices | Radar image cleaning 
+| [CustomUnet](mfai/torch/models/unet.py#L1) | [arxiv link](https://arxiv.org/pdf/1505.04597.pdf) | (Batch, features, Height, Width)    | Yes | U-Net like architecture with a variety of resnet encoder choices | Radar image cleaning
 
 
 ## Vision Transformers
@@ -62,7 +74,8 @@ Currently we support the following neural network architectures:
 | :---:   | :---: | :---: | :---: | :---: | :---: |
 | [Segformer](mfai/torch/models/segformer.py#L1) | [arxiv link](https://arxiv.org/abs/2105.15203)   | (Batch, features, Height, Width) | Yes | On par with u-net like on Deepsyg (MF internal), added an upsampling stage. Adapted from [Lucidrains' github](https://github.com/lucidrains/segformer-pytorch) | Segmentation tasks |
 | [SwinUNETR](mfai/torch/models/swinunetr.py#L1) | [arxiv link](https://arxiv.org/abs/2201.01266)   | (Batch, features, Height, Width)  | No | 2D Swin  Unet transformer (Pangu and archweather uses customised 3D versions of Swin Transformers). Plugged in from [MONAI](https://github.com/Project-MONAI/MONAI/). The decoders use Bilinear2D + Conv2d instead of Conv2dTranspose to remove artefacts/checkerboard effects | Segmentation tasks  |
-| [UNETRPP](mfai/torch/models/unetrpp.py#L1) | [arxiv link](https://arxiv.org/abs/2212.04497)  | (Batch, features, Height, Width) or  (Batch, features, Height, Width, Depth) | Yes | Vision transformer with a reduced GFLOPS footprint adapted from [author's github](https://github.com/Amshaker/unetr_plus_plus). Modified to work both with 2d and 3d inputs. The decoders use Bilinear2D + Conv2d instead of Conv2dTranspose to remove artefacts/checkerboard effects  | Front Detection, LAM Weather Forecasting |
+| [UNETRPP](mfai/torch/models/unetrpp.py#L1) | [arxiv link](https://arxiv.org/abs/2212.04497)  | (Batch, features, Height, Width) or (Batch, features, Height, Width, Depth) | Yes | Vision transformer with a reduced GFLOPS footprint adapted from [author's github](https://github.com/Amshaker/unetr_plus_plus). Modified to work both with 2d and 3d inputs. The decoders use Bilinear2D + Conv2d instead of Conv2dTranspose to remove artefacts/checkerboard effects  | Front Detection, LAM Weather Forecasting |
+| [PanguWeather](mfai/torch/models/pangu.py#L1) | [arxiv link](http://arxiv.org/abs/2211.02556)  | (Batch, features, Height, Width) and (Batch, features, Height, Width, Depth) | Yes | 3D Earth-specific transformer based on Swin transformers adapted from [author's github](https://github.com/198808xc/Pangu-Weather) pseudo-code.  | (LAM) Weather Forecasting |
 
 ## Graph Neural Networks
 
@@ -127,11 +140,9 @@ class HalfUNet(BaseModel):
 </details>
 
 
-# SegmentationLightningModule
+# Lightning Modules
 
-We provide **SegmentationLightningModule** a lightning module adapted to supervised Deep Learning projects where the input of the neural network is made of one or multiple images and the target is also one or multiple images.
-
-The module can be instanciated with any of the aforementioned neural networks architetures and used in 4 different modes : binary classification, multiclass classification, multilabel classification and regression.
+A Lightning Module is a high-level interface in PyTorch Lightning that encapsulates the model, training, validation, and testing logic, promoting modularity and ease of use in deep learning projects.
 
 The module provides:
 - customization for each stage of the training
@@ -139,6 +150,40 @@ The module provides:
 - logging of configuration and hyperparameters
 - computation of several metrics during validation stage
 - test stage: compute metrics for each sample individualy and save them in CSV file
+
+Obviously, if one of the implemented methods, metrics, etc. is not suitable for your problem, it is always possible to overload them so that the lightningmodule adapts to your needs.
+
+**Example:**
+
+We want here to log some figures in the TensorBoard, so we overload the default `val_plot_step()` method.
+```python
+from mfai.torch.lightning_modules import SegmentationLightningModule
+
+class MyProjectLightningModule(SegmentationLightningModule):
+    def val_plot_step(self, batch_idx, y, y_hat):
+        """Log prediction made for the first image of batches (6, 14, 48, 78) in tensorboard."""
+        interesting_batches = [6, 14, 48, 78]
+        if batch_idx in interesting_batches:
+            fig = plot_pred_and_target(y=y[0], y_hat=y_hat[0])
+
+            tb = self.logger.experiment
+            tb.add_figure(f"val_plots/test_figure_{batch_idx}", fig, self.current_epoch)
+```
+
+## Segmentation
+We provide [**SegmentationLightningModule**](/mfai/torch/lightning_modules/segmentation.py#21) a lightning module adapted to supervised Deep Learning projects where the input of the neural network is made of one or multiple images and the target is also one or multiple images.
+
+The module can be instanciated with any of the aforementioned vision neural networks architetures and used in 4 different modes : binary classification, multiclass classification, multilabel classification and regression.
+
+By default, some metrics are computed in function of the mode of segmentation you use:
+- Binary, Multiclass, Multilabel: [`Accuracy`](https://lightning.ai/docs/torchmetrics/stable/classification/accuracy.html), [`F1Score`](https://lightning.ai/docs/torchmetrics/stable/classification/f1_score.html#torchmetrics.F1Score), [`Recall`](https://lightning.ai/docs/torchmetrics/stable/classification/recall.html), [`Precision`](https://lightning.ai/docs/torchmetrics/stable/classification/precision.html),
+- Regression: [`MeanSquaredError`](https://lightning.ai/docs/torchmetrics/stable/regression/mean_squared_error.html), [`MeanAbsoluteError`](https://lightning.ai/docs/torchmetrics/stable/regression/mean_absolute_error.html#torchmetrics.MeanAbsoluteError), [`MeanAbsolutePercentageError`](https://lightning.ai/docs/torchmetrics/stable/regression/mean_absolute_percentage_error.html#torchmetrics.MeanAbsolutePercentageError).
+
+## Clip
+We also provide [**CLIPLightningModule**](/mfai/torch/lightning_modules/clip.py#19), a lightning module dedicated to the training of CLIP models. 
+
+This module can be instanciated with a simple [ClipSettings](/mfai/torch/models/clip.py#19) that informs which image and text encoders to use as well as the embedding size and the initial temperature.
+
 
 # Lightning CLI
 
@@ -168,7 +213,7 @@ Pytorch already provide some Loss like Mean Squared Error (torch.nn.MSELoss) or 
 
 ## Perceptual Loss
 
-It was introduced by Johnson et al. - Perceptual losses for real-time style transfer and super-resolution. (https://arxiv.org/pdf/1603.08155).  
+It was introduced by Johnson et al. - Perceptual losses for real-time style transfer and super-resolution. (https://arxiv.org/pdf/1603.08155).
 
 The [**PerceptualLoss**](mfai/torch/losses/perceptual.py#L28) class is a `torch.nn.Module` that allows to initialize a VGG-16 and compute directly the perceptual loss between a given input and target.
 
@@ -218,7 +263,7 @@ perceptual_loss_class = PerceptualLoss(channel_iterative_mode=True, in_channels=
 perceptual_loss_class.compute_perceptual_features(inputs)
 
 for _ in range():
-  
+
   targets = torch.rand(25, 5, 128, 128)
 
   # The features of the targets are computed and compared to the input features
@@ -330,7 +375,7 @@ The lightning module can be instantiated and used in a forward pass as follows:
 ```python
 import torch
 from mfai.torch.models import UNet
-from mfai.torch.segmentation_module import SegmentationLightningModule
+from mfai.torch.lightning_modules import SegmentationLightningModule
 
 arch = UNet(in_channels=1, out_channels=1, input_shape=[64, 64])
 loss = torch.nn.MSELoss()
@@ -345,6 +390,22 @@ You can also look at our unit tests in `tests/test_lightning.py` for example of 
 
 See [pytorch lightning documentation](https://lightning.ai/docs/overview/getting-started) for how to configure the Trainer and customize the module to suit your needs.
 
+### Add a new metric
+
+The SegmentationLightningModule uses a MetricCollection to compute (and log) metrics over validation and test datasets. To add a new metric (should be `torchmetrics.Metric`), you just have to add the line below in your `__init__`.
+```python
+class MyLightningModule(SegmentationLightningModule):
+    def __init__(
+        self,
+        model: ModelABC,
+        type_segmentation: Literal["binary", "multiclass", "multilabel", "regression"],
+        loss: Callable,
+    ) -> None:
+        super().__init__(model, type_segmentation, loss)
+
+        self.metrics.add_metrics(AUROC(task="binary", thresholds=100))
+```
+
 ## Lightning CLI
 
 Setting up lightning CLI is as easy as our `examples/main_cli_dummy.py` script:
@@ -353,7 +414,7 @@ Setting up lightning CLI is as easy as our `examples/main_cli_dummy.py` script:
 from lightning.pytorch.cli import LightningCLI
 
 from mfai.torch.dummy_dataset import DummyDataModule
-from mfai.torch.segmentation_module import SegmentationLightningModule
+from mfai.torch.lightning_modules import SegmentationLightningModule
 
 
 def cli_main():
@@ -589,7 +650,16 @@ docker build . -f Dockerfile -t mfai
 docker run -it --rm mfai python3 -m pytest tests
 ```
 
-# Running mypy
+# Contributing
+
+We welcome contributions to this package. Our guidelines are the following:
+
+- Submit a PR with a clear description of the changes and the motivation behind them.
+- Make sure the current tests pass and add new tests if necessary to cover the new features. Our CI will fail with a **test coverage below 80%**.
+- Make sure the code is formatted with [ruff](https://docs.astral.sh/ruff/) : `ruff format` and `ruff check --select I --fix`
+- Make sure the code respects our mypy type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
+
+## Running mypy
 Mypy is used to check the project type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
 
 To run mypy:
@@ -598,18 +668,10 @@ docker build . -f Dockerfile -t mfai
 docker run -it --rm mfai mypy mfai/
 ```
 
-# Contributing
-
-We welcome contributions to this package. Our guidelines are the following:
-
-- Submit a PR with a clear description of the changes and the motivation behind them.
-- Make sure the current tests pass and add new tests if necessary to cover the new features. Our CI will fail with a **test coverage below 80%**.
-- Make sure the code is formatted with [ruff](https://docs.astral.sh/ruff/) : `ruff format` and `ruff check`
-- Make sure the code respects our mypy type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
-
 # Publishing
 
 We provide a script **build_and_publish.sh** to build the package and publish it to PyPI (**TestPyPI** by default). For now it uses Docker and our private/internal wrapper runai.
+(See [Semantic Versioning](https://semver.org/) rules to help you choose version when creating a tag)
 
 The full process is as follows (adjust the tag name and message to your needs):
 

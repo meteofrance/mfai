@@ -19,7 +19,8 @@ class ResNetEncoder(ResNet):
     - output channels specification of feature tensors (produced by encoder)
     - patching first convolution for arbitrary input channels
     """
-    def __init__(self, out_channels: tuple[int, ...], depth: int = 5, **kwargs: dict[str, Any]):
+
+    def __init__(self, out_channels: tuple[int, ...], depth: int = 5, **kwargs: Any):
         super().__init__(**kwargs)
         self._depth = depth
         self._out_channels = out_channels
@@ -45,11 +46,11 @@ class ResNetEncoder(ResNet):
 
         return features
 
-    def load_state_dict(self, state_dict: dict[str, Any], **kwargs: dict[str, Any]) -> None:
+    def load_state_dict(self, state_dict: dict[str, Any], **kwargs: Any) -> None:
         state_dict.pop("fc.bias", None)
         state_dict.pop("fc.weight", None)
         super().load_state_dict(state_dict, **kwargs)
-    
+
     @property
     def out_channels(self) -> tuple[int, ...]:
         """Return channels dimensions for each tensor of forward output of encoder"""
@@ -95,7 +96,7 @@ class ResNetEncoder(ResNet):
             )
 
 
-ENCODERS_MAP: dict[Literal['resnet18', 'resnet34', 'resnet50'], dict[str, Any]] = {
+ENCODERS_MAP: dict[Literal["resnet18", "resnet34", "resnet50"], dict[str, Any]] = {
     "resnet18": {
         "encoder": ResNetEncoder,
         "pretrained_url": "https://dl.fbaipublicfiles.com/semiweaksupervision/model_files/semi_supervised_resnet18-d92f0530.pth",  # noqa
@@ -127,7 +128,7 @@ ENCODERS_MAP: dict[Literal['resnet18', 'resnet34', 'resnet50'], dict[str, Any]] 
 
 
 def get_resnet_encoder(
-    name: Literal['resnet18', 'resnet34', 'resnet50'],
+    name: Literal["resnet18", "resnet34", "resnet50"],
     in_channels: int = 3,
     depth: int = 5,
     weights: bool = True,
@@ -205,6 +206,8 @@ class ResNet50(torch.nn.Module):
         self.avgpool = torch.nn.AdaptiveAvgPool2d((1, 1))
         self.fc = torch.nn.Linear(512 * 4, num_classes)
         self.num_classes = num_classes
+        self.settings = settings
+        self.num_channels = num_channels
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         y_hat = self.encoder(x)[-1]

@@ -1,9 +1,11 @@
 from functools import partial
+
 import pytest
 import torch
-from mfai.torch.models.llms import Llama2Settings, Llama2, GPT2, GPT2Settings
-from mfai.tokenizers import LlamaTokenizer, GPT2Tokenizer
 from test_multimodal_lm import generate_text_simple
+
+from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer
+from mfai.torch.models.llms import GPT2, GPT2Settings, Llama2, Llama2Settings
 
 
 @pytest.mark.parametrize(
@@ -11,7 +13,7 @@ from test_multimodal_lm import generate_text_simple
     [
         (
             partial(GPT2, GPT2Settings()),
-            "Hello, I am CHrazinosaur hypothesized Masonic Helen Stef convin emerged Lexington",
+            "Hello, I amisi invincible collided 1500 tenomenotinables thinks republic",
             GPT2Tokenizer(),
         ),
         (

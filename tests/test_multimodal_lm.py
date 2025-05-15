@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Literal, Tuple, Union
 
 import pytest
@@ -5,8 +6,13 @@ import torch
 from torch import Tensor, nn
 
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer
+from mfai.torch.models.clip import Clip, ClipSettings
+from mfai.torch.models.llms import GPT2, GPT2Settings
 from mfai.torch.models.llms.multimodal import MultiModalLM, MultiModalLMSettings
+from mfai.torch.models.resnet import ResNet50, ResNet50Settings
 from mfai.torch.namedtensor import NamedTensor
+
+
 def generate_text_simple(
     model: nn.Module,
     idx: Tensor,
@@ -56,24 +62,16 @@ def generate_text_simple(
             "gpt2",
             GPT2Tokenizer(),
             (
-                "Sustine et abstinegreg LXamm Local addition Immun GlassrikeFal Resurrection",
-                "Sustine et abstineohoorphLE updates� Oaks Coconut VC Privacy backward",
+                "Sustine et abstine Patron nationalist grease Carly Detectiveuceditta Mysteryolationitivity",
+                "Sustine et abstine grinned Supporters strife dissemination crewsrush error paternalirementsuania",
             ),
         ),
         (
             "gpt2",
             LlamaTokenizer(),
             (
-                "Sustine et abstine współ terrestführtrange지edتズ ownershipantal",
-                "Sustine et abstine detected *rit україн dernièreistoryikalcorüssknow",
-            ),
-        ),
-        (
-            "gpt2",
-            GPT2Tokenizer(),
-            (
-                "Sustine et abstinegreg LXamm Local addition Immun GlassrikeFal Resurrection",
-                "Sustine et abstineohoorphLE updates� Oaks Coconut VC Privacy backward",
+                "Sustine et abstine współ terrestführt substantial arrow atoms introduction mil стар sze",
+                "Sustine et abstine logging extremdan={\glyское elabor commissionategymapping",
             ),
         ),
     ],
@@ -118,20 +116,52 @@ def test_multimodal_llm(
         assert decoded_text == expected_text[0 if not force_vision else 1]
 
 
-def test_multimodal_clip():
+def test_multimodal_with_pretrained_clip():
     torch.manual_seed(666)
+    embed_dim: int = 32
+    vision_input_shape: tuple[int] = (128, 128, 2, 1)
+    num_channels: int = vision_input_shape[2] * vision_input_shape[3]
+    path_checkpoint: Path = Path("checkpoint.tar")
+
+    # Setup the CLIP model
+    resnet_clip = ResNet50(
+        num_channels=num_channels,
+        num_classes=embed_dim,
+        # Optional : encoder pretrained with imagenet
+        settings=ResNet50Settings(encoder_weights=True),
+    )
+    llm_clip = GPT2(
+        settings=GPT2Settings(
+            n_heads=2,
+            n_layers=4,
+            context_length=64,
+        )
+    )
+    clip = Clip(
+        settings=ClipSettings(
+            emb_dim=embed_dim,
+            image_encoder=resnet_clip,
+            text_encoder=llm_clip,
+            init_temperature=666,
+        )
+    )
+
+    # Save the weights and parameters of the image encoder ResNet50
+    clip.save_vision_encoder(path_checkpoint)
+
     tokenizer = GPT2Tokenizer()
     model = MultiModalLM(
         settings=MultiModalLMSettings(
-            vision_input_shape=(128, 128, 2, 1),
+            vision_input_shape=vision_input_shape,
             backend="gpt2",
             n_heads=1,
             n_layers=1,
-            emb_dim=32,
+            emb_dim=embed_dim,
             hidden_dim=32,
             context_length=32,
             inject_vision_each_stage=False,
             vision_encoder="resnet50",
+            resnet_checkpoint=path_checkpoint,
         ),
         vocab_size=tokenizer.vocab_size,
     )

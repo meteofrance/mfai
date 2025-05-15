@@ -30,13 +30,11 @@ dependencies = {file = ["requirements.txt"]}
 [project.urls]
 Homepage = "https://github.com/meteofrance/mfai"
 
+[tool.ruff.lint]
+select = ["I"]  # I = isort
+
 [tool.mypy]
 # [mypy configuration file doc](https://mypy.readthedocs.io/en/stable/config_file.html#confval-exclude)
-exclude = [
-  '^mfai/torch/models/nlam/*$',
-  '^mfai/torch/models/deeplabv3.py$',
-  '^mfai/torch/models/unetrpp.py$',
-]
 
 # Disallows defining functions without type annotations or with incomplete type annotations.
 # Use Any for *args and **kwargs
@@ -79,6 +77,11 @@ module = [
   "sentencepiece",
   "onnxruntime",
   "pl_bolts.*",
-  "torchvision.*"
+  "torchvision.*",
+  "torch_geometric.*",
+  "networkx.*",
+  "scipy.spatial",
+  "timm.*",
+  "flash_attn.*",
 ]
 ignore_missing_imports = true

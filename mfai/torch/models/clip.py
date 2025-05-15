@@ -2,11 +2,11 @@
 Implementation of CLIP (Contrastive Langage-Image Pre-training) model. Based on the original https://arxiv.org/abs/2103.00020
 """
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Tuple, Union
 
 import torch
-
 import torch.nn as nn
 from dataclasses_json import dataclass_json
 
@@ -52,28 +52,31 @@ class Clip(nn.Module):
             torch.ones([]) * torch.log(torch.Tensor([settings.init_temperature]))
         )
 
-    def forward(
-        self, text_tokens: torch.Tensor, image_input: NamedTensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        text_tokens = text_tokens[
-            :, -self.text_encoder.context_length :
-        ]  # Keep only the last context_length tokens
-
-        image_features = self.image_encoder(image_input.tensor)
-        text_features = self.text_encoder.embed_tokens(text_tokens)
+    def encode_text(self, text_tokens: torch.Tensor) -> torch.Tensor:
+        # Keep only the last context_length tokens:
+        text_tokens = text_tokens[:, -self.text_encoder.context_length :]
+        x = self.text_encoder.embed_tokens(
+            text_tokens
+        )  # [batch_size, seq_len, emb_dim]
+        x = self.text_encoder.drop_emb(x)  # type: ignore[operator]
+        x = self.text_encoder.trf_blocks(x)  # Apply transformer model
+        x = self.text_norm(x)  # [batch_size, seq_len, emb_dim]
 
         # We consider that EOT token (in practice the highest number in each sequence) represents
         # the sentence, as it said in the original article (p.5):
         # "The [EOS] token are treated as the feature representation of the text which is
         # layer normalized and then linearly projected into the multi-modal embedding space."
-        text_features = self.text_norm(text_features)
-        text_features = (
-            text_features[
-                torch.arange(len(text_tokens), device=text_tokens.device),
-                text_tokens.argmax(dim=-1),
-            ]
+        x = (
+            x[torch.arange(len(text_tokens)), text_tokens.argmax(dim=-1)]
             @ self.text_projection
         )
+        return x  # [batch_size, emb_dim]
+
+    def forward(
+        self, text_tokens: torch.Tensor, image_input: NamedTensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        image_features = self.image_encoder(image_input.tensor)
+        text_features = self.encode_text(text_tokens)
 
         # Normalize features
         image_features = image_features / image_features.norm(dim=1, keepdim=True)
@@ -84,3 +87,15 @@ class Clip(nn.Module):
         text_logits = image_logits.T
 
         return text_logits, image_logits
+
+    def save_vision_encoder(self, path: Path) -> None:
+        """
+        Save the weights and parameters of the image encoder ResNet50
+        """
+        ckpt = {
+            "model_state_dict": self.image_encoder.state_dict(),
+            "num_channels": self.image_encoder.num_channels,
+            "num_classes": self.image_encoder.num_classes,
+            "settings": asdict(self.image_encoder.settings),
+        }
+        torch.save(ckpt, path)

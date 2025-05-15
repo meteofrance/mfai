@@ -2,8 +2,8 @@
 A class based NamedTensor implementation for PyTorch, inspired from the unstable PyTorch namedtensors.
 """
 
-from copy import deepcopy
 from collections.abc import Iterable
+from copy import deepcopy
 from dataclasses import dataclass
 from itertools import chain
 from typing import Any, List, Sequence, Union

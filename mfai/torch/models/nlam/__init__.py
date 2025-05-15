@@ -26,18 +26,18 @@ def offload_to_cpu(model: nn.ModuleList) -> nn.ModuleList:
 def load_graph(
     graph_dir: Path, device: torch.device | Literal["cpu", "cuda"] = "cpu"
 ) -> tuple[
-    bool,
-    torch.Tensor,
-    torch.Tensor,
-    list[torch.Tensor],
-    list[torch.Tensor],
-    list[torch.Tensor],
-    torch.Tensor,
-    torch.Tensor,
-    list[torch.Tensor],
-    list[torch.Tensor],
-    list[torch.Tensor],
-    list[torch.Tensor],
+    bool,  # hierarchical
+    torch.Tensor,  # g2m_edge_index
+    torch.Tensor,  # m2g_edge_index
+    list[torch.Tensor],  # m2m_edge_index
+    list[torch.Tensor],  # mesh_up_edge_index
+    list[torch.Tensor],  # mesh_down_edge_index
+    torch.Tensor,  # g2m_features
+    torch.Tensor,  # m2g_features
+    list[torch.Tensor],  # m2m_features
+    list[torch.Tensor],  # mesh_up_features
+    list[torch.Tensor],  # mesh_down_features
+    list[torch.Tensor],  # mesh_static_features
 ]:
     """
     Loads a graph from its disk serialised format into a dict of Tensors.
@@ -138,18 +138,18 @@ def load_graph(
 
     print(f"Graph is hierarchical {hierarchical}")
     return (
-        hierarchical,
-        g2m_edge_index,
-        m2g_edge_index,
-        m2m_edge_index,
-        mesh_up_edge_index,
-        mesh_down_edge_index,
-        g2m_features,
-        m2g_features,
-        m2m_features,
-        mesh_up_features,
-        mesh_down_features,
-        mesh_static_features,
+        hierarchical,  # bool
+        g2m_edge_index,  # torch.Tensor
+        m2g_edge_index,  # torch.Tensor
+        m2m_edge_index,  # list[torch.Tensor]
+        mesh_up_edge_index,  # list[torch.Tensor]
+        mesh_down_edge_index,  # list[torch.Tensor]
+        g2m_features,  # torch.Tensor
+        m2g_features,  # torch.Tensor
+        m2m_features,  # list[torch.Tensor]
+        mesh_up_features,  # list[torch.Tensor]
+        mesh_down_features,  # list[torch.Tensor]
+        mesh_static_features,  # list[torch.Tensor]
     )
 
 
@@ -221,18 +221,18 @@ class BaseGraphModel(BaseModel):
         self._settings = settings
 
         (
-            hierarchical,
-            self.g2m_edge_index,
-            self.m2g_edge_index,
-            self.m2m_edge_index,
-            self.mesh_up_edge_index,
-            self.mesh_down_edge_index,
-            self.g2m_features,
-            self.m2g_features,
-            self.m2m_features,
-            self.mesh_up_features,
-            self.mesh_down_features,
-            self.mesh_static_features,
+            hierarchical,  # bool
+            self.g2m_edge_index,  # torch.Tensor
+            self.m2g_edge_index,  # torch.Tensor
+            self.m2m_edge_index,  # list[torch.Tensor]
+            self.mesh_up_edge_index,  # list[torch.Tensor]
+            self.mesh_down_edge_index,  # list[torch.Tensor]
+            self.g2m_features,  # torch.Tensor
+            self.m2g_features,  # torch.Tensor
+            self.m2m_features,  # list[torch.Tensor]
+            self.mesh_up_features,  # list[torch.Tensor]
+            self.mesh_down_features,  # list[torch.Tensor]
+            self.mesh_static_features,  # list[torch.Tensor]
         ) = load_graph(self.settings.tmp_dir)
         if hierarchical != self.hierarchical:
             raise ValueError(

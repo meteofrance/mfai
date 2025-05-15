@@ -217,12 +217,11 @@ class BaseGraphModel(BaseModel):
         )  # List of (N_mesh[l], d_mesh_static)
 
         # Some checks for consistency
-        assert (
-            len(self.m2m_features) == n_levels
-        ), "Inconsistent number of levels in mesh"
-        assert (
-            len(self.mesh_static_features) == n_levels
-        ), "Inconsistent number of levels in mesh"
+        if (
+            len(self.m2m_features) != n_levels
+            or len(self.mesh_static_features) != n_levels
+        ):
+            raise ValueError("Inconsistent number of levels in mesh.")
 
         self.mesh_up_edge_index: list[torch.Tensor] = []
         self.mesh_down_edge_index: list[torch.Tensor] = []

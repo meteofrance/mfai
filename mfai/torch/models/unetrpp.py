@@ -689,7 +689,7 @@ class UNetRPPSettings:
 
 class UNetRPP(BaseModel):
     """
-    UNETR++ based on: "Shaker et al.,
+    UNetR++ based on: "Shaker et al.,
     UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation"
     """
 

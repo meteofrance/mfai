@@ -326,7 +326,7 @@ def test_load_model_by_name():
     # Should raise: invalid settings file for this model
     with pytest.raises(ValidationError):
         load_from_settings_file(
-            model_name="UNETRPP",
+            model_name="UNetRPP",
             in_channels=2,
             out_channels=2,
             settings_path=Path(__file__).parents[1]

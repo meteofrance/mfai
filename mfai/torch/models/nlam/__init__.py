@@ -4,7 +4,7 @@ Graph Neural Network architectures adapted from https://github.com/mllam/neural-
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Generator, Literal
+from typing import Any, Literal
 
 import torch
 import torch_geometric as pyg
@@ -21,148 +21,6 @@ from .interaction_net import InteractionNet, make_mlp
 
 def offload_to_cpu(model: nn.ModuleList) -> nn.ModuleList:
     return nn.ModuleList([offload_wrapper(x) for x in model])
-
-
-class BufferList(nn.Module):
-    """
-    A list of torch buffer tensors that sit together as a Module with no parameters and only
-    buffers.
-
-    This should be replaced by a native torch BufferList once implemented.
-    See: https://github.com/pytorch/pytorch/issues/37386
-    """
-
-    def __init__(
-        self, buffer_tensors: list[torch.Tensor], persistent: bool = True
-    ) -> None:
-        super().__init__()
-        self.n_buffers = len(buffer_tensors)
-        for buffer_i, tensor in enumerate(buffer_tensors):
-            self.register_buffer(f"b{buffer_i}", tensor, persistent=persistent)
-
-    def __getitem__(self, key: int) -> Any:
-        return getattr(self, f"b{key}")
-
-    def __len__(self) -> int:
-        return self.n_buffers
-
-    def __iter__(self) -> Generator[Any, None, None]:
-        return (self[i] for i in range(len(self)))
-
-
-def load_graph(
-    graph_dir: Path, device: torch.device | Literal["cpu", "cuda"] = "cpu"
-) -> tuple[bool, dict]:
-    """
-    Loads a graph from its disk serialised format into a dict of Tensors.
-    """
-    # Load edges (edge_index)
-    m2m_edge_index: BufferList = BufferList(
-        torch.load(graph_dir / "m2m_edge_index.pt", device), persistent=False
-    )  # List of (2, M_m2m[l])
-    g2m_edge_index: torch.Tensor = torch.load(
-        graph_dir / "g2m_edge_index.pt", device
-    )  # (2, M_g2m)
-    m2g_edge_index: torch.Tensor = torch.load(
-        graph_dir / "m2g_edge_index.pt", device
-    )  # (2, M_m2g)
-
-    n_levels = len(m2m_edge_index)
-    hierarchical = n_levels > 1  # Nor just single level mesh graph
-
-    # Load static edge features
-    m2m_features: list[torch.Tensor] = torch.load(
-        graph_dir / "m2m_features.pt", device
-    )  # List of (M_m2m[l], d_edge_f)
-    g2m_features: torch.Tensor = torch.load(
-        graph_dir / "g2m_features.pt", device
-    )  # (M_g2m, d_edge_f)
-    m2g_features: torch.Tensor = torch.load(
-        graph_dir / "m2g_features.pt", device
-    )  # (M_m2g, d_edge_f)
-
-    # Normalize by dividing with longest edge (found in m2m)
-    longest_edge: torch.Tensor = max(
-        [torch.max(level_features[:, 0]) for level_features in m2m_features]
-    )  # Col. 0 is length
-    m2m_features = BufferList(
-        [level_features / longest_edge for level_features in m2m_features],
-        persistent=False,
-    )
-    g2m_features = g2m_features / longest_edge
-    m2g_features = m2g_features / longest_edge
-
-    # Load static node features
-    mesh_static_features: list[torch.Tensor] = torch.load(
-        graph_dir / "mesh_features.pt"
-    )  # List of (N_mesh[l], d_mesh_static)
-
-    # Some checks for consistency
-    assert len(m2m_features) == n_levels, "Inconsistent number of levels in mesh"
-    assert (
-        len(mesh_static_features) == n_levels
-    ), "Inconsistent number of levels in mesh"
-
-    mesh_up_edge_index: BufferList | list[torch.Tensor]
-    mesh_down_edge_index: BufferList | list[torch.Tensor]
-    mesh_up_features: BufferList | list[torch.Tensor]
-    mesh_down_features: BufferList | list[torch.Tensor]
-    if hierarchical:
-        # Load up and down edges and features
-        mesh_up_edge_index = BufferList(
-            torch.load(graph_dir / "mesh_up_edge_index.pt", device),
-            persistent=False,
-        )  # List of (2, M_up[l])
-        mesh_down_edge_index = BufferList(
-            torch.load(graph_dir / "mesh_down_edge_index.pt", device),
-            persistent=False,
-        )  # List of (2, M_down[l])
-
-        mesh_up_features = torch.load(
-            graph_dir / "mesh_up_features.pt"
-        )  # List of (M_up[l], d_edge_f)
-        mesh_down_features = torch.load(
-            graph_dir / "mesh_down_features.pt"
-        )  # List of (M_down[l], d_edge_f)
-
-        # Rescale
-        mesh_up_features = BufferList(
-            [edge_features / longest_edge for edge_features in mesh_up_features],
-            persistent=False,
-        )
-        mesh_down_features = BufferList(
-            [edge_features / longest_edge for edge_features in mesh_down_features],
-            persistent=False,
-        )
-
-        mesh_static_features = BufferList(mesh_static_features, persistent=False)
-    else:
-        # Extract single mesh level
-        m2m_edge_index = m2m_edge_index[0]
-        m2m_features = m2m_features[0]
-        mesh_static_features = mesh_static_features[0]
-
-        (
-            mesh_up_edge_index,
-            mesh_down_edge_index,
-            mesh_up_features,
-            mesh_down_features,
-        ) = ([], [], [], [])
-
-    print(f"Graph is hierarchical {hierarchical}")
-    return hierarchical, {
-        "g2m_edge_index": g2m_edge_index,
-        "m2g_edge_index": m2g_edge_index,
-        "m2m_edge_index": m2m_edge_index,
-        "mesh_up_edge_index": mesh_up_edge_index,
-        "mesh_down_edge_index": mesh_down_edge_index,
-        "g2m_features": g2m_features,
-        "m2g_features": m2g_features,
-        "m2m_features": m2m_features,
-        "mesh_up_features": mesh_up_features,
-        "mesh_down_features": mesh_down_features,
-        "mesh_static_features": mesh_static_features,
-    }
 
 
 @dataclass_json
@@ -232,19 +90,7 @@ class BaseGraphModel(BaseModel):
         self.input_shape = input_shape
         self._settings = settings
 
-        hierarchical, graph_ldict = load_graph(self.settings.tmp_dir)
-        if hierarchical != self.hierarchical:
-            raise ValueError(
-                f"Loaded graph is {hierarchical} while expecting {self.hierarchical}"
-            )
-        for name, attr_value in graph_ldict.items():
-            # Make BufferLists module members and register tensors as buffers
-            if isinstance(attr_value, torch.Tensor):
-                print(f"Registering buffer {name}")
-                self.register_buffer(name, attr_value, persistent=False)
-            else:
-                print(f"setattr {name}")
-                setattr(self, name, attr_value)
+        self.load_graph()  # Load from disk graph features and set them as attributes
 
         self.g2m_edges: int = self.g2m_features.shape[0]
         g2m_dim: int = self.g2m_features.shape[1]
@@ -310,6 +156,120 @@ class BaseGraphModel(BaseModel):
         # subclasses should override this method
         self.finalize_graph_model()
         self.check_required_attributes()
+
+    def load_graph(self, device: torch.device | Literal["cpu", "cuda"] = "cpu") -> None:
+        """
+        Loads a graph from its disk serialised format and set them as attributes.
+        """
+        graph_dir = self.settings.tmp_dir
+
+        # Load edges (edge_index)
+        self.m2m_edge_index: list[torch.Tensor] = []
+        for item in torch.load(
+            graph_dir / "m2m_edge_index.pt", device
+        ):  # List of (2, M_m2m[l])
+            self.m2m_edge_index.append(nn.parameter.Buffer(item, persistent=False))
+        self.g2m_edge_index: torch.Tensor = nn.parameter.Buffer(
+            torch.load(graph_dir / "g2m_edge_index.pt", device)
+        )  # (2, M_g2m)
+        self.m2g_edge_index: torch.Tensor = nn.parameter.Buffer(
+            torch.load(graph_dir / "m2g_edge_index.pt", device)
+        )  # (2, M_m2g)
+
+        n_levels = len(self.m2m_edge_index)
+        hierarchical = n_levels > 1  # Nor just single level mesh graph
+
+        if hierarchical != self.hierarchical:
+            raise ValueError(
+                f"Loaded graph is {hierarchical} while expecting {self.hierarchical}"
+            )
+
+        # Load static edge features
+        self.m2m_features: list[torch.Tensor] = torch.load(
+            graph_dir / "m2m_features.pt", device
+        )  # List of (M_m2m[l], d_edge_f)
+        self.g2m_features: torch.Tensor = nn.parameter.Buffer(
+            torch.load(graph_dir / "g2m_features.pt", device)
+        )  # (M_g2m, d_edge_f)
+        self.m2g_features: torch.Tensor = nn.parameter.Buffer(
+            torch.load(graph_dir / "m2g_features.pt", device)
+        )  # (M_m2g, d_edge_f)
+
+        # Normalize by dividing with longest edge (found in m2m)
+        longest_edge: torch.Tensor = torch.max(
+            torch.Tensor(
+                [
+                    torch.max(level_features[:, 0])
+                    for level_features in self.m2m_features
+                ]
+            )
+        )  # Col. 0 is length
+        self.m2m_features = [
+            nn.parameter.Buffer(level_features / longest_edge, persistent=False)
+            for level_features in self.m2m_features
+        ]
+        self.g2m_features = self.g2m_features / longest_edge
+        self.m2g_features = self.m2g_features / longest_edge
+
+        # Load static node features
+        self.mesh_static_features: list[torch.Tensor] = torch.load(
+            graph_dir / "mesh_features.pt"
+        )  # List of (N_mesh[l], d_mesh_static)
+
+        # Some checks for consistency
+        if (
+            len(self.m2m_features) != n_levels
+            or len(self.mesh_static_features) != n_levels
+        ):
+            raise ValueError("Inconsistent number of levels in mesh.")
+
+        self.mesh_up_edge_index: list[torch.Tensor] = []
+        self.mesh_down_edge_index: list[torch.Tensor] = []
+        self.mesh_up_features: list[torch.Tensor]
+        self.mesh_down_features: list[torch.Tensor]
+        if hierarchical:
+            # Load up and down edges and features
+            for item in torch.load(
+                graph_dir / "mesh_up_edge_index.pt", device
+            ):  # List of (2, M_up[l])
+                self.mesh_up_edge_index.append(
+                    nn.parameter.Buffer(item, persistent=False)
+                )
+            for item in torch.load(
+                graph_dir / "mesh_down_edge_index.pt", device
+            ):  # List of (2, M_down[l])
+                self.mesh_down_edge_index.append(
+                    nn.parameter.Buffer(item, persistent=False)
+                )
+
+            self.mesh_up_features = torch.load(
+                graph_dir / "mesh_up_features.pt"
+            )  # List of (M_up[l], d_edge_f)
+            self.mesh_down_features = torch.load(
+                graph_dir / "mesh_down_features.pt"
+            )  # List of (M_down[l], d_edge_f)
+
+            # Rescale
+            self.mesh_up_features = [
+                nn.parameter.Buffer(edge_features / longest_edge, persistent=False)
+                for edge_features in self.mesh_up_features
+            ]
+            self.mesh_down_features = [
+                nn.parameter.Buffer(edge_features / longest_edge, persistent=False)
+                for edge_features in self.mesh_down_features
+            ]
+
+            self.mesh_static_features = [
+                nn.parameter.Buffer(item, persistent=False)
+                for item in self.mesh_static_features
+            ]
+        else:
+            # Extract single mesh level
+            self.m2m_edge_index = self.m2m_edge_index[:1]
+            self.m2m_features = self.m2m_features[:1]
+            self.mesh_static_features = self.mesh_static_features[:1]
+
+            self.mesh_up_features, self.mesh_down_features = [], []
 
     @property
     def settings(self) -> GraphLamSettings:
@@ -539,7 +499,7 @@ class BaseHiGraphModel(BaseGraphModel):
         mesh_rep_levels: list[torch.Tensor] = [mesh_rep] + [
             expand_to_batch(emb(node_static_features), batch_size)
             for emb, node_static_features in zip(
-                list(self.mesh_embedders)[1:], list(self.mesh_static_features)[1:]
+                self.mesh_embedders[1:], self.mesh_static_features[1:]
             )
         ]
 
@@ -635,8 +595,9 @@ class GraphLAM(BaseGraphModel):
         if self.hierarchical:
             raise ValueError("GraphLAM does not use a hierarchical mesh graph")
 
-        mesh_dim: int = self.mesh_static_features.shape[1]
-        m2m_edges, m2m_dim = self.m2m_features.shape
+        # Assume all levels have same static feature dimensionality
+        mesh_dim: int = self.mesh_static_features[0].shape[1]
+        m2m_edges, m2m_dim = self.m2m_features[0].shape
         print(
             f"Edges in subgraphs: m2m={m2m_edges}, g2m={self.g2m_edges}, "
             f"m2g={self.m2g_edges}"
@@ -657,7 +618,7 @@ class GraphLAM(BaseGraphModel):
         # processor
         processor_nets = [
             InteractionNet(
-                self.m2m_edge_index,
+                torch.cat(self.m2m_edge_index),
                 self.settings.hidden_dims,
                 hidden_layers=self.settings.hidden_layers,
                 aggr=self.settings.mesh_aggr,
@@ -685,7 +646,7 @@ class GraphLAM(BaseGraphModel):
         Embedd static mesh features
         Returns tensor of shape (N_mesh, d_h)
         """
-        return self.mesh_embedder(self.mesh_static_features)  # (N_mesh, d_h)
+        return self.mesh_embedder(self.mesh_static_features[0])  # (N_mesh, d_h)
 
     def process_step(self, mesh_rep: torch.Tensor) -> torch.Tensor:
         """
@@ -697,7 +658,7 @@ class GraphLAM(BaseGraphModel):
         """
         # Embedd m2m here first
         batch_size = mesh_rep.shape[0]
-        m2m_emb = self.m2m_embedder(self.m2m_features)  # (M_mesh, d_h)
+        m2m_emb = self.m2m_embedder(self.m2m_features[0])  # (M_mesh, d_h)
         m2m_emb_expanded = expand_to_batch(m2m_emb, batch_size)  # (B, M_mesh, d_h)
 
         mesh_rep, _ = self.processor(mesh_rep, m2m_emb_expanded)  # (B, N_mesh, d_h)
@@ -720,9 +681,7 @@ class HiLAMParallel(BaseHiGraphModel):
         # Processor GNNs
         # Create the complete total edge_index combining all edges for processing
         total_edge_index_list = (
-            list(self.m2m_edge_index)
-            + list(self.mesh_up_edge_index)
-            + list(self.mesh_down_edge_index)
+            self.m2m_edge_index + self.mesh_up_edge_index + self.mesh_down_edge_index
         )
         total_edge_index = torch.cat(total_edge_index_list, dim=1)
         self.edge_split_sections = [ei.shape[1] for ei in total_edge_index_list]
@@ -774,7 +733,7 @@ class HiLAMParallel(BaseHiGraphModel):
         # First join all node and edge representations to single tensors
         mesh_rep = torch.cat(mesh_rep_levels, dim=1)  # (B, N_mesh, d_h)
         mesh_edge_rep = torch.cat(
-            mesh_same_rep + mesh_up_rep + mesh_down_rep, axis=1
+            mesh_same_rep + mesh_up_rep + mesh_down_rep, dim=1
         )  # (B, M_mesh, d_h)
 
         # Here, update mesh_*_rep and mesh_rep
@@ -782,8 +741,8 @@ class HiLAMParallel(BaseHiGraphModel):
 
         # Split up again for read-out step
         mesh_rep_levels = list(torch.split(mesh_rep, self.N_mesh_levels, dim=1))
-        mesh_edge_rep_sections = torch.split(
-            mesh_edge_rep, self.edge_split_sections, dim=1
+        mesh_edge_rep_sections = list(
+            torch.split(mesh_edge_rep, self.edge_split_sections, dim=1)
         )
 
         mesh_same_rep = mesh_edge_rep_sections[: self.N_levels]

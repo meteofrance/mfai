@@ -276,6 +276,68 @@ def test_torch_pangu_training_loop(model_kls):
                 export_to_onnx(model, sample, dst.name)
                 onnx_load_and_infer(dst.name, sample)
 
+@pytest.mark.parametrize("model_kls", nn_architectures[ModelType.DIFFUSION])
+def test_torch_diffusion_training_loop(model_kls):
+    
+    """
+    Checks that our models are trainable on a toy problem (sum).
+    """
+
+    settings = model_kls.settings_kls(channels=1)
+
+    INPUT_SHAPE = (1,64,64)
+
+    NUM_INPUTS = 1
+
+    model = model_kls(
+        in_channels = NUM_INPUTS,
+        out_channels = 1,
+        settings = settings,
+        input_shape = INPUT_SHAPE
+    )
+
+    #copied from train_model, adapted to take time parameter in forward
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    loss_fn = torch.nn.MSELoss()
+
+    batch_size = 2
+
+    timesteps = 1000  # Total number of diffusion steps
+    debug_time = torch.randint(0, timesteps, (batch_size,))
+
+    ds = FakeSumDataset(INPUT_SHAPE)
+
+    training_loader = torch.utils.data.DataLoader(ds, batch_size=batch_size)
+
+    # Simulate 2 EPOCHS of training
+    for _ in range(2):
+        for _, data in enumerate(training_loader):
+            # Every data instance is an input + label pair
+            inputs, targets = data
+
+            # Zero your gradients for every batch!
+            optimizer.zero_grad()
+
+            # Make predictions for this batch
+            outputs = model(inputs, debug_time) #added time parameter
+
+            # Compute the loss and its gradients
+            loss = loss_fn(outputs, targets)
+            loss.backward()
+
+            # Adjust learning weights
+            optimizer.step()
+
+    # Make a prediction in eval mode
+    model.eval()
+    sample = ds[0][0].unsqueeze(0)
+    model(sample,debug_time)
+
+    # if model.onnx_supported:
+    #     with tempfile.NamedTemporaryFile(mode="w", suffix=".onnx") as dst:
+    #         sample = torch.rand(1, NUM_INPUTS, *INPUT_SHAPE[:spatial_dims])
+    #         export_to_onnx(model, sample, dst.name)
+    #         onnx_load_and_infer(dst.name, sample)
 
 @pytest.mark.parametrize(
     "model_and_settings",

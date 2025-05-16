@@ -30,15 +30,6 @@ AttentionConfig = namedtuple(
 
 # helpers
 
-
-def exists(val):
-    return val is not None
-
-
-def default(val, d):
-    return val if exists(val) else d
-
-
 def once(fn):
     called = False
 
@@ -56,7 +47,6 @@ def once(fn):
 print_once = once(print)
 
 # main class
-
 
 class Attend(nn.Module):
     def __init__(self, dropout=0.0, flash=False, scale=None):
@@ -103,7 +93,7 @@ class Attend(nn.Module):
             q.device,
         )
 
-        if exists(self.scale):
+        if self.scale is not None:
             default_scale = q.shape[-1]
             q = q * (self.scale / default_scale)
 
@@ -156,13 +146,8 @@ class Attend(nn.Module):
 
 # building blocks
 
-
-def exists(x):
-    return x is not None
-
-
 def default(val, d):
-    if exists(val):
+    if val is not None:
         return val
     return d() if callable(d) else d
 
@@ -371,7 +356,7 @@ class Encoder(nn.Module):
         self.pixel_norm = PixelNorm(dim=1)
 
         self.to_emb = None
-        if exists(emb_dim):
+        if emb_dim is not None:
             self.to_emb = nn.Sequential(Linear(emb_dim, dim_out), Gain())
 
         self.block1 = nn.Sequential(MPSiLU(), Conv2d(curr_dim, dim_out, 3))
@@ -404,7 +389,7 @@ class Encoder(nn.Module):
 
         x = self.block1(x)
 
-        if exists(emb):
+        if emb is not None:
             scale = self.to_emb(emb) + 1
             x = x * rearrange(scale, "b c -> b c 1 1")
 
@@ -412,7 +397,7 @@ class Encoder(nn.Module):
 
         x = self.res_mp_add(x, res)
 
-        if exists(self.attn):
+        if self.attn is not None:
             x = self.attn(x)
 
         return x
@@ -440,7 +425,7 @@ class Decoder(nn.Module):
         self.needs_skip = not upsample
 
         self.to_emb = None
-        if exists(emb_dim):
+        if emb_dim is not None:
             self.to_emb = nn.Sequential(Linear(emb_dim, dim_out), Gain())
 
         self.block1 = nn.Sequential(MPSiLU(), Conv2d(dim, dim_out, 3))
@@ -472,7 +457,7 @@ class Decoder(nn.Module):
 
         x = self.block1(x)
 
-        if exists(emb):
+        if emb is not None:
             scale = self.to_emb(emb) + 1
             x = x * rearrange(scale, "b c -> b c 1 1")
 
@@ -480,7 +465,7 @@ class Decoder(nn.Module):
 
         x = self.res_mp_add(x, res)
 
-        if exists(self.attn):
+        if self.attn is not None:
             x = self.attn(x)
 
         return x
@@ -533,7 +518,7 @@ class Attention(nn.Module):
 @dataclass(slots=True)
 class UNetKarrasSettings:
     # default settings from implementation
-    # image_size = ?
+    # image_size removed here because corresponds to input_shape
     dim = 192
     dim_max = 768  # channels will double every downsample and cap out to this value
     num_classes = None  # in paper, they do 1000 classes for a popular benchmark
@@ -555,8 +540,8 @@ class UNetKarrasSettings:
 class UNetKarras(ModelABC, nn.Module):
     settings_kls = UNetKarrasSettings
     onnx_supported: bool = True
-    supported_num_spatial_dims = (2,)
-    num_spatial_dims: int = 2
+    supported_num_spatial_dims = (3,)
+    num_spatial_dims: int = 3
     features_last: bool = False
     model_type: int = ModelType.DIFFUSION
     register: bool = True
@@ -572,14 +557,14 @@ class UNetKarras(ModelABC, nn.Module):
         **kwargs,
     ):
         super().__init__()
-        super().__init__()
 
         self.self_condition = settings.self_condition
 
         # determine dimensions
 
         self.channels = settings.channels
-        self.image_size = settings.image_size
+        assert input_shape[1] == input_shape[2] #we want the image to be forced into a square here and first dim to be channel count (WIP)
+        self.image_size = input_shape[1]
         input_channels = settings.channels * (2 if settings.self_condition else 1)
 
         # input and output blocks
@@ -603,7 +588,7 @@ class UNetKarras(ModelABC, nn.Module):
 
         # class embedding
 
-        self.needs_class_labels = exists(settings.num_classes)
+        self.needs_class_labels = settings.num_classes is not None
         self.num_classes = settings.num_classes
 
         if self.needs_class_labels:
@@ -620,7 +605,7 @@ class UNetKarras(ModelABC, nn.Module):
 
         # attention
 
-        attn_res = set(cast_tuple(attn_res))
+        attn_res = set(cast_tuple(settings.attn_res))
 
         # resnet block
 
@@ -638,7 +623,7 @@ class UNetKarras(ModelABC, nn.Module):
         self.ups = nn.ModuleList([])
 
         curr_dim = settings.dim
-        curr_res = settings.image_size
+        curr_res = self.image_size//2
 
         self.skip_mp_cat = MPCat(t=settings.mp_cat_t, dim=1)
 
@@ -652,7 +637,7 @@ class UNetKarras(ModelABC, nn.Module):
             enc = Encoder(curr_dim, curr_dim, **block_kwargs)
             dec = Decoder(curr_dim * 2, curr_dim, **block_kwargs)
 
-            append(self.downs, enc)
+            self.downs.append(enc)
             prepend(self.ups, dec)
 
         # stages
@@ -674,7 +659,7 @@ class UNetKarras(ModelABC, nn.Module):
                 curr_dim, dim_out, downsample=True, has_attn=has_attn, **block_kwargs
             )
 
-            append(self.downs, downsample)
+            self.downs.append(downsample)
             prepend(self.ups, upsample)
             prepend(
                 self.ups,
@@ -685,8 +670,8 @@ class UNetKarras(ModelABC, nn.Module):
                 enc = Encoder(dim_out, dim_out, has_attn=has_attn, **block_kwargs)
                 dec = Decoder(dim_out * 2, dim_out, has_attn=has_attn, **block_kwargs)
 
-                settings.append(self.downs, enc)
-                settings.prepend(self.ups, dec)
+                self.downs.append(enc)
+                prepend(self.ups, dec)
 
             curr_dim = dim_out
 
@@ -704,12 +689,15 @@ class UNetKarras(ModelABC, nn.Module):
         self.out_dim = settings.channels
 
     @property
+    def settings(self) -> UNetKarrasSettings:
+        return self.settings
+
+    @property
     def downsample_factor(self):
         return 2**self.num_downsamples
 
     def forward(self, x, time, self_cond=None, class_labels=None):
         # validate image shape
-
         assert x.shape[1:] == (self.channels, self.image_size, self.image_size)
 
         # self conditioning
@@ -718,7 +706,7 @@ class UNetKarras(ModelABC, nn.Module):
             self_cond = default(self_cond, lambda: torch.zeros_like(x))
             x = torch.cat((self_cond, x), dim=1)
         else:
-            assert not exists(self_cond)
+            assert self_cond is None
 
         # time condition
 
@@ -726,7 +714,7 @@ class UNetKarras(ModelABC, nn.Module):
 
         # class condition
 
-        assert xnor(exists(class_labels), self.needs_class_labels)
+        assert xnor(class_labels is not None, self.needs_class_labels)
 
         if self.needs_class_labels:
             if class_labels.dtype in (torch.int, torch.long):

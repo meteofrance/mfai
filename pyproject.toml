@@ -25,6 +25,12 @@ keywords = ["PyTorch", "Deep Learning", "Artificial Intelligence", "Meteo-France
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"mfai" = ["py.typed"]
+
 [tool.setuptools_scm]
 
 [project.urls]

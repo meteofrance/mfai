@@ -157,9 +157,7 @@ class CLIPLightningModule(pl.LightningModule):
         plt.tight_layout()
         return plt.gcf()
 
-    def forward(
-        self, images: NamedTensor, texts: Tensor
-    ) -> Tuple[Tensor, Tensor]:
+    def forward(self, images: NamedTensor, texts: Tensor) -> Tuple[Tensor, Tensor]:
         return self.model(texts, images)
 
     def _shared_forward_step(

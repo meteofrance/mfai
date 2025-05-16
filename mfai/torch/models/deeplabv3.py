@@ -398,9 +398,7 @@ class DeepLabV3(BaseModel):
                 f"divisible by {output_stride}. Consider pad your images to shape ({new_h}, {new_w})."
             )
 
-    def forward(
-        self, x: Tensor
-    ) -> Tensor | tuple[Tensor, Tensor]:
+    def forward(self, x: Tensor) -> Tensor | tuple[Tensor, Tensor]:
         """Sequentially pass `x` trough model`s encoder, decoder and heads"""
 
         self.check_input_shape(x)

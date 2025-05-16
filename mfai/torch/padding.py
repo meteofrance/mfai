@@ -86,9 +86,7 @@ def _get_3D_padding(
     return left, right, top, bottom, front, back
 
 
-def undo_padding(
-    batch: Tensor, old_shape: torch.Size, inplace: bool = False
-) -> Tensor:
+def undo_padding(batch: Tensor, old_shape: torch.Size, inplace: bool = False) -> Tensor:
     """Removes the padding added by pad_batch
 
     Args:

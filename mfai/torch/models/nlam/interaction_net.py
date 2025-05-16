@@ -133,9 +133,7 @@ class InteractionNet(pyg.nn.MessagePassing):
 
         return rec_rep
 
-    def message(
-        self, x_j: Tensor, x_i: Tensor, edge_attr: Tensor
-    ) -> Tensor:
+    def message(self, x_j: Tensor, x_i: Tensor, edge_attr: Tensor) -> Tensor:
         """
         Compute messages from node j to node i.
         """

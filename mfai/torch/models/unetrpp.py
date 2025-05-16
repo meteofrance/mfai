@@ -449,9 +449,7 @@ class UNetRPPEncoder(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
-    def forward_features(
-        self, x: Tensor
-    ) -> tuple[Tensor, list[Tensor]]:
+    def forward_features(self, x: Tensor) -> tuple[Tensor, list[Tensor]]:
         hidden_states = []
 
         x = self.downsample_layers[0](x)
@@ -644,9 +642,7 @@ class UNetRUpBlock(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
-    def forward(
-        self, inp: Tensor, skip: Tensor | None = None
-    ) -> Tensor:
+    def forward(self, inp: Tensor, skip: Tensor | None = None) -> Tensor:
         """
         Forward pass:
         1. Upsampling using bi/tri-linear OR Conv{2,3}dTranspose

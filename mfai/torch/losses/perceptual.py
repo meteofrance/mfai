@@ -284,9 +284,7 @@ class PerceptualLoss(torch.nn.Module):
                 loss += self.alpha_style * loss_style
         return loss
 
-    def _perceptual_loss_given_input_and_target(
-        self, x: Tensor, y: Tensor
-    ) -> Tensor:
+    def _perceptual_loss_given_input_and_target(self, x: Tensor, y: Tensor) -> Tensor:
         """Computes the Perceptual Loss between two images
 
         Arguments :

@@ -341,9 +341,7 @@ class NamedTensor(TensorWrapper):
             feature_dim_name=self.feature_dim_name,
         )
 
-    def index_select_tensor_dim(
-        self, dim_name: str, indices: Tensor
-    ) -> Tensor:
+    def index_select_tensor_dim(self, dim_name: str, indices: Tensor) -> Tensor:
         """
         Same as index_select_dim but returns a torch.tensor, but returns a Tensor.
         """
@@ -433,9 +431,7 @@ class NamedTensor(TensorWrapper):
         return NamedTensor(tensor, other.names.copy(), other.feature_names.copy())
 
     @staticmethod
-    def expand_to_batch_like(
-        tensor: Tensor, other: "NamedTensor"
-    ) -> "NamedTensor":
+    def expand_to_batch_like(tensor: Tensor, other: "NamedTensor") -> "NamedTensor":
         """
         Create a new NamedTensor with the same names and feature names as another NamedTensor
         with an extra first dimension called 'batch' using the supplied tensor.

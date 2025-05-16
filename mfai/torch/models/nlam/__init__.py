@@ -60,9 +60,7 @@ class BaseGraphModel(BaseModel):
     features_last: bool = True
 
     @classmethod
-    def rank_zero_setup(
-        cls, settings: GraphLamSettings, meshgrid: Tensor
-    ) -> None:
+    def rank_zero_setup(cls, settings: GraphLamSettings, meshgrid: Tensor) -> None:
         """
         This is a static method to allow multi-GPU
         trainig frameworks to call this method once
@@ -564,9 +562,7 @@ class BaseHiGraphModel(BaseGraphModel):
         mesh_same_rep: list[Tensor],
         mesh_up_rep: list[Tensor],
         mesh_down_rep: list[Tensor],
-    ) -> tuple[
-        list[Tensor], list[Tensor], list[Tensor], list[Tensor]
-    ]:
+    ) -> tuple[list[Tensor], list[Tensor], list[Tensor], list[Tensor]]:
         """
         Internal processor step of hierarchical graph models.
         Between mesh init and read out.
@@ -714,9 +710,7 @@ class HiLAMParallel(BaseHiGraphModel):
         mesh_same_rep: list[Tensor],
         mesh_up_rep: list[Tensor],
         mesh_down_rep: list[Tensor],
-    ) -> tuple[
-        list[Tensor], list[Tensor], list[Tensor], list[Tensor]
-    ]:
+    ) -> tuple[list[Tensor], list[Tensor], list[Tensor], list[Tensor]]:
         """
         Internal processor step of hierarchical graph models.
         Between mesh init and read out.
@@ -935,9 +929,7 @@ class HiLAM(BaseHiGraphModel):
         mesh_same_rep: list[Tensor],
         mesh_up_rep: list[Tensor],
         mesh_down_rep: list[Tensor],
-    ) -> tuple[
-        list[Tensor], list[Tensor], list[Tensor], list[Tensor]
-    ]:
+    ) -> tuple[list[Tensor], list[Tensor], list[Tensor], list[Tensor]]:
         """
         Internal processor step of hierarchical graph models.
         Between mesh init and read out.

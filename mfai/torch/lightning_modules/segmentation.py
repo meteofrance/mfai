@@ -172,9 +172,7 @@ class SegmentationLightningModule(pl.LightningModule):
         y_hat = self.model(inputs)
         return self.last_activation(y_hat)
 
-    def _shared_forward_step(
-        self, x: Tensor, y: Tensor
-    ) -> tuple[Tensor, Any]:
+    def _shared_forward_step(self, x: Tensor, y: Tensor) -> tuple[Tensor, Any]:
         """Computes forward pass and loss for a batch.
         Step shared by training, validation and test steps"""
         if self.channels_last:
@@ -209,9 +207,7 @@ class SegmentationLightningModule(pl.LightningModule):
             self.logger.experiment.add_custom_scalars(layout)
             self.logger.log_hyperparams(hparams)
 
-    def training_step(
-        self, batch: Tuple[Tensor, Tensor], batch_idx: int
-    ) -> Any:
+    def training_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> Any:
         x, y = batch
         _, loss = self._shared_forward_step(x, y)
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
@@ -228,9 +224,7 @@ class SegmentationLightningModule(pl.LightningModule):
     def on_validation_start(self) -> None:
         self.valid_metrics = self.metrics.clone(prefix="val_")
 
-    def val_plot_step(
-        self, batch_idx: int, y: Tensor, y_hat: Tensor
-    ) -> None:
+    def val_plot_step(self, batch_idx: int, y: Tensor, y_hat: Tensor) -> None:
         """Plots images on first batch of validation and log them in logger.
         Should be overwrited for each specific project, with matplotlib plots."""
         if batch_idx == 0:
@@ -241,9 +235,7 @@ class SegmentationLightningModule(pl.LightningModule):
                 tb.add_image("val_plots/true_image", y[0], dataformats=dformat)
             tb.add_image("val_plots/pred_image", y_hat[0], step, dataformats=dformat)
 
-    def validation_step(
-        self, batch: Tuple[Tensor, Tensor], batch_idx: int
-    ) -> Any:
+    def validation_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> Any:
         x, y = batch
         y_hat, loss = self._shared_forward_step(x, y)
         self.log("val_loss", loss, on_epoch=True, sync_dist=True)
@@ -274,9 +266,7 @@ class SegmentationLightningModule(pl.LightningModule):
         )  # Used to compute metrics on each sample, to log metrics in CSV file
         self.list_sample_metrics: list[dict[str, Any]] = []
 
-    def test_step(
-        self, batch: Tuple[Tensor, Tensor], batch_idx: int
-    ) -> None:
+    def test_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> None:
         """Computes metrics for each sample, at the end of the run."""
         x, y = batch
         y_hat, loss = self._shared_forward_step(x, y)

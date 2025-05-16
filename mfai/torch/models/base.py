@@ -135,9 +135,7 @@ class AutoPaddingModel(ABC):
                                 shape that fits the model, otherwise it will be None.
         """
 
-    def _maybe_padding(
-        self, data_tensor: Tensor
-    ) -> tuple[Tensor, torch.Size]:
+    def _maybe_padding(self, data_tensor: Tensor) -> tuple[Tensor, torch.Size]:
         """Performs an optional padding to ensure that the data tensor can be fed
             to the underlying model. Padding will happen only if
             autopadding was enabled via the settings.

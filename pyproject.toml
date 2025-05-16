@@ -28,7 +28,7 @@ dependencies = {file = ["requirements.txt"]}
 # Package discovery is necessary to set package-data values. See:
 # https://stackoverflow.com/questions/76073605/add-py-typed-as-package-data-with-setuptools-in-pyproject-toml
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["mfai"]
 
 # Include marker file `py.typed` to respect PEP561 and declare this package as type hinted
 [tool.setuptools.package-data]

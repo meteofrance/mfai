@@ -78,7 +78,9 @@ class FakePanguDataset(torch.utils.data.Dataset):
         }
 
 
-def train_model(model: torch.nn.Module, input_shape: Tuple[int, ...]) -> torch.nn.Module:
+def train_model(
+    model: torch.nn.Module, input_shape: Tuple[int, ...]
+) -> torch.nn.Module:
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     loss_fn = torch.nn.MSELoss()
 
@@ -153,7 +155,9 @@ def test_torch_graph_training_loop(model_kls: Any) -> None:
     nn_architectures[ModelType.CONVOLUTIONAL]
     + nn_architectures[ModelType.VISION_TRANSFORMER],
 )
-def test_torch_convolutional_and_vision_transformer_training_loop(model_kls: Any) -> None:
+def test_torch_convolutional_and_vision_transformer_training_loop(
+    model_kls: Any,
+) -> None:
     """
     Checks that our models are trainable on a toy problem (sum).
     """
@@ -308,7 +312,7 @@ def test_extra_models(model_and_settings: Any) -> None:
 
 def test_load_model_by_name() -> None:
     with pytest.raises(ValueError):
-        load_from_settings_file("NotAValidModel", 2, 2, Path(''), (1, 1))
+        load_from_settings_file("NotAValidModel", 2, 2, Path(""), (1, 1))
 
     # Should work: valid settings file for this model
     load_from_settings_file(

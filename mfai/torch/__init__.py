@@ -8,15 +8,19 @@ import torch
 from torch import nn
 
 
-def to_numpy(input: torch.Tensor | tuple[torch.Tensor, ...]) -> numpy.ndarray | tuple[numpy.ndarray, ...]:
+def to_numpy(
+    input: torch.Tensor | tuple[torch.Tensor, ...],
+) -> numpy.ndarray | tuple[numpy.ndarray, ...]:
     if isinstance(input, tuple):
         l = []
         for tensor in input:
-            l.append(tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy())
+            l.append(
+                tensor.detach().cpu().numpy()
+                if tensor.requires_grad
+                else tensor.cpu().numpy()
+            )
         return tuple(l)
-    return (
-        input.detach().cpu().numpy() if input.requires_grad else input.cpu().numpy()
-    )
+    return input.detach().cpu().numpy() if input.requires_grad else input.cpu().numpy()
 
 
 def export_to_onnx(
@@ -47,7 +51,9 @@ def export_to_onnx(
     )
 
 
-def onnx_load_and_infer(filepath: Path | str, input: torch.Tensor | tuple[torch.Tensor, ...]) -> numpy.ndarray:
+def onnx_load_and_infer(
+    filepath: Path | str, input: torch.Tensor | tuple[torch.Tensor, ...]
+) -> numpy.ndarray:
     """
     Loads a model using onnx, checks it, and performs an inference.
     """

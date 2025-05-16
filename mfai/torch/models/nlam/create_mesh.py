@@ -8,10 +8,11 @@ import torch
 import torch_geometric as pyg
 from networkx.classes.reportviews import NodeView
 from scipy.spatial import KDTree
+from torch import Tensor
 from torch_geometric.utils.convert import from_networkx
 
 
-def torch_save(data: torch.Tensor | list[torch.Tensor], path: Path) -> None:
+def torch_save(data: Tensor | list[Tensor], path: Path) -> None:
     """Saving files with torch to be writeable by anyone"""
     if path.exists():
         path.unlink()
@@ -155,7 +156,7 @@ def save_edges_list(graphs: list[pyg.data.Data], name: str, base_path: Path) -> 
 
 def hierarchical_mesh(
     G: list[networkx.DiGraph], mesh_levels: int, plot: bool, cache_dir_path: Path
-) -> tuple[list[pyg.data.Data], list[torch.Tensor], networkx.DiGraph, NodeView]:
+) -> tuple[list[pyg.data.Data], list[Tensor], networkx.DiGraph, NodeView]:
     # Relabel nodes of each level with level index first
     G = [prepend_node_index(graph, level_i) for level_i, graph in enumerate(G)]
 
@@ -257,7 +258,7 @@ def hierarchical_mesh(
 
 def monolevel_mesh(
     G: list[networkx.DiGraph], nx: int, plot: bool
-) -> tuple[list[pyg.data.Data], list[torch.Tensor], networkx.DiGraph, NodeView]:
+) -> tuple[list[pyg.data.Data], list[Tensor], networkx.DiGraph, NodeView]:
     # combine all levels to one graph
     G_tot = G[0]
     for lev in range(1, len(G)):
@@ -302,7 +303,7 @@ def monolevel_mesh(
 
 
 def build_graph_for_grid(
-    grid_xy: torch.Tensor,
+    grid_xy: Tensor,
     cache_dir_path: Path,
     plot: bool = False,
     levels: int = None,

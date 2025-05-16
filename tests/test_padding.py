@@ -1,5 +1,6 @@
 import pytest
 import torch
+from torch import Tensor
 
 from mfai.torch.padding import pad_batch, undo_padding
 

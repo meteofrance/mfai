@@ -6,6 +6,7 @@ import torchvision
 import torchvision.transforms as T
 from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
+from torch import Tensor
 
 from mfai.torch.lightning_modules import SegmentationLightningModule
 from mfai.torch.models import UNet

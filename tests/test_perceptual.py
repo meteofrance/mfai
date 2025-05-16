@@ -1,5 +1,6 @@
 import pytest
 import torch
+from torch import Tensor
 
 from mfai.torch.losses.perceptual import LPIPS, PerceptualLoss
 

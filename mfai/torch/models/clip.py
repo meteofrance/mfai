@@ -9,6 +9,7 @@ from typing import Tuple, Union
 import torch
 import torch.nn as nn
 from dataclasses_json import dataclass_json
+from torch import Tensor
 
 from mfai.torch.models.llms import GPT2, LayerNorm, Llama2
 from mfai.torch.models.resnet import ResNet50
@@ -49,10 +50,10 @@ class Clip(nn.Module):
         )
         nn.init.normal_(self.text_projection, std=self.text_encoder.emb_dim**-0.5)
         self.temperature = nn.Parameter(
-            torch.ones([]) * torch.log(torch.Tensor([settings.init_temperature]))
+            torch.ones([]) * torch.log(Tensor([settings.init_temperature]))
         )
 
-    def encode_text(self, text_tokens: torch.Tensor) -> torch.Tensor:
+    def encode_text(self, text_tokens: Tensor) -> Tensor:
         # Keep only the last context_length tokens:
         text_tokens = text_tokens[:, -self.text_encoder.context_length :]
         x = self.text_encoder.embed_tokens(
@@ -73,8 +74,8 @@ class Clip(nn.Module):
         return x  # [batch_size, emb_dim]
 
     def forward(
-        self, text_tokens: torch.Tensor, image_input: NamedTensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self, text_tokens: Tensor, image_input: NamedTensor
+    ) -> Tuple[Tensor, Tensor]:
         image_features = self.image_encoder(image_input.tensor)
         text_features = self.encode_text(text_tokens)
 

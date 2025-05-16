@@ -8,7 +8,7 @@ Test our pure PyTorch models to make sure they can be :
 
 import tempfile
 from pathlib import Path
-from typing import Tuple
+from typing import Any, Tuple
 
 import numpy as np
 import pytest
@@ -26,21 +26,21 @@ from mfai.torch.models.deeplabv3 import DeepLabV3Plus
 from mfai.torch.models.half_unet import HalfUNet
 
 
-def to_numpy(tensor):
+def to_numpy(tensor: torch.Tensor) -> Any:
     return (
         tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
     )
 
 
 class FakeSumDataset(torch.utils.data.Dataset):
-    def __init__(self, input_shape: Tuple[int, ...]):
+    def __init__(self, input_shape: Tuple[int, ...]) -> None:
         self.input_shape = input_shape
         super().__init__()
 
-    def __len__(self):
+    def __len__(self) -> int:
         return 4
 
-    def __getitem__(self, idx: int):
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         x = torch.rand(*self.input_shape)
         y = torch.sum(x, 0).unsqueeze(0)
         return x, y
@@ -54,16 +54,16 @@ class FakePanguDataset(torch.utils.data.Dataset):
         plevel_variables: int,
         plevels: int,
         static_length: int,
-    ):
+    ) -> None:
         self.surface_shape = (surface_variables, *input_shape)
         self.plevel_shape = (plevel_variables, plevels, *input_shape)
         self.static_shape = (static_length, *input_shape)
         super().__init__()
 
-    def __len__(self):
+    def __len__(self) -> int:
         return 4
 
-    def __getitem__(self, idx: int):
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         input_surface = torch.rand(*self.surface_shape)
         input_plevel = torch.rand(*self.plevel_shape)
         input_static = torch.rand(*self.static_shape)
@@ -78,7 +78,7 @@ class FakePanguDataset(torch.utils.data.Dataset):
         }
 
 
-def train_model(model: torch.nn.Module, input_shape: Tuple[int, ...]):
+def train_model(model: torch.nn.Module, input_shape: Tuple[int, ...]) -> torch.nn.Module:
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     loss_fn = torch.nn.MSELoss()
 
@@ -112,7 +112,7 @@ def train_model(model: torch.nn.Module, input_shape: Tuple[int, ...]):
     return model
 
 
-def meshgrid(grid_width: int, grid_height: int):
+def meshgrid(grid_width: int, grid_height: int) -> torch.Tensor:
     x = np.arange(0, grid_width, 1)
     y = np.arange(0, grid_height, 1)
     xx, yy = np.meshgrid(x, y)
@@ -120,7 +120,7 @@ def meshgrid(grid_width: int, grid_height: int):
 
 
 @pytest.mark.parametrize("model_kls", nn_architectures[ModelType.GRAPH])
-def test_torch_graph_training_loop(model_kls):
+def test_torch_graph_training_loop(model_kls: Any) -> None:
     """
     Checks that our models are trainable on a toy problem (sum).
     """
@@ -153,7 +153,7 @@ def test_torch_graph_training_loop(model_kls):
     nn_architectures[ModelType.CONVOLUTIONAL]
     + nn_architectures[ModelType.VISION_TRANSFORMER],
 )
-def test_torch_convolutional_and_vision_transformer_training_loop(model_kls):
+def test_torch_convolutional_and_vision_transformer_training_loop(model_kls: Any) -> None:
     """
     Checks that our models are trainable on a toy problem (sum).
     """
@@ -186,7 +186,7 @@ def test_torch_convolutional_and_vision_transformer_training_loop(model_kls):
 
 
 @pytest.mark.parametrize("model_kls", nn_architectures[ModelType.PANGU])
-def test_torch_pangu_training_loop(model_kls):
+def test_torch_pangu_training_loop(model_kls: Any) -> None:
     """
     Checks that our models are trainable on a toy problem (sum).
     """
@@ -272,9 +272,9 @@ def test_torch_pangu_training_loop(model_kls):
                 sample_static = torch.rand(
                     1, STATIC_LENGTH, *INPUT_SHAPE[:spatial_dims]
                 )
-                sample = (sample_plevel, sample_surface, sample_static)
-                export_to_onnx(model, sample, dst.name)
-                onnx_load_and_infer(dst.name, sample)
+                samples = (sample_plevel, sample_surface, sample_static)
+                export_to_onnx(model, samples, dst.name)
+                onnx_load_and_infer(dst.name, samples)
 
 
 @pytest.mark.parametrize(
@@ -288,7 +288,7 @@ def test_torch_pangu_training_loop(model_kls):
         (DeepLabV3Plus, DeepLabV3Plus.settings_kls(activation="logsoftmax")),
     ],
 )
-def test_extra_models(model_and_settings):
+def test_extra_models(model_and_settings: Any) -> None:
     """
     Tests some extra models and settings.
     """
@@ -306,9 +306,9 @@ def test_extra_models(model_and_settings):
         train_model(model, (NUM_INPUTS, *INPUT_SHAPE[:spatial_dims]))
 
 
-def test_load_model_by_name():
+def test_load_model_by_name() -> None:
     with pytest.raises(ValueError):
-        load_from_settings_file("NotAValidModel", 2, 2, None, (1, 1))
+        load_from_settings_file("NotAValidModel", 2, 2, Path(''), (1, 1))
 
     # Should work: valid settings file for this model
     load_from_settings_file(
@@ -339,7 +339,7 @@ def test_load_model_by_name():
 
 
 @pytest.mark.parametrize("model_class", autopad_nn_architectures)
-def test_input_shape_validation(model_class):
+def test_input_shape_validation(model_class: Any) -> None:
     B, C, W, H = 32, 3, 64, 65
 
     input_data = torch.randn(B, C, W, H)
@@ -361,7 +361,7 @@ def test_input_shape_validation(model_class):
 
 
 @pytest.mark.parametrize("model_class", autopad_nn_architectures)
-def test_autopad_models(model_class):
+def test_autopad_models(model_class: Any) -> None:
     B, C, W, H = 32, 3, 64, 65  # invalid [W,H]
 
     input_data = torch.randn(B, C, W, H)

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 import numpy
 import onnx
@@ -8,14 +8,19 @@ import torch
 from torch import nn
 
 
-def to_numpy(tensor: torch.Tensor) -> numpy.ndarray:
+def to_numpy(input: torch.Tensor | tuple[torch.Tensor, ...]) -> numpy.ndarray | tuple[numpy.ndarray, ...]:
+    if isinstance(input, tuple):
+        l = []
+        for tensor in input:
+            l.append(tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy())
+        return tuple(l)
     return (
-        tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
+        input.detach().cpu().numpy() if input.requires_grad else input.cpu().numpy()
     )
 
 
 def export_to_onnx(
-    model: nn.Module, sample: torch.Tensor | tuple[Any], filepath: Path | str
+    model: nn.Module, sample: torch.Tensor | tuple[Any, ...], filepath: Path | str
 ) -> None:
     """
     Exports a model to ONNX format.
@@ -42,7 +47,7 @@ def export_to_onnx(
     )
 
 
-def onnx_load_and_infer(filepath: Path, sample: torch.Tensor) -> numpy.ndarray:
+def onnx_load_and_infer(filepath: Path | str, input: torch.Tensor | tuple[torch.Tensor, ...]) -> numpy.ndarray:
     """
     Loads a model using onnx, checks it, and performs an inference.
     """
@@ -55,4 +60,4 @@ def onnx_load_and_infer(filepath: Path, sample: torch.Tensor) -> numpy.ndarray:
         filepath, providers=["CPUExecutionProvider"]
     )
 
-    return ort_session.run(None, {"input": to_numpy(sample)})
+    return ort_session.run(None, {"input": to_numpy(input)})

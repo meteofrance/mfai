@@ -366,7 +366,7 @@ class EPA(nn.Module):
 einops, _ = optional_import("einops")
 
 
-class UnetrPPEncoder(nn.Module):
+class UNetRPPEncoder(nn.Module):
     def __init__(
         self,
         input_size: list[int] = [32 * 32 * 32, 16 * 16 * 16, 8 * 8 * 8, 4 * 4 * 4],
@@ -474,7 +474,7 @@ class UnetrPPEncoder(nn.Module):
         return x, hidden_states
 
 
-class UnetrUpBlock(nn.Module):
+class UNetRUpBlock(nn.Module):
     def __init__(
         self,
         spatial_dims: int,
@@ -661,7 +661,7 @@ class UnetrUpBlock(nn.Module):
 
 @dataclass_json
 @dataclass
-class UNETRPPSettings:
+class UNetRPPSettings:
     hidden_size: int = 256
     num_heads_encoder: int = 4
     num_heads_decoder: int = 4
@@ -687,15 +687,15 @@ class UNETRPPSettings:
     attention_code: str = "torch"
 
 
-class UNETRPP(BaseModel):
+class UNetRPP(BaseModel):
     """
-    UNETR++ based on: "Shaker et al.,
+    UNetR++ based on: "Shaker et al.,
     UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation"
     """
 
     onnx_supported = False
     supported_num_spatial_dims = (2, 3)
-    settings_kls = UNETRPPSettings
+    settings_kls = UNetRPPSettings
     model_type = ModelType.VISION_TRANSFORMER
     features_last: bool = False
     register: bool = True
@@ -705,7 +705,7 @@ class UNETRPP(BaseModel):
         in_channels: int,
         out_channels: int,
         input_shape: Tuple[int, ...],
-        settings: UNETRPPSettings = UNETRPPSettings(),
+        settings: UNetRPPSettings = UNetRPPSettings(),
     ) -> None:
         """
         Args:
@@ -779,7 +779,7 @@ class UNETRPP(BaseModel):
         ]
         h_size = settings.hidden_size
 
-        self.unetr_pp_encoder = UnetrPPEncoder(
+        self.unetr_pp_encoder = UNetRPPEncoder(
             input_size=encoder_input_size,
             dims=[
                 h_size // 8,
@@ -804,7 +804,7 @@ class UNETRPP(BaseModel):
             stride=1,
             norm_name=settings.norm_name,
         )
-        self.decoder5 = UnetrUpBlock(
+        self.decoder5 = UNetRUpBlock(
             spatial_dims=settings.spatial_dims,
             in_channels=settings.hidden_size,
             out_channels=settings.hidden_size // 2,
@@ -817,7 +817,7 @@ class UNETRPP(BaseModel):
             attention_code=settings.attention_code,
             num_heads=settings.num_heads_decoder,
         )
-        self.decoder4 = UnetrUpBlock(
+        self.decoder4 = UNetRUpBlock(
             spatial_dims=settings.spatial_dims,
             in_channels=settings.hidden_size // 2,
             out_channels=settings.hidden_size // 4,
@@ -830,7 +830,7 @@ class UNETRPP(BaseModel):
             attention_code=settings.attention_code,
             num_heads=settings.num_heads_decoder,
         )
-        self.decoder3 = UnetrUpBlock(
+        self.decoder3 = UNetRUpBlock(
             spatial_dims=settings.spatial_dims,
             in_channels=settings.hidden_size // 4,
             out_channels=settings.hidden_size // 8,
@@ -843,7 +843,7 @@ class UNETRPP(BaseModel):
             attention_code=settings.attention_code,
             num_heads=settings.num_heads_decoder,
         )
-        self.decoder2 = UnetrUpBlock(
+        self.decoder2 = UNetRUpBlock(
             spatial_dims=settings.spatial_dims,
             in_channels=settings.hidden_size // 8,
             out_channels=settings.hidden_size // 16,
@@ -876,7 +876,7 @@ class UNETRPP(BaseModel):
             self.check_required_attributes()
 
     @property
-    def settings(self) -> UNETRPPSettings:
+    def settings(self) -> UNetRPPSettings:
         return self._settings
 
     @property

@@ -59,7 +59,7 @@ class DoubleConv(nn.Module):
 
 @dataclass_json
 @dataclass(slots=True)
-class UnetSettings:
+class UNetSettings:
     init_features: int = 64
     autopad_enabled: bool = False
 
@@ -71,7 +71,7 @@ class UNet(BaseModel, AutoPaddingModel):
     Implementation from the original paper: https://arxiv.org/pdf/1505.04597.pdf.
     """
 
-    settings_kls = UnetSettings
+    settings_kls = UNetSettings
     onnx_supported = True
     supported_num_spatial_dims = (2,)
     features_last = False
@@ -84,7 +84,7 @@ class UNet(BaseModel, AutoPaddingModel):
         in_channels: int,
         out_channels: int,
         input_shape: tuple[int, ...],
-        settings: UnetSettings = UnetSettings(),
+        settings: UNetSettings = UNetSettings(),
     ) -> None:
         super().__init__()
 
@@ -125,7 +125,7 @@ class UNet(BaseModel, AutoPaddingModel):
         self.check_required_attributes()
 
     @property
-    def settings(self) -> UnetSettings:
+    def settings(self) -> UNetSettings:
         return self._settings
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -232,15 +232,15 @@ class UNet(BaseModel, AutoPaddingModel):
 
 @dataclass_json
 @dataclass(slots=True)
-class CustomUnetSettings:
+class CustomUNetSettings:
     encoder_name: Literal["resnet18", "resnet34", "resnet50"] = "resnet18"
     encoder_depth: int = 5
     encoder_weights: bool = True
     autopad_enabled: bool = False
 
 
-class CustomUnet(BaseModel, AutoPaddingModel):
-    settings_kls = CustomUnetSettings
+class CustomUNet(BaseModel, AutoPaddingModel):
+    settings_kls = CustomUNetSettings
     onnx_supported = True
     supported_num_spatial_dims = (2,)
     features_last = False
@@ -253,7 +253,7 @@ class CustomUnet(BaseModel, AutoPaddingModel):
         in_channels: int,
         out_channels: int,
         input_shape: tuple[int, ...],
-        settings: CustomUnetSettings = CustomUnetSettings(),
+        settings: CustomUNetSettings = CustomUNetSettings(),
     ) -> None:
         super().__init__()
 
@@ -294,7 +294,7 @@ class CustomUnet(BaseModel, AutoPaddingModel):
         self.check_required_attributes()
 
     @property
-    def settings(self) -> CustomUnetSettings:
+    def settings(self) -> CustomUNetSettings:
         return self._settings
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

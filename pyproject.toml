@@ -35,6 +35,8 @@ select = ["I"]  # I = isort
 
 [tool.mypy]
 # [mypy configuration file doc](https://mypy.readthedocs.io/en/stable/config_file.html#confval-exclude)
+exclude = [
+]
 
 # Disallows defining functions without type annotations or with incomplete type annotations.
 # Use Any for *args and **kwargs

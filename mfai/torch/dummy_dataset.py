@@ -2,8 +2,8 @@ import random
 from typing import List, Literal, Tuple
 
 import torch
-from torch import Tensor
 from lightning.pytorch.core import LightningDataModule
+from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 
 from .namedtensor import NamedTensor

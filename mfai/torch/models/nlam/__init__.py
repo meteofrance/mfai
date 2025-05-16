@@ -7,10 +7,9 @@ from pathlib import Path
 from typing import Any, Literal
 
 import torch
-from torch import Tensor
 import torch_geometric as pyg
 from dataclasses_json import dataclass_json
-from torch import nn
+from torch import Tensor, nn
 from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import offload_wrapper
 
 from mfai.torch.models.base import BaseModel, ModelType

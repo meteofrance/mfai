@@ -3,10 +3,10 @@ import tempfile
 import lightning.pytorch as L
 import pytest
 import torch
-from torch import Tensor
 from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
 from lightning.pytorch.cli import ArgsType, LightningCLI
 from lightning.pytorch.loggers import TensorBoardLogger
+from torch import Tensor
 
 from mfai.torch.dummy_dataset import DummyDataModule
 from mfai.torch.lightning_modules import SegmentationLightningModule

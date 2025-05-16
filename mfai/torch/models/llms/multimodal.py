@@ -5,7 +5,6 @@ from typing import Literal
 
 import einops
 import torch
-from torch import Tensor
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
 

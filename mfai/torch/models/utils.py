@@ -3,8 +3,8 @@ from typing import Tuple
 
 import einops
 import torch
-from torch import Tensor
 import torch.nn as nn
+from torch import Tensor
 
 
 def patch_first_conv(

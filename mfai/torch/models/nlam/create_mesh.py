@@ -5,10 +5,10 @@ import matplotlib.pyplot as plt
 import networkx
 import numpy as np
 import torch
-from torch import Tensor
 import torch_geometric as pyg
 from networkx.classes.reportviews import NodeView
 from scipy.spatial import KDTree
+from torch import Tensor
 from torch_geometric.utils.convert import from_networkx
 
 

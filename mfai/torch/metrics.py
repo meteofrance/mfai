@@ -1,10 +1,9 @@
 from typing import Any, Literal, Optional
 
 import torch
-from torch import Tensor
-from torch import Tensor
 import torch.nn.functional as F
 from einops import rearrange
+from torch import Tensor
 from torchmetrics import Metric, Precision, PrecisionRecallCurve
 from torchmetrics.utilities.compute import _auc_compute
 

@@ -2,11 +2,10 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 import torch
-from torch import Tensor
 from dataclasses_json import dataclass_json
 from monai.networks.blocks.dynunet_block import UnetResBlock
 from monai.networks.nets.swin_unetr import SwinUNETR as MonaiSwinUNETR
-from torch import nn
+from torch import Tensor, nn
 
 from .base import ModelABC, ModelType
 

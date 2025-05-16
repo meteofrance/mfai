@@ -7,8 +7,7 @@ from enum import Enum
 from typing import Any, Tuple
 
 import torch
-from torch import Tensor
-from torch import Size, nn
+from torch import Size, Tensor, nn
 
 from mfai.torch.padding import pad_batch, undo_padding
 

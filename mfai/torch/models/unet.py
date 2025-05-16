@@ -12,9 +12,8 @@ from math import ceil
 from typing import Literal, Tuple
 
 import torch
-from torch import Tensor
 from dataclasses_json import dataclass_json
-from torch import nn
+from torch import Tensor, nn
 
 from .base import AutoPaddingModel, BaseModel, ModelType
 from .resnet import get_resnet_encoder

@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from typing import Tuple, Union
 
 import torch
-from torch import Tensor
 import torch.nn as nn
 import torch.nn.functional as F
 from dataclasses_json import dataclass_json
@@ -23,6 +22,7 @@ from monai.networks.blocks.dynunet_block import (
 )
 from monai.networks.layers.utils import get_norm_layer
 from monai.utils import optional_import
+from torch import Tensor
 from torch.nn.functional import scaled_dot_product_attention
 
 from .base import BaseModel, ModelType

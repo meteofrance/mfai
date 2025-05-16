@@ -1,9 +1,8 @@
 from typing import Any, Literal
 
 import torch
-from torch import Tensor
 import torch_geometric as pyg
-from torch import nn
+from torch import Tensor, nn
 from torch.utils.checkpoint import checkpoint
 
 

@@ -6,9 +6,9 @@ from typing import Sequence
 from urllib.error import URLError
 
 import torch
-from torch import Tensor
 import torch.nn as nn
 import torchvision.models as models
+from torch import Tensor
 
 
 class PerceptualLoss(torch.nn.Module):

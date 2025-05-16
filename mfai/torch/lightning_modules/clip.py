@@ -8,11 +8,11 @@ from typing import Any, Literal, Tuple
 import lightning.pytorch as pl
 import matplotlib.pyplot as plt
 import torch
-from torch import Tensor
 import torch.nn.functional as F
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from matplotlib.figure import Figure
 from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
+from torch import Tensor
 from torch.optim import AdamW
 from torchmetrics import Metric
 

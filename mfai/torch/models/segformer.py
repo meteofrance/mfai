@@ -8,10 +8,9 @@ from math import sqrt
 from typing import Any, Callable, Literal, Sequence
 
 import torch
-from torch import Tensor
 from dataclasses_json import dataclass_json
 from einops import rearrange
-from torch import einsum, nn
+from torch import Tensor, einsum, nn
 
 from .base import BaseModel, ModelType
 

@@ -3,7 +3,6 @@ from typing import Literal, Tuple, Union
 
 import pytest
 import torch
-from torch import Tensor
 from torch import Tensor, nn
 
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer

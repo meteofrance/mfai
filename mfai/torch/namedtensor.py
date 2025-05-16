@@ -10,8 +10,8 @@ from typing import Any, List, Sequence, Union
 
 import einops
 import torch
-from torch import Tensor
 from tabulate import tabulate
+from torch import Tensor
 
 
 @dataclass(slots=True)

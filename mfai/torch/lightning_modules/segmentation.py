@@ -5,9 +5,9 @@ from typing import Any, Literal, Tuple
 import lightning.pytorch as pl
 import pandas as pd
 import torch
-from torch import Tensor
 import torchmetrics as tm
 from pytorch_lightning.utilities import rank_zero_only
+from torch import Tensor
 
 from mfai.torch.models.base import BaseModel
 

@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import Tuple, Union
 
 import torch
-from torch import Tensor
 import torch.nn as nn
 from dataclasses_json import dataclass_json
+from torch import Tensor
 
 from mfai.torch.models.llms import GPT2, LayerNorm, Llama2
 from mfai.torch.models.resnet import ResNet50

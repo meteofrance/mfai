@@ -2,10 +2,10 @@ from dataclasses import dataclass
 from typing import Any, Literal, Union
 
 import torch
-from torch import Tensor
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 from dataclasses_json import dataclass_json
+from torch import Tensor
 from torchvision.models.resnet import BasicBlock, Bottleneck, ResNet
 
 from mfai.torch.models import utils

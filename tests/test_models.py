@@ -13,8 +13,8 @@ from typing import Any, Tuple
 import numpy as np
 import pytest
 import torch
-from torch import Tensor
 from marshmallow.exceptions import ValidationError
+from torch import Tensor
 
 from mfai.torch import export_to_onnx, onnx_load_and_infer, padding
 from mfai.torch.models import (

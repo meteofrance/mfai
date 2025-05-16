@@ -5,9 +5,8 @@ from math import ceil
 from typing import Any, Literal, Sequence
 
 import torch
-from torch import Tensor
 from dataclasses_json import dataclass_json
-from torch import nn
+from torch import Tensor, nn
 
 from mfai.torch.models.base import AutoPaddingModel, BaseModel, ModelType
 from mfai.torch.models.utils import AbsolutePosEmdebding

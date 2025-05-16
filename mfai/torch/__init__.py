@@ -5,8 +5,7 @@ import numpy
 import onnx
 import onnxruntime
 import torch
-from torch import Tensor
-from torch import nn
+from torch import Tensor, nn
 
 
 def to_numpy(

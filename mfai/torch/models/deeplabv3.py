@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from typing import Any, Callable, Literal, Optional
 
 import torch
-from torch import Tensor
 import torch.nn as nn
 from dataclasses_json import dataclass_json
+from torch import Tensor
 from torch.nn import functional as F
 
 from .base import BaseModel, ModelType

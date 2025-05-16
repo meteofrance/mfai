@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from typing import Union
 
 import torch
-from torch import Tensor
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
 

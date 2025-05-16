@@ -5,6 +5,7 @@ Tests for our pytorch metrics
 import numpy as np
 import pytest
 import torch
+from torch import Tensor
 
 from mfai.torch.metrics import FAR, FNR, PR_AUC, CSINeighborood
 
@@ -72,7 +73,7 @@ def test_csi_binary(num_neighbors: int, expected_value: float):
 
 
 @pytest.mark.parametrize("num_neighbors,expected_value", [(0, 0.43), (1, 0.79)])
-def test_csi_multiclass(num_neighbors: int, expected_value: torch.Tensor):
+def test_csi_multiclass(num_neighbors: int, expected_value: Tensor):
     """
     Build tensors of size (1, 1, 5, 5), compute the CSI for multiclass taskand check if the output is
     the result expected.
@@ -116,7 +117,7 @@ def test_csi_multiclass(num_neighbors: int, expected_value: torch.Tensor):
 
 
 @pytest.mark.parametrize("num_neighbors,expected_value", [(0, 0.36), (1, 0.81)])
-def test_csi_multilabel(num_neighbors: int, expected_value: torch.Tensor):
+def test_csi_multilabel(num_neighbors: int, expected_value: Tensor):
     """
     Build tensors of size (1, 3, 5, 5), compute the CSI for multilabel task and check if the output is
     the result expected.

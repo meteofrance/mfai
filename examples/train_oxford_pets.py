@@ -2,6 +2,7 @@ from pathlib import Path
 
 import lightning.pytorch as L
 import torch
+from torch import Tensor
 import torchvision
 import torchvision.transforms as T
 from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint

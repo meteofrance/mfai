@@ -2,6 +2,7 @@ import random
 from typing import List, Literal, Tuple
 
 import torch
+from torch import Tensor
 from lightning.pytorch.core import LightningDataModule
 from torch.utils.data import DataLoader, Dataset
 
@@ -43,7 +44,7 @@ class DummyDataset(Dataset):
     def __len__(self) -> int:
         return self.len
 
-    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
+    def __getitem__(self, index: int) -> tuple[Tensor, Tensor]:
         x = torch.randn((self.nb_input_channels, self.dim_x, self.dim_y)).float()
         if self.task == "multiclass":
             y = torch.randint(
@@ -165,7 +166,7 @@ class DummyMultiModalDataset(Dataset):
     def __len__(self) -> int:
         return self.len
 
-    def __getitem__(self, index: int) -> tuple[NamedTensor, torch.Tensor, torch.Tensor]:
+    def __getitem__(self, index: int) -> tuple[NamedTensor, Tensor, Tensor]:
         # Create the random vision input
         x = torch.randn((self.nb_input_channels, self.dim_x, self.dim_y)).float()
         images = NamedTensor(
@@ -227,12 +228,12 @@ class DummyMultiModalDataModule(LightningDataModule):
         self.eot_token = self.dummy_train.eot_token
 
     def collate_fn_fit(
-        self, batch: List[Tuple[NamedTensor, torch.Tensor, torch.Tensor]]
-    ) -> Tuple[NamedTensor, torch.Tensor, torch.Tensor]:
+        self, batch: List[Tuple[NamedTensor, Tensor, Tensor]]
+    ) -> Tuple[NamedTensor, Tensor, Tensor]:
         """Collate a batch of multimodal data."""
         images: list[NamedTensor]
-        input_txt: list[torch.Tensor]
-        targets: list[torch.Tensor]
+        input_txt: list[Tensor]
+        targets: list[Tensor]
         images, input_txt, targets = zip(*batch)  # type: ignore[assignment]
         return (
             NamedTensor.collate_fn(images),
@@ -241,8 +242,8 @@ class DummyMultiModalDataModule(LightningDataModule):
         )
 
     def collate_text(
-        self, batch: List[torch.Tensor], target: bool = False, prompt: bool = False
-    ) -> torch.Tensor:
+        self, batch: List[Tensor], target: bool = False, prompt: bool = False
+    ) -> Tensor:
         """Collate a batch of text tensors."""
         batch_max_len = max([len(text) for text in batch]) + 1
         new_texts = []

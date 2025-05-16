@@ -8,6 +8,7 @@ from typing import Any, Literal, Tuple
 import lightning.pytorch as pl
 import matplotlib.pyplot as plt
 import torch
+from torch import Tensor
 import torch.nn.functional as F
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from matplotlib.figure import Figure
@@ -30,12 +31,12 @@ class CLIPAccuracySkillScore(Metric):
         super().__init__()
         self.top_k = top_k
         self.batch_size = batch_size
-        self.count_positives: torch.Tensor
-        self.count_total: torch.Tensor
+        self.count_positives: Tensor
+        self.count_total: Tensor
         self.add_state("count_positives", default=torch.tensor(0), dist_reduce_fx="sum")
         self.add_state("count_total", default=torch.tensor(0), dist_reduce_fx="sum")
 
-    def update(self, similarity: torch.Tensor) -> None:
+    def update(self, similarity: Tensor) -> None:
         """Update the metric state with stats from the cosine similarity matrix."""
         # Compute the top_k text indices for each image
         top_k_indices = similarity.topk(self.top_k, dim=1).indices
@@ -48,7 +49,7 @@ class CLIPAccuracySkillScore(Metric):
         self.count_total += matches_top_k.shape[0]
         # TODO : transform to simple Top 1 accuracy and nique mypy
 
-    def compute(self) -> torch.Tensor:
+    def compute(self) -> Tensor:
         accuracy = self.count_positives / self.count_total
         random_acc = 1 / self.batch_size
         perfect_acc = 1
@@ -144,7 +145,7 @@ class CLIPLightningModule(pl.LightningModule):
         else:
             return optimizer
 
-    def plot_probabilities_matrix(self, sim_matrix: torch.Tensor) -> Figure:
+    def plot_probabilities_matrix(self, sim_matrix: Tensor) -> Figure:
         """
         Plot the clip pair probabilities matrix.
         """
@@ -157,13 +158,13 @@ class CLIPLightningModule(pl.LightningModule):
         return plt.gcf()
 
     def forward(
-        self, images: NamedTensor, texts: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self, images: NamedTensor, texts: Tensor
+    ) -> Tuple[Tensor, Tensor]:
         return self.model(texts, images)
 
     def _shared_forward_step(
-        self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self, batch: Tuple[NamedTensor, Tensor, Tensor]
+    ) -> Tuple[Tensor, Tensor]:
         images, texts, _ = batch
 
         if len(images.tensor.shape) == 5:
@@ -183,8 +184,8 @@ class CLIPLightningModule(pl.LightningModule):
         return loss, image_logits
 
     def training_step(
-        self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor], batch_idx: int
-    ) -> torch.Tensor:
+        self, batch: Tuple[NamedTensor, Tensor, Tensor], batch_idx: int
+    ) -> Tensor:
         loss, _ = self._shared_forward_step(batch)
 
         self.log(
@@ -193,8 +194,8 @@ class CLIPLightningModule(pl.LightningModule):
         return loss
 
     def validation_step(
-        self, batch: Tuple[NamedTensor, torch.Tensor, torch.Tensor], batch_idx: int
-    ) -> torch.Tensor:
+        self, batch: Tuple[NamedTensor, Tensor, Tensor], batch_idx: int
+    ) -> Tensor:
         loss, image_logits = self._shared_forward_step(batch)
         probas = image_logits.softmax(dim=-1)
 

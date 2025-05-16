@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 import torch
+from torch import Tensor
 from dataclasses_json import dataclass_json
 from timm.layers import DropPath
 from torch import Tensor, nn

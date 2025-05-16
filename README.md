@@ -374,6 +374,7 @@ The lightning module can be instantiated and used in a forward pass as follows:
 
 ```python
 import torch
+from torch import Tensor
 from mfai.torch.models import UNet
 from mfai.torch.lightning_modules import SegmentationLightningModule
 
@@ -628,6 +629,7 @@ As our metrics are subclasses of the [torchmetrics.Metric](https://lightning.ai/
 
 ```python
 import torch
+from torch import Tensor
 from mfai.torch.metrics import CSINeighborood
 
 preds = torch.rand(2, 2).softmax(dim=-1)

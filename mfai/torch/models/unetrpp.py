@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Tuple, Union
 
 import torch
+from torch import Tensor
 import torch.nn as nn
 import torch.nn.functional as F
 from dataclasses_json import dataclass_json
@@ -28,8 +29,8 @@ from .base import BaseModel, ModelType
 
 
 def _trunc_normal_(
-    tensor: torch.Tensor, mean: float, std: float, a: float, b: float
-) -> torch.Tensor:
+    tensor: Tensor, mean: float, std: float, a: float, b: float
+) -> Tensor:
     # Cut & paste from PyTorch official master until it's in a few official releases - RW
     # Method based on https://people.sc.fsu.edu/~jburkardt/presentations/truncated_normal.pdf
     def norm_cdf(x: float) -> float:
@@ -67,12 +68,12 @@ def _trunc_normal_(
 
 
 def trunc_normal_(
-    tensor: torch.Tensor,
+    tensor: Tensor,
     mean: float = 0.0,
     std: float = 1.0,
     a: float = -2.0,
     b: float = 2.0,
-) -> torch.Tensor:
+) -> Tensor:
     r"""Fills the input Tensor with values drawn from a truncated
     normal distribution. The values are effectively drawn from the
     normal distribution :math:`\mathcal{N}(\text{mean}, \text{std}^2)`
@@ -85,7 +86,7 @@ def trunc_normal_(
     should be adjusted to match the range of mean, std args.
 
     Args:
-        tensor: an n-dimensional `torch.Tensor`
+        tensor: an n-dimensional `Tensor`
         mean: the mean of the normal distribution
         std: the standard deviation of the normal distribution
         a: the minimum cutoff value
@@ -114,7 +115,7 @@ class LayerNorm(nn.Module):
             raise NotImplementedError
         self.normalized_shape = (normalized_shape,)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         if self.data_format == "channels_last":
             return F.layer_norm(
                 x, self.normalized_shape, self.weight, self.bias, self.eps
@@ -204,7 +205,7 @@ class TransformerBlock(nn.Module):
         if pos_embed:
             self.pos_embed = nn.Parameter(torch.zeros(1, input_size, hidden_size))
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         if self.spatial_dims == 2:
             B, C, H, W = x.shape
             x = x.reshape(B, C, H * W).permute(0, 2, 1)
@@ -227,7 +228,7 @@ class TransformerBlock(nn.Module):
         return x
 
 
-def init_(tensor: torch.Tensor) -> torch.Tensor:
+def init_(tensor: Tensor) -> Tensor:
     dim = tensor.shape[-1]
     std = 1 / math.sqrt(dim)
     tensor.uniform_(-std, std)
@@ -289,7 +290,7 @@ class EPA(nn.Module):
         self.attn_drop = nn.Dropout(channel_attn_drop)
         self.attn_drop_2 = nn.Dropout(spatial_attn_drop)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         # TODO: fully optimize this function for each attention code
         B, N, C = x.shape
 
@@ -435,7 +436,7 @@ class UNetRPPEncoder(nn.Module):
                     )
                 )
             self.stages.append(nn.Sequential(*stage_blocks))
-        self.hidden_states: list[torch.Tensor] = []
+        self.hidden_states: list[Tensor] = []
         self.apply(self._init_weights)
         self.spatial_dims = spatial_dims
 
@@ -449,8 +450,8 @@ class UNetRPPEncoder(nn.Module):
             nn.init.constant_(m.weight, 1.0)
 
     def forward_features(
-        self, x: torch.Tensor
-    ) -> tuple[torch.Tensor, list[torch.Tensor]]:
+        self, x: Tensor
+    ) -> tuple[Tensor, list[Tensor]]:
         hidden_states = []
 
         x = self.downsample_layers[0](x)
@@ -469,7 +470,7 @@ class UNetRPPEncoder(nn.Module):
             hidden_states.append(x)
         return x, hidden_states
 
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, list[torch.Tensor]]:
+    def forward(self, x: Tensor) -> tuple[Tensor, list[Tensor]]:
         x, hidden_states = self.forward_features(x)
         return x, hidden_states
 
@@ -644,8 +645,8 @@ class UNetRUpBlock(nn.Module):
             nn.init.constant_(m.weight, 1.0)
 
     def forward(
-        self, inp: torch.Tensor, skip: torch.Tensor | None = None
-    ) -> torch.Tensor:
+        self, inp: Tensor, skip: Tensor | None = None
+    ) -> Tensor:
         """
         Forward pass:
         1. Upsampling using bi/tri-linear OR Conv{2,3}dTranspose
@@ -883,7 +884,7 @@ class UNetRPP(BaseModel):
     def num_spatial_dims(self) -> int:
         return self.settings.spatial_dims
 
-    def proj_feat(self, x: torch.Tensor) -> torch.Tensor:
+    def proj_feat(self, x: Tensor) -> Tensor:
         if self.spatial_dims == 2:
             x = x.view(
                 x.size(0), self.feat_size[0], self.feat_size[1], self.hidden_size
@@ -904,7 +905,7 @@ class UNetRPP(BaseModel):
 
         return x
 
-    def forward(self, x_in: torch.Tensor) -> torch.Tensor | list[torch.Tensor]:
+    def forward(self, x_in: Tensor) -> Tensor | list[Tensor]:
         _, hidden_states = self.unetr_pp_encoder(x_in)
         convBlock = self.encoder1(x_in)
 

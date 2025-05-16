@@ -12,6 +12,7 @@ from math import ceil
 from typing import Literal, Tuple
 
 import torch
+from torch import Tensor
 from dataclasses_json import dataclass_json
 from torch import nn
 
@@ -53,7 +54,7 @@ class DoubleConv(nn.Module):
             )
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         return self.double_conv(x)
 
 
@@ -128,7 +129,7 @@ class UNet(BaseModel, AutoPaddingModel):
     def settings(self) -> UNetSettings:
         return self._settings
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         """
         Description of the architecture from the original paper (https://arxiv.org/pdf/1505.04597.pdf):
         The network architecture is illustrated in Figure 1. It consists of a contracting
@@ -297,7 +298,7 @@ class CustomUNet(BaseModel, AutoPaddingModel):
     def settings(self) -> CustomUNetSettings:
         return self._settings
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         x, old_shape = self._maybe_padding(data_tensor=x)
         # Encoder part
         encoder_outputs = self.encoder(x)

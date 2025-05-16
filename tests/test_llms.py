@@ -2,6 +2,7 @@ from functools import partial
 
 import pytest
 import torch
+from torch import Tensor
 from test_multimodal_lm import generate_text_simple
 
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer

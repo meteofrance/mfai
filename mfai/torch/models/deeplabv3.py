@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Literal, Optional
 
 import torch
+from torch import Tensor
 import torch.nn as nn
 from dataclasses_json import dataclass_json
 from torch.nn import functional as F
@@ -35,7 +36,7 @@ class Activation(nn.Module):
                 f"Activation should be callable/sigmoid/softmax/logsoftmax/tanh/None; got {name}"
             )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         return self.activation(x)
 
 
@@ -54,7 +55,7 @@ class DeepLabV3Decoder(nn.Sequential):
         )
         self.out_channels = out_channels
 
-    def forward(self, *features: tuple[torch.Tensor]) -> torch.Tensor:
+    def forward(self, *features: tuple[Tensor]) -> Tensor:
         return super().forward(features[-1])
 
 
@@ -108,7 +109,7 @@ class DeepLabV3PlusDecoder(nn.Module):
             nn.ReLU(),
         )
 
-    def forward(self, *features: tuple[torch.Tensor]) -> torch.Tensor:
+    def forward(self, *features: tuple[Tensor]) -> Tensor:
         aspp_features = self.aspp(features[-1])
         aspp_features = self.up(aspp_features)
         high_res_features = self.block1(features[-4])
@@ -158,7 +159,7 @@ class ASPPPooling(nn.Sequential):
             nn.ReLU(),
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         size = x.shape[-2:]
         for mod in self:
             x = mod(x)
@@ -200,7 +201,7 @@ class ASPP(nn.Module):
             nn.Dropout(0.5),
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         res_list = []
         for conv in self.convs:
             res_list.append(conv(x))
@@ -378,7 +379,7 @@ class DeepLabV3(BaseModel):
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
 
-    def check_input_shape(self, x: torch.Tensor) -> None:
+    def check_input_shape(self, x: Tensor) -> None:
         h, w = x.shape[-2:]
         output_stride = self.encoder.output_stride
         if h % output_stride != 0 or w % output_stride != 0:
@@ -398,8 +399,8 @@ class DeepLabV3(BaseModel):
             )
 
     def forward(
-        self, x: torch.Tensor
-    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
+        self, x: Tensor
+    ) -> Tensor | tuple[Tensor, Tensor]:
         """Sequentially pass `x` trough model`s encoder, decoder and heads"""
 
         self.check_input_shape(x)
@@ -416,7 +417,7 @@ class DeepLabV3(BaseModel):
         return masks
 
     @torch.no_grad()
-    def predict(self, x: torch.Tensor) -> torch.Tensor:
+    def predict(self, x: Tensor) -> Tensor:
         """Inference method. Switch model to `eval` mode, call `.forward(x)` with `torch.no_grad()`
 
         Args:

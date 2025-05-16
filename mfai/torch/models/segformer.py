@@ -8,6 +8,7 @@ from math import sqrt
 from typing import Any, Callable, Literal, Sequence
 
 import torch
+from torch import Tensor
 from dataclasses_json import dataclass_json
 from einops import rearrange
 from torch import einsum, nn
@@ -62,7 +63,7 @@ class DsConv2d(nn.Module):
             nn.Conv2d(nb_in_channels, nb_out_channels, kernel_size=1, bias=bias),
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         return self.net(x)
 
 
@@ -73,7 +74,7 @@ class LayerNorm(nn.Module):
         self.g = nn.Parameter(torch.ones(1, dim, 1, 1))
         self.b = nn.Parameter(torch.zeros(1, dim, 1, 1))
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         std = torch.var(x, dim=1, unbiased=False, keepdim=True).sqrt()
         mean = torch.mean(x, dim=1, keepdim=True)
         return (x - mean) / (std + self.eps) * self.g + self.b
@@ -85,7 +86,7 @@ class PreNorm(nn.Module):
         self.fn = fn
         self.norm = LayerNorm(dim)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         return self.fn(self.norm(x))
 
 
@@ -111,13 +112,13 @@ class EfficientSelfAttention(nn.Module):
         )
         self.to_out = nn.Conv2d(dim, dim, 1, bias=False)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         h, w = x.shape[-2:]
         heads = self.heads
 
-        q: torch.Tensor = self.to_q(x)
-        k: torch.Tensor
-        v: torch.Tensor
+        q: Tensor = self.to_q(x)
+        k: Tensor
+        v: Tensor
         k, v = self.to_kv(x).chunk(2, dim=1)
         q, k, v = map(
             lambda t: rearrange(t, "b (h c) x y -> (b h) (x y) c", h=heads), (q, k, v)
@@ -142,7 +143,7 @@ class MixFeedForward(nn.Module):
             nn.Conv2d(hidden_dim, dim, 1),
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         return self.net(x)
 
 
@@ -212,8 +213,8 @@ class MiT(nn.Module):
             )
 
     def forward(
-        self, x: torch.Tensor, return_layer_outputs: bool = False
-    ) -> torch.Tensor | list[torch.Tensor]:
+        self, x: Tensor, return_layer_outputs: bool = False
+    ) -> Tensor | list[Tensor]:
         h, w = x.shape[-2:]
 
         layer_outputs = []
@@ -346,12 +347,12 @@ class Segformer(BaseModel):
     def settings(self) -> SegformerSettings:
         return self._settings
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         x = self.downsampler(x)
-        layer_outputs: list[torch.Tensor] = self.mit(x, return_layer_outputs=True)
+        layer_outputs: list[Tensor] = self.mit(x, return_layer_outputs=True)
 
-        fused: list[torch.Tensor] = [
+        fused: list[Tensor] = [
             to_fused(output) for output, to_fused in zip(layer_outputs, self.to_fused)
         ]
-        out: torch.Tensor = torch.cat(fused, dim=1)
+        out: Tensor = torch.cat(fused, dim=1)
         return self.upsampler(out)

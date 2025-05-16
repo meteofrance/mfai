@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 import torch
+from torch import Tensor
 from dataclasses_json import dataclass_json
 from monai.networks.blocks.dynunet_block import UnetResBlock
 from monai.networks.nets.swin_unetr import SwinUNETR as MonaiSwinUNETR
@@ -50,7 +51,7 @@ class UpsampleBlock(nn.Module):
             norm_name=norm_name,
         )
 
-    def forward(self, inp: torch.Tensor, skip: torch.Tensor) -> torch.Tensor:
+    def forward(self, inp: Tensor, skip: Tensor) -> Tensor:
         out = self.upsampler(inp)
         # concat along the channels/features dimension
         out = torch.cat((out, skip), dim=1)

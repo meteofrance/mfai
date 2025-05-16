@@ -6,6 +6,7 @@ from typing import Sequence
 from urllib.error import URLError
 
 import torch
+from torch import Tensor
 import torch.nn as nn
 import torchvision.models as models
 
@@ -129,8 +130,8 @@ class PerceptualLoss(torch.nn.Module):
         return blocks
 
     def _downscale(
-        self, x: torch.Tensor, scale_times: int = 1, mode: str = "bilinear"
-    ) -> torch.Tensor:
+        self, x: Tensor, scale_times: int = 1, mode: str = "bilinear"
+    ) -> Tensor:
         for _ in range(scale_times):
             x = torch.nn.functional.interpolate(x, scale_factor=0.5, mode=mode)
 
@@ -154,11 +155,11 @@ class PerceptualLoss(torch.nn.Module):
 
         self.blocks = torch.nn.ModuleList(blocks)
 
-    def _forward_net_single_img(self, x: torch.Tensor) -> tuple:
+    def _forward_net_single_img(self, x: Tensor) -> tuple:
         """Forward the Network features and styles for a single image.
 
         Arguments :
-            x: (torch.Tensor)
+            x: (Tensor)
 
         Return :
             features : (list)
@@ -202,12 +203,12 @@ class PerceptualLoss(torch.nn.Module):
         return features, styles
 
     def compute_perceptual_features(
-        self, x: torch.Tensor, return_features_and_styles: bool = False
+        self, x: Tensor, return_features_and_styles: bool = False
     ) -> tuple:
         """Compute the features of a single image.
 
         Arguments :
-            x: (torch.Tensor)
+            x: (Tensor)
             return_features_and_styles: (bool)
 
         Example :
@@ -254,12 +255,12 @@ class PerceptualLoss(torch.nn.Module):
             return None, None
 
     def _perceptual_loss_given_features_and_target(
-        self, x: torch.Tensor, features_y: list, styles_y: list
-    ) -> torch.Tensor:
+        self, x: Tensor, features_y: list, styles_y: list
+    ) -> Tensor:
         """Computes the Perceptual Loss given features and a target image.
 
         Arguments :
-            x: (torch.Tensor)
+            x: (Tensor)
             features_y : (list)
             styles_y : (list)
 
@@ -284,13 +285,13 @@ class PerceptualLoss(torch.nn.Module):
         return loss
 
     def _perceptual_loss_given_input_and_target(
-        self, x: torch.Tensor, y: torch.Tensor
-    ) -> torch.Tensor:
+        self, x: Tensor, y: Tensor
+    ) -> Tensor:
         """Computes the Perceptual Loss between two images
 
         Arguments :
-            x: (torch.Tensor)
-            y: (torch.Tensor)
+            x: (Tensor)
+            y: (Tensor)
 
         Return :
             loss : (troch.Tensor)
@@ -302,11 +303,11 @@ class PerceptualLoss(torch.nn.Module):
             x=y, features_y=features_x, styles_y=styles_x
         )
 
-    def forward(self, x: torch.Tensor, y: torch.Tensor | None = None) -> torch.Tensor:
+    def forward(self, x: Tensor, y: Tensor | None = None) -> Tensor:
         r"""Computes the Perceptual loss between two images
         Arguments :
-            x: (torch.Tensor)
-            y: (torch.Tensor) (default=None)
+            x: (Tensor)
+            y: (Tensor) (default=None)
 
         Note :
             If y is None, the features of y needs to be computed before by calling the function : compute_perceptual_features
@@ -476,7 +477,7 @@ class LPIPS(nn.Module):
 
         return new_state_dict
 
-    def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor, y: Tensor) -> Tensor:
         feat_x, _ = self.perceptual_loss.compute_perceptual_features(
             x, return_features_and_styles=True
         )
@@ -521,17 +522,17 @@ class BaseNet(nn.Module):
         super().__init__()
 
         # register buffer
-        self.mean = torch.Tensor([-0.030, -0.088, -0.188])[None, :, None, None]
-        self.std = torch.Tensor([0.458, 0.448, 0.450])[None, :, None, None]
+        self.mean = Tensor([-0.030, -0.088, -0.188])[None, :, None, None]
+        self.std = Tensor([0.458, 0.448, 0.450])[None, :, None, None]
 
     def set_requires_grad(self, state: bool) -> None:
         for param in chain(self.parameters(), self.buffers()):
             param.requires_grad = state
 
-    def z_score(self, x: torch.Tensor) -> torch.Tensor:
+    def z_score(self, x: Tensor) -> Tensor:
         return (x - self.mean) / self.std
 
-    def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
+    def forward(self, x: Tensor) -> list[Tensor]:
         raise NotImplementedError
 
 
@@ -552,7 +553,7 @@ class VGG16(BaseNet):
 
         self.set_requires_grad(False)
 
-    def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
+    def forward(self, x: Tensor) -> list[Tensor]:
         x = self.z_score(x)
 
         output = []
@@ -565,7 +566,7 @@ class VGG16(BaseNet):
         return output
 
 
-def normalize_activation(x: torch.Tensor, eps: float = 1e-10) -> torch.Tensor:
+def normalize_activation(x: Tensor, eps: float = 1e-10) -> Tensor:
     norm_factor = torch.sqrt(torch.sum(x**2, dim=1, keepdim=True))
     return x / (norm_factor + eps)
 

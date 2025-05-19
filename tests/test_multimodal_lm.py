@@ -80,7 +80,7 @@ def test_multimodal_llm(
     llm_backend: Literal["llama2", "gpt2"],
     tokenizer: Union[GPT2Tokenizer, LlamaTokenizer],
     expected_text: Tuple[str, str],
-):
+) -> None:
     torch.manual_seed(999)
     for force_vision in (False, True):
         model = MultiModalLM(
@@ -98,8 +98,8 @@ def test_multimodal_llm(
         )
         vision_input = NamedTensor(
             torch.randn(1, 3, 3, 2, 1),
-            names=("batch", "lat", "lon", "timestep", "features"),
-            feature_names=("u",),
+            names=["batch", "lat", "lon", "timestep", "features"],
+            feature_names=["u",],
         )
         encoded = tokenizer.encode("Sustine et abstine")
         encoded_tensor = torch.tensor(encoded).unsqueeze(0)
@@ -116,12 +116,12 @@ def test_multimodal_llm(
         assert decoded_text == expected_text[0 if not force_vision else 1]
 
 
-def test_multimodal_with_pretrained_clip():
+def test_multimodal_with_pretrained_clip() -> None:
     torch.manual_seed(666)
-    embed_dim: int = 32
-    vision_input_shape: tuple[int] = (128, 128, 2, 1)
+    embed_dim = 32
+    vision_input_shape = (128, 128, 2, 1)
     num_channels: int = vision_input_shape[2] * vision_input_shape[3]
-    path_checkpoint: Path = Path("checkpoint.tar")
+    path_checkpoint = Path("checkpoint.tar")
 
     # Setup the CLIP model
     resnet_clip = ResNet50(
@@ -167,8 +167,8 @@ def test_multimodal_with_pretrained_clip():
     )
     vision_input = NamedTensor(
         torch.randn(1, 128, 128, 2, 1),
-        names=("batch", "lat", "lon", "timestep", "features"),
-        feature_names=("u",),
+        names=["batch", "lat", "lon", "timestep", "features"],
+        feature_names=["u",],
     )
     encoded = tokenizer.encode("Sustine et abstine")
     encoded_tensor = torch.tensor(encoded).unsqueeze(0)

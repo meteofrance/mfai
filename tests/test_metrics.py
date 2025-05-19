@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 import torch
 
-from mfai.torch.metrics import FAR, FNR, PR_AUC, CSINeighborood
+from mfai.torch.metrics import FAR, FNR, PR_AUC, CSINeighborhood
 
 
 @pytest.mark.parametrize("num_neighbors,expected_value", [(0, 0.36), (1, 0.91)])
@@ -64,7 +64,7 @@ def test_csi_binary(num_neighbors: int, expected_value: float) -> None:
         )
     )
 
-    csi = CSINeighborood(num_neighbors=num_neighbors, task="binary")
+    csi = CSINeighborhood(num_neighbors=num_neighbors, task="binary")
     csi.update(preds=y_hat, targets=y_true)
     csi_score = torch.round(csi.compute(), decimals=2).float()
 
@@ -108,7 +108,7 @@ def test_csi_multiclass(num_neighbors: int, expected_value: torch.Tensor) -> Non
         )
     )
 
-    csi = CSINeighborood(num_neighbors, "multiclass", 4)
+    csi = CSINeighborhood(num_neighbors, "multiclass", 4)
     csi.update(preds=y_hat, targets=y_true)
     csi_score = torch.round(csi.compute(), decimals=2).float()
 
@@ -180,7 +180,7 @@ def test_csi_multilabel(num_neighbors: int, expected_value: torch.Tensor) -> Non
         )
     )
 
-    csi = CSINeighborood(num_neighbors, "multilabel", 3)
+    csi = CSINeighborhood(num_neighbors, "multilabel", 3)
     csi.update(preds=y_hat, targets=y_true)
     csi_score = torch.round(csi.compute(), decimals=2).float()
 

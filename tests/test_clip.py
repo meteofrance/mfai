@@ -1,4 +1,4 @@
-from lightning.pytorch.cli import ArgsType, LightningCLI, LightningArgumentParser
+from lightning.pytorch.cli import ArgsType, LightningArgumentParser, LightningCLI
 
 from mfai.torch.dummy_dataset import DummyMultiModalDataModule
 from mfai.torch.lightning_modules.clip import CLIPLightningModule

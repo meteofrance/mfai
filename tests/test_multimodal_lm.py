@@ -99,7 +99,9 @@ def test_multimodal_llm(
         vision_input = NamedTensor(
             torch.randn(1, 3, 3, 2, 1),
             names=["batch", "lat", "lon", "timestep", "features"],
-            feature_names=["u",],
+            feature_names=[
+                "u",
+            ],
         )
         encoded = tokenizer.encode("Sustine et abstine")
         encoded_tensor = torch.tensor(encoded).unsqueeze(0)
@@ -168,7 +170,9 @@ def test_multimodal_with_pretrained_clip() -> None:
     vision_input = NamedTensor(
         torch.randn(1, 128, 128, 2, 1),
         names=["batch", "lat", "lon", "timestep", "features"],
-        feature_names=["u",],
+        feature_names=[
+            "u",
+        ],
     )
     encoded = tokenizer.encode("Sustine et abstine")
     encoded_tensor = torch.tensor(encoded).unsqueeze(0)

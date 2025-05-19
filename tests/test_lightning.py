@@ -22,7 +22,11 @@ from mfai.torch.models.unet import UNet
         ("regression", 2, 1),
     ],
 )
-def test_lightning_training_loop(config: tuple[Literal["binary", "multiclass", "multilabel", "regression"], int, int]) -> None:
+def test_lightning_training_loop(
+    config: tuple[
+        Literal["binary", "multiclass", "multilabel", "regression"], int, int
+    ],
+) -> None:
     """
     Checks that our lightning module is trainable in all 4 modes.
     """

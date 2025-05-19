@@ -6,7 +6,7 @@ from mfai.torch.padding import pad_batch, undo_padding
 
 
 @pytest.mark.parametrize("dims", [2, 3])
-def test_pad(dims):
+def test_pad(dims: int) -> None:
     # get all the True/False combinations
     combinations = torch.cartesian_prod(*[torch.tensor([0, 1]) for _ in range(dims)])
     even = 8

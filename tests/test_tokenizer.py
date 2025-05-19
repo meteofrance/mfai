@@ -19,7 +19,7 @@ class LoremMiniTokenizer(MiniGPT2Tokenizer):
         return unique_tokens
 
 
-def test_mini_tokenizer():
+def test_mini_tokenizer() -> None:
     tokenizer = LoremMiniTokenizer()
     assert tokenizer.vocab_size == 40
 
@@ -28,7 +28,7 @@ def test_mini_tokenizer():
 ###################################         Special Tokens           #####################################
 ##########################################################################################################
 @pytest.mark.parametrize("tokenizer", [GPT2Tokenizer(), LoremMiniTokenizer()])
-def test_add_special_tokens(tokenizer: Tokenizer):
+def test_add_special_tokens(tokenizer: Tokenizer) -> None:
     base_tokenizer = copy.deepcopy(tokenizer)
 
     # Check that the vocab_size is increased by 1 because we add 1 new special token

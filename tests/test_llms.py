@@ -1,10 +1,11 @@
 from functools import partial
+from typing import Any
 
 import pytest
 import torch
 from test_multimodal_lm import generate_text_simple
 
-from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer
+from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, Tokenizer
 from mfai.torch.models.llms import GPT2, GPT2Settings, Llama2, Llama2Settings
 
 
@@ -23,7 +24,7 @@ from mfai.torch.models.llms import GPT2, GPT2Settings, Llama2, Llama2Settings
         ),
     ],
 )
-def test_llms(model_target_tokenizer):
+def test_llms(model_target_tokenizer: tuple[Any, str, Tokenizer]) -> None:
     torch.manual_seed(999)
     model, target, tokenizer = model_target_tokenizer
     model = model()

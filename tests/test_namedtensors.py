@@ -4,7 +4,7 @@ import torch
 from mfai.torch.namedtensor import NamedTensor
 
 
-def test_named_tensor():
+def test_named_tensor() -> None:
     """
     Test NamedTensor class.
     """
@@ -194,8 +194,8 @@ def test_named_tensor():
         assert nt_dim.names == ["lat", "lon", "features"]
 
     # Test iteration on batch dimension returning bare tensors
-    for i, nt_dim in enumerate(nt.iter_tensor_dim("batch")):
-        assert nt_dim.shape == (256, 256, 50)
+    for i, nt_tensor_dim in enumerate(nt.iter_tensor_dim("batch")):
+        assert nt_tensor_dim.shape == (256, 256, 50)
 
     assert i == 2
 
@@ -236,16 +236,16 @@ def test_named_tensor():
     assert t.shape == torch.Size([3, 256, 256])
 
     # test select_dim along the lat dim
-    t = nt_cat.select_dim("lat", 128)
-    assert t.tensor.shape == (3, 256, 30)
+    nt = nt_cat.select_dim("lat", 128)
+    assert nt.tensor.shape == (3, 256, 30)
 
     # test select_tensor_dim along the lat dim
     t = nt_cat.select_tensor_dim("lat", 128)
     assert t.shape == (3, 256, 30)
 
     # test index_select_dim
-    t = nt_cat.index_select_dim("features", [0, 1, 2])
-    assert t.tensor.shape == (3, 256, 256, 3)
+    nt = nt_cat.index_select_dim("features", [0, 1, 2])
+    assert nt.tensor.shape == (3, 256, 256, 3)
 
     # test index_select_tensor_dim
     t = nt_cat.index_select_tensor_dim("features", [0, 1, 2])
@@ -253,17 +253,17 @@ def test_named_tensor():
 
     # test select_dim when returning NamedTensor
     with pytest.raises(ValueError):
-        t = nt_cat.select_dim("features", 0)
-    t = nt_cat.select_dim("lon", 0)
-    assert t.tensor.shape == (3, 256, 30)
-    assert t.feature_names == nt_cat.feature_names
-    assert t.names == ["batch", "lat", "features"]
+        nt = nt_cat.select_dim("features", 0)
+    nt = nt_cat.select_dim("lon", 0)
+    assert nt.tensor.shape == (3, 256, 30)
+    assert nt.feature_names == nt_cat.feature_names
+    assert nt.names == ["batch", "lat", "features"]
 
     # test index_select_dim when returning NamedTensor
-    t = nt_cat.index_select_dim("features", [0, 1, 2])
-    assert t.tensor.shape == (3, 256, 256, 3)
-    assert t.feature_names == nt_cat.feature_names[:3]
-    assert t.names == ["batch", "lat", "lon", "features"]
+    nt = nt_cat.index_select_dim("features", [0, 1, 2])
+    assert nt.tensor.shape == (3, 256, 256, 3)
+    assert nt.feature_names == nt_cat.feature_names[:3]
+    assert nt.names == ["batch", "lat", "lon", "features"]
 
     # test dim_size
     assert nt_cat.dim_size("features") == 30

@@ -317,7 +317,7 @@ class NamedTensor(TensorWrapper):
         """
         return self.tensor.select(self.names.index(dim_name), index)
 
-    def index_select_dim(self, dim_name: str, indices: torch.Tensor) -> "NamedTensor":
+    def index_select_dim(self, dim_name: str, indices: Sequence[int]) -> "NamedTensor":
         """
         Return the tensor indexed along the dimension dim_name
         with the indices tensor.
@@ -341,7 +341,7 @@ class NamedTensor(TensorWrapper):
         )
 
     def index_select_tensor_dim(
-        self, dim_name: str, indices: torch.Tensor
+        self, dim_name: str, indices: Sequence[int]
     ) -> torch.Tensor:
         """
         Same as index_select_dim but returns a torch.tensor, but returns a torch.Tensor.

@@ -18,7 +18,7 @@ IMG_SIZE = 64
 class GetClass(object):
     """Retrieves target values for Oxford Pets classification task."""
 
-    def __call__(self, y):
+    def __call__(self, y: Tensor) -> Tensor:
         return (y * 255 - 1).long()
 
 

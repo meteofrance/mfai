@@ -116,7 +116,7 @@ def test_csi_multiclass(num_neighbors: int, expected_value: torch.Tensor) -> Non
 
 
 @pytest.mark.parametrize("num_neighbors,expected_value", [(0, 0.36), (1, 0.81)])
-def test_csi_multilabel(num_neighbors: int, expected_value: Tensor) -> None:
+def test_csi_multilabel(num_neighbors: int, expected_value: torch.Tensor) -> None:
     """
     Build tensors of size (1, 3, 5, 5), compute the CSI for multilabel task and check if the output is
     the result expected.

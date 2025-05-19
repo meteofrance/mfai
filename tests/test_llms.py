@@ -4,7 +4,6 @@ from typing import Any
 import pytest
 import torch
 from test_multimodal_lm import generate_text_simple
-from torch import Tensor
 
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, Tokenizer
 from mfai.torch.models.llms import GPT2, GPT2Settings, Llama2, Llama2Settings

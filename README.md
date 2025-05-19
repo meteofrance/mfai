@@ -635,7 +635,7 @@ from mfai.torch.metrics import CSINeighborood
 preds = torch.rand(2, 2).softmax(dim=-1)
 target = torch.randint(2, (2, 2))
 
-csi_metric = CSINeighborood(task="multiclass", num_classes=2, num_neighbors=0)
+csi_metric = CSINeighborhood(task="multiclass", num_classes=2, num_neighbors=0)
 csi = csi_metric(preds, target)
 ```
 

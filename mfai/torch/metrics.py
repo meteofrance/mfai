@@ -69,7 +69,7 @@ class PR_AUC(Metric):
         return _auc_compute(self.precision, self.recall, reorder=True)
 
 
-class CSINeighborood(Metric):
+class CSINeighborhood(Metric):
     """
     Compute Critical Sucess Index (or Threat Score) over a neighborhood to avoid the phenomenon
     of double penalty. So a forecast is considered as a true positive if there is a positive

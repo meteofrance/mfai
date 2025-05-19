@@ -7,11 +7,11 @@ import pytest
 import torch
 from torch import Tensor
 
-from mfai.torch.metrics import FAR, FNR, PR_AUC, CSINeighborood
+from mfai.torch.metrics import FAR, FNR, PR_AUC, CSINeighborhood
 
 
 @pytest.mark.parametrize("num_neighbors,expected_value", [(0, 0.36), (1, 0.91)])
-def test_csi_binary(num_neighbors: int, expected_value: float):
+def test_csi_binary(num_neighbors: int, expected_value: float) -> None:
     """
     Build tensors of size (2, 1, 5, 5), compute the CSI for binary task and check if the output is
     the result expected.
@@ -65,7 +65,7 @@ def test_csi_binary(num_neighbors: int, expected_value: float):
         )
     )
 
-    csi = CSINeighborood(num_neighbors=num_neighbors, task="binary")
+    csi = CSINeighborhood(num_neighbors=num_neighbors, task="binary")
     csi.update(preds=y_hat, targets=y_true)
     csi_score = torch.round(csi.compute(), decimals=2).float()
 
@@ -109,7 +109,7 @@ def test_csi_multiclass(num_neighbors: int, expected_value: Tensor):
         )
     )
 
-    csi = CSINeighborood(num_neighbors, "multiclass", 4)
+    csi = CSINeighborhood(num_neighbors, "multiclass", 4)
     csi.update(preds=y_hat, targets=y_true)
     csi_score = torch.round(csi.compute(), decimals=2).float()
 
@@ -181,14 +181,14 @@ def test_csi_multilabel(num_neighbors: int, expected_value: Tensor):
         )
     )
 
-    csi = CSINeighborood(num_neighbors, "multilabel", 3)
+    csi = CSINeighborhood(num_neighbors, "multilabel", 3)
     csi.update(preds=y_hat, targets=y_true)
     csi_score = torch.round(csi.compute(), decimals=2).float()
 
     assert pytest.approx(csi_score.cpu(), 0.001) == expected_value
 
 
-def test_pr_auc():
+def test_pr_auc() -> None:
     """
     Test of the compute of the Precision-Recall Area Under the Curve.
     """
@@ -201,7 +201,7 @@ def test_pr_auc():
     assert pytest.approx(auc_value.cpu(), 0.001) == expected_value
 
 
-def test_far():
+def test_far() -> None:
     """
     Test of the compute of the False Alarm Rate.
     """
@@ -214,7 +214,7 @@ def test_far():
     assert pytest.approx(auc_value.cpu(), 0.001) == expected_value
 
 
-def test_fnr():
+def test_fnr() -> None:
     """
     Test of the compute of the False Alarm Rate.
     """

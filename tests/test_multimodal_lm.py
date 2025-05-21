@@ -8,8 +8,7 @@ from torch import Tensor, nn
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer
 from mfai.torch.models.clip import Clip, ClipSettings
 from mfai.torch.models.llms import GPT2, GPT2Settings
-from mfai.torch.models.llms.multimodal import MultiModalLM, MultiModalLMSettings
-from mfai.torch.models.resnet import ResNet50, ResNet50Settings
+from mfai.torch.models.llms.multimodal import MultiModalLM, MultiModalLMSettings, XAttMultiModalLM, XAttMultiModalLMSettings
 from mfai.torch.namedtensor import NamedTensor
 
 
@@ -185,3 +184,38 @@ def test_multimodal_with_pretrained_clip() -> None:
         vision_input=vision_input,
     )
     tokenizer.decode(out.squeeze(0).tolist())
+
+
+def test_xatt_multimodal() -> None:
+    torch.manual_seed(666)
+    vision_input_shape = (128, 128, 2, 1)
+    settings = XAttMultiModalLMSettings(
+        vision_input_shape=vision_input_shape,
+        n_heads=1,
+        n_layers=4,
+        emb_dim=32,
+        context_length=32,
+        x_att_ratio=2,
+    )
+    tokenizer = GPT2Tokenizer()
+    model = XAttMultiModalLM(settings=settings, vocab_size=tokenizer.vocab_size)
+    
+    encoded = tokenizer.encode("Sustine et abstine")
+    token_ids = torch.tensor(encoded).unsqueeze(0)
+    vision_input = NamedTensor(
+        torch.randn(1, 128, 128, 2, 1),
+        names=["batch", "lat", "lon", "timestep", "features"],
+        feature_names=[
+            "u",
+        ],
+    )
+
+    token_ids_out = generate_text_simple(
+        model=model,
+        idx=token_ids,
+        max_new_tokens=10,
+        context_size=model.context_length,
+        vision_input=vision_input,
+    )
+    decoded_text = tokenizer.decode(token_ids_out.squeeze(0).tolist())
+    assert decoded_text == "Sustine et abstine admittedly Psychiatry renewal Marx gall awaiting precedent5000atlmary"

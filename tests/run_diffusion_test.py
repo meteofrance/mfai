@@ -1,0 +1,5 @@
+from test_models import test_torch_diffusion_training_loop
+
+from mfai.torch.models.karras_unet import UNetKarras
+
+test_torch_diffusion_training_loop(UNetKarras)

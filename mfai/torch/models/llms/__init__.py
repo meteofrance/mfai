@@ -174,7 +174,7 @@ class MultiHeadCrossAttentionPySDPA(nn.Module):
         keys, values = kv
 
         use_dropout = 0.0 if not self.training else self.dropout
-        print(q.shape, keys.shape, values.shape)
+
         context_vec = nn.functional.scaled_dot_product_attention(
             q.unsqueeze(1).transpose(1, -1), keys.transpose(1,-1), values.transpose(1,-1), attn_mask=None,
             dropout_p=use_dropout

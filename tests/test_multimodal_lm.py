@@ -18,7 +18,7 @@ def generate_text_simple(
     idx: Tensor,
     max_new_tokens: int,
     context_size: int,
-    vision_input: Union[None, NamedTensor] = None,
+    vision_input: Union[None, NamedTensor, Tensor] = None,
 ) -> Tensor:
     # idx is (B, T) array of indices in the current context
     for _ in range(max_new_tokens):
@@ -29,7 +29,7 @@ def generate_text_simple(
 
         # Get the predictions
         with torch.no_grad():
-            if vision_input:
+            if vision_input is not None:
                 logits = model(idx_cond, vision_input)
             else:
                 logits = model(idx_cond)

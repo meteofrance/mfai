@@ -2,7 +2,7 @@ from typing import Any, Literal
 
 import torch
 import torch_geometric as pyg
-from torch import nn
+from torch import Tensor, nn
 from torch.utils.checkpoint import checkpoint
 
 
@@ -24,7 +24,7 @@ class InteractionNet(pyg.nn.MessagePassing):
 
     def __init__(
         self,
-        edge_index: torch.Tensor,
+        edge_index: Tensor,
         input_dim: int,
         update_edges: bool = True,
         hidden_layers: int = 1,
@@ -99,8 +99,8 @@ class InteractionNet(pyg.nn.MessagePassing):
         self.update_edges = update_edges
 
     def forward(
-        self, send_rep: torch.Tensor, rec_rep: torch.Tensor, edge_rep: torch.Tensor
-    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
+        self, send_rep: Tensor, rec_rep: Tensor, edge_rep: Tensor
+    ) -> Tensor | tuple[Tensor, Tensor]:
         """
         Apply interaction network to update the representations of receiver nodes,
         and optionally the edge representations.
@@ -132,9 +132,7 @@ class InteractionNet(pyg.nn.MessagePassing):
 
         return rec_rep
 
-    def message(
-        self, x_j: torch.Tensor, x_i: torch.Tensor, edge_attr: torch.Tensor
-    ) -> torch.Tensor:
+    def message(self, x_j: Tensor, x_i: Tensor, edge_attr: Tensor) -> Tensor:
         """
         Compute messages from node j to node i.
         """
@@ -142,11 +140,11 @@ class InteractionNet(pyg.nn.MessagePassing):
 
     def aggregate(
         self,
-        messages: torch.Tensor,
-        index: torch.Tensor,
-        ptr: torch.Tensor,
+        messages: Tensor,
+        index: Tensor,
+        ptr: Tensor,
         dim_size: int,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[Tensor, Tensor]:
         """
         Overridden aggregation function to:
         * return both aggregated and original messages,
@@ -174,7 +172,7 @@ class SplitMLPs(nn.Module):
         self.mlps = nn.ModuleList(mlps)
         self.chunk_sizes = chunk_sizes
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         """
         Chunk up input and feed through MLPs
 

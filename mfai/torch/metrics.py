@@ -3,6 +3,7 @@ from typing import Any, Literal, Optional
 import torch
 import torch.nn.functional as F
 from einops import rearrange
+from torch import Tensor
 from torchmetrics import Metric, Precision, PrecisionRecallCurve
 from torchmetrics.utilities.compute import _auc_compute
 
@@ -22,7 +23,7 @@ class FAR(Metric):
     def update(self, *args: Any, **kwargs: Any) -> None:
         self.p.update(*args, **kwargs)
 
-    def compute(self) -> torch.Tensor:
+    def compute(self) -> Tensor:
         return 1 - self.p.compute()
 
 
@@ -37,18 +38,18 @@ class FNR(Metric):
     def __init__(self) -> None:
         super().__init__()
         full_state_update = True  # noqa
-        self.true_positives: torch.Tensor
-        self.false_negatives: torch.Tensor
-        self.add_state("true_positives", default=torch.tensor(0), dist_reduce_fx="sum")
-        self.add_state("false_negatives", default=torch.tensor(0), dist_reduce_fx="sum")
+        self.true_positives: Tensor
+        self.false_negatives: Tensor
+        self.add_state("true_positives", default=Tensor(0), dist_reduce_fx="sum")
+        self.add_state("false_negatives", default=Tensor(0), dist_reduce_fx="sum")
 
-    def update(self, preds: torch.Tensor, target: torch.Tensor) -> None:
+    def update(self, preds: Tensor, target: Tensor) -> None:
         assert preds.shape == target.shape
         preds = torch.where(preds >= 0.5, 1, 0)
         self.true_positives += torch.sum((preds == 1) & (target == 1))
         self.false_negatives += torch.sum((preds == 0) & (target == 1))
 
-    def compute(self) -> torch.Tensor:
+    def compute(self) -> Tensor:
         return self.false_negatives / (self.true_positives + self.false_negatives)
 
 
@@ -60,11 +61,11 @@ class PR_AUC(Metric):
         full_state_update = True  # noqa
         self.task = task
 
-    def update(self, preds: torch.Tensor, targets: torch.Tensor) -> None:
+    def update(self, preds: Tensor, targets: Tensor) -> None:
         pr_curve = PrecisionRecallCurve(task=self.task)
         self.precision, self.recall, _ = pr_curve(preds, targets)
 
-    def compute(self) -> torch.Tensor:
+    def compute(self) -> Tensor:
         return _auc_compute(self.precision, self.recall, reorder=True)
 
 
@@ -103,9 +104,9 @@ class CSINeighborhood(Metric):
         if torch.cuda.is_available():
             self._device = torch.device("cuda")
 
-        self.true_positives: torch.Tensor
-        self.false_positives: torch.Tensor
-        self.false_negatives: torch.Tensor
+        self.true_positives: Tensor
+        self.false_positives: Tensor
+        self.false_negatives: Tensor
         self.add_state(
             "true_positives",
             default=torch.zeros(self.num_classes).to(device=self.device),
@@ -122,7 +123,7 @@ class CSINeighborhood(Metric):
             dist_reduce_fx="sum",
         )
 
-    def binary_dilation_(self, input_tensor: torch.Tensor) -> torch.Tensor:
+    def binary_dilation_(self, input_tensor: Tensor) -> Tensor:
         """
         Performs IN_PLACE binary dilation of input_tensor Tensor.
         input_tensor is assumed to be an implicit single channel tensor of shape (MINIBATCH, W, H).
@@ -146,18 +147,18 @@ class CSINeighborhood(Metric):
         output_tensor.squeeze_(1)
         return output_tensor
 
-    def update(self, preds: torch.Tensor, targets: torch.Tensor) -> None:
+    def update(self, preds: Tensor, targets: Tensor) -> None:
         """
-        preds and targets are torch.Tensors of shape (H, w) or (B,C,H,W).
+        preds and targets are Tensors of shape (H, w) or (B,C,H,W).
         If multiclass, takes int value in [0, nb_output_channels] interval.
         """
 
         def compute_sub_results(
-            preds: torch.Tensor, targets: torch.Tensor
+            preds: Tensor, targets: Tensor
         ) -> tuple[
-            torch.Tensor,
-            torch.Tensor,
-            torch.Tensor,
+            Tensor,
+            Tensor,
+            Tensor,
         ]:
             exp_targets = targets.type(torch.FloatTensor.dtype).to(device=self.device)
             targets_extend = self.binary_dilation_(exp_targets)
@@ -201,7 +202,7 @@ class CSINeighborhood(Metric):
             self.false_positives[channel] += fp
             self.false_negatives[channel] += fn
 
-    def compute(self) -> torch.Tensor:
+    def compute(self) -> Tensor:
         csi = self.true_positives / (
             self.true_positives + self.false_negatives + self.false_positives
         )

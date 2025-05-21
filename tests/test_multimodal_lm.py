@@ -8,7 +8,12 @@ from torch import Tensor, nn
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer
 from mfai.torch.models.clip import Clip, ClipSettings
 from mfai.torch.models.llms import GPT2, GPT2Settings
-from mfai.torch.models.llms.multimodal import MultiModalLM, MultiModalLMSettings, XAttMultiModalLM, XAttMultiModalLMSettings
+from mfai.torch.models.llms.multimodal import (
+    MultiModalLM,
+    MultiModalLMSettings,
+    XAttMultiModalLM,
+    XAttMultiModalLMSettings,
+)
 from mfai.torch.namedtensor import NamedTensor
 
 
@@ -199,7 +204,7 @@ def test_xatt_multimodal() -> None:
     )
     tokenizer = GPT2Tokenizer()
     model = XAttMultiModalLM(settings=settings, vocab_size=tokenizer.vocab_size)
-    
+
     encoded = tokenizer.encode("Sustine et abstine")
     token_ids = torch.tensor(encoded).unsqueeze(0)
     vision_input = NamedTensor(
@@ -218,4 +223,7 @@ def test_xatt_multimodal() -> None:
         vision_input=vision_input,
     )
     decoded_text = tokenizer.decode(token_ids_out.squeeze(0).tolist())
-    assert decoded_text == "Sustine et abstine admittedly Psychiatry renewal Marx gall awaiting precedent5000atlmary"
+    assert (
+        decoded_text
+        == "Sustine et abstine admittedly Psychiatry renewal Marx gall awaiting precedent5000atlmary"
+    )

@@ -129,6 +129,7 @@ class MultiHeadCrossAttentionPySDPA(nn.Module):
     Mutli Head Cross Attention using Pytorch's scaled_dot_product_attention
     The query and key/values are from different sources.
     """
+
     def __init__(
         self,
         d_in_q: int,
@@ -153,7 +154,7 @@ class MultiHeadCrossAttentionPySDPA(nn.Module):
         self.kv = nn.Linear(d_in_kv, 2 * d_out, bias=qkv_bias)
         self.proj = nn.Linear(d_out, d_out)
         self.dropout = dropout
-        
+
     def forward(self, x_q: Tensor, x_kv: Tensor) -> Tensor:
         batch_size, num_tokens_q, _ = x_q.shape
         batch_size, num_tokens_kv, _ = x_kv.shape
@@ -176,15 +177,18 @@ class MultiHeadCrossAttentionPySDPA(nn.Module):
         use_dropout = 0.0 if not self.training else self.dropout
 
         context_vec = nn.functional.scaled_dot_product_attention(
-            q.unsqueeze(1).transpose(1, -1), keys.transpose(1,-1), values.transpose(1,-1), attn_mask=None,
-            dropout_p=use_dropout
+            q.unsqueeze(1).transpose(1, -1),
+            keys.transpose(1, -1),
+            values.transpose(1, -1),
+            attn_mask=None,
+            dropout_p=use_dropout,
         )
 
         # Combine heads
         context_vec = (
-            context_vec.transpose(1,-1)
+            context_vec.transpose(1, -1)
             .contiguous()
-            .view(batch_size,num_tokens_q,self.d_out)
+            .view(batch_size, num_tokens_q, self.d_out)
         )
 
         context_vec = self.proj(context_vec)
@@ -208,7 +212,7 @@ class GPT2Settings:
 @dataclass_json
 @dataclass(slots=True)
 class CrossAttGPT2Settings(GPT2Settings):
-    cross_att_ratio: int = 4 # Ratio of cross attention blocks, default one out of 4
+    cross_att_ratio: int = 4  # Ratio of cross attention blocks, default one out of 4
 
 
 class TransformerBlock(nn.Module):
@@ -259,6 +263,7 @@ class CrossAttentionTransformerBlock(nn.Module):
     """
     A cross attention transformer block
     """
+
     def __init__(self, settings: CrossAttGPT2Settings) -> None:
         super().__init__()
         self.att = MultiHeadCrossAttentionPySDPA(
@@ -273,8 +278,8 @@ class CrossAttentionTransformerBlock(nn.Module):
         self.ff = FeedForward(settings.emb_dim)
         self.norm1 = LayerNorm(settings.emb_dim)
         self.norm2 = LayerNorm(settings.emb_dim)
-        self.drop_shortcut = nn.Dropout(settings.drop_rate)    
-    
+        self.drop_shortcut = nn.Dropout(settings.drop_rate)
+
     def forward(self, x_q: Tensor, x_kv: Tensor) -> Tensor:
         # Shortcut connection for attention block
         shortcut = x_q
@@ -291,6 +296,7 @@ class CrossAttentionTransformerBlock(nn.Module):
         x = x + shortcut  # Add the original input back
 
         return x
+
 
 class GPT2(nn.Module):
     """GPT implementation
@@ -368,7 +374,7 @@ class CrossAttentionGPT2(nn.Module):
     A GPT2 with cross attention to allow vision/weather data injection as key/values into some of the transformer block.
     Freely inspired by Llama3.2 as described here : https://magazine.sebastianraschka.com/i/151078631/the-llama-herd-of-models
     """
-    
+
     settings_kls = CrossAttGPT2Settings
     model_type = ModelType.LLM
 
@@ -416,10 +422,11 @@ class CrossAttentionGPT2(nn.Module):
                 x = b(x, vision_inputs)
             else:
                 x = b(x)
-        
+
         x = self.final_norm(x)
         logits = self.out_head(x)
         return logits
+
 
 ##########################################################################################################
 #######################################         llama2           #########################################

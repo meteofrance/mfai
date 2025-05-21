@@ -6,7 +6,14 @@ import torch
 from test_multimodal_lm import generate_text_simple
 
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, Tokenizer
-from mfai.torch.models.llms import GPT2, GPT2Settings, Llama2, Llama2Settings, CrossAttentionGPT2, CrossAttGPT2Settings
+from mfai.torch.models.llms import (
+    GPT2,
+    GPT2Settings,
+    Llama2,
+    Llama2Settings,
+    CrossAttentionGPT2,
+    CrossAttGPT2Settings,
+)
 
 
 @pytest.mark.parametrize(

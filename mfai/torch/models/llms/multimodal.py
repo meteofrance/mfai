@@ -262,6 +262,7 @@ class XAttMultiModalLMSettings:
     """
     Settings for our cross attention multimodal language model.
     """
+
     emb_dim: int = 768  # Embedding dimension
     context_length: int = 1024  # Context length
     n_heads: int = 12  # Number of attention heads
@@ -289,8 +290,8 @@ class XAttMultiModalLM(nn.Module):
     ):
         super().__init__()
         self.settings = settings
-        
-        # Initialize our X ATT GPT2 backend
+
+        # Initialize our X ATT GPT2 backend
         self.backend = CrossAttentionGPT2(
             CrossAttentionGPT2.settings_kls(
                 **{
@@ -302,15 +303,15 @@ class XAttMultiModalLM(nn.Module):
             vocab_size=vocab_size,
         )
 
-        # Initialize our resnet50 vision encoder
+        # Initialize our resnet50 vision encoder
         num_channels_viz = (
-                settings.vision_input_shape[2] * settings.vision_input_shape[3]
-            )
+            settings.vision_input_shape[2] * settings.vision_input_shape[3]
+        )
         self.vision_encoder = ResNet50(
             num_channels=num_channels_viz,
             num_classes=settings.emb_dim,
         )
-    
+
     @property
     def context_length(self) -> int:
         return self.backend.context_length
@@ -335,14 +336,14 @@ class XAttMultiModalLM(nn.Module):
         """
         for param in self.vision_encoder.parameters():
             param.requires_grad = False
-    
+
     def unfreeze_vision(self) -> None:
         """
         Unfreeze the vision encoder layers
         """
         for param in self.vision_encoder.parameters():
             param.requires_grad = True
-    
+
     def forward(self, text_tokens: Tensor, vision_input: NamedTensor) -> Tensor:
         # Reshape the vision input
         new_tensor = einops.rearrange(
@@ -356,4 +357,3 @@ class XAttMultiModalLM(nn.Module):
         vis_embeds = vis_embeds / vis_embeds.norm(dim=1, keepdim=True)
 
         return self.backend(text_tokens, vis_embeds)
-

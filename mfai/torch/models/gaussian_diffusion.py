@@ -475,25 +475,47 @@ def sigmoid_beta_schedule(timesteps, start = -3, end = 3, tau = 1, clamp_min = 1
     betas = 1 - (alphas_cumprod[1:] / alphas_cumprod[:-1])
     return torch.clip(betas, 0, 0.999)
 
+class GaussianDiffusionSettings:
+    timesteps: int = 1000,
+    sampling_timesteps: Union[None, int] = None, #either none of number of timesteps sampled?
+    objective: str = 'pred_v',
+    beta_schedule: str = 'sigmoid',
+    schedule_fn_kwargs: dict = dict(),
+    ddim_sampling_eta: tuple[float, ...] = 0.,
+    auto_normalize: bool = True,
+    offset_noise_strength: tuple[float, ...] = 0.,  # https://www.crosslabs.org/blog/diffusion-with-offset-noise
+    min_snr_loss_weight: bool = False, # https://arxiv.org/abs/2303.09556
+    min_snr_gamma: tuple[int, ...] = 5,
+    immiscible: bool = False
+
 class GaussianDiffusion(Module):
     def __init__(
         self,
-        model,
-        *,
-        image_size,
-        timesteps = 1000,
-        sampling_timesteps = None,
-        objective = 'pred_v',
-        beta_schedule = 'sigmoid',
-        schedule_fn_kwargs = dict(),
-        ddim_sampling_eta = 0.,
-        auto_normalize = True,
-        offset_noise_strength = 0.,  # https://www.crosslabs.org/blog/diffusion-with-offset-noise
-        min_snr_loss_weight = False, # https://arxiv.org/abs/2303.09556
-        min_snr_gamma = 5,
-        immiscible = False
+        in_channels: int,
+        out_channels: int,
+        input_shape: Union[None, Tuple[int, int]] = None,
+        settings: GaussianDiffusionSettings,
+        *args,
+        **kwargs,
     ):
         super().__init__()
+
+        #todo: define 'model'
+
+        #import from settings
+
+        timesteps = settings.timesteps
+        sampling_timesteps = settings.sampling_timesteps
+        objective = settings.objective
+        beta_schedule = settings.beta_schedule
+        schedule_fn_kwargs = settings.schedule_fn_kwargs
+        ddim_sampling_eta = settings.ddim_sampling_eta
+        auto_normalize = settings.auto_normalize
+        offset_noise_strength = settings.offset_noise_strength
+        min_snr_loss_weight = settings.min_snr_loss_weight
+        min_snr_gamma = settings.min_snr_gamma
+        immiscible = settings.immiscible
+        
         assert not (type(self) == GaussianDiffusion and model.channels != model.out_dim)
         assert not hasattr(model, 'random_or_learned_sinusoidal_cond') or not model.random_or_learned_sinusoidal_cond
 

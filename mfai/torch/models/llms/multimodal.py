@@ -9,7 +9,7 @@ from dataclasses_json import dataclass_json
 from torch import Tensor, nn
 
 from mfai.torch.models.base import ModelType
-from mfai.torch.models.llms import GPT2, Llama2, CrossAttentionGPT2
+from mfai.torch.models.llms import GPT2, CrossAttentionGPT2, Llama2
 from mfai.torch.models.resnet import ResNet50, ResNet50Settings
 from mfai.torch.namedtensor import NamedTensor
 

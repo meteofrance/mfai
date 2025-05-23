@@ -498,8 +498,6 @@ class GaussianDiffusion(Module):
         *args,
         **kwargs,
     ):
-        super().__init__()
-
         #import from settings
 
         timesteps = settings.timesteps
@@ -535,6 +533,9 @@ class GaussianDiffusion(Module):
         assert input_shape[0] == input_shape[1]
         image_size = input_shape[0]
 
+        #code from denoising-diffusion-pytorch
+        
+        super().__init__()
         assert not (type(self) == GaussianDiffusion and model.channels != model.out_dim)
         assert not hasattr(model, 'random_or_learned_sinusoidal_cond') or not model.random_or_learned_sinusoidal_cond
 

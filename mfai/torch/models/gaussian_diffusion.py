@@ -500,8 +500,6 @@ class GaussianDiffusion(Module):
     ):
         super().__init__()
 
-        #todo: define 'model'
-
         #import from settings
 
         timesteps = settings.timesteps
@@ -515,7 +513,28 @@ class GaussianDiffusion(Module):
         min_snr_loss_weight = settings.min_snr_loss_weight
         min_snr_gamma = settings.min_snr_gamma
         immiscible = settings.immiscible
+
+        #defining the model
+
+        #the philosophy being adopted here is that whilst in denoising-diffusion-pytorch,
+        #the model is defined outside of the diffusion class, here we define it inside
+        #whilst getting the characteristics necessary to define it inside the settings.
+
+        #before adding to the settings we simply use the readme example
+
+        model = Unet(
+            dim = 64,
+            dim_mults = (1, 2, 4, 8),
+            flash_attn = True
+        )
+
+        #what to do of image_size?
+
+        #for now we define image_size from input_shape, forcing both terms to be equal
         
+        assert input_shape[0] == input_shape[1]
+        image_size = input_shape[0]
+
         assert not (type(self) == GaussianDiffusion and model.channels != model.out_dim)
         assert not hasattr(model, 'random_or_learned_sinusoidal_cond') or not model.random_or_learned_sinusoidal_cond
 

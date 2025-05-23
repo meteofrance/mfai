@@ -493,8 +493,8 @@ class GaussianDiffusion(Module):
         self,
         in_channels: int,
         out_channels: int,
-        input_shape: Union[None, Tuple[int, int]] = None,
         settings: GaussianDiffusionSettings,
+        input_shape: Union[None, Tuple[int, int]] = None,
         *args,
         **kwargs,
     ):

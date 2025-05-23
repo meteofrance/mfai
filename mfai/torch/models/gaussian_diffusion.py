@@ -890,7 +890,14 @@ class GaussianDiffusion(Module):
             dim = 64,
             dim_mults = (1, 2, 4, 8),
             flash_attn = True
+            channels = in_channels
         )
+
+        #what to do of out_channels?
+
+        #for now we want channels in and out to be identical
+
+        assert in_channels == out_channels
 
         #what to do of image_size?
 

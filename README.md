@@ -23,10 +23,11 @@
       - HiLAM
       - GraphLAM
     - Large Language Models:
-      - GPT2
+      - GPT2 (classical and cross attention version)
       - LLama2
     - Multimodal Language Models:
       - A custom Fuyu inspired model
+      - A custom model combining a Resnet50 vision encoder with a cross attention GPT2
     - Vision Language Models:
       - CLIP
 

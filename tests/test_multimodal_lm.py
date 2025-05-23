@@ -14,6 +14,7 @@ from mfai.torch.models.llms.multimodal import (
     XAttMultiModalLM,
     XAttMultiModalLMSettings,
 )
+from mfai.torch.models.resnet import ResNet50, ResNet50Settings
 from mfai.torch.namedtensor import NamedTensor
 
 

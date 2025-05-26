@@ -9,7 +9,7 @@ from typing import Any, Literal
 import torch
 import torch_geometric as pyg
 from dataclasses_json import dataclass_json
-from torch import nn
+from torch import Tensor, nn
 from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import offload_wrapper
 
 from mfai.torch.models.base import BaseModel, ModelType
@@ -59,9 +59,7 @@ class BaseGraphModel(BaseModel):
     features_last: bool = True
 
     @classmethod
-    def rank_zero_setup(
-        cls, settings: GraphLamSettings, meshgrid: torch.Tensor
-    ) -> None:
+    def rank_zero_setup(cls, settings: GraphLamSettings, meshgrid: Tensor) -> None:
         """
         This is a static method to allow multi-GPU
         trainig frameworks to call this method once
@@ -164,15 +162,15 @@ class BaseGraphModel(BaseModel):
         graph_dir = self.settings.tmp_dir
 
         # Load edges (edge_index)
-        self.m2m_edge_index: list[torch.Tensor] = []
+        self.m2m_edge_index: list[Tensor] = []
         for item in torch.load(
             graph_dir / "m2m_edge_index.pt", device
         ):  # List of (2, M_m2m[l])
             self.m2m_edge_index.append(nn.parameter.Buffer(item, persistent=False))
-        self.g2m_edge_index: torch.Tensor = nn.parameter.Buffer(
+        self.g2m_edge_index: Tensor = nn.parameter.Buffer(
             torch.load(graph_dir / "g2m_edge_index.pt", device)
         )  # (2, M_g2m)
-        self.m2g_edge_index: torch.Tensor = nn.parameter.Buffer(
+        self.m2g_edge_index: Tensor = nn.parameter.Buffer(
             torch.load(graph_dir / "m2g_edge_index.pt", device)
         )  # (2, M_m2g)
 
@@ -185,19 +183,19 @@ class BaseGraphModel(BaseModel):
             )
 
         # Load static edge features
-        self.m2m_features: list[torch.Tensor] = torch.load(
+        self.m2m_features: list[Tensor] = torch.load(
             graph_dir / "m2m_features.pt", device
         )  # List of (M_m2m[l], d_edge_f)
-        self.g2m_features: torch.Tensor = nn.parameter.Buffer(
+        self.g2m_features: Tensor = nn.parameter.Buffer(
             torch.load(graph_dir / "g2m_features.pt", device)
         )  # (M_g2m, d_edge_f)
-        self.m2g_features: torch.Tensor = nn.parameter.Buffer(
+        self.m2g_features: Tensor = nn.parameter.Buffer(
             torch.load(graph_dir / "m2g_features.pt", device)
         )  # (M_m2g, d_edge_f)
 
         # Normalize by dividing with longest edge (found in m2m)
-        longest_edge: torch.Tensor = torch.max(
-            torch.Tensor(
+        longest_edge: Tensor = torch.max(
+            Tensor(
                 [
                     torch.max(level_features[:, 0])
                     for level_features in self.m2m_features
@@ -212,7 +210,7 @@ class BaseGraphModel(BaseModel):
         self.m2g_features = self.m2g_features / longest_edge
 
         # Load static node features
-        self.mesh_static_features: list[torch.Tensor] = torch.load(
+        self.mesh_static_features: list[Tensor] = torch.load(
             graph_dir / "mesh_features.pt"
         )  # List of (N_mesh[l], d_mesh_static)
 
@@ -223,10 +221,10 @@ class BaseGraphModel(BaseModel):
         ):
             raise ValueError("Inconsistent number of levels in mesh.")
 
-        self.mesh_up_edge_index: list[torch.Tensor] = []
-        self.mesh_down_edge_index: list[torch.Tensor] = []
-        self.mesh_up_features: list[torch.Tensor]
-        self.mesh_down_features: list[torch.Tensor]
+        self.mesh_up_edge_index: list[Tensor] = []
+        self.mesh_down_edge_index: list[Tensor] = []
+        self.mesh_up_features: list[Tensor]
+        self.mesh_down_features: list[Tensor]
         if hierarchical:
             # Load up and down edges and features
             for item in torch.load(
@@ -288,14 +286,14 @@ class BaseGraphModel(BaseModel):
         """
         raise NotImplementedError("get_num_mesh not implemented")
 
-    def embedd_mesh_nodes(self) -> torch.Tensor:
+    def embedd_mesh_nodes(self) -> Tensor:
         """
         Embedd static mesh features
         Returns tensor of shape (N_mesh, d_h)
         """
         raise NotImplementedError("embedd_mesh_nodes not implemented")
 
-    def process_step(self, mesh_rep: torch.Tensor) -> torch.Tensor:
+    def process_step(self, mesh_rep: Tensor) -> Tensor:
         """
         Process step of embedd-process-decode framework
         Processes the representation on the mesh, possible in multiple steps
@@ -307,8 +305,8 @@ class BaseGraphModel(BaseModel):
 
     def forward(
         self,
-        x: torch.Tensor,
-    ) -> torch.Tensor:
+        x: Tensor,
+    ) -> Tensor:
         """
         Step state one step ahead using prediction model, X_{t-1}, X_t -> X_t+1
         prev_state: (B, N_grid, feature_dim), X_t
@@ -475,7 +473,7 @@ class BaseHiGraphModel(BaseGraphModel):
         N_mesh_ignore = N_mesh - self.mesh_static_features[0].shape[0]
         return N_mesh, N_mesh_ignore
 
-    def embedd_mesh_nodes(self) -> torch.Tensor:
+    def embedd_mesh_nodes(self) -> Tensor:
         """
         Embedd static mesh features
         This embedds only bottom level, rest is done at beginning of processing step
@@ -483,7 +481,7 @@ class BaseHiGraphModel(BaseGraphModel):
         """
         return self.mesh_embedders[0](self.mesh_static_features[0])
 
-    def process_step(self, mesh_rep: torch.Tensor) -> torch.Tensor:
+    def process_step(self, mesh_rep: Tensor) -> Tensor:
         """
         Process step of embedd-process-decode framework
         Processes the representation on the mesh, possible in multiple steps
@@ -496,7 +494,7 @@ class BaseHiGraphModel(BaseGraphModel):
         # EMBEDD REMAINING MESH NODES (levels >= 1) -
         # Create list of mesh node representations for each level,
         # each of size (B, N_mesh[l], d_h)
-        mesh_rep_levels: list[torch.Tensor] = [mesh_rep] + [
+        mesh_rep_levels: list[Tensor] = [mesh_rep] + [
             expand_to_batch(emb(node_static_features), batch_size)
             for emb, node_static_features in zip(
                 self.mesh_embedders[1:], self.mesh_static_features[1:]
@@ -559,13 +557,11 @@ class BaseHiGraphModel(BaseGraphModel):
 
     def hi_processor_step(
         self,
-        mesh_rep_levels: list[torch.Tensor],
-        mesh_same_rep: list[torch.Tensor],
-        mesh_up_rep: list[torch.Tensor],
-        mesh_down_rep: list[torch.Tensor],
-    ) -> tuple[
-        list[torch.Tensor], list[torch.Tensor], list[torch.Tensor], list[torch.Tensor]
-    ]:
+        mesh_rep_levels: list[Tensor],
+        mesh_same_rep: list[Tensor],
+        mesh_up_rep: list[Tensor],
+        mesh_down_rep: list[Tensor],
+    ) -> tuple[list[Tensor], list[Tensor], list[Tensor], list[Tensor]]:
         """
         Internal processor step of hierarchical graph models.
         Between mesh init and read out.
@@ -641,14 +637,14 @@ class GraphLAM(BaseGraphModel):
         """
         return len(self.mesh_static_features), 0
 
-    def embedd_mesh_nodes(self) -> torch.Tensor:
+    def embedd_mesh_nodes(self) -> Tensor:
         """
         Embedd static mesh features
         Returns tensor of shape (N_mesh, d_h)
         """
         return self.mesh_embedder(self.mesh_static_features[0])  # (N_mesh, d_h)
 
-    def process_step(self, mesh_rep: torch.Tensor) -> torch.Tensor:
+    def process_step(self, mesh_rep: Tensor) -> Tensor:
         """
         Process step of embedd-process-decode framework
         Processes the representation on the mesh, possible in multiple steps
@@ -709,13 +705,11 @@ class HiLAMParallel(BaseHiGraphModel):
 
     def hi_processor_step(
         self,
-        mesh_rep_levels: list[torch.Tensor],
-        mesh_same_rep: list[torch.Tensor],
-        mesh_up_rep: list[torch.Tensor],
-        mesh_down_rep: list[torch.Tensor],
-    ) -> tuple[
-        list[torch.Tensor], list[torch.Tensor], list[torch.Tensor], list[torch.Tensor]
-    ]:
+        mesh_rep_levels: list[Tensor],
+        mesh_same_rep: list[Tensor],
+        mesh_up_rep: list[Tensor],
+        mesh_down_rep: list[Tensor],
+    ) -> tuple[list[Tensor], list[Tensor], list[Tensor], list[Tensor]]:
         """
         Internal processor step of hierarchical graph models.
         Between mesh init and read out.
@@ -846,12 +840,12 @@ class HiLAM(BaseHiGraphModel):
 
     def mesh_down_step(
         self,
-        mesh_rep_levels: list[torch.Tensor],
-        mesh_same_rep: list[torch.Tensor],
-        mesh_down_rep: list[torch.Tensor],
+        mesh_rep_levels: list[Tensor],
+        mesh_same_rep: list[Tensor],
+        mesh_down_rep: list[Tensor],
         down_gnns: nn.ModuleList,
         same_gnns: nn.ModuleList,
-    ) -> tuple[list[torch.Tensor], list[torch.Tensor], list[torch.Tensor]]:
+    ) -> tuple[list[Tensor], list[Tensor], list[Tensor]]:
         """
         Run down-part of vertical processing, sequentially alternating between processing
         using down edges and same-level edges.
@@ -888,12 +882,12 @@ class HiLAM(BaseHiGraphModel):
 
     def mesh_up_step(
         self,
-        mesh_rep_levels: list[torch.Tensor],
-        mesh_same_rep: list[torch.Tensor],
-        mesh_up_rep: list[torch.Tensor],
+        mesh_rep_levels: list[Tensor],
+        mesh_same_rep: list[Tensor],
+        mesh_up_rep: list[Tensor],
         up_gnns: nn.ModuleList,
         same_gnns: nn.ModuleList,
-    ) -> tuple[list[torch.Tensor], list[torch.Tensor], list[torch.Tensor]]:
+    ) -> tuple[list[Tensor], list[Tensor], list[Tensor]]:
         """
         Run up-part of vertical processing, sequentially alternating between processing
         using up edges and same-level edges.
@@ -930,13 +924,11 @@ class HiLAM(BaseHiGraphModel):
 
     def hi_processor_step(
         self,
-        mesh_rep_levels: list[torch.Tensor],
-        mesh_same_rep: list[torch.Tensor],
-        mesh_up_rep: list[torch.Tensor],
-        mesh_down_rep: list[torch.Tensor],
-    ) -> tuple[
-        list[torch.Tensor], list[torch.Tensor], list[torch.Tensor], list[torch.Tensor]
-    ]:
+        mesh_rep_levels: list[Tensor],
+        mesh_same_rep: list[Tensor],
+        mesh_up_rep: list[Tensor],
+        mesh_down_rep: list[Tensor],
+    ) -> tuple[list[Tensor], list[Tensor], list[Tensor], list[Tensor]]:
         """
         Internal processor step of hierarchical graph models.
         Between mesh init and read out.

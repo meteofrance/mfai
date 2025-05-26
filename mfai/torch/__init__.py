@@ -1,15 +1,15 @@
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import numpy
 import onnx
 import onnxruntime
 import torch
-from torch import nn
+from torch import Tensor, nn
 
 
 def to_numpy(
-    input: torch.Tensor | tuple[torch.Tensor, ...],
+    input: Tensor | tuple[Tensor, ...],
 ) -> numpy.ndarray | tuple[numpy.ndarray, ...]:
     if isinstance(input, tuple):
         l = []
@@ -24,12 +24,12 @@ def to_numpy(
 
 
 def export_to_onnx(
-    model: nn.Module, sample: torch.Tensor | tuple[Any, ...], filepath: Path | str
+    model: nn.Module, sample: Tensor | tuple[Any, ...], filepath: Path | str
 ) -> None:
     """
     Exports a model to ONNX format.
     """
-    if isinstance(sample, torch.Tensor):
+    if isinstance(sample, Tensor):
         sample = (sample,)
 
     if isinstance(filepath, Path):
@@ -52,7 +52,7 @@ def export_to_onnx(
 
 
 def onnx_load_and_infer(
-    filepath: Path | str, input: torch.Tensor | tuple[torch.Tensor, ...]
+    filepath: Path | str, input: Tensor | tuple[Tensor, ...]
 ) -> numpy.ndarray:
     """
     Loads a model using onnx, checks it, and performs an inference.

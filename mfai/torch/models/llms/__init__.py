@@ -346,8 +346,8 @@ class MultiHeadAttentionPySDPALlama2(nn.Module):
     Mutli Head Attention using Pytorch's scaled_dot_product_attention
     """
 
-    cos: torch.Tensor
-    sin: torch.Tensor
+    cos: Tensor
+    sin: Tensor
 
     def __init__(
         self,

@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 from dataclasses_json import dataclass_json
+from torch import Tensor
 from torchvision.models.resnet import BasicBlock, Bottleneck, ResNet
 
 from mfai.torch.models import utils
@@ -38,7 +39,7 @@ class ResNetEncoder(ResNet):
             self.layer4,
         ]
 
-    def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
+    def forward(self, x: Tensor) -> list[Tensor]:
         features = []
         for i in range(self._depth + 1):
             x = self.stages[i](x)
@@ -209,7 +210,7 @@ class ResNet50(torch.nn.Module):
         self.settings = settings
         self.num_channels = num_channels
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         y_hat = self.encoder(x)[-1]
         y_hat = self.avgpool(y_hat)
         y_hat = y_hat.reshape(y_hat.shape[0], -1)

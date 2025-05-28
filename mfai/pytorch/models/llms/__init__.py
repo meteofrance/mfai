@@ -11,7 +11,7 @@ import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
 
-from mfai.torch.models.base import ModelType
+from mfai.pytorch.models.base import ModelType
 
 ##########################################################################################################
 #######################################         GPT2           ###########################################

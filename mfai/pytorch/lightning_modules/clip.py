@@ -16,8 +16,8 @@ from torch import Tensor
 from torch.optim import AdamW
 from torchmetrics import Metric
 
-from mfai.torch.models.clip import Clip, ClipSettings
-from mfai.torch.namedtensor import NamedTensor
+from mfai.pytorch.models.clip import Clip, ClipSettings
+from mfai.pytorch.namedtensor import NamedTensor
 
 
 class CLIPAccuracySkillScore(Metric):

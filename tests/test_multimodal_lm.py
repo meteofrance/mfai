@@ -6,11 +6,11 @@ import torch
 from torch import Tensor, nn
 
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer
-from mfai.torch.models.clip import Clip, ClipSettings
-from mfai.torch.models.llms import GPT2, GPT2Settings
-from mfai.torch.models.llms.multimodal import MultiModalLM, MultiModalLMSettings
-from mfai.torch.models.resnet import ResNet50, ResNet50Settings
-from mfai.torch.namedtensor import NamedTensor
+from mfai.pytorch.models.clip import Clip, ClipSettings
+from mfai.pytorch.models.llms import GPT2, GPT2Settings
+from mfai.pytorch.models.llms.multimodal import MultiModalLM, MultiModalLMSettings
+from mfai.pytorch.models.resnet import ResNet50, ResNet50Settings
+from mfai.pytorch.namedtensor import NamedTensor
 
 
 def generate_text_simple(

@@ -6,7 +6,7 @@ model:
     image_encoder:
       num_channels: 2
     text_encoder:
-      class_path: mfai.torch.models.llms.GPT2
+      class_path: mfai.pytorch.models.llms.GPT2
       init_args:
         settings:
           n_heads: 1
@@ -31,7 +31,7 @@ trainer:
   enable_progress_bar: true
   default_root_dir: null
   callbacks:
-    - class_path: mfai.torch.lightning_modules.clip.SaveCLIPVisualEncoderWeights
+    - class_path: mfai.pytorch.lightning_modules.clip.SaveCLIPVisualEncoderWeights
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
         monitor: val_loss

@@ -8,9 +8,9 @@ from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
 from lightning.pytorch.cli import ArgsType, LightningCLI
 from lightning.pytorch.loggers import TensorBoardLogger
 
-from mfai.torch.dummy_dataset import DummyDataModule
-from mfai.torch.lightning_modules import SegmentationLightningModule
-from mfai.torch.models.unet import UNet
+from mfai.pytorch.dummy_dataset import DummyDataModule
+from mfai.pytorch.lightning_modules import SegmentationLightningModule
+from mfai.pytorch.models.unet import UNet
 
 
 @pytest.mark.parametrize(

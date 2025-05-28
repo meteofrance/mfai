@@ -8,7 +8,7 @@ from dataclasses_json import dataclass_json
 from torch import Tensor
 from torchvision.models.resnet import BasicBlock, Bottleneck, ResNet
 
-from mfai.torch.models import utils
+from mfai.pytorch.models import utils
 
 ##########################################################################################################
 ######################################         Encoders           ########################################

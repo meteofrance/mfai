@@ -8,8 +8,8 @@ import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
 
-from mfai.torch.models.base import AutoPaddingModel, BaseModel, ModelType
-from mfai.torch.models.utils import AbsolutePosEmdebding
+from mfai.pytorch.models.base import AutoPaddingModel, BaseModel, ModelType
+from mfai.pytorch.models.utils import AbsolutePosEmdebding
 
 
 @dataclass_json

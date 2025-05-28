@@ -8,10 +8,10 @@ import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
 
-from mfai.torch.models.base import ModelType
-from mfai.torch.models.llms import GPT2, Llama2
-from mfai.torch.models.resnet import ResNet50, ResNet50Settings
-from mfai.torch.namedtensor import NamedTensor
+from mfai.pytorch.models.base import ModelType
+from mfai.pytorch.models.llms import GPT2, Llama2
+from mfai.pytorch.models.resnet import ResNet50, ResNet50Settings
+from mfai.pytorch.namedtensor import NamedTensor
 
 
 @dataclass_json

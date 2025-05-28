@@ -99,7 +99,7 @@ In the following example, we create a **NamedTensor** from a PyTorch tensor with
 ```python
 import torch
 from torch import Tensor
-from mfai.torch.namedtensor import NamedTensor
+from mfai.pytorch.namedtensor import NamedTensor
 
 tensor = torch.rand(4, 256, 256, 3)
 
@@ -115,7 +115,7 @@ nt = NamedTensor(
 ```python
 import torch
 from torch import Tensor
-from mfai.torch.namedtensor import NamedTensor
+from mfai.pytorch.namedtensor import NamedTensor
 
 nt1 = NamedTensor(
     torch.rand(4, 256, 256, 3),

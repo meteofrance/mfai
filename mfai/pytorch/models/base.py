@@ -9,7 +9,7 @@ from typing import Any, Tuple
 import torch
 from torch import Size, Tensor, nn
 
-from mfai.torch.padding import pad_batch, undo_padding
+from mfai.pytorch.padding import pad_batch, undo_padding
 
 
 class ModelType(Enum):

@@ -16,15 +16,15 @@ import torch
 from marshmallow.exceptions import ValidationError
 from torch import Tensor
 
-from mfai.torch import export_to_onnx, onnx_load_and_infer, padding
-from mfai.torch.models import (
+from mfai.pytorch import export_to_onnx, onnx_load_and_infer, padding
+from mfai.pytorch.models import (
     autopad_nn_architectures,
     load_from_settings_file,
     nn_architectures,
 )
-from mfai.torch.models.base import ModelType
-from mfai.torch.models.deeplabv3 import DeepLabV3Plus
-from mfai.torch.models.half_unet import HalfUNet
+from mfai.pytorch.models.base import ModelType
+from mfai.pytorch.models.deeplabv3 import DeepLabV3Plus
+from mfai.pytorch.models.half_unet import HalfUNet
 
 
 def to_numpy(tensor: Tensor) -> Any:

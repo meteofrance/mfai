@@ -157,7 +157,7 @@ Obviously, if one of the implemented methods, metrics, etc. is not suitable for 
 
 We want here to log some figures in the TensorBoard, so we overload the default `val_plot_step()` method.
 ```python
-from mfai.torch.lightning_modules import SegmentationLightningModule
+from mfai.pytorch.lightning_modules import SegmentationLightningModule
 
 class MyProjectLightningModule(SegmentationLightningModule):
     def val_plot_step(self, batch_idx, y, y_hat):
@@ -314,7 +314,7 @@ The last parameter is an instance of the model's settings class and is a keyword
 Here is an example of how to instanciate the UNet model with a 3 channels input (like an RGB image) and 1 channel output with its default settings:
 
 ```python
-from mfai.torch.models import UNet
+from mfai.pytorch.models import UNet
 unet = UNet(in_channels=3, out_channels=1)
 ```
 
@@ -323,14 +323,14 @@ unet = UNet(in_channels=3, out_channels=1)
 In order to instanciate a HalfUNet model with a 2 channels inputs, 2 channels outputs and a custom settings (128 filters, ghost module):
 
 ```python
-from mfai.torch.models import HalfUNet
+from mfai.pytorch.models import HalfUNet
 halfunet = HalfUNet(in_channels=2, out_channels=2, settings=HalfUNet.settings_kls(num_filters=128, use_ghost=True))
 ```
 
 Finally, to instanciate a model with the mandatory **input_shape** parameter, here is an example with the UNETR++ model working on 2d spatial data (256x256) with 3 channels input and 1 channel output:
 
 ```python
-from mfai.torch.models import UNetRPP
+from mfai.pytorch.models import UNetRPP
 unetrpp = UNetRPP(in_channels=3, out_channels=1, input_shape=(256, 256))
 ```
 
@@ -340,7 +340,7 @@ You can use the **load_from_settings_file** function to instanciate a model with
 
 ```python
 from pathlib import Path
-from mfai.torch.models import load_from_settings_file
+from mfai.pytorch.models import load_from_settings_file
 model = load_from_settings_file(
     "HalfUNet",
     2,
@@ -356,7 +356,7 @@ model = load_from_settings_file(
 Our tests [illustrate how to export and later reload a model to/from onnx](tests/test_models.py#L91). Here is an example of how to export a model to onnx:
 
 ```python
-from mfai.torch import export_to_onnx, onnx_load_and_infer
+from mfai.pytorch import export_to_onnx, onnx_load_and_infer
 
 # Export the model to onnx assuming we have just trained a 'model'
 export_to_onnx(model, "model.onnx")
@@ -375,8 +375,8 @@ The lightning module can be instantiated and used in a forward pass as follows:
 ```python
 import torch
 from torch import Tensor
-from mfai.torch.models import UNet
-from mfai.torch.lightning_modules import SegmentationLightningModule
+from mfai.pytorch.models import UNet
+from mfai.pytorch.lightning_modules import SegmentationLightningModule
 
 arch = UNet(in_channels=1, out_channels=1, input_shape=[64, 64])
 loss = torch.nn.MSELoss()
@@ -414,8 +414,8 @@ Setting up lightning CLI is as easy as our `examples/main_cli_dummy.py` script:
 ```python
 from lightning.pytorch.cli import LightningCLI
 
-from mfai.torch.dummy_dataset import DummyDataModule
-from mfai.torch.lightning_modules import SegmentationLightningModule
+from mfai.pytorch.dummy_dataset import DummyDataModule
+from mfai.pytorch.lightning_modules import SegmentationLightningModule
 
 
 def cli_main():
@@ -441,7 +441,7 @@ For instance, see `mfai/config/cli_fit_test.yaml`:
 seed_everything: true
 model:
   model:
-    class_path: mfai.torch.models.Segformer
+    class_path: mfai.pytorch.models.Segformer
     init_args:
       in_channels: 2
       out_channels: 1
@@ -537,7 +537,7 @@ Customize every aspect of training via flags:
 
 
 <details>
-<summary>runai python examples/main_cli_dummy.py fit  --model.model.help mfai.torch.models.Segformer (click to expand)</summary>
+<summary>runai python examples/main_cli_dummy.py fit  --model.model.help mfai.pytorch.models.Segformer (click to expand)</summary>
 
 ```bash
 usage: main.py --model.model.in_channels IN_CHANNELS --model.model.out_channels OUT_CHANNELS
@@ -547,7 +547,7 @@ usage: main.py --model.model.in_channels IN_CHANNELS --model.model.out_channels 
                [--model.model.settings.decoder_dim DECODER_DIM]
                [--model.model.settings.num_downsampling_chans NUM_DOWNSAMPLING_CHANS]
 
-Help for --model.model.help=mfai.torch.models.Segformer
+Help for --model.model.help=mfai.pytorch.models.Segformer
 
 Segformer architecture with extra:
   --model.model.in_channels IN_CHANNELS
@@ -582,12 +582,12 @@ SegformerSettings(dims: Tuple[int, ...] = (32, 64, 160, 256), heads: Tuple[int, 
 To help you write correctly your config file, use `--print_config`:
 
 <details>
-<summary>runai python examples/main_cli_dummy.py fit  --model.model mfai.torch.models.Segformer --print_config (click to expand)</summary>
+<summary>runai python examples/main_cli_dummy.py fit  --model.model mfai.pytorch.models.Segformer --print_config (click to expand)</summary>
 
 ```bash
 model:
   model:
-    class_path: mfai.torch.models.Segformer
+    class_path: mfai.pytorch.models.Segformer
     init_args:
       in_channels: null
       out_channels: null
@@ -630,7 +630,7 @@ As our metrics are subclasses of the [torchmetrics.Metric](https://lightning.ai/
 ```python
 import torch
 from torch import Tensor
-from mfai.torch.metrics import CSINeighborood
+from mfai.pytorch.metrics import CSINeighborood
 
 preds = torch.rand(2, 2).softmax(dim=-1)
 target = torch.randint(2, (2, 2))

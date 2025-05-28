@@ -7,7 +7,7 @@ import pytest
 import torch
 from torch import Tensor
 
-from mfai.torch.metrics import FAR, FNR, PR_AUC, CSINeighborhood
+from mfai.pytorch.metrics import FAR, FNR, PR_AUC, CSINeighborhood
 
 
 @pytest.mark.parametrize("num_neighbors,expected_value", [(0, 0.36), (1, 0.91)])

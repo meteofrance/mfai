@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from mfai.torch.padding import pad_batch, undo_padding
+from mfai.pytorch.padding import pad_batch, undo_padding
 
 
 @pytest.mark.parametrize("dims", [2, 3])

@@ -9,6 +9,7 @@ authors = [
   {name="Theo Tournier", email="theo.tournier@meteo.fr"},
   {name="Lea Berthomier", email="lea.berthomier@meteo.fr"},
   {name="Bruno Pradel", email="bruno.pradel@meteo.fr"},
+  {name="Oscar Dewasmes", email="oscar.dewasmes@meteo.fr"},
 ]
 description = "Meteo-France's Artificial Intelligence Python Package"
 readme = "README.md"
@@ -24,11 +25,6 @@ keywords = ["PyTorch", "Deep Learning", "Artificial Intelligence", "Meteo-France
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
-
-# Package discovery is necessary to set package-data values. See:
-# https://stackoverflow.com/questions/76073605/add-py-typed-as-package-data-with-setuptools-in-pyproject-toml
-[tool.setuptools.packages.find]
-where = ["mfai"]
 
 # Include marker file `py.typed` to respect PEP561 and declare this package as type hinted
 [tool.setuptools.package-data]

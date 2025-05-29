@@ -1,6 +1,6 @@
 # NamedTensor
 
-The [**NamedTensor**](mfai/torch/namedtensor.py#L28) class is a wrapper around a PyTorch tensor with additionnal attributes and methods, it allows us to pass consistent object linking data and metadata with extra utility methods (concat along features dimension, flatten in place, ...).
+The [**NamedTensor**](mfai/pytorch/namedtensor.py#L28) class is a wrapper around a PyTorch tensor with additionnal attributes and methods, it allows us to pass consistent object linking data and metadata with extra utility methods (concat along features dimension, flatten in place, ...).
 
 Table of Contents:
 - [Attributes](#attributes)
@@ -205,4 +205,4 @@ collated_nt = NamedTensor.collate_fn([nt1, nt2])
 print(collated_nt)
 ```
 
-For more details, refer to the **NamedTensor** class in `mfai/torch/namedtensor.py`.
+For more details, refer to the **NamedTensor** class in `mfai/pytorch/namedtensor.py`.

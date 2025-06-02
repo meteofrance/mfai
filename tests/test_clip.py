@@ -1,7 +1,7 @@
 from lightning.pytorch.cli import ArgsType, LightningArgumentParser, LightningCLI
 
-from mfai.torch.dummy_dataset import DummyMultiModalDataModule
-from mfai.torch.lightning_modules.clip import CLIPLightningModule
+from mfai.pytorch.dummy_dataset import DummyMultiModalDataModule
+from mfai.pytorch.lightning_modules.clip import CLIPLightningModule
 
 
 class ClipCLI(LightningCLI):

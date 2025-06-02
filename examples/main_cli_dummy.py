@@ -1,7 +1,7 @@
 from lightning.pytorch.cli import LightningCLI
 
-from mfai.torch.dummy_dataset import DummyDataModule
-from mfai.torch.lightning_modules import SegmentationLightningModule
+from mfai.pytorch.dummy_dataset import DummyDataModule
+from mfai.pytorch.lightning_modules import SegmentationLightningModule
 
 
 def cli_main() -> None:

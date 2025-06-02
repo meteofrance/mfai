@@ -5,17 +5,17 @@ import pytest
 import torch
 from torch import Tensor, nn
 
-from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer
-from mfai.torch.models.clip import Clip, ClipSettings
-from mfai.torch.models.llms import GPT2, GPT2Settings
-from mfai.torch.models.llms.multimodal import (
+from mfai.pytorch.models.clip import Clip, ClipSettings
+from mfai.pytorch.models.llms import GPT2, GPT2Settings
+from mfai.pytorch.models.llms.multimodal import (
     MultiModalLM,
     MultiModalLMSettings,
     XAttMultiModalLM,
     XAttMultiModalLMSettings,
 )
-from mfai.torch.models.resnet import ResNet50, ResNet50Settings
-from mfai.torch.namedtensor import NamedTensor
+from mfai.pytorch.models.resnet import ResNet50, ResNet50Settings
+from mfai.pytorch.namedtensor import NamedTensor
+from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer
 
 
 def generate_text_simple(
@@ -121,6 +121,10 @@ def test_multimodal_llm(
         decoded_text = tokenizer.decode(out.squeeze(0).tolist())
         print(llm_backend, tokenizer.name(), decoded_text)
         assert decoded_text == expected_text[0 if not force_vision else 1]
+        model.freeze_llm()
+        model.unfreeze_llm()
+        model.freeze_vision()
+        model.unfreeze_vision()
 
 
 def test_multimodal_with_pretrained_clip() -> None:
@@ -228,3 +232,7 @@ def test_xatt_multimodal() -> None:
         decoded_text
         == "Sustine et abstine admittedly Psychiatry renewal Marx gall awaiting precedent5000atlmary"
     )
+    model.freeze_llm()
+    model.freeze_vision()
+    model.unfreeze_llm()
+    model.unfreeze_vision()

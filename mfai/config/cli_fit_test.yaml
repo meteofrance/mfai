@@ -1,7 +1,7 @@
 seed_everything: true
 model:
   model:
-    class_path: mfai.torch.models.segformer.Segformer
+    class_path: mfai.pytorch.models.segformer.Segformer
     init_args:
       in_channels: 2
       out_channels: 1

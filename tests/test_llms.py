@@ -6,7 +6,7 @@ import torch
 from test_multimodal_lm import generate_text_simple
 
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, Tokenizer
-from mfai.torch.models.llms import (
+from mfai.pytorch.models.llms import (
     GPT2,
     CrossAttentionGPT2,
     CrossAttGPT2Settings,

@@ -8,10 +8,45 @@ import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
 
-from mfai.torch.models.base import ModelType
-from mfai.torch.models.llms import GPT2, CrossAttentionGPT2, Llama2
-from mfai.torch.models.resnet import ResNet50, ResNet50Settings
-from mfai.torch.namedtensor import NamedTensor
+from mfai.pytorch.models.base import ModelType
+from mfai.pytorch.models.llms import GPT2, CrossAttentionGPT2, Llama2
+from mfai.pytorch.models.resnet import ResNet50, ResNet50Settings
+from mfai.pytorch.namedtensor import NamedTensor
+
+
+class FreezeMixin:
+    """
+    A Mixin for (un)freezing llm and vision stages
+    of a multimodal model
+    """
+
+    def freeze_llm(self) -> None:
+        """
+        Freeze the LLM layers (not the vision layers)
+        """
+        for param in self.backend.parameters():
+            param.requires_grad = False
+
+    def unfreeze_llm(self) -> None:
+        """
+        Unfreeze the LLM layers
+        """
+        for param in self.backend.parameters():
+            param.requires_grad = True
+
+    def freeze_vision(self) -> None:
+        """
+        Freeze the vision encoder layers
+        """
+        for param in self.vision_encoder.parameters():
+            param.requires_grad = False
+
+    def unfreeze_vision(self) -> None:
+        """
+        Unfreeze the vision encoder layers
+        """
+        for param in self.vision_encoder.parameters():
+            param.requires_grad = True
 
 
 @dataclass_json
@@ -49,7 +84,7 @@ class MultiModalLMSettings:
     resnet_checkpoint: None | Path = None
 
 
-class MultiModalLM(nn.Module):
+class MultiModalLM(FreezeMixin, nn.Module):
     """
     A multimodal LLM : vision/weather and txt façon Fuyu.
     Can use GPT2 or Llama2 as its LLM backend.
@@ -111,7 +146,7 @@ class MultiModalLM(nn.Module):
 
         if self.settings.vision_encoder == "linear":
             # One linear projection per feature/weather field
-            self.linear_vis_projs = nn.ModuleList(
+            self.vision_encoder: nn.ModuleList | ResNet50 = nn.ModuleList(
                 [
                     nn.Linear(spatial_dims, settings.emb_dim)
                     for _ in range(settings.vision_input_shape[3])
@@ -145,16 +180,16 @@ class MultiModalLM(nn.Module):
                         f"Checkpoint num_classes {checkpoint['num_classes']} does not match the model num_classes {num_classes}."
                     )
                 # Instantiate the ResNet50 encoder with the same parameters as the checkpoint
-                self.resnet50 = ResNet50(
+                self.vision_encoder = ResNet50(
                     num_channels=checkpoint["num_channels"],
                     num_classes=checkpoint["num_classes"],
                     settings=ResNet50Settings(**checkpoint["settings"]),
                 )
                 # Load the pretrained weights
-                self.resnet50.load_state_dict(checkpoint["model_state_dict"])
+                self.vision_encoder.load_state_dict(checkpoint["model_state_dict"])
 
             else:
-                self.resnet50 = ResNet50(
+                self.vision_encoder = ResNet50(
                     num_channels=num_channels,
                     num_classes=num_classes,
                 )
@@ -167,20 +202,6 @@ class MultiModalLM(nn.Module):
     @property
     def context_length(self) -> int:
         return self.backend.context_length
-
-    def freeze_llm(self) -> None:
-        """
-        Freeze the LLM layers (not the vision layers)
-        """
-        for param in self.backend.parameters():
-            param.requires_grad = False
-
-    def unfreeze_llm(self) -> None:
-        """
-        Unfreeze the LLM layers
-        """
-        for param in self.backend.parameters():
-            param.requires_grad = True
 
     def forward(self, text_tokens: Tensor, vision_input: NamedTensor) -> Tensor:
         # Linear projection of weather input data
@@ -200,7 +221,9 @@ class MultiModalLM(nn.Module):
                     timestep_tensor = timestep_tensor.flatten(1, 2)
                     if self.layer_norm_vis:
                         timestep_tensor = self.vis_layer_norms[i](timestep_tensor)
-                    timestep_embed.append(self.linear_vis_projs[i](timestep_tensor))
+                    timestep_embed.append(
+                        self.vision_encoder[i](timestep_tensor)  # type: ignore[index]
+                    )
 
                 timestep_embed_tensor = torch.stack(timestep_embed, dim=1)
                 vis_timesteps_embeds.append(timestep_embed_tensor)
@@ -213,7 +236,7 @@ class MultiModalLM(nn.Module):
             )
 
             # Resnet50 encoder
-            vis_embeds = self.resnet50(new_tensor)
+            vis_embeds = self.vision_encoder(new_tensor)
 
             # Normalize the output
             vis_embeds = vis_embeds / vis_embeds.norm(dim=1, keepdim=True)
@@ -278,7 +301,7 @@ class XAttMultiModalLMSettings:
     x_att_ratio: int = 4  # Cross attention layer ratio
 
 
-class XAttMultiModalLM(nn.Module):
+class XAttMultiModalLM(FreezeMixin, nn.Module):
     """
     A multimodal LLM with cross attention.
     """
@@ -315,34 +338,6 @@ class XAttMultiModalLM(nn.Module):
     @property
     def context_length(self) -> int:
         return self.backend.context_length
-
-    def freeze_llm(self) -> None:
-        """
-        Freeze the LLM layers (not the vision layers)
-        """
-        for param in self.backend.parameters():
-            param.requires_grad = False
-
-    def unfreeze_llm(self) -> None:
-        """
-        Unfreeze the LLM layers
-        """
-        for param in self.backend.parameters():
-            param.requires_grad = True
-
-    def freeze_vision(self) -> None:
-        """
-        Freeze the vision encoder layers
-        """
-        for param in self.vision_encoder.parameters():
-            param.requires_grad = False
-
-    def unfreeze_vision(self) -> None:
-        """
-        Unfreeze the vision encoder layers
-        """
-        for param in self.vision_encoder.parameters():
-            param.requires_grad = True
 
     def forward(self, text_tokens: Tensor, vision_input: NamedTensor) -> Tensor:
         # Reshape the vision input

@@ -11,7 +11,7 @@ import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
 
-from mfai.torch.models.base import ModelType
+from mfai.pytorch.models.base import ModelType
 
 ##########################################################################################################
 #######################################         GPT2           ###########################################
@@ -387,7 +387,7 @@ class CrossAttentionGPT2(nn.Module):
         self.drop_emb = nn.Dropout(settings.drop_rate)
 
         # Every 4 blocks is a cross attention block
-        trf_blocks: list[TransformerBlock|CrossAttentionTransformerBlock] = []
+        trf_blocks: list[TransformerBlock | CrossAttentionTransformerBlock] = []
         for i in range(settings.n_layers):
             if i % settings.cross_att_ratio == 0 and i != 0:
                 trf_blocks.append(CrossAttentionTransformerBlock(settings))
@@ -522,8 +522,8 @@ class MultiHeadAttentionPySDPALlama2(nn.Module):
     Mutli Head Attention using Pytorch's scaled_dot_product_attention
     """
 
-    cos: torch.Tensor
-    sin: torch.Tensor
+    cos: Tensor
+    sin: Tensor
 
     def __init__(
         self,

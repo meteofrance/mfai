@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from mfai.torch.namedtensor import NamedTensor
+from mfai.pytorch.namedtensor import NamedTensor
 
 
 def test_named_tensor() -> None:

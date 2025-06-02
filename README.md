@@ -90,7 +90,7 @@ Currently we support the following neural network architectures:
 | :---:   | :---: | :---: | :---: | :---: | :---: |
 | [GPT2](mfai/pytorch/models/llms/__init__.py#L182) | [openai paper](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf)  | (Batch, token_id) | No   | Imported and adapted from [Sebastian Raschka's book and github](https://github.com/rasbt/LLMs-from-scratch/) |
 | [Llama2](mfai/pytorch/models/llms/__init__.py#L432) | [arxiv link](https://arxiv.org/abs/2307.09288)  | (Batch, token_id) | No  | Imported and adapted from [Sebastian Raschka's book and github](https://github.com/rasbt/LLMs-from-scratch/) |
-| [Custom GPT-2 with Cross Attention](mfai/pytorch/models/llms/__init__.py#L372) | | (Batch, token_id, other) | No  | Inspired from [Sebastian Raschka's blog](https://magazine.sebastianraschka.com/p/understanding-multimodal-llms) |
+| [Custom Cross Attention MLM with resnet50 and Cross Attention GPT-2](mfai/pytorch/models/llms/__init__.py#L372) | | (Batch, token_id, other) | No  | Inspired from [Sebastian Raschka's blog](https://magazine.sebastianraschka.com/p/understanding-multimodal-llms) |
 
 ## Multimodal Language Models
 

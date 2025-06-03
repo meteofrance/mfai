@@ -423,18 +423,14 @@ class CrossAttentionGPT2(nn.Module):
         ]  # Keep only the last context_length tokens
         x = self.embed_tokens(token_ids)
         x = self.drop_emb(x)
-        print(f"CrossAttentionGPT2 forward: x shape {x.shape}, vision_inputs shape {vision_inputs.shape}")
         for b in self.trf_blocks:
             if isinstance(b, nn.Sequential):
                 for bb in b:
-                    print(f"x shape inside loop {x.shape}")
                     if isinstance(bb, CrossAttentionTransformerBlock):
                         # If the block is a cross attention block, we pass the vision inputs
                         x = bb(x, vision_inputs)
-                        print(f"CrossAttentionGPT2 forward: x shape after cross attention {x.shape}")
                     else:
                         x = bb(x)
-                        print(f"CrossAttentionGPT2 forward: x shape after self attention {x.shape}")
 
             else:
                 x = b(x)

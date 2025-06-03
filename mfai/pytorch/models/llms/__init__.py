@@ -174,6 +174,8 @@ class MultiHeadCrossAttentionPySDPA(nn.Module):
         # (2, b, num_heads, num_tokens_kv, head_dim) -> 2 times (b, num_heads, num_tokens_kv, head_dim)
         keys, values = kv
 
+        print(f"MultiHeadCrossAttentionPySDPA forward: q shape {q.shape}, keys shape {keys.shape}, values shape {values.shape}")
+
         use_dropout = 0.0 if not self.training else self.dropout
 
         context_vec = nn.functional.scaled_dot_product_attention(

@@ -354,7 +354,4 @@ class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
         # Normalize the output
         vis_embeds = vis_embeds / vis_embeds.norm(dim=1, keepdim=True)
         vis_embeds = vis_embeds.unsqueeze(1)
-        print(f"vis_embeds shape: {vis_embeds.shape}")
-        print(f"token_ids shape: {token_ids.shape}")
-
         return self.backend(token_ids, vis_embeds)

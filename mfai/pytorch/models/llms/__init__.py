@@ -426,11 +426,14 @@ class CrossAttentionGPT2(nn.Module):
         for b in self.trf_blocks:
             if isinstance(b, nn.Sequential):
                 for bb in b:
+                    print(f"x shape inside loop {x.shape}")
                     if isinstance(bb, CrossAttentionTransformerBlock):
                         # If the block is a cross attention block, we pass the vision inputs
                         x = bb(x, vision_inputs)
+                        print(f"CrossAttentionGPT2 forward: x shape after cross attention {x.shape}")
                     else:
                         x = bb(x)
+                        print(f"CrossAttentionGPT2 forward: x shape after self attention {x.shape}")
 
             else:
                 x = b(x)

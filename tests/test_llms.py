@@ -60,7 +60,7 @@ def test_cross_attention_gpt2() -> None:
         n_heads=1,
         n_layers=4,
         emb_dim=32,
-        cross_att_ratio=2,
+        x_att_ratio=2,
     )
     model = CrossAttentionGPT2(settings)
     token_ids = torch.rand(1, 16).long()

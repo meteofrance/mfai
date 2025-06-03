@@ -161,6 +161,8 @@ class MultiHeadCrossAttentionPySDPA(nn.Module):
 
         # (b, num_tokens_q, embed_dim) --> (b, num_tokens, d_out)
         q = self.q(x_q)
+        q = q.view(batch_size, num_tokens_q, self.num_heads, self.head_dim)
+        q = q.permute(0, 2, 1, 3)  # (b, num_heads, num_tokens_q, head_dim)
 
         # (b, num_tokens_kv, embed_dim) --> (b, num_tokens, 2 * d_out)
         kv = self.kv(x_kv)
@@ -174,14 +176,12 @@ class MultiHeadCrossAttentionPySDPA(nn.Module):
         # (2, b, num_heads, num_tokens_kv, head_dim) -> 2 times (b, num_heads, num_tokens_kv, head_dim)
         keys, values = kv
 
-        print(f"MultiHeadCrossAttentionPySDPA forward: q shape {q.shape}, keys shape {keys.shape}, values shape {values.shape}")
-
         use_dropout = 0.0 if not self.training else self.dropout
 
         context_vec = nn.functional.scaled_dot_product_attention(
-            q.unsqueeze(1).transpose(1, -1),
-            keys.transpose(1, -1),
-            values.transpose(1, -1),
+            q,
+            keys,
+            values,
             attn_mask=None,
             dropout_p=use_dropout,
         )
@@ -214,7 +214,7 @@ class GPT2Settings:
 @dataclass_json
 @dataclass(slots=True)
 class CrossAttGPT2Settings(GPT2Settings):
-    cross_att_ratio: int = 4  # Ratio of cross attention blocks, default one out of 4
+    x_att_ratio: int = 4  # Ratio of cross attention blocks, default one out of 4
 
 
 class TransformerBlock(nn.Module):
@@ -391,7 +391,7 @@ class CrossAttentionGPT2(nn.Module):
         # Build the transformer blocks, every nth block includes a cross attention block
         trf_blocks: list[TransformerBlock | nn.Sequential] = []
         for i in range(settings.n_layers):
-            if i % settings.cross_att_ratio == 0 and i != 0:
+            if i % settings.x_att_ratio == 0 and i != 0:
                 trf_blocks.append(
                     nn.Sequential(
                         TransformerBlock(settings),
@@ -401,7 +401,6 @@ class CrossAttentionGPT2(nn.Module):
             else:
                 trf_blocks.append(TransformerBlock(settings))
         self.trf_blocks = nn.Sequential(*trf_blocks)
-
         self.final_norm = LayerNorm(settings.emb_dim)
         self.out_head = nn.Linear(settings.emb_dim, vocab_size, bias=False)
 

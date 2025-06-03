@@ -307,7 +307,7 @@ class XAttMultiModalLMSettings:
         10,
     )
     x_att_ratio: int = 4  # Cross attention layer ratio
-    num_tokens_vision: int = 32  # Number of vision tokens
+    num_tokens_vision: int = 64  # Number of vision/weather tokens
 
 
 class XAttMultiModalLM(FreezeMLMMixin, nn.Module):

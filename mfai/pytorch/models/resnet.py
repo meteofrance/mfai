@@ -216,3 +216,52 @@ class ResNet50(torch.nn.Module):
         y_hat = y_hat.reshape(y_hat.shape[0], -1)
         y_hat = self.fc(y_hat)
         return y_hat
+
+
+@dataclass_json
+@dataclass(slots=True)
+class ResNet50MLMSettings:
+    encoder_depth: int = 5
+    encoder_weights: bool = False
+    encoder_stride: int = 32
+    num_tokens: int = 32 # number of tokens for the MLM vision encoder
+
+
+class ResNet50MLM(torch.nn.Module):
+    """
+    A ResNet50 model adapted for Multi-Modal Language Models (MLM).
+    This model outputs a sequence of feature vectors instead of a single classification output.
+    """
+    settings_kls = ResNet50MLMSettings
+
+    def __init__(
+        self,
+        num_channels: int = 3,
+        num_classes: int = 1000,
+        input_shape: Union[None, tuple[int, int]] = None,
+        settings: ResNet50MLMSettings = ResNet50MLMSettings(),
+    ):
+        super().__init__()
+
+        self.encoder = get_resnet_encoder(
+            name="resnet50",
+            in_channels=num_channels,
+            depth=settings.encoder_depth,
+            weights=settings.encoder_weights,
+            output_stride=settings.encoder_stride,
+        )
+        # For details, see:
+        # https://github.com/aladdinpersson/Machine-Learning-Collection/blob/master/ML/Pytorch/CNN_architectures/pytorch_resnet.py
+        self.avgpool = torch.nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = torch.nn.Linear(512 * 4, num_classes* settings.num_tokens)
+        self.num_classes = num_classes
+        self.settings = settings
+        self.num_channels = num_channels
+
+    def forward(self, x: Tensor) -> Tensor:
+        y_hat = self.encoder(x)[-1]
+        y_hat = self.avgpool(y_hat)
+        y_hat = y_hat.reshape(y_hat.shape[0], -1)
+        y_hat = self.fc(y_hat)
+        # batch, num_tokens, features = num_classes = embed_dim
+        return y_hat.reshape(y_hat.shape[0], self.settings.num_tokens, -1)

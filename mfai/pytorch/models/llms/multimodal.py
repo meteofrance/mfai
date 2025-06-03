@@ -10,7 +10,12 @@ from torch import Tensor, nn
 
 from mfai.pytorch.models.base import ModelType
 from mfai.pytorch.models.llms import GPT2, CrossAttentionGPT2, Llama2
-from mfai.pytorch.models.resnet import ResNet50, ResNet50Settings
+from mfai.pytorch.models.resnet import (
+    ResNet50,
+    ResNet50MLM,
+    ResNet50MLMSettings,
+    ResNet50Settings,
+)
 from mfai.pytorch.namedtensor import NamedTensor
 
 
@@ -302,6 +307,7 @@ class XAttMultiModalLMSettings:
         10,
     )
     x_att_ratio: int = 4  # Cross attention layer ratio
+    num_tokens_vision: int = 32  # Number of vision tokens
 
 
 class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
@@ -333,9 +339,10 @@ class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
         num_channels_viz = (
             settings.vision_input_shape[2] * settings.vision_input_shape[3]
         )
-        self.vision_encoder = ResNet50(
+        self.vision_encoder = ResNet50MLM(
             num_channels=num_channels_viz,
             num_classes=settings.emb_dim,
+            settings=ResNet50MLMSettings(num_tokens=settings.num_tokens_vision),
         )
 
     @property
@@ -353,5 +360,4 @@ class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
 
         # Normalize the output
         vis_embeds = vis_embeds / vis_embeds.norm(dim=1, keepdim=True)
-        vis_embeds = vis_embeds.unsqueeze(1)
         return self.backend(token_ids, vis_embeds)

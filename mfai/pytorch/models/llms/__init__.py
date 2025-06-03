@@ -422,6 +422,7 @@ class CrossAttentionGPT2(nn.Module):
         ]  # Keep only the last context_length tokens
         x = self.embed_tokens(token_ids)
         x = self.drop_emb(x)
+        print(f"CrossAttentionGPT2 forward: x shape {x.shape}, vision_inputs shape {vision_inputs.shape}")
         for b in self.trf_blocks:
             if isinstance(b, nn.Sequential):
                 for bb in b:

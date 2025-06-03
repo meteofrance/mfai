@@ -19,6 +19,7 @@ class FreezeMLMMixin:
     A Mixin for (un)freezing llm and vision stages
     of a multimodal model
     """
+
     backend: GPT2 | Llama2 | CrossAttentionGPT2
     vision_encoder: nn.Module
 

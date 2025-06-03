@@ -14,11 +14,13 @@ from mfai.pytorch.models.resnet import ResNet50, ResNet50Settings
 from mfai.pytorch.namedtensor import NamedTensor
 
 
-class FreezeMixin:
+class FreezeMLMMixin:
     """
     A Mixin for (un)freezing llm and vision stages
     of a multimodal model
     """
+    backend: GPT2 | Llama2 | CrossAttentionGPT2
+    vision_encoder: nn.Module
 
     def freeze_llm(self) -> None:
         """
@@ -84,7 +86,7 @@ class MultiModalLMSettings:
     resnet_checkpoint: None | Path = None
 
 
-class MultiModalLM(FreezeMixin, nn.Module):
+class MultiModalLM(FreezeMLMMixin, nn.Module):
     """
     A multimodal LLM : vision/weather and txt façon Fuyu.
     Can use GPT2 or Llama2 as its LLM backend.
@@ -301,7 +303,7 @@ class XAttMultiModalLMSettings:
     x_att_ratio: int = 4  # Cross attention layer ratio
 
 
-class XAttMultiModalLM(FreezeMixin, nn.Module):
+class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
     """
     A multimodal LLM with cross attention.
     """

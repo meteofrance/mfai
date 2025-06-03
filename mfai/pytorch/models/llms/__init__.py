@@ -143,7 +143,7 @@ class MultiHeadCrossAttentionPySDPA(nn.Module):
         super().__init__()
 
         if d_out % num_heads != 0:
-            raise Exception("ERROR: embed_dim is indivisible by num_heads")
+            raise ValueError("embed_dim is indivisible by num_heads")
 
         self.num_heads = num_heads
         self.context_length = context_length

@@ -391,7 +391,7 @@ class CrossAttentionGPT2(nn.Module):
         # Build the transformer blocks, every nth block includes a cross attention block
         trf_blocks: list[TransformerBlock | nn.Sequential] = []
         for i in range(settings.n_layers):
-            if i % settings.x_att_ratio == 0 and i != 0:
+            if i % settings.x_att_ratio == 0:
                 trf_blocks.append(
                     nn.Sequential(
                         TransformerBlock(settings),

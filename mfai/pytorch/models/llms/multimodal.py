@@ -206,7 +206,7 @@ class MultiModalLM(FreezeMLMMixin, nn.Module):
     def context_length(self) -> int:
         return self.backend.context_length
 
-    def forward(self, text_tokens: Tensor, vision_input: NamedTensor) -> Tensor:
+    def forward(self, token_ids: Tensor, vision_input: NamedTensor) -> Tensor:
         # Linear projection of weather input data
         vis_timesteps_embeds = []
         if self.settings.vision_encoder == "linear":
@@ -251,7 +251,7 @@ class MultiModalLM(FreezeMLMMixin, nn.Module):
                 f"Unknown vision encoder: {self.settings.vision_encoder}. Use 'linear' or 'resnet50'."
             )
 
-        text_embeds = self.backend.tok_emb(text_tokens)
+        text_embeds = self.backend.tok_emb(token_ids)
 
         vis_txt_embeds = torch.cat([vis_embeds, text_embeds], dim=1)
         if vis_txt_embeds.shape[1] > self.context_length:
@@ -260,7 +260,7 @@ class MultiModalLM(FreezeMLMMixin, nn.Module):
             )
             # Keep only the last context_length tokens, (batch_size, context_length)
             vis_txt_embeds = vis_txt_embeds[:, -self.context_length :]
-        embeds_idx = torch.arange(vis_txt_embeds.shape[1], device=text_tokens.device)
+        embeds_idx = torch.arange(vis_txt_embeds.shape[1], device=token_ids.device)
 
         if hasattr(self.backend, "pos_emb") and isinstance(
             self.backend.pos_emb, nn.Embedding
@@ -342,7 +342,7 @@ class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
     def context_length(self) -> int:
         return self.backend.context_length
 
-    def forward(self, text_tokens: Tensor, vision_input: NamedTensor) -> Tensor:
+    def forward(self, token_ids: Tensor, vision_input: NamedTensor) -> Tensor:
         # Reshape the vision input
         new_tensor = einops.rearrange(
             vision_input.tensor,
@@ -353,5 +353,5 @@ class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
 
         # Normalize the output
         vis_embeds = vis_embeds / vis_embeds.norm(dim=1, keepdim=True)
-
-        return self.backend(text_tokens, vis_embeds)
+        vis_embeds = vis_embeds.unsqueeze(1)
+        return self.backend(token_ids, vis_embeds)

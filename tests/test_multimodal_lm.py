@@ -201,11 +201,11 @@ def test_xatt_multimodal() -> None:
     vision_input_shape = (128, 128, 2, 1)
     settings = XAttMultiModalLMSettings(
         vision_input_shape=vision_input_shape,
-        n_heads=1,
+        n_heads=2,
         n_layers=4,
         emb_dim=32,
         context_length=32,
-        x_att_ratio=2,
+        x_att_ratio=1,
     )
     tokenizer = GPT2Tokenizer()
     model = XAttMultiModalLM(settings=settings, vocab_size=tokenizer.vocab_size)
@@ -230,7 +230,7 @@ def test_xatt_multimodal() -> None:
     decoded_text = tokenizer.decode(token_ids_out.squeeze(0).tolist())
     assert (
         decoded_text
-        == "Sustine et abstine admittedly Psychiatry renewal Marx gall awaiting precedent5000atlmary"
+        == "Sustine et abstinevictgp pure ojer payoff Standing Neo pled disciplines"
     )
     model.freeze_llm()
     model.freeze_vision()

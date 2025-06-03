@@ -9,9 +9,47 @@ from dataclasses_json import dataclass_json
 from torch import Tensor, nn
 
 from mfai.pytorch.models.base import ModelType
-from mfai.pytorch.models.llms import GPT2, Llama2
+from mfai.pytorch.models.llms import GPT2, CrossAttentionGPT2, Llama2
 from mfai.pytorch.models.resnet import ResNet50, ResNet50Settings
 from mfai.pytorch.namedtensor import NamedTensor
+
+
+class FreezeMLMMixin:
+    """
+    A Mixin for (un)freezing llm and vision stages
+    of a multimodal model
+    """
+
+    backend: GPT2 | Llama2 | CrossAttentionGPT2
+    vision_encoder: nn.Module
+
+    def freeze_llm(self) -> None:
+        """
+        Freeze the LLM layers (not the vision layers)
+        """
+        for param in self.backend.parameters():
+            param.requires_grad = False
+
+    def unfreeze_llm(self) -> None:
+        """
+        Unfreeze the LLM layers
+        """
+        for param in self.backend.parameters():
+            param.requires_grad = True
+
+    def freeze_vision(self) -> None:
+        """
+        Freeze the vision encoder layers
+        """
+        for param in self.vision_encoder.parameters():
+            param.requires_grad = False
+
+    def unfreeze_vision(self) -> None:
+        """
+        Unfreeze the vision encoder layers
+        """
+        for param in self.vision_encoder.parameters():
+            param.requires_grad = True
 
 
 @dataclass_json
@@ -49,7 +87,7 @@ class MultiModalLMSettings:
     resnet_checkpoint: None | Path = None
 
 
-class MultiModalLM(nn.Module):
+class MultiModalLM(FreezeMLMMixin, nn.Module):
     """
     A multimodal LLM : vision/weather and txt façon Fuyu.
     Can use GPT2 or Llama2 as its LLM backend.
@@ -111,7 +149,7 @@ class MultiModalLM(nn.Module):
 
         if self.settings.vision_encoder == "linear":
             # One linear projection per feature/weather field
-            self.linear_vis_projs = nn.ModuleList(
+            self.vision_encoder: nn.ModuleList | ResNet50 = nn.ModuleList(
                 [
                     nn.Linear(spatial_dims, settings.emb_dim)
                     for _ in range(settings.vision_input_shape[3])
@@ -145,16 +183,16 @@ class MultiModalLM(nn.Module):
                         f"Checkpoint num_classes {checkpoint['num_classes']} does not match the model num_classes {num_classes}."
                     )
                 # Instantiate the ResNet50 encoder with the same parameters as the checkpoint
-                self.resnet50 = ResNet50(
+                self.vision_encoder = ResNet50(
                     num_channels=checkpoint["num_channels"],
                     num_classes=checkpoint["num_classes"],
                     settings=ResNet50Settings(**checkpoint["settings"]),
                 )
                 # Load the pretrained weights
-                self.resnet50.load_state_dict(checkpoint["model_state_dict"])
+                self.vision_encoder.load_state_dict(checkpoint["model_state_dict"])
 
             else:
-                self.resnet50 = ResNet50(
+                self.vision_encoder = ResNet50(
                     num_channels=num_channels,
                     num_classes=num_classes,
                 )
@@ -167,20 +205,6 @@ class MultiModalLM(nn.Module):
     @property
     def context_length(self) -> int:
         return self.backend.context_length
-
-    def freeze_llm(self) -> None:
-        """
-        Freeze the LLM layers (not the vision layers)
-        """
-        for param in self.backend.parameters():
-            param.requires_grad = False
-
-    def unfreeze_llm(self) -> None:
-        """
-        Unfreeze the LLM layers
-        """
-        for param in self.backend.parameters():
-            param.requires_grad = True
 
     def forward(self, text_tokens: Tensor, vision_input: NamedTensor) -> Tensor:
         # Linear projection of weather input data
@@ -200,7 +224,9 @@ class MultiModalLM(nn.Module):
                     timestep_tensor = timestep_tensor.flatten(1, 2)
                     if self.layer_norm_vis:
                         timestep_tensor = self.vis_layer_norms[i](timestep_tensor)
-                    timestep_embed.append(self.linear_vis_projs[i](timestep_tensor))
+                    timestep_embed.append(
+                        self.vision_encoder[i](timestep_tensor)  # type: ignore[index]
+                    )
 
                 timestep_embed_tensor = torch.stack(timestep_embed, dim=1)
                 vis_timesteps_embeds.append(timestep_embed_tensor)
@@ -213,7 +239,7 @@ class MultiModalLM(nn.Module):
             )
 
             # Resnet50 encoder
-            vis_embeds = self.resnet50(new_tensor)
+            vis_embeds = self.vision_encoder(new_tensor)
 
             # Normalize the output
             vis_embeds = vis_embeds / vis_embeds.norm(dim=1, keepdim=True)
@@ -254,3 +280,78 @@ class MultiModalLM(nn.Module):
 
         # removes the vision part of the logits
         return logits[:, vis_embeds.shape[1] :]
+
+
+@dataclass_json
+@dataclass
+class XAttMultiModalLMSettings:
+    """
+    Settings for our cross attention multimodal language model.
+    """
+
+    emb_dim: int = 768  # Embedding dimension
+    context_length: int = 1024  # Context length
+    n_heads: int = 12  # Number of attention heads
+    n_layers: int = 12  # Number of layers
+    drop_rate: float = 0.1  # Dropout rate
+    qkv_bias: bool = False  # Query-Key-Value bias
+    vision_input_shape: tuple[int, int, int, int] = (
+        256,
+        256,
+        10,
+        10,
+    )
+    x_att_ratio: int = 4  # Cross attention layer ratio
+
+
+class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
+    """
+    A multimodal LLM with cross attention.
+    """
+
+    def __init__(
+        self,
+        settings: XAttMultiModalLMSettings = XAttMultiModalLMSettings(),
+        vocab_size: int = 50257,
+    ):
+        super().__init__()
+        self.settings = settings
+
+        # Initialize our X ATT GPT2 backend
+        self.backend = CrossAttentionGPT2(
+            CrossAttentionGPT2.settings_kls(
+                **{
+                    k: v
+                    for k, v in asdict(settings).items()
+                    if k in CrossAttentionGPT2.settings_kls.__dataclass_fields__
+                }
+            ),
+            vocab_size=vocab_size,
+        )
+
+        # Initialize our resnet50 vision encoder
+        num_channels_viz = (
+            settings.vision_input_shape[2] * settings.vision_input_shape[3]
+        )
+        self.vision_encoder = ResNet50(
+            num_channels=num_channels_viz,
+            num_classes=settings.emb_dim,
+        )
+
+    @property
+    def context_length(self) -> int:
+        return self.backend.context_length
+
+    def forward(self, text_tokens: Tensor, vision_input: NamedTensor) -> Tensor:
+        # Reshape the vision input
+        new_tensor = einops.rearrange(
+            vision_input.tensor,
+            "batch lat lon timestep features -> batch (timestep features) lat lon",
+        )
+
+        vis_embeds = self.vision_encoder(new_tensor)
+
+        # Normalize the output
+        vis_embeds = vis_embeds / vis_embeds.norm(dim=1, keepdim=True)
+
+        return self.backend(text_tokens, vis_embeds)

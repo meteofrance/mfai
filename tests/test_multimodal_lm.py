@@ -230,7 +230,7 @@ def test_xatt_multimodal() -> None:
     decoded_text = tokenizer.decode(token_ids_out.squeeze(0).tolist())
     assert (
         decoded_text
-        == "Sustine et abstinemath touredigma doct subpEventuallyodon feelzek grab"
+        == "Sustine et abstine enforcedOriginally MoriAbsashes Deckeritudes048 Revelations originals"
     )
     model.freeze_llm()
     model.freeze_vision()

@@ -239,7 +239,7 @@ class ResNet50MLM(torch.nn.Module):
         self,
         num_channels: int = 3,
         num_classes: int = 1000,
-        input_shape: Union[None, tuple[int, int]] = None,
+        input_shape: tuple[int, int] = None,
         settings: ResNet50MLMSettings = ResNet50MLMSettings(),
     ):
         super().__init__()

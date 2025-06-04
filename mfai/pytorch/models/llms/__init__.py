@@ -268,9 +268,17 @@ class CrossAttentionTransformerBlock(nn.Module):
 
     def __init__(self, settings: CrossAttGPT2Settings) -> None:
         super().__init__()
-        self.att = MultiHeadCrossAttentionPySDPA(
+        self.x_att = MultiHeadCrossAttentionPySDPA(
             d_in_q=settings.emb_dim,
             d_in_kv=settings.emb_dim,
+            d_out=settings.emb_dim,
+            context_length=settings.context_length,
+            num_heads=settings.n_heads,
+            dropout=settings.drop_rate,
+            qkv_bias=settings.qkv_bias,
+        )
+        self.att = MultiHeadAttentionPySDPA(
+            d_in=settings.emb_dim,
             d_out=settings.emb_dim,
             context_length=settings.context_length,
             num_heads=settings.n_heads,
@@ -286,7 +294,12 @@ class CrossAttentionTransformerBlock(nn.Module):
         # Shortcut connection for attention block
         shortcut = x_q
         x_q = self.norm1(x_q)
-        x = self.att(x_q, x_kv)  # Shape [batch_size, num_tokens, emb_size]
+
+        x_q = self.att(x_q)
+        x_q += shortcut
+        shortcut = x_q
+
+        x = self.x_att(x_q, x_kv)  # Shape [batch_size, num_tokens, emb_size]
         x = self.drop_shortcut(x)
         x = x + shortcut  # Add the original input back
 
@@ -389,15 +402,10 @@ class CrossAttentionGPT2(nn.Module):
         self.drop_emb = nn.Dropout(settings.drop_rate)
 
         # Build the transformer blocks, every nth block includes a cross attention block
-        trf_blocks: list[TransformerBlock | nn.Sequential] = []
+        trf_blocks: list[TransformerBlock | CrossAttentionTransformerBlock] = []
         for i in range(settings.n_layers):
-            if i % settings.x_att_ratio == 0 and i != 0:
-                trf_blocks.append(
-                    nn.Sequential(
-                        TransformerBlock(settings),
-                        CrossAttentionTransformerBlock(settings),
-                    )
-                )
+            if i % settings.x_att_ratio == 0:
+                trf_blocks.append(CrossAttentionTransformerBlock(settings))
             else:
                 trf_blocks.append(TransformerBlock(settings))
         self.trf_blocks = nn.Sequential(*trf_blocks)
@@ -424,14 +432,9 @@ class CrossAttentionGPT2(nn.Module):
         x = self.embed_tokens(token_ids)
         x = self.drop_emb(x)
         for b in self.trf_blocks:
-            if isinstance(b, nn.Sequential):
-                for bb in b:
-                    if isinstance(bb, CrossAttentionTransformerBlock):
-                        # If the block is a cross attention block, we pass the vision inputs
-                        x = bb(x, vision_inputs)
-                    else:
-                        x = bb(x)
-
+            if isinstance(b, CrossAttentionTransformerBlock):
+                # If the block is a cross attention block, we pass the vision inputs
+                x = b(x, vision_inputs)
             else:
                 x = b(x)
 

@@ -14,6 +14,7 @@
       - deeplabv3/deeplabv3+
       - halfunet
       - unet/customunet
+      - Resnet50, with a specific last stage to output multiple tokens (for MLM)
     - Vision Transformers:
       - segformer
       - swinunetr
@@ -22,10 +23,10 @@
     - Graph Neural Networks:
       - HiLAM
       - GraphLAM
-    - Large Language Models:
+    - Large Language Models (LLMs):
       - GPT2 (classical and cross attention version)
       - LLama2
-    - Multimodal Language Models:
+    - Multimodal Language Models (MLMs):
       - A custom Fuyu inspired model
       - A custom model combining a Resnet50 vision encoder with a cross attention GPT2
     - Vision Language Models:
@@ -66,7 +67,8 @@ Currently we support the following neural network architectures:
 | [DeepLabV3Plus](mfai/pytorch/models/deeplabv3.py#L1) | [arxiv link](https://arxiv.org/abs/1802.02611) | (Batch, features, Height, Width)    | Yes | As a very large receptive field versus U-Net, Half-Unet, ... | Front Detection, Nowcasting |
 | [HalfUNet](mfai/pytorch/models/half_unet.py#L1) | [researchgate link](https://www.researchgate.net/publication/361186968_Half-UNet_A_Simplified_U-Net_Architecture_for_Medical_Image_Segmentation) | (Batch, features, Height, Width)    | Yes | In prod/oper on [Espresso](https://www.mdpi.com/2674-0494/2/4/25) V2 with 128 filters and standard conv blocks instead of ghost | Satellite channels to rain estimation |
 | [UNet](mfai/pytorch/models/unet.py#L1) | [arxiv link](https://arxiv.org/pdf/1505.04597.pdf) | (Batch, features, Height, Width)    | Yes | Vanilla U-Net | Radar image cleaning |
-| [CustomUNet](mfai/pytorch/models/unet.py#L1) | [arxiv link](https://arxiv.org/pdf/1505.04597.pdf) | (Batch, features, Height, Width)    | Yes | U-Net like architecture with a variety of resnet encoder choices | Radar image cleaning
+| [CustomUNet](mfai/pytorch/models/unet.py#L1) | [arxiv link](https://arxiv.org/pdf/1505.04597.pdf) | (Batch, features, Height, Width)    | Yes | U-Net like architecture with a variety of resnet encoder choices | Radar image cleaning |
+| [custom Resnet50](mfai/pytorch/models/resnet.py#L230) | [arxiv link](https://arxiv.org/pdf/1512.03385) | (Batch, features, Height, Width)    | Yes | A slightly customised Resnet50 outputing (batch, num_tokens, embed_dim) for multimodal LM weather/image encoding | Weather + text to text in MLMs |
 
 
 ## Vision Transformers

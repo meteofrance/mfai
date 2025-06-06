@@ -91,6 +91,9 @@ class MultiModalLMSettings:
     # Optional checkpoint path for the resnet encoder
     resnet_checkpoint: None | Path = None
 
+    # number of tokens for ResNet50 encoder
+    resnet_num_tokens: int = 32
+
 
 class MultiModalLM(FreezeMLMMixin, nn.Module):
     """
@@ -154,7 +157,7 @@ class MultiModalLM(FreezeMLMMixin, nn.Module):
 
         if self.settings.vision_encoder == "linear":
             # One linear projection per feature/weather field
-            self.vision_encoder: nn.ModuleList | ResNet50 = nn.ModuleList(
+            self.vision_encoder: nn.ModuleList | ResNet50 | ResNet50MLM = nn.ModuleList(
                 [
                     nn.Linear(spatial_dims, settings.emb_dim)
                     for _ in range(settings.vision_input_shape[3])
@@ -197,9 +200,10 @@ class MultiModalLM(FreezeMLMMixin, nn.Module):
                 self.vision_encoder.load_state_dict(checkpoint["model_state_dict"])
 
             else:
-                self.vision_encoder = ResNet50(
+                self.vision_encoder = ResNet50MLM(
                     num_channels=num_channels,
                     num_classes=num_classes,
+                    settings=ResNet50MLMSettings(num_tokens=settings.resnet_num_tokens),
                 )
 
         else:
@@ -249,7 +253,9 @@ class MultiModalLM(FreezeMLMMixin, nn.Module):
             # Normalize the output
             vis_embeds = vis_embeds / vis_embeds.norm(dim=1, keepdim=True)
 
-            vis_embeds = vis_embeds.unsqueeze(1)
+            # resnet50mlm already outputs an extra token dim
+            if isinstance(self.vision_encoder, ResNet50):
+                vis_embeds = vis_embeds.unsqueeze(1)
 
         else:
             raise ValueError(

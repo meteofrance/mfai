@@ -365,5 +365,5 @@ class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
         vis_embeds = self.vision_encoder(new_tensor)
 
         # Normalize the output
-        vis_embeds = vis_embeds / vis_embeds.norm(dim=1, keepdim=True)
+        vis_embeds = vis_embeds / vis_embeds.norm(dim=2, keepdim=True)
         return self.backend(token_ids, vis_embeds)

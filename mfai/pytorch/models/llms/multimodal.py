@@ -250,13 +250,13 @@ class MultiModalLM(FreezeMLMMixin, nn.Module):
             # Resnet50 encoder
             vis_embeds = self.vision_encoder(new_tensor)
 
-            # Normalize the output
-            vis_embeds = vis_embeds / vis_embeds.norm(dim=1, keepdim=True)
-
             # resnet50mlm already outputs an extra token dim
             if isinstance(self.vision_encoder, ResNet50):
                 vis_embeds = vis_embeds.unsqueeze(1)
-
+            
+            # Normalize the output along embedding dimension
+            vis_embeds = vis_embeds / vis_embeds.norm(dim=2, keepdim=True)
+        
         else:
             raise ValueError(
                 f"Unknown vision encoder: {self.settings.vision_encoder}. Use 'linear' or 'resnet50'."

@@ -258,6 +258,7 @@ class ResNet50MLM(torch.nn.Module):
         self.num_classes = num_classes
         self.settings = settings
         self.num_channels = num_channels
+        self.pos_embedding = nn.Parameter(torch.randn(settings.num_tokens, num_classes))
 
     def forward(self, x: Tensor) -> Tensor:
         y_hat = self.encoder(x)[-1]
@@ -265,4 +266,7 @@ class ResNet50MLM(torch.nn.Module):
         y_hat = y_hat.reshape(y_hat.shape[0], -1)
         y_hat = self.fc(y_hat)
         # batch, num_tokens, features = num_classes = embed_dim
-        return y_hat.reshape(y_hat.shape[0], self.settings.num_tokens, -1)
+        return (
+            y_hat.reshape(y_hat.shape[0], self.settings.num_tokens, self.num_classes)
+            + self.pos_embedding
+        )

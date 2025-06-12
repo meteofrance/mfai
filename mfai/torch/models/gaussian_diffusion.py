@@ -6,7 +6,7 @@ from functools import partial, wraps
 from collections import namedtuple
 from multiprocessing import cpu_count
 from packaging import version
-from typing import Union
+from typing import Union, Tuple
 
 import torch
 from torch import nn, einsum

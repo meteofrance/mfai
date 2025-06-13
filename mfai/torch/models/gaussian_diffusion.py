@@ -586,16 +586,16 @@ def sigmoid_beta_schedule(timesteps, start = -3, end = 3, tau = 1, clamp_min = 1
 @dataclass_json
 @dataclass(slots=True)
 class GaussianDiffusionSettings:
-    timesteps: int = 1000,
-    sampling_timesteps: Union[None, int] = None, #either none of number of timesteps sampled?
-    objective: str = 'pred_v',
-    beta_schedule: str = 'sigmoid',
-    schedule_fn_kwargs: dict = dict(),
-    ddim_sampling_eta: tuple[float, ...] = 0.,
-    auto_normalize: bool = True,
-    offset_noise_strength: tuple[float, ...] = 0.,  # https://www.crosslabs.org/blog/diffusion-with-offset-noise
-    min_snr_loss_weight: bool = False, # https://arxiv.org/abs/2303.09556
-    min_snr_gamma: tuple[int, ...] = 5,
+    timesteps: int = 1000
+    sampling_timesteps: Union[None, int] = None #either none of number of timesteps sampled?
+    objective: str = 'pred_v'
+    beta_schedule: str = 'sigmoid'
+    schedule_fn_kwargs: dict = dict()
+    ddim_sampling_eta: tuple[float, ...] = 0.
+    auto_normalize: bool = True
+    offset_noise_strength: tuple[float, ...] = 0.  # https://www.crosslabs.org/blog/diffusion-with-offset-noise
+    min_snr_loss_weight: bool = False # https://arxiv.org/abs/2303.09556
+    min_snr_gamma: tuple[int, ...] = 5
     immiscible: bool = False
 
 class GaussianDiffusion(Module):

@@ -225,7 +225,9 @@ class ResNet50MLMSettings:
     encoder_weights: bool = False
     encoder_stride: int = 32
     num_tokens: int = 32  # number of tokens for the MLM vision encoder
-    pos_embedding: bool = False  # add an extra set of parameters for absolute pos embedding
+    pos_embedding: bool = (
+        False  # add an extra set of parameters for absolute pos embedding
+    )
     mlp_output: bool = False  # If True an mlp is added after the last decoder, otherwise only one linear layer
 
 

@@ -30,6 +30,9 @@ from ema_pytorch import EMA
 
 from accelerate import Accelerator
 
+from dataclasses_json import dataclass_json
+from dataclasses import dataclass
+
 # constants
 
 ModelPrediction =  namedtuple('ModelPrediction', ['pred_noise', 'pred_x_start'])
@@ -580,6 +583,8 @@ def sigmoid_beta_schedule(timesteps, start = -3, end = 3, tau = 1, clamp_min = 1
     betas = 1 - (alphas_cumprod[1:] / alphas_cumprod[:-1])
     return torch.clip(betas, 0, 0.999)
 
+@dataclass_json
+@dataclass(slots=True)
 class GaussianDiffusionSettings:
     timesteps: int = 1000,
     sampling_timesteps: Union[None, int] = None, #either none of number of timesteps sampled?
@@ -594,11 +599,12 @@ class GaussianDiffusionSettings:
     immiscible: bool = False
 
 class GaussianDiffusion(Module):
+    settings_kls = GaussianDiffusionSettings
     def __init__(
         self,
         in_channels: int,
         out_channels: int,
-        settings: GaussianDiffusionSettings,
+        settings: GaussianDiffusionSettings = GaussianDiffusionSettings(),
         input_shape: Union[None, Tuple[int, int]] = None,
         *args,
         **kwargs,

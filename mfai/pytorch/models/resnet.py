@@ -268,7 +268,7 @@ class ResNet50MLM(torch.nn.Module):
             )
 
         if self.settings.mlp_output:
-            self.fc = torch.nn.Sequential(
+            self.fc: torch.nn.Linear | torch.nn.Sequential = torch.nn.Sequential(
                 torch.nn.Linear(512 * 4, 512 * 4 * 2),
                 torch.nn.GELU(),
                 torch.nn.Linear(512 * 4 * 2, 512 * 4),

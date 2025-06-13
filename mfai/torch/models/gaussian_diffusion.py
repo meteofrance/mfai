@@ -1,37 +1,31 @@
-import math
 import copy
+import math
+from collections import namedtuple
+from dataclasses import dataclass, field
+from functools import partial, wraps
+from multiprocessing import cpu_count
 from pathlib import Path
 from random import random
-from functools import partial, wraps
-from collections import namedtuple
-from multiprocessing import cpu_count
-from packaging import version
-from typing import Union, Tuple
+from typing import Tuple, Union
 
 import torch
-from torch import nn, einsum
 import torch.nn.functional as F
-from torch.nn import Module, ModuleList
-from torch.amp import autocast
-from torch.utils.data import Dataset, DataLoader
-
-from torch.optim import Adam
-
-from torchvision import transforms as T, utils
-
+from accelerate import Accelerator
+from dataclasses_json import dataclass_json
 from einops import rearrange, reduce, repeat
 from einops.layers.torch import Rearrange
-
-from scipy.optimize import linear_sum_assignment
-
-from PIL import Image
-from tqdm.auto import tqdm
 from ema_pytorch import EMA
-
-from accelerate import Accelerator
-
-from dataclasses_json import dataclass_json
-from dataclasses import dataclass, field
+from packaging import version
+from PIL import Image
+from scipy.optimize import linear_sum_assignment
+from torch import einsum, nn
+from torch.amp import autocast
+from torch.nn import Module, ModuleList
+from torch.optim import Adam
+from torch.utils.data import DataLoader, Dataset
+from torchvision import transforms as T
+from torchvision import utils
+from tqdm.auto import tqdm
 
 # constants
 

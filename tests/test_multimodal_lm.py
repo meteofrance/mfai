@@ -253,7 +253,7 @@ def test_fuyu_with_mlp_and_pos_embedding() -> None:
             inject_vision_each_stage=True,
             resnet_mlp_output=True,
             resnet_pos_embedding=True,
-            resnet_num_tokens= 1,
+            resnet_num_tokens=1,
         ),
         vocab_size=tokenizer.vocab_size,
     )
@@ -275,7 +275,10 @@ def test_fuyu_with_mlp_and_pos_embedding() -> None:
         vision_input=vision_input,
     )
     decoded_text = tokenizer.decode(out.squeeze(0).tolist())
-    assert decoded_text == "Sustine et abstine Quartzinternetmulti AdultgreSQL hire reflectscephaloutsidemas" 
+    assert (
+        decoded_text
+        == "Sustine et abstine Quartzinternetmulti AdultgreSQL hire reflectscephaloutsidemas"
+    )
     model.freeze_llm()
     model.unfreeze_llm()
     model.freeze_vision()

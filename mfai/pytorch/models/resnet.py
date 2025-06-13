@@ -270,9 +270,9 @@ class ResNet50MLM(torch.nn.Module):
         if self.settings.mlp_output:
             self.fc = torch.nn.Sequential(
                 torch.nn.Linear(512 * 4, 512 * 4 * 2),
-                torch.nn.ReLU(),
+                torch.nn.GELU(),
                 torch.nn.Linear(512 * 4 * 2, 512 * 4),
-                torch.nn.ReLU(),
+                torch.nn.GELU(),
                 torch.nn.Linear(512 * 4, num_classes * settings.num_tokens),
             )
         else:

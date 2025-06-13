@@ -31,7 +31,7 @@ from ema_pytorch import EMA
 from accelerate import Accelerator
 
 from dataclasses_json import dataclass_json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 # constants
 
@@ -590,7 +590,7 @@ class GaussianDiffusionSettings:
     sampling_timesteps: Union[None, int] = None #either none of number of timesteps sampled?
     objective: str = 'pred_v'
     beta_schedule: str = 'sigmoid'
-    schedule_fn_kwargs: dict = dict()
+    schedule_fn_kwargs: dict = field(default_factory=dict)
     ddim_sampling_eta: tuple[float, ...] = 0.
     auto_normalize: bool = True
     offset_noise_strength: tuple[float, ...] = 0.  # https://www.crosslabs.org/blog/diffusion-with-offset-noise

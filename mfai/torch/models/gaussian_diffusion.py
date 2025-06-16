@@ -18,7 +18,7 @@ from ema_pytorch import EMA
 from packaging import version
 from PIL import Image
 from scipy.optimize import linear_sum_assignment
-from torch import einsum, nn
+from torch import einsum, nn, Tensor
 from torch.amp import autocast
 from torch.nn import Module, ModuleList
 from torch.optim import Adam
@@ -54,7 +54,7 @@ def divisible_by(number: int, denom: int) -> bool:
     return (number % denom) == 0
 
 
-def identity(t: Any, *args, **kwargs) -> Any:
+def identity(t: Any, *args: Any, **kwargs: Any) -> Any:
     return t
 
 
@@ -77,7 +77,7 @@ def num_to_groups(num: int, divisor: int) -> list[int]:
     return arr
 
 
-def convert_image_to_fn(img_type: str, image: torch.Tensor) -> torch.Tensor:
+def convert_image_to_fn(img_type: str, image: Tensor) -> Tensor:
     print(type(image))
     if image.mode != img_type:
         return image.convert(img_type)
@@ -699,13 +699,18 @@ class GaussianDiffusion(Module):
         min_snr_gamma = settings.min_snr_gamma
         immiscible = settings.immiscible
 
+        # what to do of image_size?
+
+        # for now we define image_size from input_shape, forcing both terms to be equal
+
+        assert input_shape[0] == input_shape[1]
+        image_size = input_shape[0]
+
         # defining the model
 
         # the philosophy being adopted here is that whilst in denoising-diffusion-pytorch,
         # the model is defined outside of the diffusion class, here we define it inside
         # whilst getting the characteristics necessary to define it inside the settings.
-
-        # before adding to the settings we simply use the readme example
 
         model = Unet(
             dim=64, dim_mults=(1, 2, 4, 8), flash_attn=True, channels=in_channels
@@ -716,13 +721,6 @@ class GaussianDiffusion(Module):
         # for now we want channels in and out to be identical
 
         assert in_channels == out_channels
-
-        # what to do of image_size?
-
-        # for now we define image_size from input_shape, forcing both terms to be equal
-
-        assert input_shape[0] == input_shape[1]
-        image_size = input_shape[0]
 
         # code from denoising-diffusion-pytorch
 

@@ -6,7 +6,7 @@ from functools import partial, wraps
 from multiprocessing import cpu_count
 from pathlib import Path
 from random import random
-from typing import Tuple, Union
+from typing import Tuple, Union, Any, Iterable, Generator, Callable
 
 import torch
 import torch.nn.functional as F
@@ -34,41 +34,41 @@ ModelPrediction = namedtuple("ModelPrediction", ["pred_noise", "pred_x_start"])
 # helpers functions
 
 
-def exists(x):
+def exists(x: Any) -> bool:
     return x is not None
 
 
-def default(val, d):
+def default(val: Any, d: Any) -> Any:
     if exists(val):
         return val
     return d() if callable(d) else d
 
 
-def cast_tuple(t, length=1):
+def cast_tuple(t: Any, length: int=1) -> tuple:
     if isinstance(t, tuple):
         return t
     return (t,) * length
 
 
-def divisible_by(numer, denom):
-    return (numer % denom) == 0
+def divisible_by(number: int, denom: int) -> bool:
+    return (number % denom) == 0
 
 
-def identity(t, *args, **kwargs):
+def identity(t: Any, *args, **kwargs) -> Any:
     return t
 
 
-def cycle(dl):
+def cycle(dl: Iterable) -> Generator:
     while True:
         for data in dl:
             yield data
 
 
-def has_int_squareroot(num):
+def has_int_squareroot(num: int) -> bool:
     return (math.sqrt(num) ** 2) == num
 
 
-def num_to_groups(num, divisor):
+def num_to_groups(num: int, divisor: int) -> list[int]:
     groups = num // divisor
     remainder = num % divisor
     arr = [divisor] * groups
@@ -77,7 +77,8 @@ def num_to_groups(num, divisor):
     return arr
 
 
-def convert_image_to_fn(img_type, image):
+def convert_image_to_fn(img_type: str, image: torch.Tensor) -> torch.Tensor:
+    print(type(image))
     if image.mode != img_type:
         return image.convert(img_type)
     return image
@@ -86,32 +87,32 @@ def convert_image_to_fn(img_type, image):
 # normalization functions
 
 
-def normalize_to_neg_one_to_one(img):
+def normalize_to_neg_one_to_one(img: Any) -> Any:
     return img * 2 - 1
 
 
-def unnormalize_to_zero_to_one(t):
+def unnormalize_to_zero_to_one(t: Any) -> Any:
     return (t + 1) * 0.5
 
 
 # small helper modules
 
 
-def Upsample(dim, dim_out=None):
+def Upsample(dim: int, dim_out: int=None) -> nn.Sequential:
     return nn.Sequential(
         nn.Upsample(scale_factor=2, mode="nearest"),
         nn.Conv2d(dim, default(dim_out, dim), 3, padding=1),
     )
 
 
-def Downsample(dim, dim_out=None):
+def Downsample(dim: int, dim_out: int=None) -> nn.Sequential:
     return nn.Sequential(
         Rearrange("b c (h p1) (w p2) -> b (c p1 p2) h w", p1=2, p2=2),
         nn.Conv2d(dim * 4, default(dim_out, dim), 1),
     )
 
 
-def once(fn):
+def once(fn: Callable) -> Callable:
     called = False
 
     @wraps(fn)

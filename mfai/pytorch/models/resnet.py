@@ -225,6 +225,10 @@ class ResNet50MLMSettings:
     encoder_weights: bool = False
     encoder_stride: int = 32
     num_tokens: int = 32  # number of tokens for the MLM vision encoder
+    pos_embedding: bool = (
+        False  # add an extra set of parameters for absolute pos embedding
+    )
+    mlp_output: bool = False  # If True an mlp is added after the last decoder, otherwise only one linear layer
 
 
 class ResNet50MLM(torch.nn.Module):
@@ -254,15 +258,38 @@ class ResNet50MLM(torch.nn.Module):
         # For details, see:
         # https://github.com/aladdinpersson/Machine-Learning-Collection/blob/master/ML/Pytorch/CNN_architectures/pytorch_resnet.py
         self.avgpool = torch.nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = torch.nn.Linear(512 * 4, num_classes * settings.num_tokens)
         self.num_classes = num_classes
         self.settings = settings
         self.num_channels = num_channels
+
+        if self.settings.pos_embedding:
+            self.pos_embedding = nn.Parameter(
+                torch.randn(settings.num_tokens, num_classes)
+            )
+
+        if self.settings.mlp_output:
+            self.fc: torch.nn.Linear | torch.nn.Sequential = torch.nn.Sequential(
+                torch.nn.Linear(512 * 4, 512 * 4 * 2),
+                torch.nn.GELU(),
+                torch.nn.Linear(512 * 4 * 2, 512 * 4),
+                torch.nn.GELU(),
+                torch.nn.Linear(512 * 4, num_classes * settings.num_tokens),
+            )
+        else:
+            self.fc = torch.nn.Linear(512 * 4, num_classes * settings.num_tokens)
 
     def forward(self, x: Tensor) -> Tensor:
         y_hat = self.encoder(x)[-1]
         y_hat = self.avgpool(y_hat)
         y_hat = y_hat.reshape(y_hat.shape[0], -1)
         y_hat = self.fc(y_hat)
+
         # batch, num_tokens, features = num_classes = embed_dim
-        return y_hat.reshape(y_hat.shape[0], self.settings.num_tokens, -1)
+        y_hat = y_hat.reshape(
+            y_hat.shape[0], self.settings.num_tokens, self.num_classes
+        )
+
+        if self.settings.pos_embedding:
+            y_hat += self.pos_embedding
+
+        return y_hat

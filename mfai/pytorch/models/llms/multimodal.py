@@ -94,6 +94,12 @@ class MultiModalLMSettings:
     # number of tokens for ResNet50 encoder
     resnet_num_tokens: int = 32
 
+    # absolute positional embedding for the vision encoder
+    resnet_pos_embedding: bool = False
+
+    # mlp output for the vision encoder
+    resnet_mlp_output: bool = False
+
 
 class MultiModalLM(FreezeMLMMixin, nn.Module):
     """
@@ -203,7 +209,11 @@ class MultiModalLM(FreezeMLMMixin, nn.Module):
                 self.vision_encoder = ResNet50MLM(
                     num_channels=num_channels,
                     num_classes=num_classes,
-                    settings=ResNet50MLMSettings(num_tokens=settings.resnet_num_tokens),
+                    settings=ResNet50MLMSettings(
+                        num_tokens=settings.resnet_num_tokens,
+                        pos_embedding=settings.resnet_pos_embedding,
+                        mlp_output=settings.resnet_mlp_output,
+                    ),
                 )
 
         else:

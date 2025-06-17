@@ -290,6 +290,6 @@ class ResNet50MLM(torch.nn.Module):
         )
 
         if self.settings.pos_embedding:
-            return y_hat + self.pos_embedding
-        else:
-            return y_hat
+            y_hat += self.pos_embedding
+
+        return y_hat

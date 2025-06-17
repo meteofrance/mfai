@@ -1,3 +1,4 @@
+axial-attention==0.6.1
 monai>=1.4.0
 onnx>=1.17.0
 onnxruntime>=1.20.1

@@ -430,7 +430,7 @@ class NamedTensor(TensorWrapper):
         Create a new NamedTensor with the same names and feature names as another NamedTensor
         and a tensor of the same shape as the input tensor.
         """
-        return NamedTensor(tensor, other.names.copy(), other.feature_names.copy())
+        return NamedTensor(tensor, other.names.copy(), other.feature_names.copy(), other.feature_dim_name)
 
     @staticmethod
     def expand_to_batch_like(tensor: Tensor, other: "NamedTensor") -> "NamedTensor":

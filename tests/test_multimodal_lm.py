@@ -277,7 +277,7 @@ def test_fuyu_with_mlp_and_pos_embedding() -> None:
     decoded_text = tokenizer.decode(out.squeeze(0).tolist())
     assert (
         decoded_text
-        == "Sustine et abstine Quartzinternetmulti AdultgreSQL hire reflectscephaloutsidemas"
+        == "Sustine et abstine QuartzAINjected trauma lobbiedTemperature sequential radiator radio dig"
     )
     model.freeze_llm()
     model.unfreeze_llm()

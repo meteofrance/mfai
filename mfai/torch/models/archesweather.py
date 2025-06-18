@@ -541,7 +541,7 @@ class CondBasicLayer(EarthSpecificLayer):
 
 @dataclass_json
 @dataclass
-class ArchesWeatherConfig:
+class ArchesWeatherSettings:
     """ArchesWeather configuration class"""
 
     emb_dim: int = 192
@@ -575,7 +575,7 @@ class ArchesWeather(BaseModel):
 
     onnx_supported: bool = False
     supported_num_spatial_dims: Tuple = (2,)
-    settings_kls = ArchesWeatherConfig
+    settings_kls = ArchesWeatherSettings
     model_type = ModelType.PANGU
     features_last: bool = False
     register: bool = True
@@ -585,7 +585,7 @@ class ArchesWeather(BaseModel):
         in_channels: int,
         out_channels: int,
         input_shape: Tuple[int, ...],
-        archesweather_config: ArchesWeatherConfig = ArchesWeatherConfig(),
+        archesweather_config: ArchesWeatherSettings = ArchesWeatherSettings(),
     ) -> None:
         """
         Args:
@@ -758,7 +758,7 @@ class ArchesWeather(BaseModel):
                 plevels=plevels,
             )
     @property
-    def settings(self) -> ArchesWeatherConfig:
+    def settings(self) -> ArchesWeatherSettings:
         return self.archesweather_config
 
     @property

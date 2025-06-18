@@ -1,11 +1,11 @@
-from lightning.pytorch.cli import ArgsType, LightningCLI
+from lightning.pytorch.cli import ArgsType, LightningArgumentParser, LightningCLI
 
-from mfai.torch.dummy_dataset import DummyMultiModalDataModule
-from mfai.torch.lightning_modules.clip import CLIPLightningModule
+from mfai.pytorch.dummy_dataset import DummyMultiModalDataModule
+from mfai.pytorch.lightning_modules.clip import CLIPLightningModule
 
 
 class ClipCLI(LightningCLI):
-    def add_arguments_to_parser(self, parser):
+    def add_arguments_to_parser(self, parser: LightningArgumentParser) -> None:
         parser.link_arguments(
             "model.settings.emb_dim",
             "model.settings.image_encoder.init_args.num_classes",
@@ -20,7 +20,7 @@ class ClipCLI(LightningCLI):
         )
 
 
-def cli_main(args: ArgsType = None):
+def cli_main(args: ArgsType = None) -> None:
     cli = ClipCLI(
         CLIPLightningModule,
         DummyMultiModalDataModule,
@@ -30,7 +30,7 @@ def cli_main(args: ArgsType = None):
     cli.trainer.fit(cli.model, datamodule=cli.datamodule)
 
 
-def test_clip_training():
+def test_clip_training() -> None:
     cli_main(
         [
             "--config=mfai/config/clip.yaml",

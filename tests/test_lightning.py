@@ -1,4 +1,5 @@
 import tempfile
+from typing import Literal
 
 import lightning.pytorch as L
 import pytest
@@ -7,9 +8,9 @@ from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
 from lightning.pytorch.cli import ArgsType, LightningCLI
 from lightning.pytorch.loggers import TensorBoardLogger
 
-from mfai.torch.dummy_dataset import DummyDataModule
-from mfai.torch.lightning_modules import SegmentationLightningModule
-from mfai.torch.models.unet import UNet
+from mfai.pytorch.dummy_dataset import DummyDataModule
+from mfai.pytorch.lightning_modules import SegmentationLightningModule
+from mfai.pytorch.models.unet import UNet
 
 
 @pytest.mark.parametrize(
@@ -21,7 +22,11 @@ from mfai.torch.models.unet import UNet
         ("regression", 2, 1),
     ],
 )
-def test_lightning_training_loop(config):
+def test_lightning_training_loop(
+    config: tuple[
+        Literal["binary", "multiclass", "multilabel", "regression"], int, int
+    ],
+) -> None:
     """
     Checks that our lightning module is trainable in all 4 modes.
     """
@@ -30,7 +35,7 @@ def test_lightning_training_loop(config):
     arch = UNet(
         in_channels=in_channels,
         out_channels=out_channels,
-        input_shape=[IMG_SIZE, IMG_SIZE],
+        input_shape=(IMG_SIZE, IMG_SIZE),
     )
 
     loss = torch.nn.CrossEntropyLoss() if task == "multiclass" else torch.nn.MSELoss()
@@ -59,14 +64,14 @@ def test_lightning_training_loop(config):
         trainer.test(model, datamodule.test_dataloader(), ckpt_path="best")
 
 
-def cli_main(args: ArgsType = None):
+def cli_main(args: ArgsType = None) -> None:
     cli = LightningCLI(
         SegmentationLightningModule, DummyDataModule, args=args, run=False
     )
     cli.trainer.fit(cli.model, datamodule=cli.datamodule)
 
 
-def test_cli():
+def test_cli() -> None:
     cli_main(
         [
             "--model.model=Segformer",
@@ -81,5 +86,5 @@ def test_cli():
     )
 
 
-def test_cli_with_config_file():
+def test_cli_with_config_file() -> None:
     cli_main(["--config=mfai/config/cli_fit_test.yaml", "--trainer.fast_dev_run=True"])

@@ -22,14 +22,15 @@ from monai.networks.blocks.dynunet_block import (
 )
 from monai.networks.layers.utils import get_norm_layer
 from monai.utils import optional_import
+from torch import Tensor
 from torch.nn.functional import scaled_dot_product_attention
 
 from .base import BaseModel, ModelType
 
 
 def _trunc_normal_(
-    tensor: torch.Tensor, mean: float, std: float, a: float, b: float
-) -> torch.Tensor:
+    tensor: Tensor, mean: float, std: float, a: float, b: float
+) -> Tensor:
     # Cut & paste from PyTorch official master until it's in a few official releases - RW
     # Method based on https://people.sc.fsu.edu/~jburkardt/presentations/truncated_normal.pdf
     def norm_cdf(x: float) -> float:
@@ -67,12 +68,12 @@ def _trunc_normal_(
 
 
 def trunc_normal_(
-    tensor: torch.Tensor,
+    tensor: Tensor,
     mean: float = 0.0,
     std: float = 1.0,
     a: float = -2.0,
     b: float = 2.0,
-) -> torch.Tensor:
+) -> Tensor:
     r"""Fills the input Tensor with values drawn from a truncated
     normal distribution. The values are effectively drawn from the
     normal distribution :math:`\mathcal{N}(\text{mean}, \text{std}^2)`
@@ -85,7 +86,7 @@ def trunc_normal_(
     should be adjusted to match the range of mean, std args.
 
     Args:
-        tensor: an n-dimensional `torch.Tensor`
+        tensor: an n-dimensional `Tensor`
         mean: the mean of the normal distribution
         std: the standard deviation of the normal distribution
         a: the minimum cutoff value
@@ -114,7 +115,7 @@ class LayerNorm(nn.Module):
             raise NotImplementedError
         self.normalized_shape = (normalized_shape,)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         if self.data_format == "channels_last":
             return F.layer_norm(
                 x, self.normalized_shape, self.weight, self.bias, self.eps
@@ -204,7 +205,7 @@ class TransformerBlock(nn.Module):
         if pos_embed:
             self.pos_embed = nn.Parameter(torch.zeros(1, input_size, hidden_size))
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         if self.spatial_dims == 2:
             B, C, H, W = x.shape
             x = x.reshape(B, C, H * W).permute(0, 2, 1)
@@ -227,7 +228,7 @@ class TransformerBlock(nn.Module):
         return x
 
 
-def init_(tensor: torch.Tensor) -> torch.Tensor:
+def init_(tensor: Tensor) -> Tensor:
     dim = tensor.shape[-1]
     std = 1 / math.sqrt(dim)
     tensor.uniform_(-std, std)
@@ -289,7 +290,7 @@ class EPA(nn.Module):
         self.attn_drop = nn.Dropout(channel_attn_drop)
         self.attn_drop_2 = nn.Dropout(spatial_attn_drop)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         # TODO: fully optimize this function for each attention code
         B, N, C = x.shape
 
@@ -366,7 +367,7 @@ class EPA(nn.Module):
 einops, _ = optional_import("einops")
 
 
-class UnetrPPEncoder(nn.Module):
+class UNetRPPEncoder(nn.Module):
     def __init__(
         self,
         input_size: list[int] = [32 * 32 * 32, 16 * 16 * 16, 8 * 8 * 8, 4 * 4 * 4],
@@ -435,7 +436,7 @@ class UnetrPPEncoder(nn.Module):
                     )
                 )
             self.stages.append(nn.Sequential(*stage_blocks))
-        self.hidden_states: list[torch.Tensor] = []
+        self.hidden_states: list[Tensor] = []
         self.apply(self._init_weights)
         self.spatial_dims = spatial_dims
 
@@ -448,9 +449,7 @@ class UnetrPPEncoder(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
-    def forward_features(
-        self, x: torch.Tensor
-    ) -> tuple[torch.Tensor, list[torch.Tensor]]:
+    def forward_features(self, x: Tensor) -> tuple[Tensor, list[Tensor]]:
         hidden_states = []
 
         x = self.downsample_layers[0](x)
@@ -469,12 +468,12 @@ class UnetrPPEncoder(nn.Module):
             hidden_states.append(x)
         return x, hidden_states
 
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, list[torch.Tensor]]:
+    def forward(self, x: Tensor) -> tuple[Tensor, list[Tensor]]:
         x, hidden_states = self.forward_features(x)
         return x, hidden_states
 
 
-class UnetrUpBlock(nn.Module):
+class UNetRUpBlock(nn.Module):
     def __init__(
         self,
         spatial_dims: int,
@@ -643,9 +642,7 @@ class UnetrUpBlock(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
-    def forward(
-        self, inp: torch.Tensor, skip: torch.Tensor | None = None
-    ) -> torch.Tensor:
+    def forward(self, inp: Tensor, skip: Tensor | None = None) -> Tensor:
         """
         Forward pass:
         1. Upsampling using bi/tri-linear OR Conv{2,3}dTranspose
@@ -661,7 +658,7 @@ class UnetrUpBlock(nn.Module):
 
 @dataclass_json
 @dataclass
-class UNETRPPSettings:
+class UNetRPPSettings:
     hidden_size: int = 256
     num_heads_encoder: int = 4
     num_heads_decoder: int = 4
@@ -687,15 +684,15 @@ class UNETRPPSettings:
     attention_code: str = "torch"
 
 
-class UNETRPP(BaseModel):
+class UNetRPP(BaseModel):
     """
-    UNETR++ based on: "Shaker et al.,
+    UNetR++ based on: "Shaker et al.,
     UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation"
     """
 
     onnx_supported = False
     supported_num_spatial_dims = (2, 3)
-    settings_kls = UNETRPPSettings
+    settings_kls = UNetRPPSettings
     model_type = ModelType.VISION_TRANSFORMER
     features_last: bool = False
     register: bool = True
@@ -705,7 +702,7 @@ class UNETRPP(BaseModel):
         in_channels: int,
         out_channels: int,
         input_shape: Tuple[int, ...],
-        settings: UNETRPPSettings = UNETRPPSettings(),
+        settings: UNetRPPSettings = UNetRPPSettings(),
     ) -> None:
         """
         Args:
@@ -779,7 +776,7 @@ class UNETRPP(BaseModel):
         ]
         h_size = settings.hidden_size
 
-        self.unetr_pp_encoder = UnetrPPEncoder(
+        self.unetr_pp_encoder = UNetRPPEncoder(
             input_size=encoder_input_size,
             dims=[
                 h_size // 8,
@@ -804,7 +801,7 @@ class UNETRPP(BaseModel):
             stride=1,
             norm_name=settings.norm_name,
         )
-        self.decoder5 = UnetrUpBlock(
+        self.decoder5 = UNetRUpBlock(
             spatial_dims=settings.spatial_dims,
             in_channels=settings.hidden_size,
             out_channels=settings.hidden_size // 2,
@@ -817,7 +814,7 @@ class UNETRPP(BaseModel):
             attention_code=settings.attention_code,
             num_heads=settings.num_heads_decoder,
         )
-        self.decoder4 = UnetrUpBlock(
+        self.decoder4 = UNetRUpBlock(
             spatial_dims=settings.spatial_dims,
             in_channels=settings.hidden_size // 2,
             out_channels=settings.hidden_size // 4,
@@ -830,7 +827,7 @@ class UNETRPP(BaseModel):
             attention_code=settings.attention_code,
             num_heads=settings.num_heads_decoder,
         )
-        self.decoder3 = UnetrUpBlock(
+        self.decoder3 = UNetRUpBlock(
             spatial_dims=settings.spatial_dims,
             in_channels=settings.hidden_size // 4,
             out_channels=settings.hidden_size // 8,
@@ -843,7 +840,7 @@ class UNETRPP(BaseModel):
             attention_code=settings.attention_code,
             num_heads=settings.num_heads_decoder,
         )
-        self.decoder2 = UnetrUpBlock(
+        self.decoder2 = UNetRUpBlock(
             spatial_dims=settings.spatial_dims,
             in_channels=settings.hidden_size // 8,
             out_channels=settings.hidden_size // 16,
@@ -876,14 +873,14 @@ class UNETRPP(BaseModel):
             self.check_required_attributes()
 
     @property
-    def settings(self) -> UNETRPPSettings:
+    def settings(self) -> UNetRPPSettings:
         return self._settings
 
     @property
     def num_spatial_dims(self) -> int:
         return self.settings.spatial_dims
 
-    def proj_feat(self, x: torch.Tensor) -> torch.Tensor:
+    def proj_feat(self, x: Tensor) -> Tensor:
         if self.spatial_dims == 2:
             x = x.view(
                 x.size(0), self.feat_size[0], self.feat_size[1], self.hidden_size
@@ -904,7 +901,7 @@ class UNETRPP(BaseModel):
 
         return x
 
-    def forward(self, x_in: torch.Tensor) -> torch.Tensor | list[torch.Tensor]:
+    def forward(self, x_in: Tensor) -> Tensor | list[Tensor]:
         _, hidden_states = self.unetr_pp_encoder(x_in)
         convBlock = self.encoder1(x_in)
 

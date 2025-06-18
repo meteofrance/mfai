@@ -5,14 +5,14 @@ import torch
 from dataclasses_json import dataclass_json
 from monai.networks.blocks.dynunet_block import UnetResBlock
 from monai.networks.nets.swin_unetr import SwinUNETR as MonaiSwinUNETR
-from torch import nn
+from torch import Tensor, nn
 
 from .base import ModelABC, ModelType
 
 
 @dataclass_json
 @dataclass(slots=True)
-class SwinUNETRSettings:
+class SwinUNetRSettings:
     depths: tuple[int, ...] = (2, 2, 2, 2)
     num_heads: tuple[int, ...] = (3, 6, 12, 24)
     feature_size: int = 24
@@ -50,7 +50,7 @@ class UpsampleBlock(nn.Module):
             norm_name=norm_name,
         )
 
-    def forward(self, inp: torch.Tensor, skip: torch.Tensor) -> torch.Tensor:
+    def forward(self, inp: Tensor, skip: Tensor) -> Tensor:
         out = self.upsampler(inp)
         # concat along the channels/features dimension
         out = torch.cat((out, skip), dim=1)
@@ -58,13 +58,13 @@ class UpsampleBlock(nn.Module):
         return out
 
 
-class SwinUNETR(ModelABC, MonaiSwinUNETR):
+class SwinUNetR(ModelABC, MonaiSwinUNETR):
     """
     Wrapper around the SwinUNETR from MONAI.
     Instanciated in 2D for now, with a custom decoder.
     """
 
-    settings_kls = SwinUNETRSettings
+    settings_kls = SwinUNetRSettings
     onnx_supported: bool = False
     supported_num_spatial_dims: tuple[int, ...] = (2,)
     features_last: bool = False
@@ -77,7 +77,7 @@ class SwinUNETR(ModelABC, MonaiSwinUNETR):
         in_channels: int,
         out_channels: int,
         input_shape: tuple[int, ...] = (1,),
-        settings: SwinUNETRSettings = SwinUNETRSettings(),
+        settings: SwinUNetRSettings = SwinUNetRSettings(),
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -137,5 +137,5 @@ class SwinUNETR(ModelABC, MonaiSwinUNETR):
         self.check_required_attributes()
 
     @property
-    def settings(self) -> SwinUNETRSettings:
+    def settings(self) -> SwinUNetRSettings:
         return self._settings

@@ -6,9 +6,10 @@ import torchvision
 import torchvision.transforms as T
 from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
+from torch import Tensor
 
-from mfai.torch.lightning_modules import SegmentationLightningModule
-from mfai.torch.models import UNet
+from mfai.pytorch.lightning_modules import SegmentationLightningModule
+from mfai.pytorch.models import UNet
 
 BASE_PATH = Path("/scratch/shared/OxfordPets/")
 IMG_SIZE = 64
@@ -17,7 +18,7 @@ IMG_SIZE = 64
 class GetClass(object):
     """Retrieves target values for Oxford Pets classification task."""
 
-    def __call__(self, y):
+    def __call__(self, y: Tensor) -> Tensor:
         return (y * 255 - 1).long()
 
 

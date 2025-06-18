@@ -10,7 +10,7 @@ from .base import AutoPaddingModel, ModelABC, ModelType
 # Load all models from the torch.models package
 # which are ModelABC subclasses and have the register attribute set to True
 registry: dict[str, type[ModelABC]] = dict()
-package: ModuleType = importlib.import_module("mfai.torch.models")
+package: ModuleType = importlib.import_module("mfai.pytorch.models")
 for module_info in pkgutil.walk_packages(package.__path__, package.__name__ + "."):
     module: ModuleType = importlib.import_module(module_info.name)
     for object_name, kls in module.__dict__.items():
@@ -63,7 +63,7 @@ def load_from_settings_file(
     # Check that the class is ModelABC subclass
     if not (issubclass(model_kls, ModelABC) and issubclass(model_kls, nn.Module)):
         raise ValueError(
-            f"Model {model_name} is not a subclass of mfai.torch.models.ModelABC and torch.nn.Module."
+            f"Model {model_name} is not a subclass of mfai.pytorch.models.ModelABC and torch.nn.Module."
         )
 
     # Check that the model's settings class is wrapped by the @dataclass_json decorator by looking for the schema attribute

@@ -5,9 +5,10 @@ import torch
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 from dataclasses_json import dataclass_json
+from torch import Tensor
 from torchvision.models.resnet import BasicBlock, Bottleneck, ResNet
 
-from mfai.torch.models import utils
+from mfai.pytorch.models import utils
 
 ##########################################################################################################
 ######################################         Encoders           ########################################
@@ -38,7 +39,7 @@ class ResNetEncoder(ResNet):
             self.layer4,
         ]
 
-    def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
+    def forward(self, x: Tensor) -> list[Tensor]:
         features = []
         for i in range(self._depth + 1):
             x = self.stages[i](x)
@@ -209,9 +210,86 @@ class ResNet50(torch.nn.Module):
         self.settings = settings
         self.num_channels = num_channels
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         y_hat = self.encoder(x)[-1]
         y_hat = self.avgpool(y_hat)
         y_hat = y_hat.reshape(y_hat.shape[0], -1)
         y_hat = self.fc(y_hat)
+        return y_hat
+
+
+@dataclass_json
+@dataclass(slots=True)
+class ResNet50MLMSettings:
+    encoder_depth: int = 5
+    encoder_weights: bool = False
+    encoder_stride: int = 32
+    num_tokens: int = 32  # number of tokens for the MLM vision encoder
+    pos_embedding: bool = (
+        False  # add an extra set of parameters for absolute pos embedding
+    )
+    mlp_output: bool = False  # If True an mlp is added after the last decoder, otherwise only one linear layer
+
+
+class ResNet50MLM(torch.nn.Module):
+    """
+    A ResNet50 model adapted for Multi-Modal Language Models (MLM).
+    This model outputs a sequence of feature vectors instead of a single classification output.
+    """
+
+    settings_kls = ResNet50MLMSettings
+
+    def __init__(
+        self,
+        num_channels: int = 3,
+        num_classes: int = 1000,
+        input_shape: tuple[int, int] = None,
+        settings: ResNet50MLMSettings = ResNet50MLMSettings(),
+    ):
+        super().__init__()
+
+        self.encoder = get_resnet_encoder(
+            name="resnet50",
+            in_channels=num_channels,
+            depth=settings.encoder_depth,
+            weights=settings.encoder_weights,
+            output_stride=settings.encoder_stride,
+        )
+        # For details, see:
+        # https://github.com/aladdinpersson/Machine-Learning-Collection/blob/master/ML/Pytorch/CNN_architectures/pytorch_resnet.py
+        self.avgpool = torch.nn.AdaptiveAvgPool2d((1, 1))
+        self.num_classes = num_classes
+        self.settings = settings
+        self.num_channels = num_channels
+
+        if self.settings.pos_embedding:
+            self.pos_embedding = nn.Parameter(
+                torch.randn(settings.num_tokens, num_classes)
+            )
+
+        if self.settings.mlp_output:
+            self.fc: torch.nn.Linear | torch.nn.Sequential = torch.nn.Sequential(
+                torch.nn.Linear(512 * 4, 512 * 4 * 2),
+                torch.nn.GELU(),
+                torch.nn.Linear(512 * 4 * 2, 512 * 4),
+                torch.nn.GELU(),
+                torch.nn.Linear(512 * 4, num_classes * settings.num_tokens),
+            )
+        else:
+            self.fc = torch.nn.Linear(512 * 4, num_classes * settings.num_tokens)
+
+    def forward(self, x: Tensor) -> Tensor:
+        y_hat = self.encoder(x)[-1]
+        y_hat = self.avgpool(y_hat)
+        y_hat = y_hat.reshape(y_hat.shape[0], -1)
+        y_hat = self.fc(y_hat)
+
+        # batch, num_tokens, features = num_classes = embed_dim
+        y_hat = y_hat.reshape(
+            y_hat.shape[0], self.settings.num_tokens, self.num_classes
+        )
+
+        if self.settings.pos_embedding:
+            y_hat += self.pos_embedding
+
         return y_hat

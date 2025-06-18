@@ -4,6 +4,7 @@ from typing import Tuple
 import einops
 import torch
 import torch.nn as nn
+from torch import Tensor
 
 
 def patch_first_conv(
@@ -29,7 +30,7 @@ def patch_first_conv(
 
     if not pretrained:
         first_conv.weight = nn.parameter.Parameter(
-            torch.Tensor(
+            Tensor(
                 first_conv.out_channels,
                 new_in_channels // first_conv.groups,
                 *first_conv.kernel_size,
@@ -42,7 +43,7 @@ def patch_first_conv(
         first_conv.weight = nn.parameter.Parameter(new_weight)
 
     else:
-        new_weight = torch.Tensor(
+        new_weight = Tensor(
             first_conv.out_channels,
             new_in_channels // first_conv.groups,
             *first_conv.kernel_size,
@@ -92,32 +93,32 @@ class AbsolutePosEmdebding(nn.Module):
                 requires_grad=True,
             )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         return x + self.pos_embedding
 
 
-def init_(tensor: torch.Tensor, dim_idx: int = -1) -> torch.Tensor:
+def init_(tensor: Tensor, dim_idx: int = -1) -> Tensor:
     dim: int = tensor.shape[dim_idx]
     std: float = 1 / math.sqrt(dim)
     tensor.uniform_(-std, std)
     return tensor
 
 
-def features_last_to_second(x: torch.Tensor) -> torch.Tensor:
+def features_last_to_second(x: Tensor) -> Tensor:
     """
     Moves features from the last dimension to the second dimension.
     """
     return einops.rearrange(x, "b x y n -> b n x y").contiguous()
 
 
-def features_second_to_last(y: torch.Tensor) -> torch.Tensor:
+def features_second_to_last(y: Tensor) -> Tensor:
     """
     Moves features from the second dimension to the last dimension.
     """
     return einops.rearrange(y, "b n x y -> b x y n").contiguous()
 
 
-def expand_to_batch(x: torch.Tensor, batch_size: int) -> torch.Tensor:
+def expand_to_batch(x: Tensor, batch_size: int) -> Tensor:
     """
     Expand tensor with initial batch dimension
     """

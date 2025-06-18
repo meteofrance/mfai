@@ -8,6 +8,7 @@ from urllib.error import URLError
 import torch
 import torch.nn as nn
 import torchvision.models as models
+from torch import Tensor
 
 
 class PerceptualLoss(torch.nn.Module):
@@ -26,7 +27,7 @@ class PerceptualLoss(torch.nn.Module):
         alpha_style: float = 0,
         alpha_feature: float = 1,
     ) -> None:
-        r"""Class that computes the Perceptual Loss based on selected Network.
+        """Class that computes the Perceptual Loss based on selected Network.
             For more details : See Johnson et al. - Perceptual losses for real-time style transfer and super-resolution.
             (https://arxiv.org/pdf/1603.08155)
 
@@ -55,8 +56,6 @@ class PerceptualLoss(torch.nn.Module):
             perceptual_loss = perceptual_loss_class(inputs, targets)
 
         ```
-
-
         """
         super().__init__()
 
@@ -94,7 +93,7 @@ class PerceptualLoss(torch.nn.Module):
         self._set_network()
 
     def _set_blocks(self) -> list:
-        r"""Set the blocks of layers from the neural network
+        """Set the blocks of layers from the neural network
 
         Return :
             blocks: (list)
@@ -131,15 +130,15 @@ class PerceptualLoss(torch.nn.Module):
         return blocks
 
     def _downscale(
-        self, x: torch.Tensor, scale_times: int = 1, mode: str = "bilinear"
-    ) -> torch.Tensor:
+        self, x: Tensor, scale_times: int = 1, mode: str = "bilinear"
+    ) -> Tensor:
         for _ in range(scale_times):
             x = torch.nn.functional.interpolate(x, scale_factor=0.5, mode=mode)
 
         return x
 
     def _set_network(self) -> None:
-        r"""Set the VGG16 from torchvision.
+        """Set the VGG16 from torchvision.
 
         Trained version obtained : "https://download.pytorch.org/models/vgg16-397923af.pth"
         """
@@ -156,11 +155,11 @@ class PerceptualLoss(torch.nn.Module):
 
         self.blocks = torch.nn.ModuleList(blocks)
 
-    def _forward_net_single_img(self, x: torch.Tensor) -> tuple:
-        r"""Forward the Network features and styles for a single image.
+    def _forward_net_single_img(self, x: Tensor) -> tuple:
+        """Forward the Network features and styles for a single image.
 
         Arguments :
-            x: (torch.Tensor)
+            x: (Tensor)
 
         Return :
             features : (list)
@@ -204,12 +203,12 @@ class PerceptualLoss(torch.nn.Module):
         return features, styles
 
     def compute_perceptual_features(
-        self, x: torch.Tensor, return_features_and_styles: bool = False
+        self, x: Tensor, return_features_and_styles: bool = False
     ) -> tuple:
-        r"""Compute the features of a single image.
+        """Compute the features of a single image.
 
         Arguments :
-            x: (torch.Tensor)
+            x: (Tensor)
             return_features_and_styles: (bool)
 
         Example :
@@ -227,9 +226,7 @@ class PerceptualLoss(torch.nn.Module):
 
                 # The features of the targets are computed and compared to the input features
                 perceptual_loss = perceptual_loss_class(targets)
-
         ```
-
         """
         features = []
         styles = []
@@ -258,12 +255,12 @@ class PerceptualLoss(torch.nn.Module):
             return None, None
 
     def _perceptual_loss_given_features_and_target(
-        self, x: torch.Tensor, features_y: list, styles_y: list
-    ) -> torch.Tensor:
-        r"""Computes the Perceptual Loss given features and a target image.
+        self, x: Tensor, features_y: list, styles_y: list
+    ) -> Tensor:
+        """Computes the Perceptual Loss given features and a target image.
 
         Arguments :
-            x: (torch.Tensor)
+            x: (Tensor)
             features_y : (list)
             styles_y : (list)
 
@@ -287,17 +284,16 @@ class PerceptualLoss(torch.nn.Module):
                 loss += self.alpha_style * loss_style
         return loss
 
-    def _perceptual_loss_given_input_and_target(
-        self, x: torch.Tensor, y: torch.Tensor
-    ) -> torch.Tensor:
-        r"""Computes the Perceptual Loss between two images
+    def _perceptual_loss_given_input_and_target(self, x: Tensor, y: Tensor) -> Tensor:
+        """Computes the Perceptual Loss between two images
 
         Arguments :
-            x: (torch.Tensor)
-            y: (torch.Tensor)
+            x: (Tensor)
+            y: (Tensor)
 
         Return :
-            loss : (troch.Tensor)"""
+            loss : (troch.Tensor)
+        """
 
         features_x, styles_x = self._forward_net_single_img(x)
 
@@ -305,15 +301,14 @@ class PerceptualLoss(torch.nn.Module):
             x=y, features_y=features_x, styles_y=styles_x
         )
 
-    def forward(self, x: torch.Tensor, y: torch.Tensor | None = None) -> torch.Tensor:
+    def forward(self, x: Tensor, y: Tensor | None = None) -> Tensor:
         r"""Computes the Perceptual loss between two images
         Arguments :
-            x: (torch.Tensor)
-            y: (torch.Tensor) (default=None)
+            x: (Tensor)
+            y: (Tensor) (default=None)
 
         Note :
             If y is None, the features of y needs to be computed before by calling the function : compute_perceptual_features
-
         """
 
         perceptual_loss = torch.tensor(0.0).to(self.device)
@@ -390,7 +385,7 @@ class PerceptualLoss(torch.nn.Module):
 
 
 class LPIPS(nn.Module):
-    r"""Creates a criterion that measures Learned Perceptual Image Patch Similarity (LPIPS).
+    """Creates a criterion that measures Learned Perceptual Image Patch Similarity (LPIPS).
     For more info see : Zhang et al. The Unreasonable Effectiveness of Deep Features as a Perceptual Metric
     (https://arxiv.org/pdf/1801.03924)
 
@@ -480,7 +475,7 @@ class LPIPS(nn.Module):
 
         return new_state_dict
 
-    def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor, y: Tensor) -> Tensor:
         feat_x, _ = self.perceptual_loss.compute_perceptual_features(
             x, return_features_and_styles=True
         )
@@ -525,17 +520,17 @@ class BaseNet(nn.Module):
         super().__init__()
 
         # register buffer
-        self.mean = torch.Tensor([-0.030, -0.088, -0.188])[None, :, None, None]
-        self.std = torch.Tensor([0.458, 0.448, 0.450])[None, :, None, None]
+        self.mean = Tensor([-0.030, -0.088, -0.188])[None, :, None, None]
+        self.std = Tensor([0.458, 0.448, 0.450])[None, :, None, None]
 
     def set_requires_grad(self, state: bool) -> None:
         for param in chain(self.parameters(), self.buffers()):
             param.requires_grad = state
 
-    def z_score(self, x: torch.Tensor) -> torch.Tensor:
+    def z_score(self, x: Tensor) -> Tensor:
         return (x - self.mean) / self.std
 
-    def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
+    def forward(self, x: Tensor) -> list[Tensor]:
         raise NotImplementedError
 
 
@@ -556,7 +551,7 @@ class VGG16(BaseNet):
 
         self.set_requires_grad(False)
 
-    def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
+    def forward(self, x: Tensor) -> list[Tensor]:
         x = self.z_score(x)
 
         output = []
@@ -569,7 +564,7 @@ class VGG16(BaseNet):
         return output
 
 
-def normalize_activation(x: torch.Tensor, eps: float = 1e-10) -> torch.Tensor:
+def normalize_activation(x: Tensor, eps: float = 1e-10) -> Tensor:
     norm_factor = torch.sqrt(torch.sum(x**2, dim=1, keepdim=True))
     return x / (norm_factor + eps)
 

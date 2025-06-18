@@ -691,10 +691,10 @@ class GaussianDiffusionSettings:
 
 class GaussianDiffusion(BaseModel, AutoPaddingModel):
     settings_kls = GaussianDiffusionSettings
-    # onnx_supported: bool = True #to be verified
+    onnx_supported: bool = False #to be verified in the future
     supported_num_spatial_dims: tuple[int, ...] = (2,)
     num_spatial_dims: int = 2
-    # features_last: bool = False #to be verified
+    features_last: bool = False
     model_type: ModelType = ModelType.DIFFUSION
     register: bool = True
 

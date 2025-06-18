@@ -34,6 +34,7 @@ from .pangu import (
     PatchRecovery,
     UpSample,
     generate_3d_attention_mask,
+    PanguWeatherSettings,
 )
 
 from .base import BaseModel, ModelType
@@ -541,33 +542,22 @@ class CondBasicLayer(EarthSpecificLayer):
 
 @dataclass_json
 @dataclass
-class ArchesWeatherSettings:
+class ArchesWeatherSettings(PanguWeatherSettings):
     """ArchesWeather configuration class"""
 
-    emb_dim: int = 192
-    cond_dim: int = 32
+    plevel_patch_size: tuple = (2, 2, 2)
     num_heads: tuple = (6, 12, 12, 6)
-    droppath_coeff: float = 0.2
-    patch_size: tuple = (2, 2, 2)
     window_size: tuple = (1, 6, 10)
+    cond_dim: int = 32
+    droppath_coeff: float = 0.2
     depth_multiplier: int = 1
     position_embs_dim: int = 0
     use_prev: bool = False
     use_skip: bool = False
     conv_head: bool = False
-    dropout: float = 0.0
     first_interaction_layer: bool = False
-    gradient_checkpointing: bool = False
     axial_attn: bool = False
     axial_attn_heads: int = 8
-    lam: bool = False
-    lon_resolution: int = 240
-    lat_resolution: int = 120
-    surface_variables: int = 4
-    static_length: int = 3
-    plevel_variables: int = 5
-    plevels: int = 13
-    spatial_dims: int = 2
 
 
 class ArchesWeather(BaseModel):
@@ -592,20 +582,20 @@ class ArchesWeather(BaseModel):
             in_channels: dimension of input channels, including constant mask if any.
             out_channels: dimension of output channels.
             input_shape: dimension of input image.
-            emb_dim: embedding size
+            token_size: embedding size
             cond_dim: conditioning embedding size
             num_heads: number of heads per EarthSpecificLayer
             droppath_coeff: drop path coefficient
-            patch_size: patch size for input data embedding
+            plevel_patch_size: patch size for input data embedding
             window_size: window size for shifted-window attention of EarthSpecificBlock
             depth_multiplier: depth multiplier for the number of blocks in EarthSpecificLayer
             position_embs_dim: dimension of positional embeddings
             use_prev: whether to use previous state
             use_skip: whether to use skip connections
             conv_head: whether to use a convolutional head for patch recovery
-            dropout: dropout rate
+            dropout_rate: dropout rate
             first_interaction_layer: whether to use a linear interaction layer before the first EarthSpecificLayer
-            gradient_checkpointing: whether to use gradient checkpointing
+            checkpoint_activation: whether to use gradient checkpointing
             axial_attn: whether to use axial attention
             axial_attn_head: number of heads for axial attention
             lam: whether to use limited area setting in the attention mask
@@ -641,8 +631,8 @@ class ArchesWeather(BaseModel):
         ).tolist()
         # In addition, three constant masks(the topography mask, land-sea mask and soil type mask)
         self.layer1_shape = (
-            lat_resolution // archesweather_config.patch_size[1],
-            lon_resolution // archesweather_config.patch_size[2],
+            lat_resolution // archesweather_config.plevel_patch_size[1],
+            lon_resolution // archesweather_config.plevel_patch_size[2],
         )
 
         self.positional_embeddings = nn.Parameter(
@@ -654,8 +644,8 @@ class ArchesWeather(BaseModel):
 
         # Pangu code
         self.patchembed = PatchEmbedding(
-            c_dim=archesweather_config.emb_dim,
-            patch_size=archesweather_config.patch_size,
+            c_dim=archesweather_config.token_size,
+            plevel_patch_size=archesweather_config.plevel_patch_size,
             plevel_size=torch.Size(
                 (plevel_variables, plevels, lat_resolution, lon_resolution)
             ),
@@ -671,62 +661,62 @@ class ArchesWeather(BaseModel):
 
         if archesweather_config.first_interaction_layer:
             self.interaction_layer = LinVert(
-                in_features=archesweather_config.emb_dim, embedding_size=embedding_size
+                in_features=archesweather_config.token_size, embedding_size=embedding_size
             )
 
         self.layer1 = CondBasicLayer(
             depth=2 * archesweather_config.depth_multiplier,
             data_size=embedding_size,
-            dim=archesweather_config.emb_dim,
+            dim=archesweather_config.token_size,
             cond_dim=archesweather_config.cond_dim,
             drop_path_ratio_list=drop_path[: 2 * archesweather_config.depth_multiplier],
             num_heads=archesweather_config.num_heads[0],
             window_size=archesweather_config.window_size,
-            dropout_rate=archesweather_config.dropout,
+            dropout_rate=archesweather_config.dropout_rate,
             lam=archesweather_config.lam,
             axial_attn=archesweather_config.axial_attn,
             axial_attn_heads=archesweather_config.axial_attn_heads,
-            checkpoint_activation=archesweather_config.gradient_checkpointing,
+            checkpoint_activation=archesweather_config.checkpoint_activation,
         )
         # Pangu code
-        self.downsample = DownSample(embedding_size, archesweather_config.emb_dim)
+        self.downsample = DownSample(embedding_size, archesweather_config.token_size)
         downsampled_size = self.downsample.downsampled_size
         self.layer2 = CondBasicLayer(
             depth=6 * archesweather_config.depth_multiplier,
             data_size=downsampled_size,
-            dim=archesweather_config.emb_dim * 2,
+            dim=archesweather_config.token_size * 2,
             cond_dim=archesweather_config.cond_dim,
             drop_path_ratio_list=drop_path[2 * archesweather_config.depth_multiplier :],
             num_heads=archesweather_config.num_heads[1],
             window_size=archesweather_config.window_size,
-            dropout_rate=archesweather_config.dropout,
+            dropout_rate=archesweather_config.dropout_rate,
             lam=archesweather_config.lam,
             axial_attn=archesweather_config.axial_attn,
             axial_attn_heads=archesweather_config.axial_attn_heads,
-            checkpoint_activation=archesweather_config.gradient_checkpointing,
+            checkpoint_activation=archesweather_config.checkpoint_activation,
         )
         self.layer3 = CondBasicLayer(
             depth=6 * archesweather_config.depth_multiplier,
             data_size=downsampled_size,
-            dim=archesweather_config.emb_dim * 2,
+            dim=archesweather_config.token_size * 2,
             cond_dim=archesweather_config.cond_dim,
             drop_path_ratio_list=drop_path[2 * archesweather_config.depth_multiplier :],
             num_heads=archesweather_config.num_heads[2],
             window_size=archesweather_config.window_size,
-            dropout_rate=archesweather_config.dropout,
+            dropout_rate=archesweather_config.dropout_rate,
             lam=archesweather_config.lam,
             axial_attn=archesweather_config.axial_attn,
             axial_attn_heads=archesweather_config.axial_attn_heads,
-            checkpoint_activation=archesweather_config.gradient_checkpointing,
+            checkpoint_activation=archesweather_config.checkpoint_activation,
         )
         # Pangu code
         self.upsample = UpSample(
-            archesweather_config.emb_dim * 2, archesweather_config.emb_dim
+            archesweather_config.token_size * 2, archesweather_config.token_size
         )
         out_dim = (
-            archesweather_config.emb_dim
+            archesweather_config.token_size
             if not archesweather_config.use_skip
-            else 2 * archesweather_config.emb_dim
+            else 2 * archesweather_config.token_size
         )
         self.layer4 = CondBasicLayer(
             depth=2 * archesweather_config.depth_multiplier,
@@ -736,23 +726,23 @@ class ArchesWeather(BaseModel):
             drop_path_ratio_list=drop_path[: 2 * archesweather_config.depth_multiplier],
             num_heads=archesweather_config.num_heads[3],
             window_size=archesweather_config.window_size,
-            dropout_rate=archesweather_config.dropout,
+            dropout_rate=archesweather_config.dropout_rate,
             lam=archesweather_config.lam,
             axial_attn=archesweather_config.axial_attn,
             axial_attn_heads=archesweather_config.axial_attn_heads,
-            checkpoint_activation=archesweather_config.gradient_checkpointing,
+            checkpoint_activation=archesweather_config.checkpoint_activation,
         )
 
         self.patchrecovery: PatchRecovery | PatchRecoveryConv
         if not archesweather_config.conv_head:
             # Pangu code
             self.patchrecovery = PatchRecovery(
-                out_dim, archesweather_config.patch_size, plevel_variables, surface_variables
+                out_dim, archesweather_config.plevel_patch_size, plevel_variables, surface_variables
             )
         else:
             self.patchrecovery = PatchRecoveryConv(
                 input_dim=embedding_size[-3] * out_dim,
-                downfactor=archesweather_config.patch_size[-1],
+                downfactor=archesweather_config.plevel_patch_size[-1],
                 plevel_variables=plevel_variables,
                 surface_variables=surface_variables,
                 plevels=plevels,
@@ -789,7 +779,7 @@ class ArchesWeather(BaseModel):
 
         x = self.layer2(x, downsampled_shape, cond_emb)
 
-        if self.archesweather_config.gradient_checkpointing:
+        if self.archesweather_config.checkpoint_activation:
             x = gradient_checkpoint.checkpoint(
                 self.layer3, x, downsampled_shape, cond_emb, use_reentrant=False
             )

@@ -26,6 +26,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms as T
 from torchvision import utils
 from tqdm.auto import tqdm
+from mfai.torch.models.base import AutoPaddingModel, BaseModel, ModelType
 
 # constants
 
@@ -116,7 +117,7 @@ def once(fn: Callable) -> Callable:
     called = False
 
     @wraps(fn)
-    def inner(x):
+    def inner(x: Any) -> Any:
         nonlocal called
         if called:
             return
@@ -673,8 +674,14 @@ class GaussianDiffusionSettings:
     immiscible: bool = False
 
 
-class GaussianDiffusion(Module):
+class GaussianDiffusion(BaseModel, AutoPaddingModel):
     settings_kls = GaussianDiffusionSettings
+    #onnx_supported: bool = True #to be verified
+    supported_num_spatial_dims: tuple[int, ...] = (2,)
+    num_spatial_dims: int = 2
+    #features_last: bool = False #to be verified
+    model_type: ModelType = ModelType.DIFFUSION
+    register: bool = True
 
     def __init__(
         self,

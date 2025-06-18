@@ -45,7 +45,7 @@ def default(val: Any, d: Any) -> Any:
     return d() if callable(d) else d
 
 
-def cast_tuple(t: Any, length: int=1) -> tuple:
+def cast_tuple(t: Any, length: int = 1) -> tuple:
     if isinstance(t, tuple):
         return t
     return (t,) * length
@@ -99,14 +99,14 @@ def unnormalize_to_zero_to_one(t: Any) -> Any:
 # small helper modules
 
 
-def Upsample(dim: int, dim_out: int=None) -> nn.Sequential:
+def Upsample(dim: int, dim_out: int = None) -> nn.Sequential:
     return nn.Sequential(
         nn.Upsample(scale_factor=2, mode="nearest"),
         nn.Conv2d(dim, default(dim_out, dim), 3, padding=1),
     )
 
 
-def Downsample(dim: int, dim_out: int=None) -> nn.Sequential:
+def Downsample(dim: int, dim_out: int = None) -> nn.Sequential:
     return nn.Sequential(
         Rearrange("b c (h p1) (w p2) -> b (c p1 p2) h w", p1=2, p2=2),
         nn.Conv2d(dim * 4, default(dim_out, dim), 1),
@@ -139,7 +139,9 @@ AttentionConfig = namedtuple(
 
 
 class Attend(nn.Module):
-    def __init__(self, dropout=0.0, flash=False, scale=None):
+    def __init__(
+        self, dropout: float = 0.0, flash: bool = False, scale: float = None
+    ) -> None:
         super().__init__()
         self.dropout = dropout
         self.scale = scale
@@ -175,7 +177,7 @@ class Attend(nn.Module):
             )
             self.cuda_config = AttentionConfig(False, True, True)
 
-    def flash_attn(self, q, k, v):
+    def flash_attn(self, q: Tensor, k: Tensor, v: Tensor) -> Tensor:
         _, heads, q_len, _, k_len, is_cuda, device = (
             *q.shape,
             k.shape[-2],
@@ -202,7 +204,7 @@ class Attend(nn.Module):
 
         return out
 
-    def forward(self, q, k, v):
+    def forward(self, q: Tensor, k: Tensor, v: Tensor) -> Tensor:
         """
         einstein notation
         b - batch
@@ -235,12 +237,12 @@ class Attend(nn.Module):
 
 
 class RMSNorm(Module):
-    def __init__(self, dim):
+    def __init__(self, dim: int) -> None:
         super().__init__()
         self.scale = dim**0.5
         self.g = nn.Parameter(torch.ones(1, dim, 1, 1))
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         return F.normalize(x, dim=1) * self.g * self.scale
 
 
@@ -248,12 +250,12 @@ class RMSNorm(Module):
 
 
 class SinusoidalPosEmb(Module):
-    def __init__(self, dim, theta=10000):
+    def __init__(self, dim: int, theta: int = 10000) -> None:
         super().__init__()
         self.dim = dim
         self.theta = theta
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         device = x.device
         half_dim = self.dim // 2
         emb = math.log(self.theta) / (half_dim - 1)
@@ -268,13 +270,13 @@ class RandomOrLearnedSinusoidalPosEmb(Module):
 
     """ https://github.com/crowsonkb/v-diffusion-jax/blob/master/diffusion/models/danbooru_128.py#L8 """
 
-    def __init__(self, dim, is_random=False):
+    def __init__(self, dim: int, is_random: bool = False) -> None:
         super().__init__()
         assert divisible_by(dim, 2)
         half_dim = dim // 2
         self.weights = nn.Parameter(torch.randn(half_dim), requires_grad=not is_random)
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         x = rearrange(x, "b -> b 1")
         freqs = x * rearrange(self.weights, "d -> 1 d") * 2 * math.pi
         fouriered = torch.cat((freqs.sin(), freqs.cos()), dim=-1)
@@ -286,14 +288,14 @@ class RandomOrLearnedSinusoidalPosEmb(Module):
 
 
 class Block(Module):
-    def __init__(self, dim, dim_out, dropout=0.0):
+    def __init__(self, dim: int, dim_out: int, dropout: float = 0.0) -> None:
         super().__init__()
         self.proj = nn.Conv2d(dim, dim_out, 3, padding=1)
         self.norm = RMSNorm(dim_out)
         self.act = nn.SiLU()
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x, scale_shift=None):
+    def forward(self, x: Tensor, scale_shift: bool = None) -> Tensor:
         x = self.proj(x)
         x = self.norm(x)
 
@@ -306,7 +308,9 @@ class Block(Module):
 
 
 class ResnetBlock(Module):
-    def __init__(self, dim, dim_out, *, time_emb_dim=None, dropout=0.0):
+    def __init__(
+        self, dim: int, dim_out: int, *, time_emb_dim: bool = None, dropout: float = 0.0
+    ) -> None:
         super().__init__()
         self.mlp = (
             nn.Sequential(nn.SiLU(), nn.Linear(time_emb_dim, dim_out * 2))
@@ -318,7 +322,7 @@ class ResnetBlock(Module):
         self.block2 = Block(dim_out, dim_out)
         self.res_conv = nn.Conv2d(dim, dim_out, 1) if dim != dim_out else nn.Identity()
 
-    def forward(self, x, time_emb=None):
+    def forward(self, x: Tensor, time_emb: bool = None) -> Tensor:
         scale_shift = None
         if exists(self.mlp) and exists(time_emb):
             time_emb = self.mlp(time_emb)
@@ -333,7 +337,9 @@ class ResnetBlock(Module):
 
 
 class LinearAttention(Module):
-    def __init__(self, dim, heads=4, dim_head=32, num_mem_kv=4):
+    def __init__(
+        self, dim: int, heads: int = 4, dim_head: int = 32, num_mem_kv: int = 4
+    ) -> None:
         super().__init__()
         self.scale = dim_head**-0.5
         self.heads = heads
@@ -346,7 +352,7 @@ class LinearAttention(Module):
 
         self.to_out = nn.Sequential(nn.Conv2d(hidden_dim, dim, 1), RMSNorm(dim))
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         b, c, h, w = x.shape
 
         x = self.norm(x)
@@ -372,7 +378,14 @@ class LinearAttention(Module):
 
 
 class Attention(Module):
-    def __init__(self, dim, heads=4, dim_head=32, num_mem_kv=4, flash=False):
+    def __init__(
+        self,
+        dim: int,
+        heads: int = 4,
+        dim_head: int = 32,
+        num_mem_kv: int = 4,
+        flash: bool = False,
+    ) -> bool:
         super().__init__()
         self.heads = heads
         hidden_dim = dim_head * heads
@@ -384,7 +397,7 @@ class Attention(Module):
         self.to_qkv = nn.Conv2d(dim, hidden_dim * 3, 1, bias=False)
         self.to_out = nn.Conv2d(hidden_dim, dim, 1)
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         b, c, h, w = x.shape
 
         x = self.norm(x)
@@ -409,23 +422,25 @@ class Attention(Module):
 class Unet(Module):
     def __init__(
         self,
-        dim,
-        init_dim=None,
-        out_dim=None,
-        dim_mults=(1, 2, 4, 8),
-        channels=3,
-        self_condition=False,
-        learned_variance=False,
-        learned_sinusoidal_cond=False,
-        random_fourier_features=False,
-        learned_sinusoidal_dim=16,
-        sinusoidal_pos_emb_theta=10000,
-        dropout=0.0,
-        attn_dim_head=32,
-        attn_heads=4,
-        full_attn=None,  # defaults to full attention only for inner most layer
-        flash_attn=False,
-    ):
+        dim: int,
+        init_dim: int = None,
+        out_dim: int = None,
+        dim_mults: Tuple[int, ...] = (1, 2, 4, 8),
+        channels: int = 3,
+        self_condition: bool = False,
+        learned_variance: bool = False,
+        learned_sinusoidal_cond: bool = False,
+        random_fourier_features: bool = False,
+        learned_sinusoidal_dim: int = 16,
+        sinusoidal_pos_emb_theta: int = 10000,
+        dropout: float = 0.0,
+        attn_dim_head: int = 32,
+        attn_heads: int = 4,
+        full_attn: Tuple[
+            bool, ...
+        ] = None,  # defaults to full attention only for inner most layer
+        flash_attn: bool = False,
+    ) -> None:
         super().__init__()
 
         # determine dimensions
@@ -555,10 +570,10 @@ class Unet(Module):
         self.final_conv = nn.Conv2d(init_dim, self.out_dim, 1)
 
     @property
-    def downsample_factor(self):
+    def downsample_factor(self) -> Tuple:
         return 2 ** (len(self.downs) - 1)
 
-    def forward(self, x, time, x_self_cond=None):
+    def forward(self, x: Tensor, time: Tensor, x_self_cond: bool = None) -> Tensor:
         assert all(
             [divisible_by(d, self.downsample_factor) for d in x.shape[-2:]]
         ), f"your input dimensions {x.shape[-2:]} need to be divisible by {self.downsample_factor}, given the unet"
@@ -676,10 +691,10 @@ class GaussianDiffusionSettings:
 
 class GaussianDiffusion(BaseModel, AutoPaddingModel):
     settings_kls = GaussianDiffusionSettings
-    #onnx_supported: bool = True #to be verified
+    # onnx_supported: bool = True #to be verified
     supported_num_spatial_dims: tuple[int, ...] = (2,)
     num_spatial_dims: int = 2
-    #features_last: bool = False #to be verified
+    # features_last: bool = False #to be verified
     model_type: ModelType = ModelType.DIFFUSION
     register: bool = True
 

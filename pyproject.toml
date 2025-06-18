@@ -9,6 +9,7 @@ authors = [
   {name="Theo Tournier", email="theo.tournier@meteo.fr"},
   {name="Lea Berthomier", email="lea.berthomier@meteo.fr"},
   {name="Bruno Pradel", email="bruno.pradel@meteo.fr"},
+  {name="Oscar Dewasmes", email="oscar.dewasmes@meteo.fr"},
 ]
 description = "Meteo-France's Artificial Intelligence Python Package"
 readme = "README.md"
@@ -25,17 +26,22 @@ keywords = ["PyTorch", "Deep Learning", "Artificial Intelligence", "Meteo-France
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
 
+# Include marker file `py.typed` to respect PEP561 and declare this package as type hinted
+[tool.setuptools.package-data]
+"mfai" = ["py.typed"]
+
 [tool.setuptools_scm]
 
 [project.urls]
 Homepage = "https://github.com/meteofrance/mfai"
 
+[tool.ruff.lint]
+select = ["I"]  # I = isort
+extend-select = ["F401"]  # F401 = unused-import
+
 [tool.mypy]
 # [mypy configuration file doc](https://mypy.readthedocs.io/en/stable/config_file.html#confval-exclude)
 exclude = [
-  '^mfai/torch/models/nlam/*$',
-  '^mfai/torch/models/deeplabv3.py$',
-  '^mfai/torch/models/unetrpp.py$',
 ]
 
 # Disallows defining functions without type annotations or with incomplete type annotations.
@@ -79,6 +85,11 @@ module = [
   "sentencepiece",
   "onnxruntime",
   "pl_bolts.*",
-  "torchvision.*"
+  "torchvision.*",
+  "torch_geometric.*",
+  "networkx.*",
+  "scipy.spatial",
+  "timm.*",
+  "flash_attn.*",
 ]
 ignore_missing_imports = true

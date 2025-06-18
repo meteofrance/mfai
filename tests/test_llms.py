@@ -1,9 +1,19 @@
 from functools import partial
+from typing import Any
+
 import pytest
 import torch
-from mfai.torch.models.llms import Llama2Settings, Llama2, GPT2, GPT2Settings
-from mfai.tokenizers import LlamaTokenizer, GPT2Tokenizer
 from test_multimodal_lm import generate_text_simple
+
+from mfai.pytorch.models.llms import (
+    GPT2,
+    CrossAttentionGPT2,
+    CrossAttGPT2Settings,
+    GPT2Settings,
+    Llama2,
+    Llama2Settings,
+)
+from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, Tokenizer
 
 
 @pytest.mark.parametrize(
@@ -11,7 +21,7 @@ from test_multimodal_lm import generate_text_simple
     [
         (
             partial(GPT2, GPT2Settings()),
-            "Hello, I am CHrazinosaur hypothesized Masonic Helen Stef convin emerged Lexington",
+            "Hello, I amisi invincible collided 1500 tenomenotinables thinks republic",
             GPT2Tokenizer(),
         ),
         (
@@ -21,7 +31,7 @@ from test_multimodal_lm import generate_text_simple
         ),
     ],
 )
-def test_llms(model_target_tokenizer):
+def test_llms(model_target_tokenizer: tuple[Any, str, Tokenizer]) -> None:
     torch.manual_seed(999)
     model, target, tokenizer = model_target_tokenizer
     model = model()
@@ -38,3 +48,27 @@ def test_llms(model_target_tokenizer):
     decoded_text = tokenizer.decode(out.squeeze(0).tolist())
 
     assert decoded_text == target
+
+
+def test_cross_attention_gpt2() -> None:
+    """
+    Here we only test that the model is mathematically correct (matmul compat, shapes, attention, ...)
+    """
+    torch.manual_seed(999)
+    settings = CrossAttGPT2Settings(
+        context_length=32,
+        n_heads=1,
+        n_layers=4,
+        emb_dim=32,
+        x_att_ratio=2,
+    )
+    model = CrossAttentionGPT2(settings)
+    token_ids = torch.rand(1, 16).long()
+
+    generate_text_simple(
+        model=model,
+        idx=token_ids,
+        max_new_tokens=10,
+        context_size=model.context_length,
+        vision_input=torch.randn(1, 8, settings.emb_dim),
+    )

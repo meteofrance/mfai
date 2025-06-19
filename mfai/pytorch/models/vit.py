@@ -184,6 +184,7 @@ class ViTEncoderSettings:
     mlp_dim: int = 2048
     transformer_dropout: float = 0.1  # Dropout rate
     emb_dropout: float = 0.1  # Dropout rate
+    autopad_enabled: bool = True  # Enable automatic padding
 
 
 @dataclass_json

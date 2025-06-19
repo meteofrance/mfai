@@ -237,6 +237,7 @@ class ViTClassifier(BaseModel, VitPaddingMixin):
         input_shape: tuple[int, int] = (64, 64),
         settings: ViTClassifierSettings = ViTClassifierSettings(),
     ) -> None:
+        super().__init__()
         self.vit = ViTCore(
             image_size=input_shape[:2],
             patch_size=settings.patch_size,
@@ -249,9 +250,15 @@ class ViTClassifier(BaseModel, VitPaddingMixin):
             transformer_dropout=settings.transformer_dropout,
             emb_dropout=settings.emb_dropout,
         )
+        
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.input_shape = input_shape
         self._settings = settings
+        
         self.pool = settings.pool
         self.mlp_head = nn.Linear(settings.emb_dim, out_channels)
+        self.check_required_attributes()
 
     def forward(self, x: Tensor) -> Tensor:
         x, _ = self._maybe_padding(data_tensor=x)
@@ -293,7 +300,13 @@ class VitEncoder(BaseModel, VitPaddingMixin):
         input_shape: tuple[int, int] = (64, 64),
         settings: ViTEncoderSettings = ViTEncoderSettings(),
     ) -> None:
+        super().__init__()
+        
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.input_shape = input_shape
         self._settings = settings
+        
         self.vit = ViTCore(
             image_size=input_shape[:2],
             patch_size=settings.patch_size,
@@ -306,6 +319,7 @@ class VitEncoder(BaseModel, VitPaddingMixin):
             transformer_dropout=settings.transformer_dropout,
             emb_dropout=settings.emb_dropout,
         )
+        self.check_required_attributes()
 
     def forward(self, x: Tensor) -> Tensor:
         x, _ = self._maybe_padding(data_tensor=x)

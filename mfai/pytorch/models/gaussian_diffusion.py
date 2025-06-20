@@ -1055,99 +1055,7 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
             (batch_size, channels, h, w), return_all_timesteps=return_all_timesteps
         )
 
-    @torch.inference_mode()
-    def interpolate(self, x1, x2, t=None, lam=0.5):
-        b, *_, device = *x1.shape, x1.device
-        t = default(t, self.num_timesteps - 1)
-
-        assert x1.shape == x2.shape
-
-        t_batched = torch.full((b,), t, device=device)
-        xt1, xt2 = map(lambda x: self.q_sample(x, t=t_batched), (x1, x2))
-
-        img = (1 - lam) * xt1 + lam * xt2
-
-        x_start = None
-
-        for i in tqdm(
-            reversed(range(0, t)), desc="interpolation sample time step", total=t
-        ):
-            self_cond = x_start if self.self_condition else None
-            img, x_start = self.p_sample(img, i, self_cond)
-
-        return img
-
-    def noise_assignment(self, x_start, noise):
-        x_start, noise = tuple(
-            rearrange(t, "b ... -> b (...)") for t in (x_start, noise)
-        )
-        dist = torch.cdist(x_start, noise)
-        _, assign = linear_sum_assignment(dist.cpu())
-        return torch.from_numpy(assign).to(dist.device)
-
-    @autocast("cuda", enabled=False)
-    def q_sample(self, x_start, t, noise=None):
-        noise = default(noise, lambda: torch.randn_like(x_start))
-
-        if self.immiscible:
-            assign = self.noise_assignment(x_start, noise)
-            noise = noise[assign]
-
-        return (
-            extract(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start
-            + extract(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape) * noise
-        )
-
-    def p_losses(self, x_start, t, noise=None, offset_noise_strength=None):
-        b, c, h, w = x_start.shape
-
-        noise = default(noise, lambda: torch.randn_like(x_start))
-
-        # offset noise - https://www.crosslabs.org/blog/diffusion-with-offset-noise
-
-        offset_noise_strength = default(
-            offset_noise_strength, self.offset_noise_strength
-        )
-
-        if offset_noise_strength > 0.0:
-            offset_noise = torch.randn(x_start.shape[:2], device=self.device)
-            noise += offset_noise_strength * rearrange(offset_noise, "b c -> b c 1 1")
-
-        # noise sample
-
-        x = self.q_sample(x_start=x_start, t=t, noise=noise)
-
-        # if doing self-conditioning, 50% of the time, predict x_start from current set of times
-        # and condition with unet with that
-        # this technique will slow down training by 25%, but seems to lower FID significantly
-
-        x_self_cond = None
-        if self.self_condition and random() < 0.5:
-            with torch.no_grad():
-                x_self_cond = self.model_predictions(x, t).pred_x_start
-                x_self_cond.detach_()
-
-        # predict and take gradient step
-
-        model_out = self.model(x, t, x_self_cond)
-
-        if self.objective == "pred_noise":
-            target = noise
-        elif self.objective == "pred_x0":
-            target = x_start
-        elif self.objective == "pred_v":
-            v = self.predict_v(x_start, t, noise)
-            target = v
-        else:
-            raise ValueError(f"unknown objective {self.objective}")
-
-        loss = F.mse_loss(model_out, target, reduction="none")
-        loss = reduce(loss, "b ... -> b", "mean")
-
-        loss = loss * extract(self.loss_weight, t, loss.shape)
-        return loss.mean()
-
-    def forward(self, img, *args, **kwargs):
+    def forward(self, img, *args, **kwargs): #will be completely changed to become sample()
         (
             b,
             c,
@@ -1162,4 +1070,4 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         t = torch.randint(0, self.num_timesteps, (b,), device=device).long()
 
         img = self.normalize(img)
-        return self.p_losses(img, t, *args, **kwargs)
+        return self.p_losses(img, t, *args, **kwargs) #removed function, will throw error for now

@@ -1,7 +1,9 @@
 import os
 import tempfile
 
+import pandas as pd
 import matplotlib.pyplot as plt
+from mlflow import MlflowException
 import numpy as np
 from lightning.pytorch.loggers import TensorBoardLogger, MLFlowLogger
 
@@ -10,18 +12,36 @@ class AgnosticLogger():
     def __init__(self, logger):
         self.logger = logger
 
+    # ---------- PUBLIC API ------------------------- #
 
     def log_img(self, img: np.ndarray, artifact_path: str, title: str) -> None:
         if isinstance(self.logger, MLFlowLogger):
-            self._mlflow_log_img(img=img, logger=self.logger, artifact_path=artifact_path, title=title)
+            self._mlflow_log_img(img=img, artifact_path=artifact_path, title=title)
         elif isinstance(self.logger, TensorBoardLogger):
             # TODO implement
             raise NotImplementedError(f"Tensorboard image logging not supported yet")
         else:
             raise ValueError(f"Unsupported logger class {self.logger.__class__}")
 
+    def log_params(self, params: dict):
+        if isinstance(self.logger, MLFlowLogger):
+            self._mlflow_log_params(hparams=params)
+        elif isinstance(self.logger, TensorBoardLogger):
+            # TODO implement
+            raise NotImplementedError(f"Tensorboard params logging not supported yet")
+        else:
+            raise ValueError(f"Unsupported logger class {self.logger.__class__}")
 
-    # For images
+    def log_df(self, df: pd.DataFrame, name: str, artifact_path: str):
+        if isinstance(self.logger, MLFlowLogger):
+            self._mlflow_log_csv(df=df, name=name, artifact_path=artifact_path)
+        elif isinstance(self.logger, TensorBoardLogger):
+            # TODO implement
+            raise NotImplementedError(f"Tensorboard df logging not supported yet")
+        else:
+            raise ValueError(f"Unsupported logger class {self.logger.__class__}")
+
+    # ---------- PRIVATE METHODS ------------------------- #
 
     def _img_to_numpy(self, img):
         if hasattr(img, "detach"):
@@ -47,9 +67,40 @@ class AgnosticLogger():
         plt.imsave(tmp_path, img_array, cmap=cmap)
         return tmp_path
 
-    def _mlflow_log_img(self, img, logger, title, artifact_path):
+    def _save_temp_csv(self, df: pd.DataFrame, name):
+
+        tmp_path = os.path.join(tempfile.gettempdir(), f"{name}.csv")
+        df.to_csv(tmp_path, index=False)
+
+        return tmp_path
+
+    def _mlflow_log_csv(self, df: pd.DataFrame, name: str, artifact_path):
+
+        tmp_path = self._save_temp_csv(df=df, name=name)
+
+        run_id = self.logger.run_id
+        try:
+            self.logger.experiment.log_artifact(run_id, tmp_path, artifact_path=artifact_path)
+        finally:
+            # Manually delete the file
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+    def _mlflow_log_img(self, img, title, artifact_path):
 
         img_path = self._save_temp_image(self._img_to_numpy(img), title)
 
-        run_id = logger.run_id
-        logger.experiment.log_artifact(run_id, img_path, artifact_path=artifact_path)
+        run_id = self.logger.run_id
+        try:
+            self.logger.experiment.log_artifact(run_id, img_path, artifact_path=artifact_path)
+        finally:
+            # Manually delete the file
+            if os.path.exists(img_path):
+                os.remove(img_path)
+
+    def _mlflow_log_params(self, hparams: dict):
+
+        for k, v in hparams.items():
+            run_id = self.logger.run_id
+
+            self.logger.experiment.log_param(run_id, k, v)

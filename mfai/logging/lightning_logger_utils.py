@@ -14,12 +14,12 @@ class AgnosticLogger():
 
     # ---------- PUBLIC API ------------------------- #
 
-    def log_img(self, img: np.ndarray, artifact_path: str, title: str) -> None:
+    def log_img(self, img: np.ndarray, artifact_path: str, title: str, dformat: str) -> None:
         if isinstance(self.logger, MLFlowLogger):
             self._mlflow_log_img(img=img, artifact_path=artifact_path, title=title)
         elif isinstance(self.logger, TensorBoardLogger):
             # TODO implement
-            raise NotImplementedError(f"Tensorboard image logging not supported yet")
+            self.logger.experiment.add_image(f"{artifact_path}/{title}", img, dataformats=dformat)
         else:
             raise ValueError(f"Unsupported logger class {self.logger.__class__}")
 

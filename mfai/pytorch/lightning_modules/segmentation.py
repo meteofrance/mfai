@@ -253,9 +253,10 @@ class SegmentationLightningModule(pl.LightningModule):
             step = self.current_epoch
             dformat = "HW" if self.type_segmentation == "multiclass" else "CHW"
             if step == 0:
-                self.agnostic_logger.log_img(img=y[0], title='val_true_img', artifact_path='val_img')
+                # TODO use dformat for MLFlow too (simpler internal logic)
+                self.agnostic_logger.log_img(img=y[0], title='val_true_img', artifact_path='val_img', dformat=dformat)
             #     tb.add_image("val_plots/true_image", y[0], dataformats=dformat)
-            self.agnostic_logger.log_img(img=y_hat[0], artifact_path='val_img', title=f'val_pred_img_{step}')
+            self.agnostic_logger.log_img(img=y_hat[0], artifact_path='val_img', title=f'val_pred_img_{step}', dformat=dformat)
             # tb.add_image("val_plots/pred_image", y_hat[0], step, dataformats=dformat)
 
     def validation_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> Any:

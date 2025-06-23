@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pandas as pd
 import matplotlib.pyplot as plt
-from mlflow import MlflowException
 import numpy as np
 import torch
 from lightning.pytorch.loggers import TensorBoardLogger, MLFlowLogger

@@ -8,7 +8,7 @@ import torch
 import torchmetrics as tm
 from pytorch_lightning.utilities import rank_zero_only
 from torch import Tensor
-from lightning.pytorch.loggers import TensorBoardLogger, MLFlowLogger
+from lightning.pytorch.loggers import TensorBoardLogger
 
 from mfai.pytorch.models.base import BaseModel
 from mfai.logging import AgnosticLogger

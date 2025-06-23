@@ -968,10 +968,11 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         return pred_img, x_start
 
     @torch.inference_mode()
-    def p_sample_loop(self, shape, return_all_timesteps=False):
+    def p_sample_loop(self, img, return_all_timesteps=False):
+        shape = #deduced from img
         batch, device = shape[0], self.device
 
-        img = torch.randn(shape, device=device)
+        #img = torch.randn(shape, device=device) #what img was previously set to
         imgs = [img]
 
         x_start = None
@@ -991,7 +992,8 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         return ret
 
     @torch.inference_mode()
-    def ddim_sample(self, shape, return_all_timesteps=False):
+    def ddim_sample(self, img, return_all_timesteps=False):
+        shape = #deduced from img
         batch, device, total_timesteps, sampling_timesteps, eta, objective = (
             shape[0],
             self.device,
@@ -1009,7 +1011,7 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
             zip(times[:-1], times[1:])
         )  # [(T-1, T-2), (T-2, T-3), ..., (1, 0), (0, -1)]
 
-        img = torch.randn(shape, device=device)
+        #img = torch.randn(shape, device=device) #what img was previously set to
         imgs = [img]
 
         x_start = None
@@ -1045,29 +1047,27 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         ret = self.unnormalize(ret)
         return ret
 
-    @torch.inference_mode()
-    def sample(self, batch_size=16, return_all_timesteps=False):
-        (h, w), channels = self.image_size, self.channels
+    def forward(self, img, *args, **kwargs):
+        (
+            c,
+            h,
+            w,
+            img_size,
+        ) = *img.shape, self.image_size
+
+        assert (
+            h == img_size[0] and w == img_size[1]
+        ), f"height and width of image must be {img_size}"
+
+        assert (
+            c == self.channels
+        ), f"channels amount must be {self.channels}"
+
+        t = torch.randint(0, self.num_timesteps, (b,), device=device).long()
+
         sample_fn = (
             self.p_sample_loop if not self.is_ddim_sampling else self.ddim_sample
         )
         return sample_fn(
-            (batch_size, channels, h, w), return_all_timesteps=return_all_timesteps
-        )
-
-    def forward(self, img, *args, **kwargs): #will be completely changed to become sample()
-        (
-            b,
-            c,
-            h,
-            w,
-            device,
-            img_size,
-        ) = *img.shape, img.device, self.image_size
-        assert (
-            h == img_size[0] and w == img_size[1]
-        ), f"height and width of image must be {img_size}"
-        t = torch.randint(0, self.num_timesteps, (b,), device=device).long()
-
-        img = self.normalize(img)
-        return self.p_losses(img, t, *args, **kwargs) #removed function, will throw error for now
+            img.unsqueeze(0), #unsqueezed to add a batch = 1 for now
+        ).squeeze(0) #we remove the batch

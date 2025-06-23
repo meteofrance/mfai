@@ -708,6 +708,8 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         **kwargs,
     ):
 
+        super().__init__(*args, **kwargs)
+
         # save settings
 
         self.settings = settings
@@ -888,7 +890,11 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
 
     @property
     def settings(self) -> GaussianDiffusionSettings:
-        return self.settings
+        return self._settings
+
+    @settings.setter
+    def settings(self, settings:GaussianDiffusionSettings) -> None:
+        self._settings = settings
 
     def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
         

@@ -1,26 +1,44 @@
-import mlflow
+import tempfile
+import pytest
 import numpy as np
 from lightning.pytorch.loggers import TensorBoardLogger, MLFlowLogger
 from mlflow.entities import RunStatus
+import pandas as pd
 
 from mfai.logging import AgnosticLogger
 
+@pytest.mark.parametrize(
+    "logger",
+    ['tensorboard', 'mlflow']
+)
+def test_agnostic_logger(logger):
 
-def test_agnostic_logger():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        if logger == 'mlflow':
+            logger = MLFlowLogger(experiment_name='logging_test', save_dir=tmpdir)
+        elif logger == 'tensorboard':
+            logger = TensorBoardLogger(save_dir=tmpdir, name="logs")
+        else:
+            raise NotImplementedError(f'Logger {logger} not supported.')
 
+        logger = AgnosticLogger(logger=logger)
 
-    mlflow_logger = MLFlowLogger(experiment_name='logging_test')
+        img = np.random.randn(1,10,10)
 
+        logger.log_img(img=img, artifact_path='test_img', title='img.png', dataformats='CHW')
 
-    img = np.random.randn(1,10,10)
+        df = pd.DataFrame({
+            "step": [1, 2, 3],
+            "accuracy": [0.8, 0.85, 0.88],
+            "loss": [0.5, 0.4, 0.35],
+        })
 
-    logger = AgnosticLogger(logger=mlflow_logger)
+        logger.log_df(df=df, name='metrics', artifact_path='test_metrics')
 
-    logger.log_img(img=img, artifact_path='test_img', title='img.png')
+        params = {
+            "learning_rate": 0.001,
+            "batch_size": 32,
+            "num_layers": 4,
+        }
 
-    client = mlflow_logger.experiment
-    run_id = mlflow_logger.run_id
-
-    run_info = client.get_run(run_id).info
-    if run_info.status == RunStatus.to_string(RunStatus.RUNNING):
-        client.set_terminated(run_id, status="FINISHED")
+        logger.log_params(params=params)

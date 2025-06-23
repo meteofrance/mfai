@@ -993,7 +993,7 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
 
     @torch.inference_mode()
     def ddim_sample(self, img, return_all_timesteps=False):
-        shape = #deduced from img
+        shape = img.shape #deduced from img
         batch, device, total_timesteps, sampling_timesteps, eta, objective = (
             shape[0],
             self.device,

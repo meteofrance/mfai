@@ -707,6 +707,11 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         *args,
         **kwargs,
     ):
+
+        # save settings
+
+        self.settings = settings
+
         # import from settings
 
         timesteps = settings.timesteps
@@ -880,6 +885,18 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
     @property
     def device(self):
         return self.betas.device
+
+    @property
+    def settings(self) -> GaussianDiffusionSettings:
+        return self.settings
+
+    def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
+        
+        # we force the shape to have the same width and length; we take the min of both for new_shape.
+        min_dim = min(input_shape[0],input_shape[1])
+        new_shape = (min_dim,min_dim)
+
+        return new_shape == input_shape, new_shape
 
     def predict_start_from_noise(self, x_t, t, noise):
         return (

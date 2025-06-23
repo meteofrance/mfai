@@ -1,6 +1,6 @@
 from test_models import train_model
 
-from mfai.torch.models.gaussian_diffusion import GaussianDiffusion
+from mfai.pytorch.models.gaussian_diffusion import GaussianDiffusion
 
 in_channels = 1
 out_channels = 1

@@ -26,7 +26,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms as T
 from torchvision import utils
 from tqdm.auto import tqdm
-from mfai.torch.models.base import AutoPaddingModel, BaseModel, ModelType
+from mfai.pytorch.models.base import AutoPaddingModel, BaseModel, ModelType
 
 # constants
 

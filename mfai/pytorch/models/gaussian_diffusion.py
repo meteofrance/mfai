@@ -969,7 +969,7 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
 
     @torch.inference_mode()
     def p_sample_loop(self, img, return_all_timesteps=False):
-        shape = #deduced from img
+        shape = img.shape #deduced from img
         batch, device = shape[0], self.device
 
         #img = torch.randn(shape, device=device) #what img was previously set to
@@ -1048,7 +1048,9 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         return ret
 
     def forward(self, img, *args, **kwargs):
+
         (
+            b,
             c,
             h,
             w,
@@ -1062,12 +1064,13 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         assert (
             c == self.channels
         ), f"channels amount must be {self.channels}"
-
+        
         t = torch.randint(0, self.num_timesteps, (b,), device=device).long()
 
         sample_fn = (
             self.p_sample_loop if not self.is_ddim_sampling else self.ddim_sample
         )
+
         return sample_fn(
-            img.unsqueeze(0), #unsqueezed to add a batch = 1 for now
-        ).squeeze(0) #we remove the batch
+            img,
+        )

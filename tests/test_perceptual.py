@@ -1,9 +1,10 @@
 import pytest
 import torch
-from mfai.torch.losses.perceptual import PerceptualLoss, LPIPS
+
+from mfai.pytorch.losses.perceptual import LPIPS, PerceptualLoss
 
 
-def test_perceptual_loss_on_same_img():
+def test_perceptual_loss_on_same_img() -> None:
     """
     Test of the Perceptual Loss on the same image
     """
@@ -62,7 +63,7 @@ def test_perceptual_loss_on_same_img():
     assert pytest.approx(loss, 0.001) == 0
 
 
-def test_perceptual_loss_on_different_img():
+def test_perceptual_loss_on_different_img() -> None:
     """
     Test of the Perceptual Loss on the different image
     """
@@ -124,7 +125,7 @@ def test_perceptual_loss_on_different_img():
     assert pytest.approx(loss, 0.001) != 0
 
 
-def test_feature_computation():
+def test_feature_computation() -> None:
     """
     Test of the Perceptual Loss on feature computation
     """
@@ -152,7 +153,7 @@ def test_feature_computation():
     assert len(styles) == 1
 
 
-def test_lpips_on_same_img():
+def test_lpips_on_same_img() -> None:
     """
     Test of the Perceptual Loss on the same image
     """
@@ -211,7 +212,7 @@ def test_lpips_on_same_img():
     assert pytest.approx(loss, 0.001) == 0
 
 
-def test_lpips_on_different_img():
+def test_lpips_on_different_img() -> None:
     """
     Test of the Perceptual Loss on the different image
     """

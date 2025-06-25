@@ -1077,8 +1077,9 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
             c,
             h,
             w,
+            device,
             img_size,
-        ) = *img.shape, self.image_size
+        ) = *img.shape, self.device, self.image_size
 
         assert (
             h == img_size[0] and w == img_size[1]

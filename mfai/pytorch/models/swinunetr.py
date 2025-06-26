@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from math import ceil
 from typing import Any, Literal
 
 import torch
@@ -7,7 +8,7 @@ from monai.networks.blocks.dynunet_block import UnetResBlock
 from monai.networks.nets.swin_unetr import SwinUNETR as MonaiSwinUNETR
 from torch import Tensor, nn
 
-from .base import ModelABC, ModelType
+from .base import AutoPaddingModel, ModelABC, ModelType
 
 
 @dataclass_json
@@ -24,6 +25,12 @@ class SwinUNetRSettings:
     use_checkpoint: bool = False
     downsample: Literal["merging", "merginv2"] | nn.Module = "merging"
     use_v2: bool = False
+    autopad_enabled: bool = False
+
+    def monai_kwargs(self) -> dict:
+        settings_dict = self.to_dict()
+        settings_dict.pop("autopad_enabled")
+        return settings_dict
 
 
 class UpsampleBlock(nn.Module):
@@ -58,7 +65,7 @@ class UpsampleBlock(nn.Module):
         return out
 
 
-class SwinUNetR(ModelABC, MonaiSwinUNETR):
+class SwinUNetR(ModelABC, MonaiSwinUNETR, AutoPaddingModel):
     """
     Wrapper around the SwinUNETR from MONAI.
     Instanciated in 2D for now, with a custom decoder.
@@ -81,12 +88,15 @@ class SwinUNetR(ModelABC, MonaiSwinUNETR):
         *args: Any,
         **kwargs: Any,
     ) -> None:
+        if settings.autopad_enabled:
+            _, input_shape = self.validate_input_shape(input_shape)
+        
         super().__init__(
             in_channels=in_channels,
             out_channels=out_channels,
             spatial_dims=2,
-            img_size=(128, 128),  # TODO: fix this and pass the grid shape
-            **settings.to_dict(),
+            img_size=(128, 128),
+            **settings.monai_kwargs(),
         )
 
         self.in_channels = in_channels
@@ -139,3 +149,30 @@ class SwinUNetR(ModelABC, MonaiSwinUNETR):
     @property
     def settings(self) -> SwinUNetRSettings:
         return self._settings
+
+    def forward(self, x: Tensor) -> Tensor:
+        x, old_shape = self._maybe_padding(data_tensor=x)
+        
+        hidden_states_out = self.swinViT(x, self.normalize)
+        enc0 = self.encoder1(x)
+        enc1 = self.encoder2(hidden_states_out[0])
+        enc2 = self.encoder3(hidden_states_out[1])
+        enc3 = self.encoder4(hidden_states_out[2])
+        dec4 = self.encoder10(hidden_states_out[4])
+        dec3 = self.decoder5(dec4, hidden_states_out[3])
+        dec2 = self.decoder4(dec3, enc3)
+        dec1 = self.decoder3(dec2, enc2)
+        dec0 = self.decoder2(dec1, enc1)
+        out = self.decoder1(dec0, enc0)
+        logits = self.out(out)
+        
+        return self._maybe_unpadding(logits, old_shape=old_shape)
+
+    def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
+        d = super().patch_size**5
+
+        new_shape = torch.Size(
+            [d * ceil(input_shape[i] / d) for i in range(len(input_shape))]
+        )
+
+        return new_shape == input_shape, new_shape

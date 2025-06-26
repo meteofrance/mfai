@@ -152,20 +152,7 @@ class SwinUNetR(ModelABC, MonaiSwinUNETR, AutoPaddingModel):
 
     def forward(self, x: Tensor) -> Tensor:
         x, old_shape = self._maybe_padding(data_tensor=x)
-        
-        hidden_states_out = self.swinViT(x, self.normalize)
-        enc0 = self.encoder1(x)
-        enc1 = self.encoder2(hidden_states_out[0])
-        enc2 = self.encoder3(hidden_states_out[1])
-        enc3 = self.encoder4(hidden_states_out[2])
-        dec4 = self.encoder10(hidden_states_out[4])
-        dec3 = self.decoder5(dec4, hidden_states_out[3])
-        dec2 = self.decoder4(dec3, enc3)
-        dec1 = self.decoder3(dec2, enc2)
-        dec0 = self.decoder2(dec1, enc1)
-        out = self.decoder1(dec0, enc0)
-        logits = self.out(out)
-        
+        logits = super().forward(x)
         return self._maybe_unpadding(logits, old_shape=old_shape)
 
     def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:

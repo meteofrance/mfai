@@ -420,7 +420,7 @@ class DeepLabV3(BaseModel, AutoPaddingModel):
         return masks
 
     def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
-        # H and W should be divisible by encodre.output_stride
+        # H and W should be divisible by encoder.output_stride
         d = self.encoder.output_stride
 
         new_shape = torch.Size(

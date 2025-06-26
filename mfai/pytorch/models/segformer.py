@@ -361,7 +361,7 @@ class Segformer(BaseModel, AutoPaddingModel):
         return self._maybe_unpadding(out, old_shape=old_shape)
 
     def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
-        d = 64  # TODO: this number was found with a trial and error procedure
+        d = 64  # This number was found with a trial and error procedure
 
         new_shape = torch.Size(
             [d * ceil(input_shape[i] / d) for i in range(len(input_shape))]

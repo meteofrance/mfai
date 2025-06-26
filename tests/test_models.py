@@ -122,225 +122,225 @@ def meshgrid(grid_width: int, grid_height: int) -> Tensor:
     return torch.from_numpy(np.asarray([xx, yy]))
 
 
-# @pytest.mark.parametrize("model_kls", nn_architectures[ModelType.GRAPH])
-# def test_torch_graph_training_loop(model_kls: Any) -> None:
-#     """
-#     Checks that our models are trainable on a toy problem (sum).
-#     """
-#     NUM_INPUTS = 2
-#     NUM_OUTPUTS = 1
+@pytest.mark.parametrize("model_kls", nn_architectures[ModelType.GRAPH])
+def test_torch_graph_training_loop(model_kls: Any) -> None:
+    """
+    Checks that our models are trainable on a toy problem (sum).
+    """
+    NUM_INPUTS = 2
+    NUM_OUTPUTS = 1
 
-#     settings = model_kls.settings_kls()
+    settings = model_kls.settings_kls()
 
-#     # for GNN models we test them with a fake 2d regular grid
-#     if hasattr(model_kls, "rank_zero_setup"):
-#         model_kls.rank_zero_setup(settings, meshgrid(64, 64))
+    # for GNN models we test them with a fake 2d regular grid
+    if hasattr(model_kls, "rank_zero_setup"):
+        model_kls.rank_zero_setup(settings, meshgrid(64, 64))
 
-#     if model_kls.features_last:
-#         input_shape = (64 * 64, NUM_INPUTS)
-#     else:
-#         input_shape = (NUM_INPUTS, 64 * 64)
+    if model_kls.features_last:
+        input_shape = (64 * 64, NUM_INPUTS)
+    else:
+        input_shape = (NUM_INPUTS, 64 * 64)
 
-#     model = model_kls(
-#         in_channels=NUM_INPUTS,
-#         out_channels=NUM_OUTPUTS,
-#         input_shape=input_shape,
-#         settings=settings,
-#     )
+    model = model_kls(
+        in_channels=NUM_INPUTS,
+        out_channels=NUM_OUTPUTS,
+        input_shape=input_shape,
+        settings=settings,
+    )
 
-#     model = train_model(model, input_shape)
-
-
-# @pytest.mark.parametrize(
-#     "model_kls",
-#     nn_architectures[ModelType.CONVOLUTIONAL]
-#     + nn_architectures[ModelType.VISION_TRANSFORMER],
-# )
-# def test_torch_convolutional_and_vision_transformer_training_loop(
-#     model_kls: Any,
-# ) -> None:
-#     """
-#     Checks that our models are trainable on a toy problem (sum).
-#     """
-#     INPUT_SHAPE = (64, 64, 64)
-#     NUM_INPUTS = 2
-#     NUM_OUTPUTS = 1
-
-#     settings = model_kls.settings_kls()
-
-#     # We test the model for all supported input spatial dimensions
-#     for spatial_dims in model_kls.supported_num_spatial_dims:
-#         if hasattr(settings, "spatial_dims"):
-#             settings.spatial_dims = spatial_dims
-
-#         model = model_kls(
-#             in_channels=NUM_INPUTS,
-#             out_channels=NUM_OUTPUTS,
-#             input_shape=INPUT_SHAPE[:spatial_dims],
-#             settings=settings,
-#         )
-#         model = train_model(model, (NUM_INPUTS, *INPUT_SHAPE[:spatial_dims]))
-
-#         # We test if models claiming to be onnx exportable really are post training.
-#         # See https://pytorch.org/tutorials/beginner/onnx/export_simple_model_to_onnx_tutorial.html
-#         if model.onnx_supported:
-#             with tempfile.NamedTemporaryFile(mode="w", suffix=".onnx") as dst:
-#                 sample = torch.rand(1, NUM_INPUTS, *INPUT_SHAPE[:spatial_dims])
-#                 export_to_onnx(model, sample, dst.name)
-#                 onnx_load_and_infer(dst.name, sample)
+    model = train_model(model, input_shape)
 
 
-# @pytest.mark.parametrize("model_kls", nn_architectures[ModelType.PANGU])
-# def test_torch_pangu_training_loop(model_kls: Any) -> None:
-#     """
-#     Checks that our models are trainable on a toy problem (sum).
-#     """
-#     INPUT_SHAPE = (64, 64, 64)
-#     NUM_INPUTS = 7
-#     NUM_OUTPUTS = 6
-#     SURFACE_VARIABLES = 2
-#     PLEVEL_VARIABLES = 2
-#     PLEVELS = 2
-#     STATIC_LENGTH = 1
+@pytest.mark.parametrize(
+    "model_kls",
+    nn_architectures[ModelType.CONVOLUTIONAL]
+    + nn_architectures[ModelType.VISION_TRANSFORMER],
+)
+def test_torch_convolutional_and_vision_transformer_training_loop(
+    model_kls: Any,
+) -> None:
+    """
+    Checks that our models are trainable on a toy problem (sum).
+    """
+    INPUT_SHAPE = (64, 64, 64)
+    NUM_INPUTS = 2
+    NUM_OUTPUTS = 1
 
-#     settings = model_kls.settings_kls(
-#         surface_variables=SURFACE_VARIABLES,
-#         plevel_variables=PLEVEL_VARIABLES,
-#         plevels=PLEVELS,
-#         static_length=STATIC_LENGTH,
-#     )
+    settings = model_kls.settings_kls()
 
-#     # We test the model for all supported input spatial dimensions
-#     for spatial_dims in model_kls.supported_num_spatial_dims:
-#         if hasattr(settings, "spatial_dims"):
-#             settings.spatial_dims = spatial_dims
+    # We test the model for all supported input spatial dimensions
+    for spatial_dims in model_kls.supported_num_spatial_dims:
+        if hasattr(settings, "spatial_dims"):
+            settings.spatial_dims = spatial_dims
 
-#         model = model_kls(
-#             in_channels=NUM_INPUTS,
-#             out_channels=NUM_OUTPUTS,
-#             input_shape=INPUT_SHAPE[:spatial_dims],
-#             settings=settings,
-#         )
+        model = model_kls(
+            in_channels=NUM_INPUTS,
+            out_channels=NUM_OUTPUTS,
+            input_shape=INPUT_SHAPE[:spatial_dims],
+            settings=settings,
+        )
+        model = train_model(model, (NUM_INPUTS, *INPUT_SHAPE[:spatial_dims]))
 
-#         optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
-#         loss_fn = torch.nn.MSELoss()
-
-#         ds = FakePanguDataset(
-#             input_shape=INPUT_SHAPE[:spatial_dims],
-#             surface_variables=SURFACE_VARIABLES,
-#             plevel_variables=PLEVEL_VARIABLES,
-#             plevels=PLEVELS,
-#             static_length=STATIC_LENGTH,
-#         )
-
-#         training_loader = torch.utils.data.DataLoader(ds, batch_size=2)
-
-#         # Simulate 2 EPOCHS of training
-#         for _ in range(2):
-#             for data in training_loader:
-#                 # Zero your gradients for every batch!
-#                 optimizer.zero_grad()
-
-#                 # Make predictions for this batch
-#                 output_plevel, output_surface = model(
-#                     data["input_plevel"], data["input_surface"], data["input_static"]
-#                 )
-
-#                 # Compute the loss and its gradients
-#                 loss = loss_fn(output_plevel, data["target_plevel"]) + loss_fn(
-#                     output_surface, data["target_surface"]
-#                 )
-#                 loss.backward()
-
-#                 # Adjust learning weights
-#                 optimizer.step()
-
-#         # Make a prediction in eval mode
-#         model.eval()
-#         sample = ds[0]
-#         model(
-#             sample["input_plevel"].unsqueeze(0),
-#             sample["input_surface"].unsqueeze(0),
-#             sample["input_static"].unsqueeze(0),
-#         )
-
-#         # We test if models claiming to be onnx exportable really are post training.
-#         # See https://pytorch.org/tutorials/beginner/onnx/export_simple_model_to_onnx_tutorial.html
-#         if model.onnx_supported:
-#             with tempfile.NamedTemporaryFile(mode="w", suffix=".onnx") as dst:
-#                 sample_surface = torch.rand(
-#                     1, SURFACE_VARIABLES, *INPUT_SHAPE[:spatial_dims]
-#                 )
-#                 sample_plevel = torch.rand(
-#                     1, PLEVEL_VARIABLES, PLEVELS, *INPUT_SHAPE[:spatial_dims]
-#                 )
-#                 sample_static = torch.rand(
-#                     1, STATIC_LENGTH, *INPUT_SHAPE[:spatial_dims]
-#                 )
-#                 samples = (sample_plevel, sample_surface, sample_static)
-#                 export_to_onnx(model, samples, dst.name)
-#                 onnx_load_and_infer(dst.name, samples)
+        # We test if models claiming to be onnx exportable really are post training.
+        # See https://pytorch.org/tutorials/beginner/onnx/export_simple_model_to_onnx_tutorial.html
+        if model.onnx_supported:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".onnx") as dst:
+                sample = torch.rand(1, NUM_INPUTS, *INPUT_SHAPE[:spatial_dims])
+                export_to_onnx(model, sample, dst.name)
+                onnx_load_and_infer(dst.name, sample)
 
 
-# @pytest.mark.parametrize(
-#     "model_and_settings",
-#     [
-#         (HalfUNet, HalfUNet.settings_kls(use_ghost=True, absolute_pos_embed=True)),
-#         (HalfUNet, HalfUNet.settings_kls(use_ghost=False, absolute_pos_embed=True)),
-#         (DeepLabV3Plus, DeepLabV3Plus.settings_kls(activation="sigmoid")),
-#         (DeepLabV3Plus, DeepLabV3Plus.settings_kls(activation="softmax")),
-#         (DeepLabV3Plus, DeepLabV3Plus.settings_kls(activation="tanh")),
-#         (DeepLabV3Plus, DeepLabV3Plus.settings_kls(activation="logsoftmax")),
-#     ],
-# )
-# def test_extra_models(model_and_settings: Any) -> None:
-#     """
-#     Tests some extra models and settings.
-#     """
-#     INPUT_SHAPE = (64, 64, 64)
-#     NUM_INPUTS = 2
-#     NUM_OUTPUTS = 1
-#     model_kls, settings = model_and_settings
-#     for spatial_dims in model_kls.supported_num_spatial_dims:
-#         model = model_kls(
-#             in_channels=NUM_INPUTS,
-#             out_channels=NUM_OUTPUTS,
-#             input_shape=INPUT_SHAPE[:2],
-#             settings=settings,
-#         )
-#         train_model(model, (NUM_INPUTS, *INPUT_SHAPE[:spatial_dims]))
+@pytest.mark.parametrize("model_kls", nn_architectures[ModelType.PANGU])
+def test_torch_pangu_training_loop(model_kls: Any) -> None:
+    """
+    Checks that our models are trainable on a toy problem (sum).
+    """
+    INPUT_SHAPE = (64, 64, 64)
+    NUM_INPUTS = 7
+    NUM_OUTPUTS = 6
+    SURFACE_VARIABLES = 2
+    PLEVEL_VARIABLES = 2
+    PLEVELS = 2
+    STATIC_LENGTH = 1
+
+    settings = model_kls.settings_kls(
+        surface_variables=SURFACE_VARIABLES,
+        plevel_variables=PLEVEL_VARIABLES,
+        plevels=PLEVELS,
+        static_length=STATIC_LENGTH,
+    )
+
+    # We test the model for all supported input spatial dimensions
+    for spatial_dims in model_kls.supported_num_spatial_dims:
+        if hasattr(settings, "spatial_dims"):
+            settings.spatial_dims = spatial_dims
+
+        model = model_kls(
+            in_channels=NUM_INPUTS,
+            out_channels=NUM_OUTPUTS,
+            input_shape=INPUT_SHAPE[:spatial_dims],
+            settings=settings,
+        )
+
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+        loss_fn = torch.nn.MSELoss()
+
+        ds = FakePanguDataset(
+            input_shape=INPUT_SHAPE[:spatial_dims],
+            surface_variables=SURFACE_VARIABLES,
+            plevel_variables=PLEVEL_VARIABLES,
+            plevels=PLEVELS,
+            static_length=STATIC_LENGTH,
+        )
+
+        training_loader = torch.utils.data.DataLoader(ds, batch_size=2)
+
+        # Simulate 2 EPOCHS of training
+        for _ in range(2):
+            for data in training_loader:
+                # Zero your gradients for every batch!
+                optimizer.zero_grad()
+
+                # Make predictions for this batch
+                output_plevel, output_surface = model(
+                    data["input_plevel"], data["input_surface"], data["input_static"]
+                )
+
+                # Compute the loss and its gradients
+                loss = loss_fn(output_plevel, data["target_plevel"]) + loss_fn(
+                    output_surface, data["target_surface"]
+                )
+                loss.backward()
+
+                # Adjust learning weights
+                optimizer.step()
+
+        # Make a prediction in eval mode
+        model.eval()
+        sample = ds[0]
+        model(
+            sample["input_plevel"].unsqueeze(0),
+            sample["input_surface"].unsqueeze(0),
+            sample["input_static"].unsqueeze(0),
+        )
+
+        # We test if models claiming to be onnx exportable really are post training.
+        # See https://pytorch.org/tutorials/beginner/onnx/export_simple_model_to_onnx_tutorial.html
+        if model.onnx_supported:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".onnx") as dst:
+                sample_surface = torch.rand(
+                    1, SURFACE_VARIABLES, *INPUT_SHAPE[:spatial_dims]
+                )
+                sample_plevel = torch.rand(
+                    1, PLEVEL_VARIABLES, PLEVELS, *INPUT_SHAPE[:spatial_dims]
+                )
+                sample_static = torch.rand(
+                    1, STATIC_LENGTH, *INPUT_SHAPE[:spatial_dims]
+                )
+                samples = (sample_plevel, sample_surface, sample_static)
+                export_to_onnx(model, samples, dst.name)
+                onnx_load_and_infer(dst.name, samples)
 
 
-# def test_load_model_by_name() -> None:
-#     with pytest.raises(ValueError):
-#         load_from_settings_file("NotAValidModel", 2, 2, Path(""), (1, 1))
+@pytest.mark.parametrize(
+    "model_and_settings",
+    [
+        (HalfUNet, HalfUNet.settings_kls(use_ghost=True, absolute_pos_embed=True)),
+        (HalfUNet, HalfUNet.settings_kls(use_ghost=False, absolute_pos_embed=True)),
+        (DeepLabV3Plus, DeepLabV3Plus.settings_kls(activation="sigmoid")),
+        (DeepLabV3Plus, DeepLabV3Plus.settings_kls(activation="softmax")),
+        (DeepLabV3Plus, DeepLabV3Plus.settings_kls(activation="tanh")),
+        (DeepLabV3Plus, DeepLabV3Plus.settings_kls(activation="logsoftmax")),
+    ],
+)
+def test_extra_models(model_and_settings: Any) -> None:
+    """
+    Tests some extra models and settings.
+    """
+    INPUT_SHAPE = (64, 64, 64)
+    NUM_INPUTS = 2
+    NUM_OUTPUTS = 1
+    model_kls, settings = model_and_settings
+    for spatial_dims in model_kls.supported_num_spatial_dims:
+        model = model_kls(
+            in_channels=NUM_INPUTS,
+            out_channels=NUM_OUTPUTS,
+            input_shape=INPUT_SHAPE[:2],
+            settings=settings,
+        )
+        train_model(model, (NUM_INPUTS, *INPUT_SHAPE[:spatial_dims]))
 
-#     # Should work: valid settings file for this model
-#     load_from_settings_file(
-#         model_name="HalfUNet",
-#         in_channels=2,
-#         out_channels=2,
-#         settings_path=Path(__file__).parents[1]
-#         / "mfai"
-#         / "config"
-#         / "models"
-#         / "halfunet128.json",
-#         input_shape=(10, 10, 10),
-#     )
 
-#     # Should raise: invalid settings file for this model
-#     with pytest.raises(ValidationError):
-#         load_from_settings_file(
-#             model_name="UNetRPP",
-#             in_channels=2,
-#             out_channels=2,
-#             settings_path=Path(__file__).parents[1]
-#             / "mfai"
-#             / "config"
-#             / "models"
-#             / "halfunet128.json",
-#             input_shape=(10, 10, 10),
-#         )
+def test_load_model_by_name() -> None:
+    with pytest.raises(ValueError):
+        load_from_settings_file("NotAValidModel", 2, 2, Path(""), (1, 1))
+
+    # Should work: valid settings file for this model
+    load_from_settings_file(
+        model_name="HalfUNet",
+        in_channels=2,
+        out_channels=2,
+        settings_path=Path(__file__).parents[1]
+        / "mfai"
+        / "config"
+        / "models"
+        / "halfunet128.json",
+        input_shape=(10, 10, 10),
+    )
+
+    # Should raise: invalid settings file for this model
+    with pytest.raises(ValidationError):
+        load_from_settings_file(
+            model_name="UNetRPP",
+            in_channels=2,
+            out_channels=2,
+            settings_path=Path(__file__).parents[1]
+            / "mfai"
+            / "config"
+            / "models"
+            / "halfunet128.json",
+            input_shape=(10, 10, 10),
+        )
 
 
 @pytest.mark.parametrize("model_class", autopad_nn_architectures)

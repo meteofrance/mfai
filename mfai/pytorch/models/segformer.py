@@ -4,7 +4,7 @@ SegFormer adapted from https://github.com/lucidrains/segformer-pytorch
 
 from dataclasses import dataclass
 from functools import partial
-from math import sqrt
+from math import ceil, sqrt
 from typing import Any, Callable, Literal, Sequence
 
 import torch
@@ -12,7 +12,7 @@ from dataclasses_json import dataclass_json
 from einops import rearrange
 from torch import Tensor, einsum, nn
 
-from .base import BaseModel, ModelType
+from .base import AutoPaddingModel, BaseModel, ModelType
 
 
 def exists(val: Any | None) -> bool:
@@ -32,6 +32,7 @@ class SegformerSettings:
     kernel_and_stride: tuple[int, ...] = (8, 4, 2, 1)
     num_layers: int = 2
     decoder_dim: int = 256
+    autopad_enabled: bool = False
 
     # Number of channels after downsampling
     # injected in the mit
@@ -237,7 +238,7 @@ class MiT(nn.Module):
         return ret
 
 
-class Segformer(BaseModel):
+class Segformer(BaseModel, AutoPaddingModel):
     """
     Segformer architecture with extra
     upsampling in the decoder to match
@@ -347,6 +348,8 @@ class Segformer(BaseModel):
         return self._settings
 
     def forward(self, x: Tensor) -> Tensor:
+        x, old_shape = self._maybe_padding(data_tensor=x)
+
         x = self.downsampler(x)
         layer_outputs: list[Tensor] = self.mit(x, return_layer_outputs=True)
 
@@ -354,4 +357,14 @@ class Segformer(BaseModel):
             to_fused(output) for output, to_fused in zip(layer_outputs, self.to_fused)
         ]
         out: Tensor = torch.cat(fused, dim=1)
-        return self.upsampler(out)
+        out = self.upsampler(out)
+        return self._maybe_unpadding(out, old_shape=old_shape)
+
+    def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
+        d = 64  # TODO: this number was found with a trial and error procedure
+
+        new_shape = torch.Size(
+            [d * ceil(input_shape[i] / d) for i in range(len(input_shape))]
+        )
+
+        return new_shape == input_shape, new_shape

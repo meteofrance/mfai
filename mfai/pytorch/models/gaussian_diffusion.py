@@ -1,30 +1,17 @@
-import copy
 import math
 from collections import namedtuple
 from dataclasses import dataclass, field
 from functools import partial, wraps
-from multiprocessing import cpu_count
-from pathlib import Path
-from random import random
-from typing import Tuple, Union, Any, Iterable, Generator, Callable
+from typing import Literal, Tuple, Union, Any, Iterable, Generator, Callable
 
 import torch
 import torch.nn.functional as F
-from accelerate import Accelerator
 from dataclasses_json import dataclass_json
-from einops import rearrange, reduce, repeat
+from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
-from ema_pytorch import EMA
 from packaging import version
-from PIL import Image
-from scipy.optimize import linear_sum_assignment
 from torch import einsum, nn, Tensor
-from torch.amp import autocast
 from torch.nn import Module, ModuleList
-from torch.optim import Adam
-from torch.utils.data import DataLoader, Dataset
-from torchvision import transforms as T
-from torchvision import utils
 from tqdm.auto import tqdm
 from mfai.pytorch.models.base import AutoPaddingModel, BaseModel, ModelType
 
@@ -622,9 +609,25 @@ class Unet(Module):
 # gaussian diffusion trainer class
 
 
-def extract(a, t, x_shape):
-    b, *_ = t.shape
-    out = a.gather(-1, t)
+def extract(a: Tensor, t: Tensor, x_shape: torch.Size) -> Tensor:
+    """
+    Args:
+        a: Tensor from wich to extract information
+        t: Tensor indexes to gather ?
+        x_shape: dictate output shape
+    
+    Returns:
+        Tensor: Tensor with the same number of dimensions as x_shape
+            with shape (t.shape[0], 1, 1, ...)
+    
+    Exemple:
+        >>> a = Tensor([1, 2, 3, 4])
+        >>> t = Tensor([0, 0, 0, 0])
+        >>> extract(a, t, (8, 2, 64, 64))
+        tensor([[[[1]]], [[[1]]], [[[1]]], [[[1]]], [[[1]]], [[[1]]], [[[1]]], [[[1]]]])
+    """
+    b = t.shape[0]
+    out = a.gather(dim=-1, index=t)  # Gather values along dim -1 at indexes t
     return out.reshape(b, *((1,) * (len(x_shape) - 1)))
 
 
@@ -672,25 +675,30 @@ def sigmoid_beta_schedule(timesteps, start=-3, end=3, tau=1, clamp_min=1e-5):
 @dataclass_json
 @dataclass(slots=True)
 class GaussianDiffusionSettings:
+    # TODO: Expliquer ce que régis chaque paramètre
+
+    # Number of successive model calls made for an inference
     timesteps: int = 1000
+
     sampling_timesteps: Union[None, int] = (
         None  # either none of number of timesteps sampled?
     )
-    objective: str = "pred_v"
+
+    objective: Literal["pred_v", "pred_noise", "pred_x0"] = "pred_v"
+    
+    # Wich
     beta_schedule: str = "sigmoid"
     schedule_fn_kwargs: dict = field(default_factory=dict)
     ddim_sampling_eta: tuple[float, ...] = 0.0
     auto_normalize: bool = True
-    offset_noise_strength: tuple[float, ...] = (
-        0.0  # https://www.crosslabs.org/blog/diffusion-with-offset-noise
-    )
+    offset_noise_strength: tuple[float, ...] = (0.0,)  # https://www.crosslabs.org/blog/diffusion-with-offset-noise
     min_snr_loss_weight: bool = False  # https://arxiv.org/abs/2303.09556
     min_snr_gamma: tuple[int, ...] = 5
     immiscible: bool = False
 
 
 class GaussianDiffusion(BaseModel, AutoPaddingModel):
-    settings_kls = GaussianDiffusionSettings
+    settings_kls: type[GaussianDiffusionSettings] = GaussianDiffusionSettings
     onnx_supported: bool = False #to be verified in the future
     supported_num_spatial_dims: tuple[int, ...] = (2,)
     num_spatial_dims: int = 2
@@ -790,8 +798,8 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         betas = beta_schedule_fn(timesteps, **schedule_fn_kwargs)
 
         alphas = 1.0 - betas
-        alphas_cumprod = torch.cumprod(alphas, dim=0)
-        alphas_cumprod_prev = F.pad(alphas_cumprod[:-1], (1, 0), value=1.0)
+        alphas_cumprod: Tensor = torch.cumprod(alphas, dim=0)
+        alphas_cumprod_prev: Tensor = F.pad(alphas_cumprod[:-1], (1, 0), value=1.0)
 
         (timesteps,) = betas.shape
         self.num_timesteps = int(timesteps)
@@ -812,42 +820,54 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
             name, val.to(torch.float32)
         )
 
+        self.betas: Tensor
         register_buffer("betas", betas)
+        self.alphas_cumprod: Tensor
         register_buffer("alphas_cumprod", alphas_cumprod)
+        self.alphas_cumprod_prev: Tensor
         register_buffer("alphas_cumprod_prev", alphas_cumprod_prev)
 
         # calculations for diffusion q(x_t | x_{t-1}) and others
 
+        self.sqrt_alphas_cumprod: Tensor
         register_buffer("sqrt_alphas_cumprod", torch.sqrt(alphas_cumprod))
+        self.sqrt_one_minus_alphas_cumprod: Tensor
         register_buffer(
             "sqrt_one_minus_alphas_cumprod", torch.sqrt(1.0 - alphas_cumprod)
         )
+        self.log_one_minus_alphas_cumprod: Tensor
         register_buffer("log_one_minus_alphas_cumprod", torch.log(1.0 - alphas_cumprod))
+        self.sqrt_recip_alphas_cumprod: Tensor
         register_buffer("sqrt_recip_alphas_cumprod", torch.sqrt(1.0 / alphas_cumprod))
+        self.sqrt_recipm1_alphas_cumprod: Tensor
         register_buffer(
             "sqrt_recipm1_alphas_cumprod", torch.sqrt(1.0 / alphas_cumprod - 1)
         )
 
         # calculations for posterior q(x_{t-1} | x_t, x_0)
 
-        posterior_variance = (
+        posterior_variance: Tensor = (
             betas * (1.0 - alphas_cumprod_prev) / (1.0 - alphas_cumprod)
         )
 
         # above: equal to 1. / (1. / (1. - alpha_cumprod_tm1) + alpha_t / beta_t)
 
+        self.posterior_variance: Tensor
         register_buffer("posterior_variance", posterior_variance)
 
         # below: log calculation clipped because the posterior variance is 0 at the beginning of the diffusion chain
 
+        self.posterior_log_variance_clipped: Tensor
         register_buffer(
             "posterior_log_variance_clipped",
             torch.log(posterior_variance.clamp(min=1e-20)),
         )
+        self.posterior_mean_coef1: Tensor
         register_buffer(
             "posterior_mean_coef1",
             betas * torch.sqrt(alphas_cumprod_prev) / (1.0 - alphas_cumprod),
         )
+        self.posterior_mean_coef2: Tensor
         register_buffer(
             "posterior_mean_coef2",
             (1.0 - alphas_cumprod_prev) * torch.sqrt(alphas) / (1.0 - alphas_cumprod),
@@ -897,10 +917,18 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         self._settings = settings
 
     def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
-        
-        # we force the shape to have the same width and length; we take the min of both for new_shape.
+        """Crops the input shape to a shape with 2 dimensions of the same size.
+        If the input dimension's size are not equal, keeps the smallest side as dimension size.
+
+        Args:
+            input_shape: the input shape
+
+        Returns:
+            bool: wether or not the new shape is the same as the input one
+            torch.Size: the new shape
+        """
         min_dim = min(input_shape[0],input_shape[1])
-        new_shape = (min_dim,min_dim)
+        new_shape = torch.Size((min_dim, min_dim))
 
         return new_shape == input_shape, new_shape
 
@@ -927,7 +955,7 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
             - extract(self.sqrt_one_minus_alphas_cumprod, t, x_t.shape) * v
         )
 
-    def q_posterior(self, x_start, x_t, t):
+    def q_posterior(self, x_start: Tensor, x_t: Tensor, t: Tensor) -> tuple[Tensor, Tensor, Tensor]:
         posterior_mean = (
             extract(self.posterior_mean_coef1, t, x_t.shape) * x_start
             + extract(self.posterior_mean_coef2, t, x_t.shape) * x_t
@@ -939,13 +967,28 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         return posterior_mean, posterior_variance, posterior_log_variance_clipped
 
     def model_predictions(
-        self, x, t, x_self_cond=None, clip_x_start=False, rederive_pred_noise=False
-    ):
+        self, x: Tensor, t: Tensor, x_self_cond: Tensor | None=None, clip_x_start: bool=False, rederive_pred_noise: bool=False
+    ) -> ModelPrediction:
+        """Runs the model depending on the training objective, and returns it's prediction.
+        Args:
+            x: the input image
+            t: the time tensor
+            x_self_cond: 
+            clip_x_start: wether or not to clamp x_start to [-1, 1] range
+            rederive_pred_noise: in pred_noise objective, wether or not to
+                rederive the pred_noise
+        
+        Returns:
+            ModelPrediction: the model prediction
+        """
+
         model_output = self.model(x, t, x_self_cond)
         maybe_clip = (
             partial(torch.clamp, min=-1.0, max=1.0) if clip_x_start else identity
         )
 
+        pred_noise: Tensor
+        x_start: Tensor
         if self.objective == "pred_noise":
             pred_noise = model_output
             x_start = self.predict_start_from_noise(x, t, pred_noise)
@@ -964,12 +1007,27 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
             x_start = self.predict_start_from_v(x, t, v)
             x_start = maybe_clip(x_start)
             pred_noise = self.predict_noise_from_start(x, t, x_start)
+        else:
+            raise ValueError("GaussianDiffusion.objective should be either 'pred_nois', 'pred_x0' or 'pred_v'.")
 
         return ModelPrediction(pred_noise, x_start)
 
-    def p_mean_variance(self, x, t, x_self_cond=None, clip_denoised=True):
+    def p_mean_variance(self, x: Tensor, t: Tensor, x_self_cond: Tensor | None=None, clip_denoised: bool=True) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+        """TODO: expliquer ce que fait cette fonction
+        Args:
+            x: image input
+            t: Tensor de shape (batch_size) dont toutes les valeurs sont égales au timestep
+            x_self_cond: TODO expliquer à quoi sert x_self_cond            
+
+        Returns: TODO expliquer ce que représentente chaqu'une des valeurs de retour
+            Tensor: model mean
+            Tensor: posterior variance
+            Tensor: posterior log variance
+            Tensor: x_start
+        """
+        
         preds = self.model_predictions(x, t, x_self_cond)
-        x_start = preds.pred_x_start
+        x_start: Tensor = preds.pred_x_start
 
         if clip_denoised:
             x_start.clamp_(-1.0, 1.0)
@@ -980,26 +1038,45 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         return model_mean, posterior_variance, posterior_log_variance, x_start
 
     @torch.inference_mode()
-    def p_sample(self, x, t: int, x_self_cond=None):
-        b, *_, device = *x.shape, self.device
-        batched_times = torch.full((b,), t, device=device, dtype=torch.long)
+    def p_sample(self, x: Tensor, t: int, x_self_cond: Tensor | None=None) -> tuple[Tensor, Tensor]:
+        """TODO: expliquer ce que fait cette fonction, comment est générée l'image prédite, à partir de
+        l'output du model et de bruit.
+
+        Args:
+            x: image input
+            t: time step
+            x_self_cond: TODO: expliquer à quoi sers ce paramètre dans la prédiction
+        
+        Returns:
+            Tensor: predicted image
+            Tensor: TODO expliquer ce qu'est x_start
+        """
+        
+        b: int = x.shape[0]
+        batched_times: Tensor = torch.full((b,), t, device=self.device, dtype=torch.long)  # type:ignore
         model_mean, _, model_log_variance, x_start = self.p_mean_variance(
             x=x, t=batched_times, x_self_cond=x_self_cond, clip_denoised=True
         )
-        noise = torch.randn_like(x) if t > 0 else 0.0  # no noise if t == 0
-        pred_img = model_mean + (0.5 * model_log_variance).exp() * noise
+        noise: Tensor | float = torch.randn_like(x) if t > 0 else 0.0  # no noise if t == 0
+        pred_img: Tensor = model_mean + (0.5 * model_log_variance).exp() * noise
         return pred_img, x_start
 
     @torch.inference_mode()
-    def p_sample_loop(self, img, return_all_timesteps=False):
-        shape = img.shape #deduced from img
-        batch, device = shape[0], self.device
+    def p_sample_loop(self, img: Tensor, return_all_timesteps: bool=False) -> Tensor:
+        """Applies p_sample num_timesteps times.
+        Args:
+            img: the image to denoise
+            return_all_timesteps: return images at all timesteps or just last timestep
+        
+        Returns:
+            Tensor: the denoised image or images at all timesteps stacked on dim 1
+        """
 
-        #img = torch.randn(shape, device=device) #what img was previously set to
         imgs = [img]
 
-        x_start = None
+        x_start: Tensor | None = None
 
+        t: int
         for t in tqdm(
             reversed(range(0, self.num_timesteps)),
             desc="sampling loop time step",
@@ -1070,27 +1147,17 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         ret = self.unnormalize(ret)
         return ret
 
-    def forward(self, img, *args, **kwargs):
-
-        (
-            b,
-            c,
-            h,
-            w,
-            device,
-            img_size,
-        ) = *img.shape, self.device, self.image_size
+    def forward(self, img: Tensor, *args: Any, **kwargs: Any) -> Tensor:
+        _, c, h, w = *img.shape, 
 
         assert (
-            h == img_size[0] and w == img_size[1]
-        ), f"height and width of image must be {img_size}"
+            h == self.image_size[0] and w == self.image_size[1]
+        ), f"height and width of image must be {self.image_size}"
 
         assert (
             c == self.channels
         ), f"channels amount must be {self.channels}"
         
-        t = torch.randint(0, self.num_timesteps, (b,), device=device).long()
-
         sample_fn = (
             self.p_sample_loop if not self.is_ddim_sampling else self.ddim_sample
         )

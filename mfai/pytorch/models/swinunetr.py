@@ -89,7 +89,7 @@ class SwinUNetR(ModelABC, MonaiSwinUNETR, AutoPaddingModel):
         **kwargs: Any,
     ) -> None:
         if settings.autopad_enabled:
-            _, input_shape = self.validate_input_shape(input_shape)
+            _, input_shape = self.validate_input_shape(torch.Size(input_shape))
 
         super().__init__(
             in_channels=in_channels,

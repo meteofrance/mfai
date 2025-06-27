@@ -730,7 +730,7 @@ class UNetRPP(BaseModel, AutoPaddingModel):
         # followed by 3 successive downsampling layer (k=2, stride=2)
         self.dim_divider = (2**3) * settings.downsampling_rate
         if self._settings.autopad_enabled:
-            _, self.input_shape = self.validate_input_shape(input_shape)
+            _, self.input_shape = self.validate_input_shape(torch.Size(input_shape))
         else:
             self.input_shape = input_shape
 
@@ -943,14 +943,16 @@ class UNetRPP(BaseModel, AutoPaddingModel):
             else self.decoder2(dec1)
         )
         if self.do_ds:
-            logits = [
+            list_logits: list[Tensor] = [
                 self._maybe_unpadding(self.out1(out), old_shape=old_shape),
                 self._maybe_unpadding(self.out2(dec1), old_shape=old_shape),
                 self._maybe_unpadding(self.out3(dec2), old_shape=old_shape),
             ]
+            return list_logits
         else:
-            logits = self._maybe_unpadding(self.out1(out), old_shape=old_shape)
-        return logits
+            logits: Tensor = self.out1(out)
+            logits = self._maybe_unpadding(logits, old_shape=old_shape)
+            return logits
 
     def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
         d = self.dim_divider

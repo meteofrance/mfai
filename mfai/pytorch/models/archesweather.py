@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from dataclasses_json import dataclass_json
 from typing import Optional, Tuple
 
 import numpy as np
@@ -21,25 +20,24 @@ import torch
 import torch.nn as nn
 import torch.utils.checkpoint as gradient_checkpoint
 from axial_attention import AxialAttention, AxialPositionalEmbedding
+from dataclasses_json import dataclass_json
 from timm.layers import DropPath
 from torch import Tensor
 from torch.nn import LayerNorm
 from torch.utils.checkpoint import checkpoint
 
-
+from .base import BaseModel, ModelType
 from .pangu import (
     MLP,
     CustomPad3d,
     DownSample,
     EarthAttention3D,
+    PanguWeatherSettings,
     PatchEmbedding,
     PatchRecovery,
     UpSample,
     generate_3d_attention_mask,
-    PanguWeatherSettings,
 )
-
-from .base import BaseModel, ModelType
 
 
 class EarthSpecificBlock(nn.Module):

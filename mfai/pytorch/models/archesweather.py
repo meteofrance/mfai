@@ -10,7 +10,7 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License. 
+# limitations under the License.
 
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
@@ -83,9 +83,9 @@ class EarthSpecificBlock(nn.Module):
         self.lam = lam
         # Define the window size of the neural network
         self.window_size = window_size
-        assert all(
-            [w_s == 1 or w_s % 2 == 0 for w_s in window_size]
-        ), "Window size must be divisible by 2"
+        assert all([w_s == 1 or w_s % 2 == 0 for w_s in window_size]), (
+            "Window size must be divisible by 2"
+        )
         self.shift_size = tuple(w_size // 2 + w_size % 2 for w_size in window_size)
 
         # Initialize serveral operations
@@ -542,6 +542,7 @@ class CondBasicLayer(EarthSpecificLayer):
         c = self.adaLN_modulation(cond_emb)
         return super().forward(x, embedding_shape, c)
 
+
 @dataclass_json
 @dataclass
 class ArchesWeatherSettings(PanguWeatherSettings):
@@ -619,12 +620,14 @@ class ArchesWeather(BaseModel):
         if archesweather_config.spatial_dims == 2:
             lat_resolution, lon_resolution = input_shape
         else:
-            raise ValueError(f"Unsupported spatial dimension: {archesweather_config.spatial_dims}")
+            raise ValueError(
+                f"Unsupported spatial dimension: {archesweather_config.spatial_dims}"
+            )
 
-        surface_variables = archesweather_config.surface_variables,
-        static_length = archesweather_config.static_length,
-        plevel_variables = archesweather_config.plevel_variables,
-        plevels = archesweather_config.plevels,
+        surface_variables = archesweather_config.surface_variables
+        static_length = archesweather_config.static_length
+        plevel_variables = archesweather_config.plevel_variables
+        plevels = archesweather_config.plevels
 
         drop_path = np.linspace(
             0,
@@ -647,13 +650,15 @@ class ArchesWeather(BaseModel):
         # Pangu code
         self.patchembed = PatchEmbedding(
             c_dim=archesweather_config.token_size,
-            plevel_patch_size=archesweather_config.plevel_patch_size,
+            patch_size=archesweather_config.plevel_patch_size,
             plevel_size=torch.Size(
                 (plevel_variables, plevels, lat_resolution, lon_resolution)
             ),
             surface_size=torch.Size(
                 (
-                    surface_variables + static_length + archesweather_config.position_embs_dim,
+                    surface_variables
+                    + static_length
+                    + archesweather_config.position_embs_dim,
                     lat_resolution,
                     lon_resolution,
                 )
@@ -663,7 +668,8 @@ class ArchesWeather(BaseModel):
 
         if archesweather_config.first_interaction_layer:
             self.interaction_layer = LinVert(
-                in_features=archesweather_config.token_size, embedding_size=embedding_size
+                in_features=archesweather_config.token_size,
+                embedding_size=embedding_size,
             )
 
         self.layer1 = CondBasicLayer(
@@ -739,7 +745,10 @@ class ArchesWeather(BaseModel):
         if not archesweather_config.conv_head:
             # Pangu code
             self.patchrecovery = PatchRecovery(
-                out_dim, archesweather_config.plevel_patch_size, plevel_variables, surface_variables
+                out_dim,
+                archesweather_config.plevel_patch_size,
+                plevel_variables,
+                surface_variables,
             )
         else:
             self.patchrecovery = PatchRecoveryConv(
@@ -749,6 +758,7 @@ class ArchesWeather(BaseModel):
                 surface_variables=surface_variables,
                 plevels=plevels,
             )
+
     @property
     def settings(self) -> ArchesWeatherSettings:
         return self.archesweather_config

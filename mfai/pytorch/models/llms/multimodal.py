@@ -16,6 +16,7 @@ from mfai.pytorch.models.resnet import (
     ResNet50MLMSettings,
     ResNet50Settings,
 )
+from mfai.pytorch.models.vit import VitEncoder, ViTEncoderSettings
 from mfai.pytorch.namedtensor import NamedTensor
 
 
@@ -87,7 +88,7 @@ class MultiModalLMSettings:
 
     # choice of vision encoder
     # "resnet50", "linear"
-    vision_encoder: Literal["resnet50", "linear"] = "linear"
+    vision_encoder: Literal["resnet50", "linear", "vit"] = "linear"
     # Optional checkpoint path for the resnet encoder
     resnet_checkpoint: None | Path = None
 
@@ -215,6 +216,20 @@ class MultiModalLM(FreezeMLMMixin, nn.Module):
                         mlp_output=settings.resnet_mlp_output,
                     ),
                 )
+        elif self.settings.vision_encoder == "vit":
+            # Initialize the ViT encoder
+            self.vision_encoder = VitEncoder(
+                in_channels=settings.vision_input_shape[2]
+                * settings.vision_input_shape[3],
+                out_channels=settings.emb_dim,
+                settings=ViTEncoderSettings(
+                    emb_dim=settings.emb_dim,
+                    transformer_dropout=settings.drop_rate,
+                    emb_dropout=settings.drop_rate,
+                    autopad_enabled=True,
+                ),
+                input_shape=settings.vision_input_shape[:2],
+            )
 
         else:
             raise ValueError(
@@ -263,6 +278,18 @@ class MultiModalLM(FreezeMLMMixin, nn.Module):
             # resnet50mlm already outputs an extra token dim
             if isinstance(self.vision_encoder, ResNet50):
                 vis_embeds = vis_embeds.unsqueeze(1)
+
+            # Normalize the output along embedding dimension
+            vis_embeds = vis_embeds / vis_embeds.norm(dim=2, keepdim=True)
+
+        elif self.settings.vision_encoder == "vit":
+            # Reshape the vision input for ViT
+            new_tensor = einops.rearrange(
+                vision_input.tensor,
+                "batch lat lon timestep features -> batch (timestep features) lat lon",
+            )
+            # ViT encoder
+            vis_embeds = self.vision_encoder(new_tensor)
 
             # Normalize the output along embedding dimension
             vis_embeds = vis_embeds / vis_embeds.norm(dim=2, keepdim=True)

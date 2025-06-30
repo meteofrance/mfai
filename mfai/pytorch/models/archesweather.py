@@ -576,7 +576,7 @@ class ArchesWeather(BaseModel):
         in_channels: int,
         out_channels: int,
         input_shape: Tuple[int, ...],
-        archesweather_config: ArchesWeatherSettings = ArchesWeatherSettings(),
+        settings: ArchesWeatherSettings = ArchesWeatherSettings(),
     ) -> None:
         """
         Args:
@@ -613,50 +613,44 @@ class ArchesWeather(BaseModel):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.input_shape = input_shape
-        self.archesweather_config = archesweather_config
+        self._settings = settings
 
-        if archesweather_config.spatial_dims == 2:
+        if settings.spatial_dims == 2:
             lat_resolution, lon_resolution = input_shape
         else:
-            raise ValueError(
-                f"Unsupported spatial dimension: {archesweather_config.spatial_dims}"
-            )
+            raise ValueError(f"Unsupported spatial dimension: {settings.spatial_dims}")
 
-        surface_variables = archesweather_config.surface_variables
-        static_length = archesweather_config.static_length
-        plevel_variables = archesweather_config.plevel_variables
-        plevels = archesweather_config.plevels
+        surface_variables = settings.surface_variables
+        static_length = settings.static_length
+        plevel_variables = settings.plevel_variables
+        plevels = settings.plevels
 
         drop_path = np.linspace(
             0,
-            archesweather_config.droppath_coeff / archesweather_config.depth_multiplier,
-            8 * archesweather_config.depth_multiplier,
+            settings.droppath_coeff / settings.depth_multiplier,
+            8 * settings.depth_multiplier,
         ).tolist()
         # In addition, three constant masks(the topography mask, land-sea mask and soil type mask)
         self.layer1_shape = (
-            lat_resolution // archesweather_config.plevel_patch_size[1],
-            lon_resolution // archesweather_config.plevel_patch_size[2],
+            lat_resolution // settings.plevel_patch_size[1],
+            lon_resolution // settings.plevel_patch_size[2],
         )
 
         self.positional_embeddings = nn.Parameter(
-            torch.zeros(
-                (archesweather_config.position_embs_dim, lat_resolution, lon_resolution)
-            )
+            torch.zeros((settings.position_embs_dim, lat_resolution, lon_resolution))
         )
         torch.nn.init.trunc_normal_(self.positional_embeddings, 0.02)
 
         # Pangu code
         self.patchembed = PatchEmbedding(
-            c_dim=archesweather_config.token_size,
-            patch_size=archesweather_config.plevel_patch_size,
+            c_dim=settings.token_size,
+            patch_size=settings.plevel_patch_size,
             plevel_size=torch.Size(
                 (plevel_variables, plevels, lat_resolution, lon_resolution)
             ),
             surface_size=torch.Size(
                 (
-                    surface_variables
-                    + static_length
-                    + archesweather_config.position_embs_dim,
+                    surface_variables + static_length + settings.position_embs_dim,
                     lat_resolution,
                     lon_resolution,
                 )
@@ -664,94 +658,90 @@ class ArchesWeather(BaseModel):
         )
         embedding_size = self.patchembed.embedding_size
 
-        if archesweather_config.first_interaction_layer:
+        if settings.first_interaction_layer:
             self.interaction_layer = LinVert(
-                in_features=archesweather_config.token_size,
+                in_features=settings.token_size,
                 embedding_size=embedding_size,
             )
 
         self.layer1 = CondBasicLayer(
-            depth=2 * archesweather_config.depth_multiplier,
+            depth=2 * settings.depth_multiplier,
             data_size=embedding_size,
-            dim=archesweather_config.token_size,
-            cond_dim=archesweather_config.cond_dim,
-            drop_path_ratio_list=drop_path[: 2 * archesweather_config.depth_multiplier],
-            num_heads=archesweather_config.num_heads[0],
-            window_size=archesweather_config.window_size,
-            dropout_rate=archesweather_config.dropout_rate,
-            lam=archesweather_config.lam,
-            axial_attn=archesweather_config.axial_attn,
-            axial_attn_heads=archesweather_config.axial_attn_heads,
-            checkpoint_activation=archesweather_config.checkpoint_activation,
+            dim=settings.token_size,
+            cond_dim=settings.cond_dim,
+            drop_path_ratio_list=drop_path[: 2 * settings.depth_multiplier],
+            num_heads=settings.num_heads[0],
+            window_size=settings.window_size,
+            dropout_rate=settings.dropout_rate,
+            lam=settings.lam,
+            axial_attn=settings.axial_attn,
+            axial_attn_heads=settings.axial_attn_heads,
+            checkpoint_activation=settings.checkpoint_activation,
         )
         # Pangu code
-        self.downsample = DownSample(embedding_size, archesweather_config.token_size)
+        self.downsample = DownSample(embedding_size, settings.token_size)
         downsampled_size = self.downsample.downsampled_size
         self.layer2 = CondBasicLayer(
-            depth=6 * archesweather_config.depth_multiplier,
+            depth=6 * settings.depth_multiplier,
             data_size=downsampled_size,
-            dim=archesweather_config.token_size * 2,
-            cond_dim=archesweather_config.cond_dim,
-            drop_path_ratio_list=drop_path[2 * archesweather_config.depth_multiplier :],
-            num_heads=archesweather_config.num_heads[1],
-            window_size=archesweather_config.window_size,
-            dropout_rate=archesweather_config.dropout_rate,
-            lam=archesweather_config.lam,
-            axial_attn=archesweather_config.axial_attn,
-            axial_attn_heads=archesweather_config.axial_attn_heads,
-            checkpoint_activation=archesweather_config.checkpoint_activation,
+            dim=settings.token_size * 2,
+            cond_dim=settings.cond_dim,
+            drop_path_ratio_list=drop_path[2 * settings.depth_multiplier :],
+            num_heads=settings.num_heads[1],
+            window_size=settings.window_size,
+            dropout_rate=settings.dropout_rate,
+            lam=settings.lam,
+            axial_attn=settings.axial_attn,
+            axial_attn_heads=settings.axial_attn_heads,
+            checkpoint_activation=settings.checkpoint_activation,
         )
         self.layer3 = CondBasicLayer(
-            depth=6 * archesweather_config.depth_multiplier,
+            depth=6 * settings.depth_multiplier,
             data_size=downsampled_size,
-            dim=archesweather_config.token_size * 2,
-            cond_dim=archesweather_config.cond_dim,
-            drop_path_ratio_list=drop_path[2 * archesweather_config.depth_multiplier :],
-            num_heads=archesweather_config.num_heads[2],
-            window_size=archesweather_config.window_size,
-            dropout_rate=archesweather_config.dropout_rate,
-            lam=archesweather_config.lam,
-            axial_attn=archesweather_config.axial_attn,
-            axial_attn_heads=archesweather_config.axial_attn_heads,
-            checkpoint_activation=archesweather_config.checkpoint_activation,
+            dim=settings.token_size * 2,
+            cond_dim=settings.cond_dim,
+            drop_path_ratio_list=drop_path[2 * settings.depth_multiplier :],
+            num_heads=settings.num_heads[2],
+            window_size=settings.window_size,
+            dropout_rate=settings.dropout_rate,
+            lam=settings.lam,
+            axial_attn=settings.axial_attn,
+            axial_attn_heads=settings.axial_attn_heads,
+            checkpoint_activation=settings.checkpoint_activation,
         )
         # Pangu code
-        self.upsample = UpSample(
-            archesweather_config.token_size * 2, archesweather_config.token_size
-        )
+        self.upsample = UpSample(settings.token_size * 2, settings.token_size)
         out_dim = (
-            archesweather_config.token_size
-            if not archesweather_config.use_skip
-            else 2 * archesweather_config.token_size
+            settings.token_size if not settings.use_skip else 2 * settings.token_size
         )
         self.layer4 = CondBasicLayer(
-            depth=2 * archesweather_config.depth_multiplier,
+            depth=2 * settings.depth_multiplier,
             data_size=embedding_size,
             dim=out_dim,
-            cond_dim=archesweather_config.cond_dim,
-            drop_path_ratio_list=drop_path[: 2 * archesweather_config.depth_multiplier],
-            num_heads=archesweather_config.num_heads[3],
-            window_size=archesweather_config.window_size,
-            dropout_rate=archesweather_config.dropout_rate,
-            lam=archesweather_config.lam,
-            axial_attn=archesweather_config.axial_attn,
-            axial_attn_heads=archesweather_config.axial_attn_heads,
-            checkpoint_activation=archesweather_config.checkpoint_activation,
+            cond_dim=settings.cond_dim,
+            drop_path_ratio_list=drop_path[: 2 * settings.depth_multiplier],
+            num_heads=settings.num_heads[3],
+            window_size=settings.window_size,
+            dropout_rate=settings.dropout_rate,
+            lam=settings.lam,
+            axial_attn=settings.axial_attn,
+            axial_attn_heads=settings.axial_attn_heads,
+            checkpoint_activation=settings.checkpoint_activation,
         )
 
         self.patchrecovery: PatchRecovery | PatchRecoveryConv
-        if not archesweather_config.conv_head:
+        if not settings.conv_head:
             # Pangu code
             self.patchrecovery = PatchRecovery(
                 out_dim,
-                archesweather_config.plevel_patch_size,
+                settings.plevel_patch_size,
                 plevel_variables,
                 surface_variables,
             )
         else:
             self.patchrecovery = PatchRecoveryConv(
                 input_dim=embedding_size[-3] * out_dim,
-                downfactor=archesweather_config.plevel_patch_size[-1],
+                downfactor=settings.plevel_patch_size[-1],
                 plevel_variables=plevel_variables,
                 surface_variables=surface_variables,
                 plevels=plevels,
@@ -759,11 +749,11 @@ class ArchesWeather(BaseModel):
 
     @property
     def settings(self) -> ArchesWeatherSettings:
-        return self.archesweather_config
+        return self._settings
 
     @property
     def num_spatial_dims(self) -> int:
-        return self.archesweather_config.spatial_dims
+        return self._settings.spatial_dims
 
     def forward(
         self,
@@ -779,7 +769,7 @@ class ArchesWeather(BaseModel):
 
         x, embedding_shape = self.patchembed(input_level, input_surface)
 
-        if self.archesweather_config.first_interaction_layer:
+        if self._settings.first_interaction_layer:
             x = self.interaction_layer(x)
 
         x = self.layer1(x, embedding_shape, cond_emb)
@@ -789,7 +779,7 @@ class ArchesWeather(BaseModel):
 
         x = self.layer2(x, downsampled_shape, cond_emb)
 
-        if self.archesweather_config.checkpoint_activation:
+        if self._settings.checkpoint_activation:
             x = gradient_checkpoint.checkpoint(
                 self.layer3, x, downsampled_shape, cond_emb, use_reentrant=False
             )
@@ -797,7 +787,7 @@ class ArchesWeather(BaseModel):
             x = self.layer3(x, downsampled_shape, cond_emb)
 
         x = self.upsample(x, embedding_shape)
-        if self.archesweather_config.use_skip and skip is not None:
+        if self._settings.use_skip and skip is not None:
             x = torch.concat([x, skip], dim=-1)
             embedding_shape = list(embedding_shape)
             embedding_shape[-1] = 2 * embedding_shape[-1]
@@ -808,7 +798,7 @@ class ArchesWeather(BaseModel):
             output.shape[0], -1, *self.patchembed.embedding_size
         )
 
-        if not self.archesweather_config.conv_head:
+        if not self._settings.conv_head:
             output_level, output_surface = self.patchrecovery(output, embedding_shape)
             output_surface = output_surface.unsqueeze(-3)
             # Crop the output to remove zero-paddings

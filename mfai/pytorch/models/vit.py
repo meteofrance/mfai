@@ -184,7 +184,7 @@ class ViTEncoderSettings:
     mlp_dim: int = 2048
     transformer_dropout: float = 0.1  # Dropout rate
     emb_dropout: float = 0.1  # Dropout rate
-    autopad_enabled: bool = True  # Enable automatic padding
+    autopad_enabled: bool = False  # Enable automatic padding
 
 
 @dataclass_json
@@ -202,7 +202,7 @@ class VitPaddingMixin(AutoPaddingModel):
         """
         Check if the input shape is divisible by the patch size and returns the new shape if padding is required.
         """
-        x_size, y_size = input_shape
+        x_size, y_size = input_shape[-2:]
         patch_size = self.settings.patch_size
 
         if isinstance(patch_size, int):
@@ -223,13 +223,18 @@ class VitPaddingMixin(AutoPaddingModel):
 
 
 class ViTClassifier(BaseModel, VitPaddingMixin):
+    """
+    Vision Transformer (ViT) classifier model outputing class probabilities per input sample.
+    THIS IS NOT A per pixel/grid classifier, but a global image/sample classifier.
+    """
+
     settings_kls = ViTClassifierSettings
     onnx_supported: bool = False
     supported_num_spatial_dims: tuple[int, ...] = (2,)
     features_last: bool = False
     model_type: ModelType = ModelType.VISION_TRANSFORMER
     num_spatial_dims: int = 2
-    register: bool = True
+    register: bool = False
 
     def __init__(
         self,
@@ -239,8 +244,18 @@ class ViTClassifier(BaseModel, VitPaddingMixin):
         settings: ViTClassifierSettings = ViTClassifierSettings(),
     ) -> None:
         super().__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.input_shape = input_shape
+        self._settings = settings
+
+        # we create fake data to get the input shape from our padding mixin
+        # this is needed to initialize the ViTCore correctly
+        fake_data = torch.zeros((1, in_channels, *input_shape))
+        reshaped_data, _ = self._maybe_padding(data_tensor=fake_data)
+
         self.vit = ViTCore(
-            image_size=input_shape[:2],
+            image_size=reshaped_data.shape[-2:],
             patch_size=settings.patch_size,
             emb_dim=settings.emb_dim,
             n_layers=settings.n_layers,
@@ -251,12 +266,7 @@ class ViTClassifier(BaseModel, VitPaddingMixin):
             transformer_dropout=settings.transformer_dropout,
             emb_dropout=settings.emb_dropout,
         )
-        
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.input_shape = input_shape
-        self._settings = settings
-        
+
         self.pool = settings.pool
         self.mlp_head = nn.Linear(settings.emb_dim, out_channels)
         self.check_required_attributes()
@@ -271,7 +281,7 @@ class ViTClassifier(BaseModel, VitPaddingMixin):
             x = x.mean(dim=1)
 
         return self.mlp_head(x)
-    
+
     @property
     def settings(self) -> ViTClassifierSettings:
         """
@@ -302,14 +312,19 @@ class VitEncoder(BaseModel, VitPaddingMixin):
         settings: ViTEncoderSettings = ViTEncoderSettings(),
     ) -> None:
         super().__init__()
-        
+
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.input_shape = input_shape
         self._settings = settings
-        
+
+        # we create fake data to get the input shape from our padding mixin
+        # this is needed to initialize the ViTCore correctly
+        fake_data = torch.zeros((1, in_channels, *input_shape))
+        reshaped_data, _ = self._maybe_padding(data_tensor=fake_data)
+        print(reshaped_data.shape)
         self.vit = ViTCore(
-            image_size=input_shape[:2],
+            image_size=reshaped_data.shape[-2:],
             patch_size=settings.patch_size,
             emb_dim=settings.emb_dim,
             n_layers=settings.n_layers,
@@ -325,7 +340,7 @@ class VitEncoder(BaseModel, VitPaddingMixin):
     def forward(self, x: Tensor) -> Tensor:
         x, _ = self._maybe_padding(data_tensor=x)
         return self.vit(x)
-    
+
     @property
     def settings(self) -> ViTEncoderSettings:
         """

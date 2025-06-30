@@ -4,9 +4,9 @@ Adapted from https://github.com/Amshaker/unetr_plus_plus
 Added 2d support and Bilinear interpolation for upsampling.
 """
 
-import math
 import warnings
 from dataclasses import dataclass
+from math import ceil, erf, sqrt
 from typing import Tuple, Union
 
 import torch
@@ -25,7 +25,7 @@ from monai.utils import optional_import
 from torch import Tensor
 from torch.nn.functional import scaled_dot_product_attention
 
-from .base import BaseModel, ModelType
+from .base import AutoPaddingModel, BaseModel, ModelType
 
 
 def _trunc_normal_(
@@ -35,7 +35,7 @@ def _trunc_normal_(
     # Method based on https://people.sc.fsu.edu/~jburkardt/presentations/truncated_normal.pdf
     def norm_cdf(x: float) -> float:
         # Computes standard normal cumulative distribution function
-        return (1.0 + math.erf(x / math.sqrt(2.0))) / 2.0
+        return (1.0 + erf(x / sqrt(2.0))) / 2.0
 
     if (mean < a - 2 * std) or (mean > b + 2 * std):
         warnings.warn(
@@ -59,7 +59,7 @@ def _trunc_normal_(
     tensor.erfinv_()
 
     # Transform to proper mean, std
-    tensor.mul_(std * math.sqrt(2.0))
+    tensor.mul_(std * sqrt(2.0))
     tensor.add_(mean)
 
     # Clamp to ensure it's in the proper range
@@ -230,7 +230,7 @@ class TransformerBlock(nn.Module):
 
 def init_(tensor: Tensor) -> Tensor:
     dim = tensor.shape[-1]
-    std = 1 / math.sqrt(dim)
+    std = 1 / sqrt(dim)
     tensor.uniform_(-std, std)
     return tensor
 
@@ -673,6 +673,7 @@ class UNetRPPSettings:
     downsampling_rate: int = 4
     decoder_proj_size: int = 64
     encoder_proj_sizes: tuple[int, ...] = (64, 64, 64, 32)
+    autopad_enabled: bool = False
     # Adds skip connection between encoder layers outputs
     # and corresponding decoder layers inputs
     add_skip_connections: bool = True
@@ -684,7 +685,7 @@ class UNetRPPSettings:
     attention_code: str = "torch"
 
 
-class UNetRPP(BaseModel):
+class UNetRPP(BaseModel, AutoPaddingModel):
     """
     UNetR++ based on: "Shaker et al.,
     UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation"
@@ -723,8 +724,15 @@ class UNetRPP(BaseModel):
 
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.input_shape = input_shape
         self._settings = settings
+
+        # we have first a stem layer with stride=subsampling_rate and k_size=subsampling_rate
+        # followed by 3 successive downsampling layer (k=2, stride=2)
+        self.dim_divider = (2**3) * settings.downsampling_rate
+        if self._settings.autopad_enabled:
+            _, self.input_shape = self.validate_input_shape(torch.Size(input_shape))
+        else:
+            self.input_shape = input_shape
 
         self.do_ds = settings.do_ds
         self.add_skip_connections = settings.add_skip_connections
@@ -737,33 +745,31 @@ class UNetRPP(BaseModel):
             raise KeyError(
                 f"Position embedding layer of type {settings.pos_embed} is not supported."
             )
-        # we have first a stem layer with stride=subsampling_rate and k_size=subsampling_rate
-        # followed by 3 successive downsampling layer (k=2, stride=2)
-        dim_divider = (2**3) * settings.downsampling_rate
+
         self.feat_size: tuple[int, ...]
         if settings.spatial_dims == 2:
             self.feat_size = (
-                input_shape[0] // dim_divider,
-                input_shape[1] // dim_divider,
+                self.input_shape[0] // self.dim_divider,
+                self.input_shape[1] // self.dim_divider,
             )
         else:
             self.feat_size = (
-                input_shape[0] // dim_divider,
-                input_shape[1] // dim_divider,
-                input_shape[2] // dim_divider,
+                self.input_shape[0] // self.dim_divider,
+                self.input_shape[1] // self.dim_divider,
+                self.input_shape[2] // self.dim_divider,
             )
 
         self.hidden_size = settings.hidden_size
         self.spatial_dims = settings.spatial_dims
         # Number of pixels after stem layer
         if settings.spatial_dims == 2:
-            no_pixels = (input_shape[0] * input_shape[1]) // (
+            no_pixels = (self.input_shape[0] * self.input_shape[1]) // (
                 settings.downsampling_rate**2
             )
         else:
-            no_pixels = (input_shape[0] * input_shape[1] * input_shape[2]) // (
-                settings.downsampling_rate**3
-            )
+            no_pixels = (
+                self.input_shape[0] * self.input_shape[1] * self.input_shape[2]
+            ) // (settings.downsampling_rate**3)
 
         # after the stem layer, the input is spatially downsampled
         # 3 times by a factor of 2 along each spatial dimension
@@ -901,9 +907,11 @@ class UNetRPP(BaseModel):
 
         return x
 
-    def forward(self, x_in: Tensor) -> Tensor | list[Tensor]:
-        _, hidden_states = self.unetr_pp_encoder(x_in)
-        convBlock = self.encoder1(x_in)
+    def forward(self, x: Tensor) -> Tensor | list[Tensor]:
+        x, old_shape = self._maybe_padding(data_tensor=x)
+
+        _, hidden_states = self.unetr_pp_encoder(x)
+        convBlock = self.encoder1(x)
 
         # Four encoders
         enc1 = hidden_states[0]
@@ -935,7 +943,22 @@ class UNetRPP(BaseModel):
             else self.decoder2(dec1)
         )
         if self.do_ds:
-            logits = [self.out1(out), self.out2(dec1), self.out3(dec2)]
+            list_logits: list[Tensor] = [
+                self._maybe_unpadding(self.out1(out), old_shape=old_shape),
+                self._maybe_unpadding(self.out2(dec1), old_shape=old_shape),
+                self._maybe_unpadding(self.out3(dec2), old_shape=old_shape),
+            ]
+            return list_logits
         else:
-            logits = self.out1(out)
-        return logits
+            logits: Tensor = self.out1(out)
+            logits = self._maybe_unpadding(logits, old_shape=old_shape)
+            return logits
+
+    def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
+        d = self.dim_divider
+
+        new_shape = torch.Size(
+            [d * ceil(input_shape[i] / d) for i in range(len(input_shape))]
+        )
+
+        return new_shape == input_shape, new_shape

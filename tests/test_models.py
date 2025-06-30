@@ -372,13 +372,13 @@ def test_load_model_by_name() -> None:
 
 @pytest.mark.parametrize("model_class", autopad_nn_architectures)
 def test_input_shape_validation(model_class: Any) -> None:
-    B, C, W, H = 32, 3, 64, 65
+    B, C, W, H = 8, 3, 61, 65
 
     input_data = torch.randn(B, C, W, H)
     net = model_class(in_channels=C, out_channels=1, input_shape=input_data.shape)
 
     # assert it fails before padding
-    with pytest.raises(RuntimeError):
+    with pytest.raises((RuntimeError, ValueError)):
         net(input_data)
 
     valid_shape, new_shape = net.validate_input_shape(input_data.shape[-2:])

@@ -219,7 +219,7 @@ class MultiModalLM(FreezeMLMMixin, nn.Module):
                     ),
                 )
         elif self.settings.vision_encoder == "vit":
-            # Initialize the ViT encoder
+            # Initialize the ViT encoder, we have one input channel per feature per timestep
             self.vision_encoder = VitEncoder(
                 in_channels=settings.vision_input_shape[2]
                 * settings.vision_input_shape[3],

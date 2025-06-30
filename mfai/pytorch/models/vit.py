@@ -322,7 +322,7 @@ class VitEncoder(BaseModel, VitPaddingMixin):
         # this is needed to initialize the ViTCore correctly
         fake_data = torch.zeros((1, in_channels, *input_shape))
         reshaped_data, _ = self._maybe_padding(data_tensor=fake_data)
-        print(reshaped_data.shape)
+
         self.vit = ViTCore(
             image_size=reshaped_data.shape[-2:],
             patch_size=settings.patch_size,

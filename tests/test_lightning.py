@@ -6,7 +6,7 @@ import pytest
 import torch
 from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
 from lightning.pytorch.cli import ArgsType, LightningCLI
-from lightning.pytorch.loggers import TensorBoardLogger
+from lightning.pytorch.loggers import TensorBoardLogger, MLFlowLogger
 
 from mfai.pytorch.dummy_dataset import DummyDataModule
 from mfai.pytorch.lightning_modules import SegmentationLightningModule
@@ -22,10 +22,15 @@ from mfai.pytorch.models.unet import UNet
         ("regression", 2, 1),
     ],
 )
+@pytest.mark.parametrize(
+    "logger",
+    ['tensorboard', 'mlflow']
+)
 def test_lightning_training_loop(
     config: tuple[
         Literal["binary", "multiclass", "multilabel", "regression"], int, int
     ],
+    logger: str
 ) -> None:
     """
     Checks that our lightning module is trainable in all 4 modes.
@@ -46,13 +51,18 @@ def test_lightning_training_loop(
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # Define logger, callbacks and lightning Trainer
-        tblogger = TensorBoardLogger(save_dir=tmpdir, name="logs")
+        if logger == 'tensorboard':
+            logger = TensorBoardLogger(save_dir=tmpdir, name="logs")
+        elif logger == 'mlflow':
+            logger = MLFlowLogger(experiment_name="test_lightning", save_dir=tmpdir)
+        else:
+            raise NotImplementedError(f'Logger {logger} not supported.')
         checkpointer = ModelCheckpoint(
             monitor="val_loss",
             filename="ckpt-{epoch:02d}-{val_loss:.2f}",
         )
         trainer = L.Trainer(
-            logger=tblogger,
+            logger=logger,
             max_epochs=1,
             callbacks=[checkpointer],
             limit_train_batches=2,

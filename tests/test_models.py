@@ -7,6 +7,7 @@ Test our pure PyTorch models to make sure they can be :
 """
 
 import tempfile
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Tuple
 
@@ -25,6 +26,7 @@ from mfai.pytorch.models import (
 from mfai.pytorch.models.base import ModelType
 from mfai.pytorch.models.deeplabv3 import DeepLabV3Plus
 from mfai.pytorch.models.half_unet import HalfUNet
+from mfai.pytorch.models.vit import ViTClassifier
 
 
 def to_numpy(tensor: Tensor) -> Any:
@@ -80,7 +82,9 @@ class FakePanguDataset(torch.utils.data.Dataset):
 
 
 def train_model(
-    model: torch.nn.Module, input_shape: Tuple[int, ...]
+    model: torch.nn.Module,
+    input_shape: Tuple[int, ...],
+    average_spatial_dims: bool = False,
 ) -> torch.nn.Module:
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     loss_fn = torch.nn.MSELoss()
@@ -100,6 +104,11 @@ def train_model(
 
             # Make predictions for this batch
             outputs = model(inputs)
+
+            if average_spatial_dims:
+                start_dim = 1 if model.features_last else 2
+                end_dim = start_dim + model.num_spatial_dims  # type: ignore[operator]
+                targets = targets.mean(dim=list(range(start_dim, end_dim)))
 
             # Compute the loss and its gradients
             loss = loss_fn(outputs, targets)
@@ -311,6 +320,24 @@ def test_extra_models(model_and_settings: Any) -> None:
         train_model(model, (NUM_INPUTS, *INPUT_SHAPE[:spatial_dims]))
 
 
+@pytest.mark.parametrize("model_kls", [ViTClassifier])
+def test_full_sample_classifiers(model_kls: torch.nn.Module) -> None:
+    """
+    Testing the models classifying the full input/sample/image (and not per pixel).
+    For now we only have our ViTClassifier.
+    """
+    INPUT_SHAPE = (64, 64)
+    NUM_INPUTS = 2
+    NUM_OUTPUTS = 1
+
+    model = model_kls(
+        in_channels=NUM_INPUTS,
+        out_channels=NUM_OUTPUTS,
+        input_shape=INPUT_SHAPE,
+    )
+    train_model(model, (NUM_INPUTS, *INPUT_SHAPE), average_spatial_dims=True)
+
+
 def test_load_model_by_name() -> None:
     with pytest.raises(ValueError):
         load_from_settings_file("NotAValidModel", 2, 2, Path(""), (1, 1))
@@ -357,6 +384,18 @@ def test_input_shape_validation(model_class: Any) -> None:
     valid_shape, new_shape = net.validate_input_shape(input_data.shape[-2:])
 
     assert not valid_shape
+
+    # assert it does not fail after padding
+    input_data_pad = padding.pad_batch(
+        batch=input_data, new_shape=new_shape, pad_value=0
+    )
+
+    # re-instantiate the model with autopadding enabled
+    settings = model_class.settings_kls(**asdict(net.settings))
+    net = model_class(
+        in_channels=C, out_channels=1, input_shape=new_shape, settings=settings
+    )
+    net(input_data_pad)
 
 
 @pytest.mark.parametrize("model_class", autopad_nn_architectures)

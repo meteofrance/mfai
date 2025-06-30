@@ -283,3 +283,63 @@ def test_fuyu_with_mlp_and_pos_embedding() -> None:
     model.unfreeze_llm()
     model.freeze_vision()
     model.unfreeze_vision()
+
+
+@pytest.mark.parametrize(
+    "encoder_name, target_text",
+    [
+        (
+            "linear",
+            "Sustine et abstinemir GMBF majestic Crabperture intact Causes premisesInsp",
+        ),
+        (
+            "resnet50",
+            "Sustine et abstineCorrection recessioniers unarmed related goose charge detect599 Empire",
+        ),
+        (
+            "vit",
+            'Sustine et abstine gripping disputed Capitalismwidget climb negative avail prone"}," fascinating',
+        ),
+    ],
+)
+def test_fuyu_vision_encoders(
+    encoder_name: Literal["resnet50", "linear", "vit"], target_text: str
+) -> None:
+    torch.manual_seed(999)
+    tokenizer = GPT2Tokenizer()
+    model = MultiModalLM(
+        settings=MultiModalLMSettings(
+            vision_input_shape=(64, 64, 2, 1),
+            n_heads=1,
+            n_layers=1,
+            emb_dim=32,
+            hidden_dim=32,
+            context_length=80,
+            inject_vision_each_stage=True,
+            vision_encoder=encoder_name,
+        ),
+        vocab_size=tokenizer.vocab_size,
+    )
+    vision_input = NamedTensor(
+        torch.randn(1, 64, 64, 2, 1),
+        names=["batch", "lat", "lon", "timestep", "features"],
+        feature_names=[
+            "u",
+        ],
+    )
+    encoded = tokenizer.encode("Sustine et abstine")
+    encoded_tensor = torch.tensor(encoded).unsqueeze(0)
+
+    out = generate_text_simple(
+        model=model,
+        idx=encoded_tensor,
+        max_new_tokens=10,
+        context_size=model.context_length,
+        vision_input=vision_input,
+    )
+    decoded_text = tokenizer.decode(out.squeeze(0).tolist())
+    assert decoded_text == target_text
+    model.freeze_llm()
+    model.unfreeze_llm()
+    model.freeze_vision()
+    model.unfreeze_vision()

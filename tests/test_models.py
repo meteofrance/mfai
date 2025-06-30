@@ -107,7 +107,7 @@ def train_model(
 
             if average_spatial_dims:
                 start_dim = 1 if model.features_last else 2
-                end_dim = start_dim + model.num_spatial_dims
+                end_dim = start_dim + model.num_spatial_dims  # type: ignore[operator]
                 targets = targets.mean(dim=list(range(start_dim, end_dim)))
 
             # Compute the loss and its gradients
@@ -321,7 +321,7 @@ def test_extra_models(model_and_settings: Any) -> None:
 
 
 @pytest.mark.parametrize("model_kls", [ViTClassifier])
-def test_full_sample_classifiers(model_kls) -> None:
+def test_full_sample_classifiers(model_kls: torch.nn.Module) -> None:
     """
     Testing the models classifying the full input/sample/image (and not per pixel).
     For now we only have our ViTClassifier.

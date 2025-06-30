@@ -164,11 +164,13 @@ class MultiModalLM(FreezeMLMMixin, nn.Module):
 
         if self.settings.vision_encoder == "linear":
             # One linear projection per feature/weather field
-            self.vision_encoder: nn.ModuleList | ResNet50 | ResNet50MLM = nn.ModuleList(
-                [
-                    nn.Linear(spatial_dims, settings.emb_dim)
-                    for _ in range(settings.vision_input_shape[3])
-                ]
+            self.vision_encoder: nn.ModuleList | ResNet50 | ResNet50MLM | VitEncoder = (
+                nn.ModuleList(
+                    [
+                        nn.Linear(spatial_dims, settings.emb_dim)
+                        for _ in range(settings.vision_input_shape[3])
+                    ]
+                )
             )
 
             self.layer_norm_vis = settings.layer_norm_vis

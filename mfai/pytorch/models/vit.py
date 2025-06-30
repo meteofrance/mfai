@@ -17,7 +17,7 @@ from .base import AutoPaddingModel, BaseModel, ModelType
 # helpers
 
 
-def pair(t: tuple[int, int] | int) -> tuple[int, int]:
+def pair(t: torch.Size | tuple[int, int] | int) -> torch.Size | tuple[int, int]:
     return t if isinstance(t, tuple) else (t, t)
 
 
@@ -119,8 +119,8 @@ class ViTCore(nn.Module):
     def __init__(
         self,
         *,
-        image_size: tuple[int, int] | int,
-        patch_size: tuple[int, int] | int,
+        image_size: torch.Size | tuple[int, int] | int,
+        patch_size: torch.Size | tuple[int, int] | int,
         emb_dim: int,
         n_layers: int,
         n_heads: int,

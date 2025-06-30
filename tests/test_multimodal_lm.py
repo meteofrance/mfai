@@ -302,7 +302,9 @@ def test_fuyu_with_mlp_and_pos_embedding() -> None:
         ),
     ],
 )
-def test_fuyu_vision_encoders(encoder_name: str, target_text: str) -> None:
+def test_fuyu_vision_encoders(
+    encoder_name: Literal["resnet50", "linear", "vit"], target_text: str
+) -> None:
     torch.manual_seed(999)
     tokenizer = GPT2Tokenizer()
     model = MultiModalLM(

@@ -81,6 +81,7 @@ Currently we support the following neural network architectures:
 | [UNetRPP](mfai/pytorch/models/unetrpp.py#L1) | [arxiv link](https://arxiv.org/abs/2212.04497)  | (Batch, features, Height, Width) or (Batch, features, Height, Width, Depth) | Yes | Vision transformer with a reduced GFLOPS footprint adapted from [author's github](https://github.com/Amshaker/unetr_plus_plus). Modified to work both with 2d and 3d inputs. The decoders use Bilinear2D + Conv2d instead of Conv2dTranspose to remove artefacts/checkerboard effects  | Front Detection, LAM Weather Forecasting |
 | [PanguWeather](mfai/pytorch/models/pangu.py#L1) | [arxiv link](http://arxiv.org/abs/2211.02556)  | (Batch, features, Height, Width) and (Batch, features, Height, Width, Depth) | Yes | 3D Earth-specific transformer based on Swin transformers adapted from [author's github](https://github.com/198808xc/Pangu-Weather) pseudo-code and implemented by Atos Eviden | (LAM) Weather Forecasting |
 | [ArchesWeather](mfai/pytorch/models/archesweather.py#L1) | [arxiv link](http://arxiv.org/abs/2405.14527)  | (Batch, features, Height, Width) and (Batch, features, Height, Width, Depth) | Yes | 3D Earth-specific transformer using Pangu code with axial attention, based on [author's repository](https://github.com/gcouairon/ArchesWeather/tree/main) and implemented by Atos Eviden| (LAM) Weather Forecasting |
+| [VIT](mfai/pytorch/models/vit.py#L1) | [openreview link](https://openreview.net/pdf?id=YicbFdNTTy)  | (Batch, features, Height, Width) | Yes | VIT implementation slightly adapted from [lucidrain's github](https://github.com/lucidrains/vit-pytorch/blob/main/vit_pytorch/vit.py) | two flavours: Full sample/image classification + Vision encoding for MLMs|
 
 ## Graph Neural Networks
 
@@ -100,7 +101,7 @@ Currently we support the following neural network architectures:
 
 | Model  | Research Paper  | Input Shape    | ONNX exportable ? | Notes | Use-Cases at MF |
 | :---:   | :---: | :---: | :---: | :---: | :---: |
-|[Custom Fuyu Like Model](mfai/pytorch/models/llms/multimodal.py#L37)| [arxiv link](https://arxiv.org/abs/2307.09288)  | (Batch, token_id) for text, (Batch, Lat, Lon, Timestep, Features) for weather inputs | No | Inspired from [Adept AI blog post](https://www.adept.ai/blog/fuyu-8b)  and [Sebastian Raschka's blog](https://magazine.sebastianraschka.com/p/understanding-multimodal-llms) | Marine text product generation |
+|[Custom Fuyu Like Model](mfai/pytorch/models/llms/multimodal.py#L37)| [arxiv link](https://arxiv.org/abs/2307.09288)  | (Batch, token_id) for text, (Batch, Lat, Lon, Timestep, Features) for weather inputs | No | Inspired from [Adept AI blog post](https://www.adept.ai/blog/fuyu-8b)  and [Sebastian Raschka's blog](https://magazine.sebastianraschka.com/p/understanding-multimodal-llms). We propose 3 different vision encoders: linear, resnet50, vit | Marine text product generation |
 |[Custom Cross Attention weather + text MLM combining a resnet50 and a cross attention GPT-2](mfai/pytorch/models/llms/multimodal.py#L304)|  | (Batch, token_id) for text, (Batch, Lat, Lon, Timestep, Features) for weather inputs | No | Inspired from [Sebastian Raschka's blog](https://magazine.sebastianraschka.com/p/understanding-multimodal-llms) | Marine text product generation |
 
 ## Vision Language Models

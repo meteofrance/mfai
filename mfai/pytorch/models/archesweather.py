@@ -333,7 +333,7 @@ class EarthSpecificLayer(nn.Module):
         for i, block in enumerate(self.blocks):
             # Roll the input every two blocks
             if i % 2 == 0:
-                x = block(x, embedding_shape, roll=False, cond_embed=<)
+                x = block(x, embedding_shape, roll=False, cond_embed=cond_embed)
             else:
                 x = block(x, embedding_shape, roll=True, cond_embed=cond_embed)
         return x

@@ -19,7 +19,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.utils.checkpoint as gradient_checkpoint
-from axial_attention import AxialAttention, AxialPositionalEmbedding
+from axial_attention import (  # type: ignore[import-untyped]
+    AxialAttention,
+    AxialPositionalEmbedding,
+)
 from dataclasses_json import dataclass_json
 from timm.layers import DropPath
 from torch import Tensor

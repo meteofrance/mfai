@@ -760,10 +760,14 @@ class ArchesWeather(BaseModel):
 
     def forward(
         self,
-        input_surface: Tensor,
         input_level: Tensor,
+        input_surface: Tensor,
+        static_data: Optional[Tensor] = None,
         cond_emb: Optional[Tensor] = None,
-    ) -> dict[str, Tensor]:
+    ) -> Tuple[Tensor, Tensor]:
+        if static_data is not None:
+            input_surface = torch.cat([input_surface, static_data], dim=1)
+
         pos_embs = self.positional_embeddings[None].expand(
             (input_surface.shape[0], *self.positional_embeddings.shape)
         )
@@ -850,5 +854,4 @@ class ArchesWeather(BaseModel):
                 padding_left : padded_w - padding_right,
             ]
 
-        out = dict(next_state_level=output_level, next_state_surface=output_surface)
-        return out
+        return output_level, output_surface

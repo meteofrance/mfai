@@ -333,7 +333,7 @@ class EarthSpecificLayer(nn.Module):
         for i, block in enumerate(self.blocks):
             # Roll the input every two blocks
             if i % 2 == 0:
-                x = block(x, embedding_shape, roll=False, cond_embed=cond_embed)
+                x = block(x, embedding_shape, roll=False, cond_embed=<)
             else:
                 x = block(x, embedding_shape, roll=True, cond_embed=cond_embed)
         return x
@@ -540,7 +540,10 @@ class CondBasicLayer(EarthSpecificLayer):
         embedding_shape: torch.Size,
         cond_emb: Optional[Tensor] = None,
     ) -> Tensor:
-        c = self.adaLN_modulation(cond_emb)
+        if cond_emb is not None:
+            c = self.adaLN_modulation(cond_emb)
+        else:
+            c = None
         return super().forward(x, embedding_shape, c)
 
 

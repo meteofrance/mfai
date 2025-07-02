@@ -198,7 +198,7 @@ class EarthSpecificBlock(nn.Module):
                 use_reentrant=False,
             )
         else:
-            x_window = self.attention(x_window, mask, batch_size, padded_z, padded_h)
+            x_window = self.attention(x_window, mask, batch_size)
 
         # Reorganize data to original shapes
         x = x_window.reshape(

@@ -81,9 +81,9 @@ class EarthSpecificBlock(nn.Module):
         self.lam = lam
         # Define the window size of the neural network
         self.window_size = window_size
-        assert all([w_s == 1 or w_s % 2 == 0 for w_s in window_size]), (
-            "Window size must be divisible by 2"
-        )
+        assert all(
+            [w_s == 1 or w_s % 2 == 0 for w_s in window_size]
+        ), "Window size must be divisible by 2"
         self.shift_size = tuple(w_size // 2 + w_size % 2 for w_size in window_size)
 
         # Initialize serveral operations

@@ -48,9 +48,9 @@ def define_3d_earth_position_index(window_size: Tuple[int, int, int]) -> Tensor:
     Returns:
         Tensor: index
     """
-    assert len(window_size) == 3, (
-        "Data must be 3D, but window has {}dimension(s)".format(len(window_size))
-    )
+    assert (
+        len(window_size) == 3
+    ), "Data must be 3D, but window has {}dimension(s)".format(len(window_size))
 
     # Index in the pressure level of query matrix
     coords_zi = torch.arange(window_size[0])
@@ -406,14 +406,14 @@ class CustomPad3d(ConstantPad3d):
         value: float = 0.0,
     ) -> None:
         # Compute paddings, starts from the last dim and goes backward
-        assert len(data_size) == 3, (
-            "This padding class is for 3d data, but data has {} dimension(s)".format(
-                len(data_size)
-            )
+        assert (
+            len(data_size) == 3
+        ), "This padding class is for 3d data, but data has {} dimension(s)".format(
+            len(data_size)
         )
-        assert len(patch_size) == 3, (
-            "Patch should be 3d, but has {} dimension(s)".format(len(patch_size))
-        )
+        assert (
+            len(patch_size) == 3
+        ), "Patch should be 3d, but has {} dimension(s)".format(len(patch_size))
         padding_lon = (
             patch_size[-1] - (data_size[-1] % patch_size[-1])
             if (data_size[-1] % patch_size[-1]) > 0
@@ -468,14 +468,14 @@ class CustomPad2d(ConstantPad2d):
         self, data_size: torch.Size, patch_size: Tuple[int, int], value: float = 0.0
     ) -> None:
         # Compute paddings, starts from the last dim and goes backward
-        assert len(data_size) == 2, (
-            "This padding class is for 2d data, but data has {} dimension(s)".format(
-                len(data_size)
-            )
+        assert (
+            len(data_size) == 2
+        ), "This padding class is for 2d data, but data has {} dimension(s)".format(
+            len(data_size)
         )
-        assert len(patch_size) == 2, (
-            "Patch should be 2d, but has {} dimension(s)".format(len(patch_size))
-        )
+        assert (
+            len(patch_size) == 2
+        ), "Patch should be 2d, but has {} dimension(s)".format(len(patch_size))
         padding_lon = (
             patch_size[-1] - (data_size[-1] % patch_size[-1])
             if (data_size[-1] % patch_size[-1]) > 0
@@ -681,9 +681,9 @@ class UpSample(nn.Module):
         self.norm = LayerNorm(output_dim)
 
     def forward(self, x: Tensor, embedding_shape: torch.Size) -> Tensor:
-        assert x.shape[-1] % 4 == 0, (
-            "The token size must be divisible by 4, but is {}".format(x.shape[-1])
-        )
+        assert (
+            x.shape[-1] % 4 == 0
+        ), "The token size must be divisible by 4, but is {}".format(x.shape[-1])
         # Z, H, W represent the desired output shape
         h_d = embedding_shape[2] // 2 + embedding_shape[2] % 2
         w_d = embedding_shape[3] // 2 + embedding_shape[3] % 2
@@ -801,9 +801,9 @@ class EarthSpecificBlock(nn.Module):
         self.lam = lam
         # Define the window size of the neural network
         self.window_size = window_size
-        assert all([w_s % 2 == 0 for w_s in window_size]), (
-            "Window size must be divisible by 2"
-        )
+        assert all(
+            [w_s % 2 == 0 for w_s in window_size]
+        ), "Window size must be divisible by 2"
         self.shift_size = tuple(w_size // 2 for w_size in window_size)
 
         # Initialize serveral operations

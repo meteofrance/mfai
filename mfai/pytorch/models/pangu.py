@@ -1,3 +1,5 @@
+# Copyright (C) Bull S.A.S - 2025
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -46,9 +48,9 @@ def define_3d_earth_position_index(window_size: Tuple[int, int, int]) -> Tensor:
     Returns:
         Tensor: index
     """
-    assert len(window_size) == 3, (
-        "Data must be 3D, but window has {}" "dimension(s)".format(len(window_size))
-    )
+    assert (
+        len(window_size) == 3
+    ), "Data must be 3D, but window has {}dimension(s)".format(len(window_size))
 
     # Index in the pressure level of query matrix
     coords_zi = torch.arange(window_size[0])

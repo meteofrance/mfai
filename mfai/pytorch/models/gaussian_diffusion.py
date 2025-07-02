@@ -581,7 +581,6 @@ class Unet(Module):
         if self.self_condition:
             x_self_cond = default(x_self_cond, lambda: torch.zeros_like(x))
             x = torch.cat((x_self_cond, x), dim=1)
-
         x = self.init_conv(x)
         r = x.clone()
 
@@ -979,7 +978,6 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         )
         return model_mean, posterior_variance, posterior_log_variance, x_start
 
-    @torch.inference_mode()
     def p_sample(self, x, t: int, x_self_cond=None):
         b, *_, device = *x.shape, self.device
         batched_times = torch.full((b,), t, device=device, dtype=torch.long)
@@ -990,7 +988,6 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         pred_img = model_mean + (0.5 * model_log_variance).exp() * noise
         return pred_img, x_start
 
-    @torch.inference_mode()
     def p_sample_loop(self, img, return_all_timesteps=False):
         shape = img.shape #deduced from img
         batch, device = shape[0], self.device
@@ -1014,7 +1011,6 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         ret = self.unnormalize(ret)
         return ret
 
-    @torch.inference_mode()
     def ddim_sample(self, img, return_all_timesteps=False):
         shape = img.shape #deduced from img
         batch, device, total_timesteps, sampling_timesteps, eta, objective = (
@@ -1071,6 +1067,8 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         return ret
 
     def forward(self, img, *args, **kwargs):
+
+        img.requires_grad_(True)
 
         (
             b,

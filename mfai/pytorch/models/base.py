@@ -25,6 +25,7 @@ class ModelType(Enum):
     LLM = 4
     MULTIMODAL_LLM = 5
     PANGU = 6
+    DIFFUSION = 7
 
 
 class ModelABC(ABC):

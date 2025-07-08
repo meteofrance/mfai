@@ -8,10 +8,11 @@ import torch
 import torchmetrics as tm
 from pytorch_lightning.utilities import rank_zero_only
 from torch import Tensor
-from lightning.pytorch.loggers import TensorBoardLogger
+from lightning.pytorch.loggers import TensorBoardLogger, MLFlowLogger
+from lightning.pytorch.loggers.logger import DummyLogger
 
 from mfai.pytorch.models.base import BaseModel
-from mfai.logging import AgnosticLogger
+from mfai.logging import MFAILoggerMLFlow, MFAILoggerTensorBoard, MFAILoggerDummy
 
 # define custom scalar in tensorboard, to have 2 lines on same graph
 layout = {
@@ -61,7 +62,14 @@ class SegmentationLightningModule(pl.LightningModule):
 
     def setup(self, stage: str):
         if stage == "fit":
-            self.agnostic_logger = AgnosticLogger(self.logger)
+            if isinstance(self.logger, MLFlowLogger):
+                self.agnostic_logger = MFAILoggerMLFlow(self.logger)
+            elif isinstance(self.logger, TensorBoardLogger):
+                self.agnostic_logger = MFAILoggerTensorBoard(self.logger)
+            elif isinstance(self.logger, DummyLogger):
+                self.agnostic_logger = MFAILoggerDummy(self.logger)
+            else:
+                raise NotImplementedError(f'Can not deal with logger of type {self.logger.__class__}.')
 
     def get_hparams(self) -> dict:
         """Return the hparams we want to save in logger"""
@@ -242,10 +250,10 @@ class SegmentationLightningModule(pl.LightningModule):
             step = self.current_epoch
             dformat = "HW" if self.type_segmentation == "multiclass" else "CHW"
             if step == 0:
-                # TODO use dformat for MLFlow too (simpler internal logic)
-                self.agnostic_logger.log_img(img=y[0], title='val_true_img', artifact_path='val_img', dataformats=dformat)
+                self.agnostic_logger.log_img(img=y[0], file_name='val_true_img', artifact_path='val_img', dataformats=dformat)
 
-            self.agnostic_logger.log_img(img=y_hat[0], artifact_path='val_img', title=f'val_pred_img_{step}', dataformats=dformat)
+            # TODO consider using the dynamic image logging
+            self.agnostic_logger.log_img(img=y_hat[0], artifact_path='val_img', file_name=f'val_pred_img_{step}', dataformats=dformat)
 
 
     def validation_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> Any:

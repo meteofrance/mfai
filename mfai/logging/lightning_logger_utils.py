@@ -1,115 +1,136 @@
 import os
+from abc import ABC, abstractmethod
 import tempfile
+from typing import Optional
 from pathlib import Path
 
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from lightning.pytorch.loggers import TensorBoardLogger, MLFlowLogger
+from lightning.pytorch.loggers import TensorBoardLogger, MLFlowLogger, Logger
 
-class AgnosticLogger():
 
-    def __init__(self, logger):
+class MFAILoggerABC(ABC):
+
+    def __init__(self, logger: Logger):
         self.logger = logger
 
-    # ---------- PUBLIC API ------------------------- #
+    @abstractmethod
+    def log_img(self, img: np.ndarray | torch.Tensor, artifact_path: str, file_name: str, dataformats: str, step: Optional[int] = None) -> None:
+        ...
 
-    def log_img(self, img: np.ndarray, artifact_path: str, title: str, dataformats: str) -> None:
-        if isinstance(self.logger, MLFlowLogger):
-            self._mlflow_log_img(img=img, artifact_path=artifact_path, title=title, dataformats=dataformats)
-        elif isinstance(self.logger, TensorBoardLogger):
-            self.logger.experiment.add_image(f"{artifact_path}/{title}", img, dataformats=dataformats)
-        else:
-            raise ValueError(f"Unsupported logger class {self.logger.__class__}")
+    @abstractmethod
+    def log_params(self, params: dict) -> None:
+        ...
 
-    def log_params(self, params: dict):
-        if isinstance(self.logger, MLFlowLogger):
-            self._mlflow_log_params(hparams=params)
-        elif isinstance(self.logger, TensorBoardLogger):
-            self.logger.log_hyperparams(params)
-        else:
-            raise ValueError(f"Unsupported logger class {self.logger.__class__}")
+    @abstractmethod
+    def log_df(self, df: pd.DataFrame, name: str, artifact_path: str) -> None:
+        ...
 
-    def log_df(self, df: pd.DataFrame, name: str, artifact_path: str):
-        if isinstance(self.logger, MLFlowLogger):
-            self._mlflow_log_csv(df=df, name=name, artifact_path=artifact_path)
-        elif isinstance(self.logger, TensorBoardLogger):
-            # tb does not support file logging like mlflow
-            # We rely on the log_dir
-            path_csv = Path(self.logger.log_dir) / "metrics_test_set.csv"
-            df.to_csv(path_csv, index=False)
-            print(
-                f"--> Metrics for all samples saved in \033[91;1m{path_csv}\033[0m"
-            )  # bold red
-        else:
-            raise ValueError(f"Unsupported logger class {self.logger.__class__}")
+    def _img_to_numpy(self, img: torch.Tensor | np.ndarray) -> np.ndarray:
+        """ Ensures that an array represending an image,
+        is returned as numpy array.
 
-    # ---------- PRIVATE METHODS ------------------------- #
+        Args:
+            img (torch.Tensor | np.ndarray): The image array
 
-    def _img_to_numpy(self, img):
+        Returns:
+            np.ndarray: The image as numpy array
+        """
         if hasattr(img, "detach"):
             img = img.detach().cpu().numpy()
         return img
 
-
-    def _save_temp_image(self, img_array, name, dataformats):
-        # Convert CHW to HWC
-        if dataformats == "CHW":
-            img_array = np.transpose(img_array, (1, 2, 0))  # → HWC
-
-        if dataformats == "CHW" and img_array.shape[2] not in [1, 3, 4]:
-            raise ValueError(f"Unsupported image shape: {img_array.shape}")
-
-        # Special case: (H, W, 1) → (H, W) for grayscale
-        if dataformats == "CHW" and img_array.shape[2] == 1:
-            img_array = img_array[:, :, 0]
+class MFAILoggerDummy(MFAILoggerABC):
+    """
+    Use this class for testing purposes only.
+    """
+    def __init__(self, logger: Logger):
+        self.logger = logger
 
 
-        if dataformats != "HW" and dataformats != "CHW":
-            raise ValueError(f"Image format {dataformats} not supported")
+    def log_img(self, img: np.ndarray | torch.Tensor, artifact_path: str, file_name: str, dataformats: str, step: Optional[int] = None) -> None:
+        pass
 
 
-        # Save image
-        tmp_path = os.path.join(tempfile.gettempdir(), f"{name}.png")
-        cmap = "gray" if img_array.ndim == 2 else None
-        plt.imsave(tmp_path, img_array.astype('float32'), cmap=cmap)
-        return tmp_path
+    def log_params(self, params: dict) -> None:
+        pass
 
-    def _save_temp_csv(self, df: pd.DataFrame, name):
 
-        tmp_path = os.path.join(tempfile.gettempdir(), f"{name}.csv")
-        df.to_csv(tmp_path, index=False)
+    def log_df(self, df: pd.DataFrame, name: str, artifact_path: str) -> None:
+        pass
 
-        return tmp_path
 
-    def _mlflow_log_csv(self, df: pd.DataFrame, name: str, artifact_path):
 
-        tmp_path = self._save_temp_csv(df=df, name=name)
+class MFAILoggerMLFlow(MFAILoggerABC):
 
-        run_id = self.logger.run_id
-        try:
-            self.logger.experiment.log_artifact(run_id, tmp_path, artifact_path=artifact_path)
-        finally:
-            # Manually delete the file
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
+    def __init__(self, logger: Logger):
+        assert isinstance(logger, MLFlowLogger)
+        super().__init__(logger)
 
-    def _mlflow_log_img(self, img: np.ndarray | torch.Tensor, title: str, artifact_path: str, dataformats: str = "CHW"):
 
-        img_path = self._save_temp_image(self._img_to_numpy(img), title, dataformats=dataformats)
+    def log_img(self, img: np.ndarray | torch.Tensor, artifact_path: str, file_name: str, dataformats: str, step: Optional[int] = None):
+        img = self._img_to_numpy(img)
+        img = self._reshape_image(img, dataformats)
+
+        valid_exts = ('.jpg', '.jpeg', '.png')
 
         run_id = self.logger.run_id
-        try:
-            self.logger.experiment.log_artifact(run_id, img_path, artifact_path=artifact_path)
-        finally:
-            # Manually delete the file
-            if os.path.exists(img_path):
-                os.remove(img_path)
+        if step is None:
+            # log static image
+            if not file_name.lower().endswith(valid_exts):
+                file_name += '.png'
+            self.logger.experiment.log_image(run_id, img, artifact_file=os.path.join(artifact_path, file_name))
+        else:
+            # log dynamic image
+            for ext in valid_exts:
+                if file_name.endswith(ext):
+                    file_name = file_name[: -len(ext)]
+                    break
+            artifact_path = artifact_path.replace('/', '_').replace('.', '_')
+            self.logger.experiment.log_image(run_id, img, key=f"{artifact_path}_{file_name}", step=step)
 
-    def _mlflow_log_params(self, hparams: dict):
+    def log_params(self, params: dict) -> None:
+        run_id = self.logger.run_id
 
-        for k, v in hparams.items():
-            run_id = self.logger.run_id
-
+        for k, v in params.items():
             self.logger.experiment.log_param(run_id, k, v)
+
+    def log_df(self, df: pd.DataFrame, name: str, artifact_path: str) -> None:
+        run_id = self.logger.run_id
+
+        if not name.lower().endswith('.csv'):
+            name = f"{name}.csv"
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = os.path.join(tmp_dir, name)
+            df.to_csv(tmp_path, index=False)
+            self.logger.experiment.log_artifact(run_id, tmp_path, artifact_path=artifact_path)
+
+class MFAILoggerTensorBoard(MFAILoggerABC):
+
+    def __init__(self, logger: Logger):
+        assert isinstance(logger, TensorBoardLogger)
+        super().__init__(logger)
+
+    def log_img(self, img: np.ndarray | torch.Tensor, artifact_path: str, file_name: str, dataformats: str, step: Optional[int] = None) -> None:
+        self.logger.experiment.add_image(f"{artifact_path}/{file_name}", img, dataformats=dataformats, global_step=step)
+
+    def log_params(self, params: dict) -> None:
+        self.logger.log_hyperparams(params)
+
+    def log_df(self, df: pd.DataFrame, name: str, artifact_path: str) -> None:
+        #tb does not support file logging like mlflow
+        # We rely on the log_dir
+
+        if not name.lower().endswith('.csv'):
+            name += '.csv'
+
+        path_csv = os.path.join(self.logger.log_dir, artifact_path)
+        os.makedirs(path_csv, exist_ok=True)
+        path_csv = os.path.join(path_csv, name)
+        df.to_csv(path_csv, index=False)
+        # print(
+        #     f"--> Metrics for all samples saved in \033[91;1m{path_csv}\033[0m"
+        # )  # bold red

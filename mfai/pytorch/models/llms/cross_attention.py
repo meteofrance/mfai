@@ -4,8 +4,8 @@ import einops
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
 
-from mfai.pytorch.models.llms import CrossAttentionGPT2
-from mfai.pytorch.models.llms.multimodal import FreezeMLMMixin
+from mfai.pytorch.models.llms.gpt2 import CrossAttentionGPT2
+from mfai.pytorch.models.llms.fuyu import FreezeMLMMixin
 from mfai.pytorch.models.resnet import (
     ResNet50MLM,
     ResNet50MLMSettings,

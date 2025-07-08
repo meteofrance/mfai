@@ -9,7 +9,9 @@ from dataclasses_json import dataclass_json
 from torch import Tensor, nn
 
 from mfai.pytorch.models.base import ModelType
-from mfai.pytorch.models.llms import GPT2, CrossAttentionGPT2, Llama2
+from mfai.pytorch.models.llms import FreezeMLMMixin
+from mfai.pytorch.models.llms.gpt2 import GPT2
+from mfai.pytorch.models.llms.llama2 import Llama2
 from mfai.pytorch.models.resnet import (
     ResNet50,
     ResNet50MLM,
@@ -20,47 +22,9 @@ from mfai.pytorch.models.vit import VitEncoder, ViTEncoderSettings
 from mfai.pytorch.namedtensor import NamedTensor
 
 
-class FreezeMLMMixin:
-    """
-    A Mixin for (un)freezing llm and vision stages
-    of a multimodal model
-    """
-
-    backend: GPT2 | Llama2 | CrossAttentionGPT2
-    vision_encoder: nn.Module
-
-    def freeze_llm(self) -> None:
-        """
-        Freeze the LLM layers (not the vision layers)
-        """
-        for param in self.backend.parameters():
-            param.requires_grad = False
-
-    def unfreeze_llm(self) -> None:
-        """
-        Unfreeze the LLM layers
-        """
-        for param in self.backend.parameters():
-            param.requires_grad = True
-
-    def freeze_vision(self) -> None:
-        """
-        Freeze the vision encoder layers
-        """
-        for param in self.vision_encoder.parameters():
-            param.requires_grad = False
-
-    def unfreeze_vision(self) -> None:
-        """
-        Unfreeze the vision encoder layers
-        """
-        for param in self.vision_encoder.parameters():
-            param.requires_grad = True
-
-
 @dataclass_json
 @dataclass
-class MultiModalLMSettings:
+class FuyuSettings:
     """
     Settings for a multimodal language model.
     """
@@ -102,18 +66,18 @@ class MultiModalLMSettings:
     resnet_mlp_output: bool = False
 
 
-class MultiModalLM(FreezeMLMMixin, nn.Module):
+class Fuyu(FreezeMLMMixin, nn.Module):
     """
     A multimodal LLM : vision/weather and txt inspired by Fuyu.
     Can use GPT2 or Llama2 as its LLM backend.
     """
 
-    settings_kls = MultiModalLMSettings
+    settings_kls = FuyuSettings
     model_type: Literal[ModelType.MULTIMODAL_LLM]
 
     def __init__(
         self,
-        settings: MultiModalLMSettings = MultiModalLMSettings(),
+        settings: FuyuSettings = FuyuSettings(),
         vocab_size: int = 50257,
     ):
         super().__init__()

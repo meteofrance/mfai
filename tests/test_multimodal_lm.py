@@ -6,13 +6,9 @@ import torch
 from torch import Tensor, nn
 
 from mfai.pytorch.models.clip import Clip, ClipSettings
-from mfai.pytorch.models.llms import GPT2, GPT2Settings
-from mfai.pytorch.models.llms.multimodal import (
-    MultiModalLM,
-    MultiModalLMSettings,
-    XAttMultiModalLM,
-    XAttMultiModalLMSettings,
-)
+from mfai.pytorch.models.llms.gpt2 import GPT2, GPT2Settings
+from mfai.pytorch.models.llms.fuyu import Fuyu, FuyuSettings
+from mfai.pytorch.models.llms.cross_attention import XAttMultiModalLM, XAttMultiModalLMSettings
 from mfai.pytorch.models.resnet import ResNet50, ResNet50Settings
 from mfai.pytorch.namedtensor import NamedTensor
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer
@@ -88,8 +84,8 @@ def test_multimodal_llm(
 ) -> None:
     torch.manual_seed(999)
     for force_vision in (False, True):
-        model = MultiModalLM(
-            settings=MultiModalLMSettings(
+        model = Fuyu(
+            settings=FuyuSettings(
                 vision_input_shape=(3, 3, 2, 1),
                 backend=llm_backend,
                 n_heads=1,
@@ -161,8 +157,8 @@ def test_multimodal_with_pretrained_clip() -> None:
     clip.save_vision_encoder(path_checkpoint)
 
     tokenizer = GPT2Tokenizer()
-    model = MultiModalLM(
-        settings=MultiModalLMSettings(
+    model = Fuyu(
+        settings=FuyuSettings(
             vision_input_shape=vision_input_shape,
             backend="gpt2",
             n_heads=1,
@@ -241,8 +237,8 @@ def test_xatt_multimodal() -> None:
 def test_fuyu_with_mlp_and_pos_embedding() -> None:
     torch.manual_seed(666)
     tokenizer = GPT2Tokenizer()
-    model = MultiModalLM(
-        settings=MultiModalLMSettings(
+    model = Fuyu(
+        settings=FuyuSettings(
             vision_input_shape=(3, 3, 2, 1),
             backend="gpt2",
             n_heads=1,
@@ -307,8 +303,8 @@ def test_fuyu_vision_encoders(
 ) -> None:
     torch.manual_seed(999)
     tokenizer = GPT2Tokenizer()
-    model = MultiModalLM(
-        settings=MultiModalLMSettings(
+    model = Fuyu(
+        settings=FuyuSettings(
             vision_input_shape=(64, 64, 2, 1),
             n_heads=1,
             n_layers=1,

@@ -6,9 +6,12 @@ import torch
 from torch import Tensor, nn
 
 from mfai.pytorch.models.clip import Clip, ClipSettings
-from mfai.pytorch.models.llms.gpt2 import GPT2, GPT2Settings
+from mfai.pytorch.models.llms.cross_attention import (
+    XAttMultiModalLM,
+    XAttMultiModalLMSettings,
+)
 from mfai.pytorch.models.llms.fuyu import Fuyu, FuyuSettings
-from mfai.pytorch.models.llms.cross_attention import XAttMultiModalLM, XAttMultiModalLMSettings
+from mfai.pytorch.models.llms.gpt2 import GPT2, GPT2Settings
 from mfai.pytorch.models.resnet import ResNet50, ResNet50Settings
 from mfai.pytorch.namedtensor import NamedTensor
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer

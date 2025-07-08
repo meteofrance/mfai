@@ -24,6 +24,7 @@ from axial_attention import (  # type: ignore[import-untyped]
     AxialPositionalEmbedding,
 )
 from dataclasses_json import dataclass_json
+from einops import rearrange
 from timm.layers import DropPath
 from torch import Tensor
 from torch.nn import LayerNorm
@@ -135,11 +136,11 @@ class EarthSpecificBlock(nn.Module):
 
         # Zero-pad input if needed
         # reshape data for padding, from B, Z, H, W, C to B, C, Z, H, W
-        x = x.permute((0, 4, 1, 2, 3))
+        x = rearrange(x, "b z h w c -> b c z h w")
         x = self.pad3D(x)
 
         # back to previous shape
-        x = x.permute((0, 2, 3, 4, 1))
+        x = rearrange(x, "b c z h w -> b z h w c")
 
         batch_size, padded_z, padded_h, padded_w, channels = x.shape
 
@@ -174,7 +175,7 @@ class EarthSpecificBlock(nn.Module):
                 -1,
             )
         )
-        x_window = x_window.permute((0, 1, 3, 5, 2, 4, 6, 7))
+        x_window = rearrange(x_window, "b z c1 h c2 w c3 c4 -> b z h w c1 c2 c3 c4")
 
         # Get data stacked in 3D cubes, which will further be used
         # to calculate attention among each cube
@@ -213,7 +214,7 @@ class EarthSpecificBlock(nn.Module):
                 -1,
             )
         )
-        x = x.permute((0, 1, 4, 2, 5, 3, 6, 7))
+        x = rearrange(x, "b z h w c1 c2 c3 c4 -> b z c1 h c2 w c3 c4")
 
         # Reshape the tensor back to its original shape
         x = x.reshape(shape=(batch_size, padded_z, padded_h, padded_w, -1))
@@ -248,17 +249,18 @@ class EarthSpecificBlock(nn.Module):
 
         # ArchesWeather code
         if hasattr(self, "axial_attn"):
-            x2 = (
-                x.reshape(batch_size, pl, lat * lon, channels)
-                .movedim(2, 1)
-                .flatten(0, 1)
-            )  # B*Lat*Lon, Pl, C
+            x2 = rearrange(
+                x, "b (pl lat lon) c -> (b lat lon) pl c", pl=pl, lat=lat, lon=lon
+            )
+            # B*Lat*Lon, Pl, C
             x2 = self.axis_pos_embed(x2)
             x2 = self.axial_attn(x2)
-            x2 = (
-                x2.reshape(batch_size, lat * lon, pl, channels)
-                .movedim(1, 2)
-                .flatten(1, 2)
+            x2 = rearrange(
+                x2,
+                "(b lat lon) pl c -> b (pl lat lon) c",
+                b=batch_size,
+                lat=lat,
+                lon=lon,
             )  # B, Pl*Lat*Lon, C
 
         # Main calculation stages
@@ -389,7 +391,10 @@ class PatchRecoveryConv(nn.Module):
         plevels: int = 13,
     ) -> None:
         super().__init__()
-        assert np.log2(downfactor).is_integer(), "downfactor should be a power of 2"
+        if not np.log2(downfactor).is_integer():
+            raise ValueError(
+                f"downfactor should be a power of 2, value is {downfactor}"
+            )
         self.total_levels = plevels + 1
         self.input_conv = nn.Conv2d(
             input_dim,

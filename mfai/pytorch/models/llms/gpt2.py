@@ -323,7 +323,7 @@ class GPT2(nn.Module):
 
 @dataclass_json
 @dataclass(slots=True)
-class CrossAttGPT2Settings(GPT2Settings):
+class CrossAttentionGPT2Settings(GPT2Settings):
     x_att_ratio: int = 4  # Ratio of cross attention blocks, default one out of 4
 
 
@@ -332,7 +332,7 @@ class CrossAttentionTransformerBlock(nn.Module):
     A cross attention transformer block
     """
 
-    def __init__(self, settings: CrossAttGPT2Settings) -> None:
+    def __init__(self, settings: CrossAttentionGPT2Settings) -> None:
         super().__init__()
         self.x_att = MultiHeadCrossAttentionPySDPA(
             d_in_q=settings.emb_dim,
@@ -385,10 +385,10 @@ class CrossAttentionGPT2(nn.Module):
     Freely inspired by Llama3.2 as described here : https://magazine.sebastianraschka.com/i/151078631/the-llama-herd-of-models
     """
 
-    settings_kls = CrossAttGPT2Settings
+    settings_kls = CrossAttentionGPT2Settings
     model_type = ModelType.LLM
 
-    def __init__(self, settings: CrossAttGPT2Settings, vocab_size: int = 50257) -> None:
+    def __init__(self, settings: CrossAttentionGPT2Settings, vocab_size: int = 50257) -> None:
         super().__init__()
         self.context_length = settings.context_length
         self.emb_dim = settings.emb_dim

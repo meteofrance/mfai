@@ -1,14 +1,4 @@
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Copyright (C) Bull S.A.S - 2025
 
 from dataclasses import dataclass
 from typing import Optional, Tuple
@@ -46,9 +36,10 @@ def define_3d_earth_position_index(window_size: Tuple[int, int, int]) -> Tensor:
     Returns:
         Tensor: index
     """
-    assert len(window_size) == 3, (
-        "Data must be 3D, but window has {}" "dimension(s)".format(len(window_size))
-    )
+    if len(window_size) != 3:
+        raise ValueError(
+            f"Data must be 3D, but window has {len(window_size)} dimension(s)"
+        )
 
     # Index in the pressure level of query matrix
     coords_zi = torch.arange(window_size[0])

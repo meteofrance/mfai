@@ -18,6 +18,7 @@ authors:
     family-names: Tournier
 repository-code: 'https://github.com/meteofrance/mfai'
 abstract: >-
-  Weather forecast machine learning models and tools
-  collection.
+  AI models and tools written in Python for weather
+  applications (forecasting, post-processing, text
+  product generation, ...)
 license: Apache-2.0

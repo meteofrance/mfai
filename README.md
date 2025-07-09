@@ -707,7 +707,7 @@ In order to publish to pypi passes the argument **pypi**:
 See the [Python Packaging User Guide](https://packaging.python.org/en/latest/guides/using-testpypi/) for more information on how to publish a package to PyPI.
 
 # Citation
-If you find this library usefule, please cite it:
+If you use this library in your research project, please cite it:
 ```
 Météo-France, Berthomier L., Guibert F., Pradel B., Tournier T. mfai URL: https://github.com/meteofrance/mfai
 ```

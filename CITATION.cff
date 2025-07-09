@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 title: mfai
-message: 'If you use this software, please cite it as below.'
+message: 'If you use this library in your research project, please cite it as below.'
 type: software
 authors:
   - name: Météo-France
@@ -10,6 +10,8 @@ authors:
     post-code: '31100'
   - given-names: Léa
     family-names: Berthomier
+  - given-names: Oscar
+    family-names: Dewasmes
   - given-names: Frank
     family-names: Guibert
   - given-names: Bruno

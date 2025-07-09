@@ -5,14 +5,13 @@ import pytest
 import torch
 from test_multimodal_lm import generate_text_simple
 
-from mfai.pytorch.models.llms import (
+from mfai.pytorch.models.llms.gpt2 import (
     GPT2,
     CrossAttentionGPT2,
-    CrossAttGPT2Settings,
+    CrossAttentionGPT2Settings,
     GPT2Settings,
-    Llama2,
-    Llama2Settings,
 )
+from mfai.pytorch.models.llms.llama2 import Llama2, Llama2Settings
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, Tokenizer
 
 
@@ -55,7 +54,7 @@ def test_cross_attention_gpt2() -> None:
     Here we only test that the model is mathematically correct (matmul compat, shapes, attention, ...)
     """
     torch.manual_seed(999)
-    settings = CrossAttGPT2Settings(
+    settings = CrossAttentionGPT2Settings(
         context_length=32,
         n_heads=1,
         n_layers=4,

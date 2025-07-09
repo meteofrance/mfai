@@ -388,7 +388,9 @@ class CrossAttentionGPT2(nn.Module):
     settings_kls = CrossAttentionGPT2Settings
     model_type = ModelType.LLM
 
-    def __init__(self, settings: CrossAttentionGPT2Settings, vocab_size: int = 50257) -> None:
+    def __init__(
+        self, settings: CrossAttentionGPT2Settings, vocab_size: int = 50257
+    ) -> None:
         super().__init__()
         self.context_length = settings.context_length
         self.emb_dim = settings.emb_dim

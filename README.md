@@ -53,6 +53,7 @@
 - [Running tests](#running-tests)
 - [Contributing](#contributing)
 - [Publishing](#publishing)
+- [Citation](#citation)
 - [Acknowledgements](#acknowledgements)
 
 # Neural Network Architectures
@@ -704,6 +705,12 @@ In order to publish to pypi passes the argument **pypi**:
 ```
 
 See the [Python Packaging User Guide](https://packaging.python.org/en/latest/guides/using-testpypi/) for more information on how to publish a package to PyPI.
+
+# Citation
+If you find this library usefule, please cite it:
+```
+Météo-France, Berthomier L., Guibert F., Pradel B., Tournier T. mfai URL: https://github.com/meteofrance/mfai
+```
 
 # Acknowledgements
 

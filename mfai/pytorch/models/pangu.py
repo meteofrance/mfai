@@ -48,9 +48,10 @@ def define_3d_earth_position_index(window_size: Tuple[int, int, int]) -> Tensor:
     Returns:
         Tensor: index
     """
-    assert (
-        len(window_size) == 3
-    ), "Data must be 3D, but window has {}dimension(s)".format(len(window_size))
+    if len(window_size) != 3:
+        raise ValueError(
+            f"Data must be 3D, but window has {len(window_size)} dimension(s)"
+        )
 
     # Index in the pressure level of query matrix
     coords_zi = torch.arange(window_size[0])

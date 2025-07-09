@@ -85,9 +85,10 @@ class EarthSpecificBlock(nn.Module):
         self.lam = lam
         # Define the window size of the neural network
         self.window_size = window_size
-        assert all(
-            [w_s == 1 or w_s % 2 == 0 for w_s in window_size]
-        ), "Window size must be divisible by 2"
+        if not all([w_s == 1 or w_s % 2 == 0 for w_s in window_size]):
+            raise ValueError(
+                f"Window size must be 1 or divisible by 2, got {window_size}"
+            )
         self.shift_size = tuple(w_size // 2 + w_size % 2 for w_size in window_size)
 
         # Initialize serveral operations
@@ -154,7 +155,8 @@ class EarthSpecificBlock(nn.Module):
             # If two pixels are not adjacent, then mask the attention between them
             # Your can set the matrix element to -1000 when it is not adjacent,
             # then add it to the attention
-            assert len(self.shift_size) == 3, "Shift size must be 3D"
+            if len(self.shift_size) != 3:
+                raise ValueError(f"Shift size must be 3D, got {self.shift_size}")
             mask = generate_3d_attention_mask(
                 x, self.window_size, self.shift_size, self.lam
             )

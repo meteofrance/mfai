@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+title: mfai
+message: 'If you use this software, please cite it as below.'
+type: software
+authors:
+  - name: Météo-France
+    address: 42 Av. Gaspard Coriolis
+    city: Toulouse
+    country: FR
+    post-code: '31100'
+  - given-names: Léa
+    family-names: Berthomier
+  - given-names: Frank
+    family-names: Guibert
+  - given-names: Bruno
+    family-names: Pradel
+  - given-names: Théo
+    family-names: Tournier
+repository-code: 'https://github.com/meteofrance/mfai'
+abstract: >-
+  Weather forecast machine learning models and tools
+  collection.
+license: Apache-2.0

@@ -299,6 +299,15 @@ def test_torch_pangu_training_loop(model_kls: Any) -> None:
                 samples = (sample_plevel, sample_surface, sample_static)
                 export_to_onnx(model, samples, dst.name)
                 onnx_load_and_infer(dst.name, samples)
+                onnx_logits: np.ndarray = onnx_load_and_infer(dst.name, samples)
+                model_logits: np.ndarray = to_numpy(model(sample))
+                assert np.allclose(
+                    onnx_logits,
+                    model_logits,
+                    rtol=1.0e-4,
+                    atol=1.0e-7,
+                    equal_nan=True,
+                )
 
 
 @pytest.mark.parametrize(

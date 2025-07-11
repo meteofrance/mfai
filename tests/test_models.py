@@ -196,8 +196,15 @@ def test_torch_convolutional_and_vision_transformer_training_loop(
             with tempfile.NamedTemporaryFile(mode="w", suffix=".onnx") as dst:
                 sample = torch.rand(1, NUM_INPUTS, *INPUT_SHAPE[:spatial_dims])
                 export_to_onnx(model, sample, dst.name)
-                onnx_load_and_infer(dst.name, sample)
-
+                onnx_logits: np.ndarray = onnx_load_and_infer(dst.name, sample)
+                model_logits: np.ndarray = to_numpy(model(sample))
+                assert np.allclose(
+                    onnx_logits,
+                    model_logits,
+                    rtol=1.e-4,
+                    atol=1.e-7,
+                    equal_nan=True,
+                )
 
 @pytest.mark.parametrize("model_kls", nn_architectures[ModelType.PANGU])
 def test_torch_pangu_training_loop(model_kls: Any) -> None:

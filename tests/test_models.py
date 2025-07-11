@@ -9,7 +9,7 @@ Test our pure PyTorch models to make sure they can be :
 import tempfile
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Tuple
+from typing import Any
 
 import numpy as np
 import pytest
@@ -36,7 +36,7 @@ def to_numpy(tensor: Tensor) -> Any:
 
 
 class FakeSumDataset(torch.utils.data.Dataset):
-    def __init__(self, input_shape: Tuple[int, ...]) -> None:
+    def __init__(self, input_shape: tuple[int, ...]) -> None:
         self.input_shape = input_shape
         super().__init__()
 
@@ -52,7 +52,7 @@ class FakeSumDataset(torch.utils.data.Dataset):
 class FakePanguDataset(torch.utils.data.Dataset):
     def __init__(
         self,
-        input_shape: Tuple[int, ...],
+        input_shape: tuple[int, ...],
         surface_variables: int,
         plevel_variables: int,
         plevels: int,

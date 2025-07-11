@@ -83,7 +83,7 @@ class FakePanguDataset(torch.utils.data.Dataset):
 
 def train_model(
     model: torch.nn.Module,
-    input_shape: Tuple[int, ...],
+    input_shape: tuple[int, ...],
     average_spatial_dims: bool = False,
 ) -> torch.nn.Module:
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
@@ -201,10 +201,11 @@ def test_torch_convolutional_and_vision_transformer_training_loop(
                 assert np.allclose(
                     onnx_logits,
                     model_logits,
-                    rtol=1.e-4,
-                    atol=1.e-7,
+                    rtol=1.0e-4,
+                    atol=1.0e-7,
                     equal_nan=True,
                 )
+
 
 @pytest.mark.parametrize("model_kls", nn_architectures[ModelType.PANGU])
 def test_torch_pangu_training_loop(model_kls: Any) -> None:

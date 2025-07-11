@@ -138,6 +138,7 @@ def test_torch_graph_training_loop(model_kls: Any) -> None:
     """
     NUM_INPUTS = 2
     NUM_OUTPUTS = 1
+    torch.manual_seed(666)
 
     settings = model_kls.settings_kls()
 
@@ -212,6 +213,7 @@ def test_torch_pangu_training_loop(model_kls: Any) -> None:
     """
     Checks that our models are trainable on a toy problem (sum).
     """
+    torch.manual_seed(666)
     INPUT_SHAPE = (64, 64, 64)
     NUM_INPUTS = 7
     NUM_OUTPUTS = 6

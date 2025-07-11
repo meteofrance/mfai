@@ -9,7 +9,7 @@ Test our pure PyTorch models to make sure they can be :
 import tempfile
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Tuple
+from typing import Any
 
 import numpy as np
 import pytest
@@ -36,7 +36,7 @@ def to_numpy(tensor: Tensor) -> Any:
 
 
 class FakeSumDataset(torch.utils.data.Dataset):
-    def __init__(self, input_shape: Tuple[int, ...]) -> None:
+    def __init__(self, input_shape: tuple[int, ...]) -> None:
         self.input_shape = input_shape
         super().__init__()
 
@@ -52,7 +52,7 @@ class FakeSumDataset(torch.utils.data.Dataset):
 class FakePanguDataset(torch.utils.data.Dataset):
     def __init__(
         self,
-        input_shape: Tuple[int, ...],
+        input_shape: tuple[int, ...],
         surface_variables: int,
         plevel_variables: int,
         plevels: int,
@@ -83,7 +83,7 @@ class FakePanguDataset(torch.utils.data.Dataset):
 
 def train_model(
     model: torch.nn.Module,
-    input_shape: Tuple[int, ...],
+    input_shape: tuple[int, ...],
     average_spatial_dims: bool = False,
 ) -> torch.nn.Module:
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
@@ -138,6 +138,7 @@ def test_torch_graph_training_loop(model_kls: Any) -> None:
     """
     NUM_INPUTS = 2
     NUM_OUTPUTS = 1
+    torch.manual_seed(666)
 
     settings = model_kls.settings_kls()
 
@@ -196,7 +197,15 @@ def test_torch_convolutional_and_vision_transformer_training_loop(
             with tempfile.NamedTemporaryFile(mode="w", suffix=".onnx") as dst:
                 sample = torch.rand(1, NUM_INPUTS, *INPUT_SHAPE[:spatial_dims])
                 export_to_onnx(model, sample, dst.name)
-                onnx_load_and_infer(dst.name, sample)
+                onnx_logits: np.ndarray = onnx_load_and_infer(dst.name, sample)
+                model_logits: np.ndarray = to_numpy(model(sample))
+                assert np.allclose(
+                    onnx_logits,
+                    model_logits,
+                    rtol=1.0e-4,
+                    atol=1.0e-7,
+                    equal_nan=True,
+                )
 
 
 @pytest.mark.parametrize("model_kls", nn_architectures[ModelType.PANGU])
@@ -204,6 +213,7 @@ def test_torch_pangu_training_loop(model_kls: Any) -> None:
     """
     Checks that our models are trainable on a toy problem (sum).
     """
+    torch.manual_seed(666)
     INPUT_SHAPE = (64, 64, 64)
     NUM_INPUTS = 7
     NUM_OUTPUTS = 6
@@ -289,6 +299,15 @@ def test_torch_pangu_training_loop(model_kls: Any) -> None:
                 samples = (sample_plevel, sample_surface, sample_static)
                 export_to_onnx(model, samples, dst.name)
                 onnx_load_and_infer(dst.name, samples)
+                onnx_logits: np.ndarray = onnx_load_and_infer(dst.name, samples)
+                model_logits: np.ndarray = to_numpy(model(sample))
+                assert np.allclose(
+                    onnx_logits,
+                    model_logits,
+                    rtol=1.0e-4,
+                    atol=1.0e-7,
+                    equal_nan=True,
+                )
 
 
 @pytest.mark.parametrize(

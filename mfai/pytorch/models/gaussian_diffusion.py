@@ -674,31 +674,46 @@ def sigmoid_beta_schedule(timesteps, start=-3, end=3, tau=1, clamp_min=1e-5):
 @dataclass_json
 @dataclass(slots=True)
 class GaussianDiffusionSettings:
-    # TODO: Expliquer ce que régis chaque paramètre
 
     # Number of successive model calls made for an inference
-    timesteps: int = 1000
+    timesteps: int = 100
 
+    # Number of timesteps to sample; if None, is set to 'timesteps'.
     sampling_timesteps: Union[None, int] = (
-        None  # either none of number of timesteps sampled?
+        None
     )
 
+    # The training objective (TODO explain further) 
     objective: Literal["pred_v", "pred_noise", "pred_x0"] = "pred_v"
     
-    # Wich
-    beta_schedule: str = "sigmoid"
+    # Type of beta schedule
+    beta_schedule: Literal["linear", "cosine", "sigmoid"] = "sigmoid"
+
+    # Optional arguments for the beta schedule function
     schedule_fn_kwargs: dict = field(default_factory=dict)
+
+    # How much noise is added during denoising (TODO reference)
     ddim_sampling_eta: tuple[float, ...] = 0.0
+
+    # Normalizing from [-1 to 1]
     auto_normalize: bool = True
-    offset_noise_strength: tuple[float, ...] = (0.0,)  # https://www.crosslabs.org/blog/diffusion-with-offset-noise
-    min_snr_loss_weight: bool = False  # https://arxiv.org/abs/2303.09556
+
+    # CrossLabs technique to improve FID (https://www.crosslabs.org/blog/diffusion-with-offset-noise)
+    offset_noise_strength: tuple[float, ...] = (0.0,)
+
+    # Activates the minimum cap for SNR gamma (https://arxiv.org/abs/2303.09556 3.4)
+    min_snr_loss_weight: bool = False
+
+    # Value for minimum cap for SNR gamma (https://arxiv.org/abs/2303.09556 3.4)
     min_snr_gamma: tuple[int, ...] = 5
+
+    # Referring to training the channels independently (not explained in the article...)
     immiscible: bool = False
 
 
 class GaussianDiffusion(BaseModel, AutoPaddingModel):
     settings_kls: type[GaussianDiffusionSettings] = GaussianDiffusionSettings
-    onnx_supported: bool = False #to be verified in the future
+    onnx_supported: bool = False #TODO verify in the future
     supported_num_spatial_dims: tuple[int, ...] = (2,)
     num_spatial_dims: int = 2
     features_last: bool = False
@@ -1007,7 +1022,7 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
             x_start = maybe_clip(x_start)
             pred_noise = self.predict_noise_from_start(x, t, x_start)
         else:
-            raise ValueError("GaussianDiffusion.objective should be either 'pred_nois', 'pred_x0' or 'pred_v'.")
+            raise ValueError("GaussianDiffusion.objective should be either 'pred_noise', 'pred_x0' or 'pred_v'.")
 
         return ModelPrediction(pred_noise, x_start)
 

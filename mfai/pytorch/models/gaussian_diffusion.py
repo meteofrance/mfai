@@ -560,7 +560,7 @@ class Unet(Module):
     def downsample_factor(self) -> Tuple:
         return 2 ** (len(self.downs) - 1)
 
-    def forward(self, x: Tensor, time: Tensor, x_self_cond: bool = None) -> Tensor:
+    def forward(self, x: Tensor, time: Tensor, x_self_cond: Tensor | None=None) -> Tensor:
         assert all(
             [divisible_by(d, self.downsample_factor) for d in x.shape[-2:]]
         ), f"your input dimensions {x.shape[-2:]} need to be divisible by {self.downsample_factor}, given the unet"
@@ -1027,17 +1027,20 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         return ModelPrediction(pred_noise, x_start)
 
     def p_mean_variance(self, x: Tensor, t: Tensor, x_self_cond: Tensor | None=None, clip_denoised: bool=True) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-        """TODO: expliquer ce que fait cette fonction
+        """
+
+        Computes the mean and variance of the posterior distribution p(x_{t-1}|x_t).
+
         Args:
             x: image input
             t: Tensor de shape (batch_size) dont toutes les valeurs sont égales au timestep
-            x_self_cond: TODO expliquer à quoi sert x_self_cond            
+            x_self_cond: prediction from previous step for self-conditioning ; if None, replaced by zeros_like of x
 
-        Returns: TODO expliquer ce que représentente chaqu'une des valeurs de retour
-            Tensor: model mean
-            Tensor: posterior variance
-            Tensor: posterior log variance
-            Tensor: x_start
+        Returns:
+            Tensor: mean of p(x_{t-1}|x_t) (3.1 in article)
+            Tensor: posterior variance of p(x_{t-1}|x_t) 
+            Tensor: posterior log variance (used for stochastic sampling)
+            Tensor: x_start, the estimated original image x_0 at timestep t
         """
         
         preds = self.model_predictions(x, t, x_self_cond)

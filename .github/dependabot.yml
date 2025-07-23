@@ -12,3 +12,8 @@ updates:
     open-pull-requests-limit: 10
     commit-message:
       prefix: "🔄 "
+
+security-advisories:
+  dependency-types:
+    - production       # Check main dependencies
+    - development      # Check sub-dependencies

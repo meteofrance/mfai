@@ -683,7 +683,7 @@ class GaussianDiffusionSettings:
         None
     )
 
-    # The training objective (TODO explain further) 
+    # The training objective, chosen from normal steps
     objective: Literal["pred_v", "pred_noise", "pred_x0"] = "pred_v"
     
     # Type of beta schedule
@@ -692,7 +692,7 @@ class GaussianDiffusionSettings:
     # Optional arguments for the beta schedule function
     schedule_fn_kwargs: dict = field(default_factory=dict)
 
-    # How much noise is added during denoising (TODO reference)
+    # Controls how much noise is added during denoising
     ddim_sampling_eta: tuple[float, ...] = 0.0
 
     # Normalizing from [-1 to 1]
@@ -1040,7 +1040,7 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
             Tensor: mean of p(x_{t-1}|x_t) (3.1 in article)
             Tensor: posterior variance of p(x_{t-1}|x_t) 
             Tensor: posterior log variance (used for stochastic sampling)
-            Tensor: x_start, the estimated original image x_0 at timestep t
+            Tensor: x_start, the estimated start image x_0 at timestep t
         """
         
         preds = self.model_predictions(x, t, x_self_cond)
@@ -1055,17 +1055,24 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         return model_mean, posterior_variance, posterior_log_variance, x_start
 
     def p_sample(self, x: Tensor, t: int, x_self_cond: Tensor | None=None) -> tuple[Tensor, Tensor]:
-        """TODO: expliquer ce que fait cette fonction, comment est générée l'image prédite, à partir de
-        l'output du model et de bruit.
+        """
+
+        Performs a single sampling step from p(x_{t-1}|x_t).
+        The predicted image is made using the mean and posterior log variance of p(x_{t-1}|x_t) (computed in p_mean_variance); 
+        specifically, by the following formula:
+        predicted image = mean +  noise(t) * e^( 0.5 * log_variance )
+        simplified:
+        predicted image = mean + noise(t) * sqrt( variance )
+        log of the variance is used here to accelerate.
 
         Args:
             x: image input
             t: time step
-            x_self_cond: TODO: expliquer à quoi sers ce paramètre dans la prédiction
+            x_self_cond: prediction from previous step for self-conditioning ; if None, replaced by zeros_like of x
         
         Returns:
             Tensor: predicted image
-            Tensor: TODO expliquer ce qu'est x_start
+            Tensor: x_start, the estimated start image x_0 at timestep t
         """
         
         b: int = x.shape[0]

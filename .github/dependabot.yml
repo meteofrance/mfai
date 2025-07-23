@@ -15,5 +15,4 @@ updates:
 
 security-advisories:
   dependency-types:
-    - production       # Check main dependencies
-    - development      # Check sub-dependencies
+    - production       # Check all dependencies that are in requirements.txt

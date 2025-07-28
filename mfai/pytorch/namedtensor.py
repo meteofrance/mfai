@@ -217,6 +217,8 @@ class NamedTensor(TensorWrapper):
         return self.names.index(dim_name)
 
     def clone(self) -> "NamedTensor":
+        """Clone (with a deepcopy) the NamedTensor.
+        """
         return NamedTensor(
             tensor=deepcopy(self.tensor).to(self.tensor.device),
             names=self.names.copy(),

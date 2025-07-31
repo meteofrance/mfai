@@ -996,7 +996,8 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
             ModelPrediction: the model prediction
         """
 
-        model_output = self.model(x, t, x_self_cond)
+        with torch.no_grad():
+            model_output = self.model(x, t, x_self_cond)
         maybe_clip = (
             partial(torch.clamp, min=-1.0, max=1.0) if clip_x_start else identity
         )

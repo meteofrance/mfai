@@ -28,7 +28,7 @@ The [**NamedTensor**](mfai/pytorch/namedtensor.py#L28) class is a wrapper around
 | Method  | Description  |
 | :---:   | :---: |
 | `clone`() | Clone with a deepcopy. |
-| `collate_fn`(batch) | Collates a batch of `NamedTensor` instances into a single `NamedTensor`. |
+| `collate_fn`(batch, pad_dims, pad_value) | Collates a batch of `NamedTensor` instances into a single `NamedTensor`. Optionnaly padding on the desired dimensions with `pad_value`|
 | `concat`(nts) | Concatenates a list of `NamedTensor` instances along the features dimension. |
 | `dim_index`(dim_name) | Return the index of a dimension given its name. |
 | `dim_size`(dim_name) | Returns the size of a dimension given its name. |
@@ -175,6 +175,23 @@ nt2 = NamedTensor(
 # Collate a batch of NamedTensor instances into a single NamedTensor
 collated_nt = NamedTensor.collate_fn([nt1, nt2])
 print(collated_nt)
+
+# Collate a batch with zero padding on lat, lon dimensions
+
+nt1 = NamedTensor(
+    torch.rand(128, 128, 3),
+    names=["lat", "lon", "features"],
+    feature_names=["u", "v", "t2m"],
+)
+
+nt2 = NamedTensor(
+    torch.rand(256, 256, 3),
+    names=["lat", "lon", "features"],
+    feature_names=["u", "v", "t2m"],
+)
+
+collated_nt_padded = NamedTensor.collate_fn([nt1, nt2], pad_dims=("lat", "lon"), pad_value=0.0)
+
 ```
 
 For more details, refer to the **NamedTensor** class in `mfai/pytorch/namedtensor.py`.

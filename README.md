@@ -159,7 +159,7 @@ To instanciate a settings class for a model, you can use the `settings_kls` attr
 ```python
 from mfai.pytorch.models import HalfUNet
 settings = HalfUNet.settings_kls(num_filters=128, use_ghost=True)
-model = HalfUNet(in_channels=3, out_channels=2, settings=settings)
+model = HalfUNet(in_channels=3, out_channels=2, input_shape=(64,64), settings=settings)
 ```
 
 

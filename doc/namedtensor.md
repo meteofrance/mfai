@@ -190,7 +190,7 @@ nt2 = NamedTensor(
     feature_names=["u", "v", "t2m"],
 )
 
-collated_nt_padded = NamedTensor.collate_fn([nt1, nt2], pad_dims=["lat", "lon"], pad_value=0.0)
+collated_nt_padded = NamedTensor.collate_fn([nt1, nt2], pad_dims=("lat", "lon"), pad_value=0.0)
 
 ```
 

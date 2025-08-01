@@ -1,94 +1,66 @@
-# NamedTensor
+# mfai.NamedTensor
+
+```python
+class mfai.NamedTensor(tensor: Tensor, names: List[str], feature_names: List[str], feature_dim_name: str = "features")
+```
 
 The [**NamedTensor**](mfai/pytorch/namedtensor.py#L28) class is a wrapper around a PyTorch tensor with additionnal attributes and methods, it allows us to pass consistent object linking data and metadata with extra utility methods (concat along features dimension, flatten in place, ...).
 
-Table of Contents:
-- [Attributes](#attributes)
-- [Methods](#methods)
-  - [\_\_init\_\_](#__init__)
-  - [expand_to_batch_like](#expand_to_batch_like)
-  - [spatial_dim_idx](#spatial_dim_idx)
-  - [dim_size](#dim_size)
-  - [\_\_str\_\_](#__str__)
-  - [select](#select)
-  - [index_select](#index_select)
-  - [new_like](#new_like)
-  - [flatten_](#flatten_)
-  - [rearrange_](#rearrange_)
-  - [collate_fn](#collate_fn)
-  - [concat](#concat)
-  - [stack](#stack)
-  - [iter_dim](#iter_dim)
-  - [type_](#type_)
-- [Example Usage](#example-usage)
-    - [Instantiation](#instantiation)
-    - [Concatenation, Indexing, New Like, Flatten, Rearrange](#concatenation-indexing-new-like-flatten-rearrange)
-    - [Selection and Index Selection](#selection-and-index-selection)
-    - [Iteration](#iteration)
-    - [Collation](#collation)
-
+## Parameters
+- **tensor (torch.Tensor):** The tensor to wrap.
+- **names (list of str):**  Names of the tensor's dimensions.
+- **feature_names (list of str):** Names of the features along the 'feature_dim_name' of the tensor.
+- **feature_dim_name (str, optional):** Name of the feature dimension.
 
 ## Attributes
 
-- **`names`**: A list of names for the tensor's dimensions.
-- **`feature_names`**: A list of names for the features along the last dimension of the tensor.
-- **`feature_names_to_idx`**: A dictionary mapping feature names to their indices.
-- **`feature_dim_name`**: The name of the feature dimension.
-- **`tensor`**: The `Tensor`.
+- **`device` (torch.device):** Device where the Tensor is stored.
+- **`feature_dim_name` (str):** Name of the feature dimension.
+- **`feature_names` (list of str):** Names of the features along the 'feature_dim_name' of the tensor.
+- **`feature_names_to_idx` (dict):** Dictionary mapping feature names to their indices.
+- **`names` (list of str):** Names of the tensor's dimensions.
+- **`ndims` (int):** Number of dimensions of the tensor.
+- **`num_spatial_dims` (int):** Number of spatial dimensions of the tensor.
+- **`tensor` (torch.Tensor):** The wrapped tensor.
 
 ## Methods
 
-### `__init__(self, tensor: Tensor, names: List[str], feature_names: List[str], feature_dim_name: str = "features")`
-Initializes a **NamedTensor** instance.
+| Method  | Description  |
+| :---:   | :---: |
+| `clone`() | Clone with a deepcopy. |
+| `collate_fn`(batch) | Collates a batch of `NamedTensor` instances into a single `NamedTensor`. |
+| `concat`(nts) | Concatenates a list of `NamedTensor` instances along the features dimension. |
+| `dim_index`(dim_name) | Return the index of a dimension given its name. |
+| `dim_size`(dim_name) | Returns the size of a dimension given its name. |
+| `expand_to_batch_like`(tensor, other) | Creates a new `NamedTensor` with the same names and feature names as another `NamedTensor` with an extra first dimension called 'batch' using the supplied tensor. |
+| `flatten_`(new_dim_name, dim1, dim2) | Flattens in place the dimensions `dim1` and `dim2` and renames the new dimension to `new_dim_name`. |
+| `index_select_dim`(dim_name, indices) | Returns the tensor indexed along the dimension `dim_name` with the indices tensor. The returned tensor has the same number of dimensions as the original tensor. The `dim_name` dimension has the same size as the length of `indices`; other dimensions have the same size as in the original tensor. |
+| `index_select_tensor_dim`(dim_name, indices) | Same as `index_select_dim()` but returns a `torch.Tensor`. |
+| `new_like`(tensor, other) | Creates a new `NamedTensor` with the same names but different data. |
+| `iter_dim`(dim_name) | Iterates over the specified dimension, yielding `NamedTensor` instances. |
+| `iter_tensor_dim`(dim_name) | Iterates over the specified dimension, yielding Tensor instances. |
+| `pin_memory_`() | In place operation to pin the underlying tensor to memory. |
+| `rearrange_`() | Rearranges the tensor in place using einops-like syntax. |
+| `select_dim`(dim_name, index) | Returns the `NamedTensor` indexed along the dimension `dim_name` with the desired index. The given dimension is removed from the tensor.This method can not select the feature dimension. |
+| `select_tensor_dim`(dim_name, index) | Return the Tensor indexed along the dimension dim_name with the index index. Allows the selection of the feature dimension. Allows the selection of the feature dimension. |
+| `spatial_dim_idx`() | Returns the indices of the spatial dimensions in the tensor. |
+| `squeeze_`() | Squeeze the underlying tensor along the dimension(s) given its/their name(s). |
+| `stack`(tensors, dim_name, dim) | Stacks a list of `NamedTensor` instances along a new dimension. |
+| `to_`(*args, **kwargs) | In place operation to call torch's 'to' method on the underlying tensor. |
+| `type_`(new_type) | Modifies the type of the underlying torch tensor by calling torch's `.type` method. This is an in-place operation for this class, the internal tensor is replaced by the new one. |
+| `unflatten_`(dim, unflattened_size, unflatten_dim_name) | Unflatten the dimension dim of the underlying tensor. Insert unflattened_size dimension instead. |
+| `unsqueeze_`() | Insert a new dimension dim_name of size 1 at dim_index. |
+| `unsqueeze_and_expand_from_`() | Unsqueeze and expand the tensor to have the same number of spatial dimensions as another `NamedTensor`. Injects new dimensions where the missing names are. |
 
-### `expand_to_batch_like(tensor: Tensor, other: "NamedTensor") -> "NamedTensor"`
-Creates a new **NamedTensor** with the same names and feature names as another **NamedTensor** with an extra first dimension called 'batch' using the supplied tensor.
 
-### `spatial_dim_idx(self) -> List[int]`
-Returns the indices of the spatial dimensions in the tensor.
+## Special Methods
 
-### `dim_size(self, dim_name: str) -> int`
-Returns the size of a dimension given its name.
+| Method  | Description  |
+| :---:   | :---: |
+| `__getitem__`(feature_name) | Get one feature from the features dimension of the tensor by name. The returned tensor has the same number of dimensions as the original tensor. |
+| `__or__`(other) | Concatenate two `NamedTensor` along the features dimension. |
+| `__str__`(other) | Returns a string representation of the `NamedTensor` with useful statistics. |
 
-### `__str__(self)`
-Returns a string representation of the **NamedTensor** with useful statistics.
-
-### `select(self, dim_name: str, index: int) -> "NamedTensor"`
-Returns the tensor indexed along the dimension `dim_name` with the desired index. The given dimension is removed from the tensor.
-
-### `index_select_dim(self, dim_name: str, indices: Tensor) -> "NamedTensor"`
-Returns the tensor indexed along the dimension `dim_name` with the indices tensor. The returned tensor has the same number of dimensions as the original tensor. The `dim_name` dimension has the same size as the length of `indices`; other dimensions have the same size as in the original tensor.
-See https://pytorch.org/docs/stable/generated/torch.index_select.html.
-
-### `index_select_tensor_dim(self, dim_name: str, indices: Tensor) -> Tensor`
-Same as [index_select_dim](#index_select_dimself-dim_name-str-indices-torchtensor---namedtensor) but returns a Tensor.
-
-### `new_like(cls, tensor: Tensor, other: "NamedTensor") -> "NamedTensor"`
-Creates a new **NamedTensor** with the same names but different data.
-
-### `flatten_(self, new_dim_name: str, dim1: int, dim2: int)`
-Flattens in place the dimensions `dim1` and `dim2` and renames the new dimension to `new_dim_name`.
-
-### `rearrange_(self, pattern: str)`
-Rearranges the tensor in place using einops-like syntax.
-
-### `collate_fn(cls, batch: List["NamedTensor"]) -> "NamedTensor"`
-Collates a batch of **NamedTensor** instances into a single **NamedTensor**.
-
-### `concat(cls, tensors: List["NamedTensor"]) -> "NamedTensor"`
-Concatenates a list of **NamedTensor** instances along the features dimension.
-
-### `stack(cls, tensors: List["NamedTensor"], dim_name: str, dim: int) -> "NamedTensor"`
-Stacks a list of **NamedTensor** instances along a new dimension.
-
-### `iter_dim(self, dim_name: str) -> Iterable["NamedTensor"]`
-Iterates over the specified dimension, yielding **NamedTensor** instances.
-
-### `iter_tensor_dim(self, dim_name: str) -> Iterable[Tensor]`
-Iterates over the specified dimension, yielding **Tensor** instances.
-
-### `type_(self, new_type)`
-Modifies the type of the underlying torch tensor by calling torch's `.type` method. This is an in-place operation for this class, the internal tensor is replaced by the new one.
 
 ## Example Usage
 

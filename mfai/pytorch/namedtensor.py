@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from copy import deepcopy
 from dataclasses import dataclass
 from itertools import chain
-from typing import Any, List, Sequence, Union
+from typing import Any, Sequence, Union
 
 import einops
 import torch
@@ -49,8 +49,8 @@ class NamedTensor(TensorWrapper):
     def __init__(
         self,
         tensor: Tensor,
-        names: List[str],
-        feature_names: List[str],
+        names: list[str],
+        feature_names: list[str],
         feature_dim_name: str = "features",
     ):
         if len(tensor.shape) != len(names):
@@ -139,7 +139,7 @@ class NamedTensor(TensorWrapper):
         return self.__or__(other)
 
     @staticmethod
-    def stack(nts: List["NamedTensor"], dim_name: str, dim: int = 0) -> "NamedTensor":
+    def stack(nts: list["NamedTensor"], dim_name: str, dim: int = 0) -> "NamedTensor":
         """
         Stack a list of NamedTensors along a new dimension.
         """
@@ -168,7 +168,7 @@ class NamedTensor(TensorWrapper):
             return NamedTensor(new_tensor, names, nts[0].feature_names.copy())
 
     @staticmethod
-    def concat(nts: List["NamedTensor"]) -> "NamedTensor":
+    def concat(nts: list["NamedTensor"]) -> "NamedTensor":
         """
         Safely concat a list of NamedTensors along the last dimension
         in one shot.
@@ -217,6 +217,7 @@ class NamedTensor(TensorWrapper):
         return self.names.index(dim_name)
 
     def clone(self) -> "NamedTensor":
+        """Clone (with a deepcopy) the NamedTensor."""
         return NamedTensor(
             tensor=deepcopy(self.tensor).to(self.tensor.device),
             names=self.names.copy(),
@@ -272,7 +273,7 @@ class NamedTensor(TensorWrapper):
         self.tensor = self.tensor.unflatten(dim, unflattened_size)
         self.names = self.names[:dim] + [*unflatten_dim_name] + self.names[dim + 1 :]
 
-    def squeeze_(self, dim_name: Union[List[str], str]) -> None:
+    def squeeze_(self, dim_name: Union[list[str], str]) -> None:
         """
         Squeeze the underlying tensor along the dimension(s)
         given its/their name(s).
@@ -362,7 +363,7 @@ class NamedTensor(TensorWrapper):
             raise ValueError(f"Dimension {dim_name} not found in {self.names}") from ve
 
     @property
-    def spatial_dim_idx(self) -> List[int]:
+    def spatial_dim_idx(self) -> list[int]:
         """
         Return the indices of the spatial dimensions in the tensor.
         """
@@ -463,7 +464,7 @@ class NamedTensor(TensorWrapper):
         self.tensor = self.tensor.to(*args, **kwargs)
 
     @staticmethod
-    def collate_fn(batch: List["NamedTensor"]) -> "NamedTensor":
+    def collate_fn(batch: list["NamedTensor"]) -> "NamedTensor":
         """
         Collate a list of NamedTensors into a batched single NamedTensor.
         """

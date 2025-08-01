@@ -467,7 +467,7 @@ class NamedTensor(TensorWrapper):
     def collate_fn(
         batch: list["NamedTensor"],
         pad_dims: tuple[str, ...] | tuple[()] = (),
-        pad_value: int = 0,
+        pad_value: int | float = 0,
     ) -> "NamedTensor":
         """
         Collate a list of NamedTensors into a batched single NamedTensor.

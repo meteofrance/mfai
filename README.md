@@ -148,6 +148,20 @@ class HalfUNet(BaseModel):
 ```
 </details>
 
+All models can be imported directly from the `mfai.pytorch.models` package. For example, to import the UNet model, you can use:
+
+```python
+from mfai.pytorch.models import UNet
+```
+
+To instanciate a settings class for a model, you can use the `settings_kls` attribute of the model class. For example, to create a settings instance for the HalfUNet model and use it to instanciate the model, you can do:
+
+```python
+from mfai.pytorch.models import HalfUNet
+settings = HalfUNet.settings_kls(num_filters=128, use_ghost=True)
+model = HalfUNet(in_channels=3, out_channels=2, settings=settings)
+```
+
 
 # Lightning Modules
 

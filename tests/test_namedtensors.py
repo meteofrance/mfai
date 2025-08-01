@@ -159,6 +159,36 @@ def test_named_tensor() -> None:
     assert nt_collate.feature_names == [f"feature_{i}" for i in range(10)]
     assert nt_collate.names == ["batch", "timesteps", "lat", "lon", "features"]
 
+    # test collate of multiple NamedTensors with pad_dims
+    nt_small = NamedTensor(
+        torch.rand(3, 64, 64, 10),
+        names=["timesteps", "lat", "lon", "features"],
+        feature_names=[f"feature_{i}" for i in range(10)],
+    )
+    nt_medium = NamedTensor(
+        torch.rand(3, 128, 128, 10),
+        names=["timesteps", "lat", "lon", "features"],
+        feature_names=[f"feature_{i}" for i in range(10)],
+    )
+    nt_big = NamedTensor(
+        torch.rand(3, 256, 256, 10),
+        names=["timesteps", "lat", "lon", "features"],
+        feature_names=[f"feature_{i}" for i in range(10)],
+    )
+    nt_padded_collated = NamedTensor.collate_fn(
+        [nt_small, nt_medium, nt_big], pad_dims=("lat", "lon"), pad_value=666
+    )
+    assert nt_padded_collated.tensor.shape == (3, 3, 256, 256, 10)
+
+    # check original values are preserved top left of the tensor for each item in the batch
+    assert torch.all(nt_padded_collated.tensor[0, :, :64, :64, :] == nt_small.tensor)
+    assert torch.all(nt_padded_collated.tensor[1, :, :128, :128, :] == nt_medium.tensor)
+    assert torch.all(nt_padded_collated.tensor[2, :, :, :, :] == nt_big.tensor)
+
+    # check padded value is as expected
+    assert torch.all(nt_padded_collated.tensor[0, :, 64:, 64:, :] == 666)
+    assert torch.all(nt_padded_collated.tensor[1, :, 128:, 128:, :] == 666)
+
     # test a features dim in the middle of the tensor (not last dim)
 
     nt13 = NamedTensor(

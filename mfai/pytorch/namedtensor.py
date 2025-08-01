@@ -428,8 +428,7 @@ class NamedTensor(TensorWrapper):
     @staticmethod
     def new_like(tensor: Tensor, other: "NamedTensor") -> "NamedTensor":
         """
-        Create a new NamedTensor with the same names and feature names as another NamedTensor
-        and a tensor of the same shape as the input tensor.
+        Create a new NamedTensor with the same names and feature names as another NamedTensor.
         """
         return NamedTensor(tensor, other.names.copy(), other.feature_names.copy())
 
@@ -512,11 +511,7 @@ class NamedTensor(TensorWrapper):
                     else:
                         padded_tensor = nt.tensor.clone()
 
-                    padded_batch.append(
-                        NamedTensor(
-                            padded_tensor, nt.names.copy(), nt.feature_names.copy()
-                        )
-                    )
+                    padded_batch.append(NamedTensor.new_like(padded_tensor, nt))
 
                 return NamedTensor.stack(padded_batch, dim_name="batch", dim=0)
 

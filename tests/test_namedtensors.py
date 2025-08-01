@@ -189,6 +189,30 @@ def test_named_tensor() -> None:
     assert torch.all(nt_padded_collated.tensor[0, :, 64:, 64:, :] == 666)
     assert torch.all(nt_padded_collated.tensor[1, :, 128:, 128:, :] == 666)
 
+    # checks that requesting padding on all the same size tensor works (does not pad)
+    nt_a = NamedTensor(
+        torch.rand(3, 128, 128, 10),
+        names=["timesteps", "lat", "lon", "features"],
+        feature_names=[f"feature_{i}" for i in range(10)],
+    )
+    nt_b = NamedTensor(
+        torch.rand(3, 128, 128, 10),
+        names=["timesteps", "lat", "lon", "features"],
+        feature_names=[f"feature_{i}" for i in range(10)],
+    )
+    nt_padded_collated = NamedTensor.collate_fn(
+        [nt_a, nt_b], pad_dims=("lat", "lon"), pad_value=666
+    )
+    assert nt_padded_collated.tensor.shape == (2, 3, 128, 128, 10)
+    assert torch.all(nt_padded_collated.tensor[0, :, :, :, :] == nt_a.tensor)
+    assert torch.all(nt_padded_collated.tensor[1, :, :, :, :] == nt_b.tensor)
+
+    # Checks requesting padding on non existing dim breaks
+    with pytest.raises(ValueError):
+        nt_padded_collated = NamedTensor.collate_fn(
+            [nt_a, nt_b], pad_dims=("lat", "fake"), pad_value=666
+        )
+
     # test a features dim in the middle of the tensor (not last dim)
 
     nt13 = NamedTensor(

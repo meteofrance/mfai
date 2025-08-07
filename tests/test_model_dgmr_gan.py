@@ -1,5 +1,7 @@
 """Tests DGMR model blocks."""
 
+from typing import Literal
+
 import einops
 import torch
 import torch.nn.functional as F
@@ -135,7 +137,7 @@ def test_discriminator() -> None:
 
 def test_sampler() -> None:
     input_channels = 1
-    conv_type = "standard"
+    conv_type: Literal["standard", "coord", "3d"] = "standard"
     context_channels = 384
     latent_channels = 768
     forecast_steps = 18
@@ -260,7 +262,7 @@ def test_sampler() -> None:
 
 def test_generator() -> None:
     input_channels = 1
-    conv_type = "standard"
+    conv_type: Literal["standard", "coord", "3d"] = "standard"
     context_channels = 384
     latent_channels = 768
     forecast_steps = 18

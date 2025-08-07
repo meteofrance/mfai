@@ -46,6 +46,7 @@
 - [Losses](#losses)
   - Perceptual loss
   - LPIPS
+  - GridCell loss and Hinge losses for GANs
 - [Installation](#installation)
 - [Usage](#usage)
     - [Instanciate a model](#instanciate-a-model)
@@ -203,7 +204,7 @@ By default, some metrics are computed in function of the mode of segmentation yo
 - Regression: [`MeanSquaredError`](https://lightning.ai/docs/torchmetrics/stable/regression/mean_squared_error.html), [`MeanAbsoluteError`](https://lightning.ai/docs/torchmetrics/stable/regression/mean_absolute_error.html#torchmetrics.MeanAbsoluteError), [`MeanAbsolutePercentageError`](https://lightning.ai/docs/torchmetrics/stable/regression/mean_absolute_percentage_error.html#torchmetrics.MeanAbsolutePercentageError).
 
 ## Clip
-We also provide [**CLIPLightningModule**](/mfai/pytorch/lightning_modules/clip.py#19), a lightning module dedicated to the training of CLIP models. 
+We also provide [**CLIPLightningModule**](/mfai/pytorch/lightning_modules/clip.py#19), a lightning module dedicated to the training of CLIP models.
 
 This module can be instanciated with a simple [ClipSettings](/mfai/pytorch/models/clip.py#19) that informs which image and text encoders to use as well as the embedding size and the initial temperature.
 
@@ -232,7 +233,7 @@ In addition to metrics available in [**torchmetrics**](https://lightning.ai/docs
 
 # Losses
 
-Pytorch already provide some Loss like Mean Squared Error (torch.nn.MSELoss) or Mean Absolute Error (torch.nn.L1Loss). Here we add two loss functions that focus on perceptual similarity of tensors.
+Pytorch already provide some Loss like Mean Squared Error (torch.nn.MSELoss) or Mean Absolute Error (torch.nn.L1Loss). Here we add two loss functions that focus on perceptual similarity of tensors and four loss functions use for nowcasting with GANs (DGMR).
 
 ## Perceptual Loss
 
@@ -297,6 +298,10 @@ for _ in range():
 ## LPIPS
 
 The [**LPIPS**](mfai/pytorch/losses/perceptual.py#L28) class is a `torch.nn.Module` that computes the Learned Perceptual Image Patch Similarity metric. It is using the aforementionned PerceptualLoss class so it contains the same modes.
+
+## GANs losses for Nowcasting
+
+We add the Grid Cell Regularizer loss from [Skillful Nowcasting](https://arxiv.org/pdf/2104.00954.pdf), as well as a Nowcating loss, Hinge discriminator loss and Hinge generator loss.
 
 
 # Installation
@@ -730,4 +735,4 @@ Météo-France, Berthomier L., Dewasmes O., Guibert F., Pradel B., Tournier T. m
 
 # Acknowledgements
 
-This package is maintained by the DSM/LabIA team at Météo-France. We would like to thank the authors of the papers and codes we used to implement the models (see [above links](#neural-network-architectures) to **arxiv** and **github**) and the authors of the libraries we use to build this package (see our [**requirements.txt**](requirements.txt)).
+This package is maintained by the AI Lab team at Météo-France. We would like to thank the authors of the papers and codes we used to implement the models (see [above links](#neural-network-architectures) to **arxiv** and **github**) and the authors of the libraries we use to build this package (see our [**requirements.txt**](requirements.txt)).

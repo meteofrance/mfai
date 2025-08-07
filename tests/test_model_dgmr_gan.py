@@ -95,9 +95,9 @@ def test_context_conditioning_stack() -> None:
     assert out[1].size() == (2, 192, 16, 16)
     assert out[2].size() == (2, 384, 8, 8)
     assert out[3].size() == (2, 768, 4, 4)
-    assert not all(torch.isnan(out[i]).any() for i in range(len(out))), (
-        "Output included NaNs"
-    )
+    assert not all(
+        torch.isnan(out[i]).any() for i in range(len(out))
+    ), "Output included NaNs"
 
 
 def test_temporal_discriminator() -> None:

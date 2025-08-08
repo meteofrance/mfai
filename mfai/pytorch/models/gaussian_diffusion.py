@@ -27,7 +27,7 @@ def exists(x: Any) -> bool:
 
 
 def default(val: Any, d: Any) -> Any:
-    if exists(val):
+    if exists(val) and val != 'None':
         return val
     return d() if callable(d) else d
 
@@ -679,9 +679,7 @@ class GaussianDiffusionSettings:
     timesteps: int = 100
 
     # Number of timesteps to sample; if None, is set to 'timesteps'.
-    sampling_timesteps: Union[None, int] = (
-        None
-    )
+    sampling_timesteps: Union[None, int] = None
 
     # The training objective, chosen from normal steps
     objective: Literal["pred_v", "pred_noise", "pred_x0"] = "pred_v"
@@ -724,8 +722,8 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         self,
         in_channels: int,
         out_channels: int,
-        settings: GaussianDiffusionSettings = GaussianDiffusionSettings(),
         input_shape: Union[None, Tuple[int, int]] = None,
+        settings: GaussianDiffusionSettings = GaussianDiffusionSettings(),
         *args,
         **kwargs,
     ):
@@ -738,6 +736,9 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
 
         # import from settings
 
+        print("DEBUG")
+        print(settings)
+
         timesteps = settings.timesteps
         sampling_timesteps = settings.sampling_timesteps
         objective = settings.objective
@@ -749,13 +750,7 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         min_snr_loss_weight = settings.min_snr_loss_weight
         min_snr_gamma = settings.min_snr_gamma
         immiscible = settings.immiscible
-
-        # what to do of image_size?
-
-        # for now we define image_size from input_shape, forcing both terms to be equal
-
-        assert input_shape[0] == input_shape[1]
-        image_size = input_shape[0]
+        print(timesteps,sampling_timesteps,objective,beta_schedule,schedule_fn_kwargs,ddim_sampling_eta,auto_normalize,offset_noise_strength,min_snr_loss_weight,min_snr_gamma,immiscible)
 
         # defining the model
 
@@ -771,7 +766,7 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
 
         # for now we want channels in and out to be identical
 
-        assert in_channels == out_channels
+        print(in_channels,out_channels)
 
         # code from denoising-diffusion-pytorch
 
@@ -787,12 +782,13 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         self.channels = self.model.channels
         self.self_condition = self.model.self_condition
 
-        if isinstance(image_size, int):
-            image_size = (image_size, image_size)
-        assert (
-            isinstance(image_size, (tuple, list)) and len(image_size) == 2
-        ), "image size must be a integer or a tuple/list of two integers"
-        self.image_size = image_size
+        #if isinstance(image_size, int):
+        #    image_size = (image_size, image_size)
+        #assert (
+        #    isinstance(image_size, (tuple, list)) and len(image_size) == 2
+        #), "image size must be a integer or a tuple/list of two integers"
+        assert len(input_shape) == 2
+        self.image_size = input_shape
 
         self.objective = objective
 

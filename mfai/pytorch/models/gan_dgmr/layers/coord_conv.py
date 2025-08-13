@@ -7,12 +7,10 @@ import torch.nn as nn
 
 
 class AddCoords(nn.Module):
-    """argument input tensors with spatial information."""
+    """Argument input tensors with spatial information."""
 
     def __init__(self, with_r: bool = False) -> None:
         """
-        Initialize the add coordinates class.
-
         Args:
             with_r: a condition to check if radical distance should included in the spatial
             information (bool) default = false
@@ -67,8 +65,6 @@ class CoordConv(nn.Module):
         self, in_channels: int, out_channels: int, with_r: bool = False, **kwargs: Any
     ) -> None:
         """
-        Initialize the coordinate convolution.
-
         Args:
             in_channels : number of input channels
             out_channels : number of output channels,

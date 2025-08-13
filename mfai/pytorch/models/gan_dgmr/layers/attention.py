@@ -2,7 +2,7 @@
 
 import einops
 import torch
-import torch.nn as nn
+from troch import nn, Tensor
 from torch.nn import functional as F
 
 

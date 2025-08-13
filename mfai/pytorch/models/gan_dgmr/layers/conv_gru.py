@@ -58,7 +58,7 @@ class ConvGRUCell(torch.nn.Module):
         self, x: torch.Tensor, prev_state: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        Conv GRU forward, returning the current+new state.
+        Conv GRU forward, returning the current + new state.
 
         Args:
             x: Input tensor

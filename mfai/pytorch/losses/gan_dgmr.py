@@ -1,7 +1,7 @@
 """Module for various loss functions used with DGMR GAN."""
 
 import torch
-import torch.nn as nn
+from torch import nn, Tensor
 from torch.nn import functional as F
 
 
@@ -29,7 +29,7 @@ class GridCellLoss(nn.Module):
         Forward function.
 
         Calculates the grid cell regularizer value, assumes generated images are the mean
-        predictions from 6 calls to the generater (Monte Carlo estimation of the
+        predictions from 6 calls to the generator (Monte Carlo estimation of the
         expectations for the latent variable)
 
         Args:
@@ -72,7 +72,7 @@ class NowcastingLoss(nn.Module):
 
     def forward(self, x: torch.Tensor, real_flag: bool) -> torch.Tensor:
         """Apply the relu function to the input tensor."""
-        if real_flag is True:
+        if real_flag:
             x = -x
         return F.relu(1.0 + x).mean()
 

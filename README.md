@@ -233,7 +233,7 @@ In addition to metrics available in [**torchmetrics**](https://lightning.ai/docs
 
 # Losses
 
-Pytorch already provide some Loss like Mean Squared Error (torch.nn.MSELoss) or Mean Absolute Error (torch.nn.L1Loss). Here we add two loss functions that focus on perceptual similarity of tensors and four loss functions use for nowcasting with GANs (DGMR).
+Pytorch already provide some Loss like Mean Squared Error (torch.nn.MSELoss) or Mean Absolute Error (torch.nn.L1Loss). Here we add two loss functions that focus on perceptual similarity of tensors and four loss functions used for nowcasting with GANs (DGMR).
 
 ## Perceptual Loss
 

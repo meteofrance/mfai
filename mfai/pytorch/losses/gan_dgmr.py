@@ -1,7 +1,7 @@
 """Module for various loss functions used with DGMR GAN."""
 
 import torch
-from torch import nn, Tensor
+from torch import Tensor, nn
 from torch.nn import functional as F
 
 
@@ -22,9 +22,7 @@ class GridCellLoss(nn.Module):
         super().__init__()
         self.precip_weight_cap = precip_weight_cap
 
-    def forward(
-        self, generated_images: torch.Tensor, targets: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, generated_images: Tensor, targets: Tensor) -> Tensor:
         """
         Forward function.
 
@@ -46,9 +44,7 @@ class GridCellLoss(nn.Module):
         difference = difference.norm(p=1)
         return difference / targets.size(1) * targets.size(3) * targets.size(4)
 
-    def weight_fn(
-        self, y: torch.Tensor, precip_weight_cap: float = 24.0
-    ) -> torch.Tensor:
+    def weight_fn(self, y: Tensor, precip_weight_cap: float = 24.0) -> Tensor:
         """
         Weight function for the grid cell loss.
 
@@ -61,7 +57,7 @@ class GridCellLoss(nn.Module):
         Returns:
             Weights for each grid cell.
         """
-        return torch.max(y + 1, torch.tensor(precip_weight_cap, device=y.device))
+        return torch.max(y + 1, Tensor(precip_weight_cap, device=y.device))
 
 
 class NowcastingLoss(nn.Module):
@@ -70,16 +66,14 @@ class NowcastingLoss(nn.Module):
     def __init__(self) -> None:
         super().__init__()
 
-    def forward(self, x: torch.Tensor, real_flag: bool) -> torch.Tensor:
+    def forward(self, x: Tensor, real_flag: bool) -> Tensor:
         """Apply the relu function to the input tensor."""
         if real_flag:
             x = -x
         return F.relu(1.0 + x).mean()
 
 
-def loss_hinge_disc(
-    score_generated: torch.Tensor, score_real: torch.Tensor
-) -> torch.Tensor:
+def loss_hinge_disc(score_generated: Tensor, score_real: Tensor) -> Tensor:
     """Discriminator Hinge loss."""
     l1 = F.relu(1.0 - score_real)
     loss = torch.mean(l1)
@@ -88,7 +82,7 @@ def loss_hinge_disc(
     return loss
 
 
-def loss_hinge_gen(score_generated: torch.Tensor) -> torch.Tensor:
+def loss_hinge_gen(score_generated: Tensor) -> Tensor:
     """Generator Hinge loss."""
     loss = -torch.mean(score_generated)
     return loss

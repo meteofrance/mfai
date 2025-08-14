@@ -63,7 +63,7 @@ class DGMRLightningModule(LightningModule):
 
         Initialize the Deep Generative Model of Radar model.
 
-        This is an attempt to recreate DeepMind's Skillful Nowcasting GAN from https://arxiv.org/abs/2104.00954
+        This is a recreation of DeepMind's Skillful Nowcasting GAN from https://arxiv.org/abs/2104.00954
         but slightly modified for multiple satellite channels.
 
         Args:

@@ -57,7 +57,7 @@ class GridCellLoss(nn.Module):
         Returns:
             Weights for each grid cell.
         """
-        return torch.max(y + 1, torch.Tensor(precip_weight_cap, device=y.device))
+        return torch.max(y + 1, torch.tensor(precip_weight_cap, device=y.device))
 
 
 def loss_hinge_disc(score_generated: Tensor, score_real: Tensor) -> Tensor:

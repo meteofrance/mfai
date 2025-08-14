@@ -60,19 +60,6 @@ class GridCellLoss(nn.Module):
         return torch.max(y + 1, Tensor(precip_weight_cap, device=y.device))
 
 
-class NowcastingLoss(nn.Module):
-    """Nowcasting Loss class."""
-
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x: Tensor, real_flag: bool) -> Tensor:
-        """Apply the relu function to the input tensor."""
-        if real_flag:
-            x = -x
-        return F.relu(1.0 + x).mean()
-
-
 def loss_hinge_disc(score_generated: Tensor, score_real: Tensor) -> Tensor:
     """Discriminator Hinge loss."""
     l1 = F.relu(1.0 - score_real)

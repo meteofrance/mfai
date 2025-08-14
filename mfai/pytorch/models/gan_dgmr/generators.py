@@ -216,7 +216,6 @@ class Generator(torch.nn.Module):
         self.sampler = sampler
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Apply a forward pass on the tensor."""
         conditioning_states = self.conditioning_stack(x)
         latent_dim = self.latent_stack(x)
         x = self.sampler(conditioning_states, latent_dim)

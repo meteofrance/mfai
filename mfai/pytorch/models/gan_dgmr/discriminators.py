@@ -109,7 +109,6 @@ class TemporalDiscriminator(torch.nn.Module):
         self.bn = torch.nn.BatchNorm1d(2 * internal_chn * input_channels)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Apply the forward function."""
         x = self.downsample(x)
 
         x = self.space2depth(x)
@@ -201,7 +200,6 @@ class SpatialDiscriminator(torch.nn.Module):
         self.bn = torch.nn.BatchNorm1d(2 * internal_chn * input_channels)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Apply the forward function to the tensor."""
         # x should be the chosen 8 or so
         idxs = torch.randint(low=0, high=x.size()[1], size=(self.num_timesteps,))
         representations = []

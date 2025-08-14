@@ -2,11 +2,11 @@
 
 import einops
 import torch
-from troch import nn, Tensor
+from torch import nn, Tensor
 from torch.nn import functional as F
 
 
-def attention_einsum(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
+def attention_einsum(q: Tensor, k: Tensor, v: Tensor) -> Tensor:
     """Apply the attention operator to tensors of shape [h, w, c]."""
     # Reshape 3D tensors to 2D tensor with first dimension L = h x w.
     k = einops.rearrange(k, "h w c -> (h w) c")  # [h, w, c] -> [L, c]
@@ -30,7 +30,6 @@ class AttentionLayer(torch.nn.Module):
         ratio_kq: int = 8,
         ratio_v: int = 8,
     ) -> None:
-        """Initialize the attention layer."""
         super(AttentionLayer, self).__init__()
 
         self.ratio_kq = ratio_kq
@@ -72,8 +71,7 @@ class AttentionLayer(torch.nn.Module):
         # Learnable gain parameter
         self.gamma = nn.Parameter(torch.zeros(1))
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Apply the forward function."""
+    def forward(self, x: Tensor) -> Tensor:
         # Compute query, key and value using 1x1 convolutions.
         query = self.query(x)
         key = self.key(x)

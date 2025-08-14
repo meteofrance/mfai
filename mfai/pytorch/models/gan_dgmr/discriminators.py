@@ -4,6 +4,7 @@ from typing import Literal
 
 import torch
 import torch.nn.functional as F
+from torch import Tensor
 from torch.nn.modules.pixelshuffle import PixelUnshuffle
 from torch.nn.utils.parametrizations import spectral_norm
 
@@ -44,7 +45,7 @@ class Discriminator(torch.nn.Module):
             num_layers=temporal_num_layers,
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         """Mixes the spatial loss and temporal loss of the tensor prior to returning it."""
         spatial_loss = self.spatial_discriminator(x)
         temporal_loss = self.temporal_discriminator(x)
@@ -108,7 +109,7 @@ class TemporalDiscriminator(torch.nn.Module):
         self.relu = torch.nn.ReLU()
         self.bn = torch.nn.BatchNorm1d(2 * internal_chn * input_channels)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         x = self.downsample(x)
 
         x = self.space2depth(x)
@@ -199,7 +200,7 @@ class SpatialDiscriminator(torch.nn.Module):
         self.relu = torch.nn.ReLU()
         self.bn = torch.nn.BatchNorm1d(2 * internal_chn * input_channels)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         # x should be the chosen 8 or so
         idxs = torch.randint(low=0, high=x.size()[1], size=(self.num_timesteps,))
         representations = []

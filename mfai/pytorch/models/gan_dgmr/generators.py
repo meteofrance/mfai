@@ -5,6 +5,7 @@ import logging
 import einops
 import torch
 import torch.nn.functional as F
+from torch import Tensor
 from torch.nn.modules.pixelshuffle import PixelShuffle
 from torch.nn.utils.parametrizations import spectral_norm
 
@@ -134,8 +135,8 @@ class Sampler(torch.nn.Module):
         self.depth2space = PixelShuffle(upscale_factor=2)
 
     def forward(
-        self, conditioning_states: list[torch.Tensor], latent_dim: torch.Tensor
-    ) -> torch.Tensor:
+        self, conditioning_states: list[Tensor], latent_dim: Tensor
+    ) -> Tensor:
         """
         Perform the sampling from Skillful Nowcasting with GANs.
 
@@ -144,7 +145,7 @@ class Sampler(torch.nn.Module):
             states, ordered from largest to smallest spatially latent_dim: Output from
             `LatentConditioningStack` for input into the ConvGRUs
 
-            latent_dim: (torch.Tensor)
+            latent_dim: (Tensor)
 
         Returns:
             forecast_steps-length output of images for future timesteps
@@ -215,7 +216,7 @@ class Generator(torch.nn.Module):
         self.latent_stack = latent_stack
         self.sampler = sampler
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         conditioning_states = self.conditioning_stack(x)
         latent_dim = self.latent_stack(x)
         x = self.sampler(conditioning_states, latent_dim)

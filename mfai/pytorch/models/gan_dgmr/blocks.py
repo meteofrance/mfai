@@ -5,6 +5,7 @@ from typing import Any, Literal
 import einops
 import torch
 import torch.nn.functional as F
+from torch import Tensor
 from torch.distributions import normal
 from torch.nn.modules.pixelshuffle import PixelUnshuffle
 from torch.nn.utils.parametrizations import spectral_norm
@@ -66,7 +67,7 @@ class GBlock(torch.nn.Module):
             eps=spectral_normalized_eps,
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         """Apply the forward function."""
         # Optionally spectrally normalized 1x1 convolution
         if x.shape[1] != self.output_channels:
@@ -140,7 +141,7 @@ class UpsampleGBlock(torch.nn.Module):
             eps=spectral_normalized_eps,
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         """Apply the forward function."""
         # Spectrally nsormalized 1x1 convolution
         sc = self.upsample(x)
@@ -224,7 +225,7 @@ class DBlock(torch.nn.Module):
         self.relu = torch.nn.ReLU()
         # Concatenate to double final channels and keep reduced spatial extent
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         """Apply the D residual block."""
         if self.input_channels != self.output_channels:
             x1 = self.conv_1x1(x)
@@ -292,7 +293,7 @@ class LBlock(torch.nn.Module):
             stride=1,
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         """Apply the L residual block to this tensor."""
         if self.input_channels < self.output_channels:
             sc = self.conv_1x1(x)
@@ -405,8 +406,8 @@ class ContextConditioningStack(torch.nn.Module):
         self.relu = torch.nn.ReLU()
 
     def forward(
-        self, x: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        self, x: Tensor
+    ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         """Generate the condition representation."""
         # Each timestep processed separately
         x = self.space2depth(x)
@@ -444,8 +445,8 @@ class ContextConditioningStack(torch.nn.Module):
         return tensor_1, tensor_2, tensor_3, tensor_4
 
     def _mixing_layer(
-        self, inputs: torch.Tensor, conv_block: torch.nn.Module
-    ) -> torch.Tensor:
+        self, inputs: Tensor, conv_block: torch.nn.Module
+    ) -> Tensor:
         """Combine the inputs and then passed into the convolution stack."""
         # Convert from [batch_size, time, h, w, c] -> [batch_size, h, w, c * time]
         # then perform convolution on the output while preserving number of c.
@@ -475,7 +476,7 @@ class LatentConditioningStack(torch.nn.Module):
         self.input_channels = input_channels
         self.use_attention = use_attention
         self.distribution = normal.Normal(
-            loc=torch.Tensor([0.0]), scale=torch.Tensor([1.0])
+            loc=Tensor([0.0]), scale=Tensor([1.0])
         )
 
         self.conv_3x3 = spectral_norm(
@@ -504,7 +505,7 @@ class LatentConditioningStack(torch.nn.Module):
             input_channels=output_channels // 4, output_channels=output_channels
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         """
         Apply convolution, l blocks and spatial attention module to the tensor.
 

@@ -3,7 +3,7 @@
 from typing import Any
 
 import torch
-import torch.nn as nn
+from torch import nn, Tensor
 
 
 class AddCoords(nn.Module):
@@ -18,7 +18,7 @@ class AddCoords(nn.Module):
         super().__init__()
         self.with_r: bool = with_r
 
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+    def forward(self, input_tensor: Tensor) -> Tensor:
         """
         Add spatial information to the input tensor.
 
@@ -78,7 +78,7 @@ class CoordConv(nn.Module):
             in_size += 1
         self.conv = nn.Conv2d(in_size, out_channels, **kwargs)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         """Apply a forward pass on the input tensor."""
         ret = self.addcoords(x)
         ret = self.conv(ret)

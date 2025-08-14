@@ -2,6 +2,7 @@
 
 import torch
 import torch.nn.functional as F
+from torch import Tensor
 from torch.nn.utils.parametrizations import spectral_norm
 
 
@@ -55,8 +56,8 @@ class ConvGRUCell(torch.nn.Module):
         )
 
     def forward(
-        self, x: torch.Tensor, prev_state: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+        self, x: Tensor, prev_state: Tensor
+    ) -> tuple[Tensor, Tensor]:
         """
         Conv GRU forward, returning the current + new state.
 
@@ -102,8 +103,8 @@ class ConvGRU(torch.nn.Module):
         self.cell = ConvGRUCell(input_channels, output_channels, kernel_size, sn_eps)
 
     def forward(
-        self, x: list[torch.Tensor], hidden_state: torch.Tensor = None
-    ) -> torch.Tensor:
+        self, x: list[Tensor], hidden_state: Tensor = None
+    ) -> Tensor:
         """Apply the forward function on each cell prior to returning it as a stack."""
         output_list = []
         for step in range(len(x)):

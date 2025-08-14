@@ -405,9 +405,7 @@ class ContextConditioningStack(torch.nn.Module):
 
         self.relu = torch.nn.ReLU()
 
-    def forward(
-        self, x: Tensor
-    ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+    def forward(self, x: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         """Generate the condition representation."""
         # Each timestep processed separately
         x = self.space2depth(x)
@@ -444,9 +442,7 @@ class ContextConditioningStack(torch.nn.Module):
         tensor_4 = self._mixing_layer(tensor_4, self.conv4)
         return tensor_1, tensor_2, tensor_3, tensor_4
 
-    def _mixing_layer(
-        self, inputs: Tensor, conv_block: torch.nn.Module
-    ) -> Tensor:
+    def _mixing_layer(self, inputs: Tensor, conv_block: torch.nn.Module) -> Tensor:
         """Combine the inputs and then passed into the convolution stack."""
         # Convert from [batch_size, time, h, w, c] -> [batch_size, h, w, c * time]
         # then perform convolution on the output while preserving number of c.
@@ -475,9 +471,7 @@ class LatentConditioningStack(torch.nn.Module):
 
         self.input_channels = input_channels
         self.use_attention = use_attention
-        self.distribution = normal.Normal(
-            loc=Tensor([0.0]), scale=Tensor([1.0])
-        )
+        self.distribution = normal.Normal(loc=Tensor([0.0]), scale=Tensor([1.0]))
 
         self.conv_3x3 = spectral_norm(
             torch.nn.Conv2d(

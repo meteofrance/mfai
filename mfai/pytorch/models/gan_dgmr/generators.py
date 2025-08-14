@@ -134,9 +134,7 @@ class Sampler(torch.nn.Module):
 
         self.depth2space = PixelShuffle(upscale_factor=2)
 
-    def forward(
-        self, conditioning_states: list[Tensor], latent_dim: Tensor
-    ) -> Tensor:
+    def forward(self, conditioning_states: list[Tensor], latent_dim: Tensor) -> Tensor:
         """
         Perform the sampling from Skillful Nowcasting with GANs.
 

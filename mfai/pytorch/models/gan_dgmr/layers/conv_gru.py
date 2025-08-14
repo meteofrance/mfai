@@ -55,9 +55,7 @@ class ConvGRUCell(torch.nn.Module):
             eps=sn_eps,
         )
 
-    def forward(
-        self, x: Tensor, prev_state: Tensor
-    ) -> tuple[Tensor, Tensor]:
+    def forward(self, x: Tensor, prev_state: Tensor) -> tuple[Tensor, Tensor]:
         """
         Conv GRU forward, returning the current + new state.
 
@@ -102,9 +100,7 @@ class ConvGRU(torch.nn.Module):
         super().__init__()
         self.cell = ConvGRUCell(input_channels, output_channels, kernel_size, sn_eps)
 
-    def forward(
-        self, x: list[Tensor], hidden_state: Tensor = None
-    ) -> Tensor:
+    def forward(self, x: list[Tensor], hidden_state: Tensor = None) -> Tensor:
         """Apply the forward function on each cell prior to returning it as a stack."""
         output_list = []
         for step in range(len(x)):

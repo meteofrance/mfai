@@ -750,7 +750,7 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
         min_snr_loss_weight = settings.min_snr_loss_weight
         min_snr_gamma = settings.min_snr_gamma
         immiscible = settings.immiscible
-        print(timesteps,sampling_timesteps,objective,beta_schedule,schedule_fn_kwargs,ddim_sampling_eta,auto_normalize,offset_noise_strength,min_snr_loss_weight,min_snr_gamma,immiscible)
+        #print(timesteps,sampling_timesteps,objective,beta_schedule,schedule_fn_kwargs,ddim_sampling_eta,auto_normalize,offset_noise_strength,min_snr_loss_weight,min_snr_gamma,immiscible)
 
         # defining the model
 
@@ -766,7 +766,8 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
 
         # for now we want channels in and out to be identical
 
-        print(in_channels,out_channels)
+        print("channels",in_channels,out_channels)
+        assert in_channels == out_channels
 
         # code from denoising-diffusion-pytorch
 
@@ -992,8 +993,8 @@ class GaussianDiffusion(BaseModel, AutoPaddingModel):
             ModelPrediction: the model prediction
         """
 
-        with torch.no_grad():
-            model_output = self.model(x, t, x_self_cond)
+        #MEMORY: le point problématique du 'bug mémoire'
+        model_output = self.model(x, t, x_self_cond)
         maybe_clip = (
             partial(torch.clamp, min=-1.0, max=1.0) if clip_x_start else identity
         )

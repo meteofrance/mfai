@@ -62,10 +62,10 @@ class GridCellLoss(nn.Module):
 
 def loss_hinge_disc(score_generated: Tensor, score_real: Tensor) -> Tensor:
     """Discriminator Hinge loss."""
-    l1 = F.relu(1.0 - score_real)
-    loss = torch.mean(l1)
-    l2 = F.relu(1.0 + score_generated)
-    loss += torch.mean(l2)
+    relu_score_real = F.relu(1.0 - score_real)
+    loss = torch.mean(relu_score_real)
+    relu_score_generated = F.relu(1.0 + score_generated)
+    loss += torch.mean(relu_score_generated)
     return loss
 
 

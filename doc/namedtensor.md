@@ -21,6 +21,8 @@ The [**NamedTensor**](mfai/pytorch/namedtensor.py#L28) class is a wrapper around
 - **`names` (list of str):** Names of the tensor's dimensions.
 - **`ndims` (int):** Number of dimensions of the tensor.
 - **`num_spatial_dims` (int):** Number of spatial dimensions of the tensor.
+
+- **`spatial_dim_idx` (list of int):** Indices of the spatial dimensions in the tensor.
 - **`tensor` (torch.Tensor):** The wrapped tensor.
 
 ## Methods
@@ -33,24 +35,24 @@ The [**NamedTensor**](mfai/pytorch/namedtensor.py#L28) class is a wrapper around
 | `dim_index`(dim_name) | Return the index of a dimension given its name. |
 | `dim_size`(dim_name) | Returns the size of a dimension given its name. |
 | `expand_to_batch_like`(tensor, other) | Creates a new `NamedTensor` with the same names and feature names as another `NamedTensor` with an extra first dimension called 'batch' using the supplied tensor. |
-| `flatten_`(new_dim_name, dim1, dim2) | Flattens in place the dimensions `dim1` and `dim2` and renames the new dimension to `new_dim_name`. |
+| `flatten_`(new_dim_name, start_dim, end_dim) | Flatten in place the underlying tensor from start_dim to end_dim. Deletes flattened dimension names and insert the new one. |
 | `index_select_dim`(dim_name, indices) | Returns the tensor indexed along the dimension `dim_name` with the indices tensor. The returned tensor has the same number of dimensions as the original tensor. The `dim_name` dimension has the same size as the length of `indices`; other dimensions have the same size as in the original tensor. |
 | `index_select_tensor_dim`(dim_name, indices) | Same as `index_select_dim()` but returns a `torch.Tensor`. |
 | `new_like`(tensor, other) | Creates a new `NamedTensor` with the same names but different data. |
 | `iter_dim`(dim_name) | Iterates over the specified dimension, yielding `NamedTensor` instances. |
 | `iter_tensor_dim`(dim_name) | Iterates over the specified dimension, yielding Tensor instances. |
 | `pin_memory_`() | In place operation to pin the underlying tensor to memory. |
-| `rearrange_`() | Rearranges the tensor in place using einops-like syntax. |
+
+| `rearrange_`(einops_str) | Rearranges the tensor in place using einops-like syntax. |
 | `select_dim`(dim_name, index) | Returns the `NamedTensor` indexed along the dimension `dim_name` with the desired index. The given dimension is removed from the tensor.This method can not select the feature dimension. |
 | `select_tensor_dim`(dim_name, index) | Return the Tensor indexed along the dimension dim_name with the index index. Allows the selection of the feature dimension. Allows the selection of the feature dimension. |
-| `spatial_dim_idx`() | Returns the indices of the spatial dimensions in the tensor. |
-| `squeeze_`() | Squeeze the underlying tensor along the dimension(s) given its/their name(s). |
+| `squeeze_`(dim_name) | Squeeze the underlying tensor along the dimension(s) given its/their name(s). |
 | `stack`(tensors, dim_name, dim) | Stacks a list of `NamedTensor` instances along a new dimension. |
 | `to_`(*args, **kwargs) | In place operation to call torch's 'to' method on the underlying tensor. |
 | `type_`(new_type) | Modifies the type of the underlying torch tensor by calling torch's `.type` method. This is an in-place operation for this class, the internal tensor is replaced by the new one. |
 | `unflatten_`(dim, unflattened_size, unflatten_dim_name) | Unflatten the dimension dim of the underlying tensor. Insert unflattened_size dimension instead. |
-| `unsqueeze_`() | Insert a new dimension dim_name of size 1 at dim_index. |
-| `unsqueeze_and_expand_from_`() | Unsqueeze and expand the tensor to have the same number of spatial dimensions as another `NamedTensor`. Injects new dimensions where the missing names are. |
+| `unsqueeze_`(dim_name, dim_index) | Insert a new dimension dim_name of size 1 at dim_index. |
+| `unsqueeze_and_expand_from_`(other) | Unsqueeze and expand the tensor to have the same number of spatial dimensions as another `NamedTensor`. Injects new dimensions where the missing names are. |
 
 
 ## Special Methods

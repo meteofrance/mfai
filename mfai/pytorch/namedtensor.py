@@ -428,8 +428,7 @@ class NamedTensor(TensorWrapper):
     @staticmethod
     def new_like(tensor: Tensor, other: "NamedTensor") -> "NamedTensor":
         """
-        Create a new NamedTensor with the same names and feature names as another NamedTensor
-        and a tensor of the same shape as the input tensor.
+        Create a new NamedTensor with the same names and feature names as another NamedTensor.
         """
         return NamedTensor(tensor, other.names.copy(), other.feature_names.copy())
 
@@ -464,9 +463,14 @@ class NamedTensor(TensorWrapper):
         self.tensor = self.tensor.to(*args, **kwargs)
 
     @staticmethod
-    def collate_fn(batch: list["NamedTensor"]) -> "NamedTensor":
+    def collate_fn(
+        batch: list["NamedTensor"],
+        pad_dims: tuple[str, ...] | tuple[()] = (),
+        pad_value: int | float = 0,
+    ) -> "NamedTensor":
         """
         Collate a list of NamedTensors into a batched single NamedTensor.
+        Optionnally pads the dimensions specified in pad_dims with pad_value.
         """
         if len(batch) == 0:
             raise ValueError("Cannot collate an empty list of NamedTensors")
@@ -474,4 +478,42 @@ class NamedTensor(TensorWrapper):
             # add batch dim to the single namedtensor (in place operation)
             batch[0].unsqueeze_(dim_name="batch", dim_index=0)
             return batch[0]
-        return NamedTensor.stack(batch, dim_name="batch", dim=0)
+        else:
+            if len(pad_dims):
+                # Find the maximum size for each dimension in pad_dims looking
+                # at each tensor of each NamedTensor in the batch
+                max_sizes: dict[str, int] = {
+                    dim: max(nt.dim_size(dim) for nt in batch) for dim in pad_dims
+                }
+
+                # Pad each tensor in the batch to the maximum size, for each dim we pad after the data
+                padded_batch = []
+                for nt in batch:
+                    padded_shape = list(nt.tensor.shape)
+                    do_pad: bool = False
+
+                    for dim in pad_dims:
+                        dim_idx = nt.dim_index(dim)
+                        if nt.dim_size(dim) < max_sizes[dim]:
+                            padding_size = max_sizes[dim] - nt.dim_size(dim)
+                            padded_shape[dim_idx] += padding_size
+                            do_pad = True
+
+                    if do_pad:
+                        padded_tensor = nt.tensor.new_full(
+                            padded_shape,
+                            pad_value,
+                        )
+
+                        slicer = tuple(slice(0, nt.dim_size(dim)) for dim in nt.names)
+
+                        padded_tensor[slicer] = nt.tensor
+                    else:
+                        padded_tensor = nt.tensor.clone()
+
+                    padded_batch.append(NamedTensor.new_like(padded_tensor, nt))
+
+                return NamedTensor.stack(padded_batch, dim_name="batch", dim=0)
+
+            else:
+                return NamedTensor.stack(batch, dim_name="batch", dim=0)

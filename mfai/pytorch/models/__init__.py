@@ -1,5 +1,6 @@
 import importlib
 import pkgutil
+import sys
 from pathlib import Path
 from types import ModuleType
 
@@ -11,6 +12,7 @@ from .base import AutoPaddingModel, ModelABC, ModelType
 # which are ModelABC subclasses and have the register attribute set to True
 registry: dict[str, type[ModelABC]] = dict()
 package: ModuleType = importlib.import_module("mfai.pytorch.models")
+this_module = sys.modules[__name__]
 for module_info in pkgutil.walk_packages(package.__path__, package.__name__ + "."):
     module: ModuleType = importlib.import_module(module_info.name)
     for object_name, kls in module.__dict__.items():
@@ -25,6 +27,7 @@ for module_info in pkgutil.walk_packages(package.__path__, package.__name__ + ".
                     f"Model {kls.__name__} from plugin {object_name} already exists in the registry."
                 )
             registry[kls.__name__] = kls
+            setattr(this_module, kls.__name__, kls)
 all_nn_architectures: list[type[ModelABC]] = list(registry.values())
 
 nn_architectures: dict[ModelType, list[type[ModelABC]]] = {

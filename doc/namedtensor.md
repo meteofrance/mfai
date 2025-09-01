@@ -21,6 +21,7 @@ The [**NamedTensor**](mfai/pytorch/namedtensor.py#L28) class is a wrapper around
 - **`names` (list of str):** Names of the tensor's dimensions.
 - **`ndims` (int):** Number of dimensions of the tensor.
 - **`num_spatial_dims` (int):** Number of spatial dimensions of the tensor.
+
 - **`spatial_dim_idx` (list of int):** Indices of the spatial dimensions in the tensor.
 - **`tensor` (torch.Tensor):** The wrapped tensor.
 
@@ -29,18 +30,19 @@ The [**NamedTensor**](mfai/pytorch/namedtensor.py#L28) class is a wrapper around
 | Method  | Description  |
 | :---:   | :---: |
 | `clone`() | Clone with a deepcopy. |
-| `collate_fn`(batch) | Collates a batch of `NamedTensor` instances into a single `NamedTensor`. |
+| `collate_fn`(batch, pad_dims, pad_value) | Collates a batch of `NamedTensor` instances into a single `NamedTensor`. Optionnaly padding on the desired dimensions with `pad_value`|
 | `concat`(nts) | Concatenates a list of `NamedTensor` instances along the features dimension. |
 | `dim_index`(dim_name) | Return the index of a dimension given its name. |
 | `dim_size`(dim_name) | Returns the size of a dimension given its name. |
 | `expand_to_batch_like`(tensor, other) | Creates a new `NamedTensor` with the same names and feature names as another `NamedTensor` with an extra first dimension called 'batch' using the supplied tensor. |
-| `flatten_`(new_dim_name, start_dim,  ) | Flatten in place the underlying tensor from start_dim to end_dim. Deletes flattened dimension names and insert the new one. |
+| `flatten_`(new_dim_name, start_dim, end_dim) | Flatten in place the underlying tensor from start_dim to end_dim. Deletes flattened dimension names and insert the new one. |
 | `index_select_dim`(dim_name, indices) | Returns the tensor indexed along the dimension `dim_name` with the indices tensor. The returned tensor has the same number of dimensions as the original tensor. The `dim_name` dimension has the same size as the length of `indices`; other dimensions have the same size as in the original tensor. |
 | `index_select_tensor_dim`(dim_name, indices) | Same as `index_select_dim()` but returns a `torch.Tensor`. |
 | `new_like`(tensor, other) | Creates a new `NamedTensor` with the same names but different data. |
 | `iter_dim`(dim_name) | Iterates over the specified dimension, yielding `NamedTensor` instances. |
 | `iter_tensor_dim`(dim_name) | Iterates over the specified dimension, yielding Tensor instances. |
 | `pin_memory_`() | In place operation to pin the underlying tensor to memory. |
+
 | `rearrange_`(einops_str) | Rearranges the tensor in place using einops-like syntax. |
 | `select_dim`(dim_name, index) | Returns the `NamedTensor` indexed along the dimension `dim_name` with the desired index. The given dimension is removed from the tensor.This method can not select the feature dimension. |
 | `select_tensor_dim`(dim_name, index) | Return the Tensor indexed along the dimension dim_name with the index index. Allows the selection of the feature dimension. Allows the selection of the feature dimension. |
@@ -175,6 +177,23 @@ nt2 = NamedTensor(
 # Collate a batch of NamedTensor instances into a single NamedTensor
 collated_nt = NamedTensor.collate_fn([nt1, nt2])
 print(collated_nt)
+
+# Collate a batch with zero padding on lat, lon dimensions
+
+nt1 = NamedTensor(
+    torch.rand(128, 128, 3),
+    names=["lat", "lon", "features"],
+    feature_names=["u", "v", "t2m"],
+)
+
+nt2 = NamedTensor(
+    torch.rand(256, 256, 3),
+    names=["lat", "lon", "features"],
+    feature_names=["u", "v", "t2m"],
+)
+
+collated_nt_padded = NamedTensor.collate_fn([nt1, nt2], pad_dims=("lat", "lon"), pad_value=0.0)
+
 ```
 
 For more details, refer to the **NamedTensor** class in `mfai/pytorch/namedtensor.py`.

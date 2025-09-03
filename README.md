@@ -38,6 +38,7 @@
 - [LightningModule](#lightning-modules)
     - Segmentation
     - CLIP
+    - DGMR
 - [Lightning CLI](#lightning-cli)
 - [NamedTensors](#namedtensors)
 - [Metrics](#metrics)
@@ -216,6 +217,15 @@ We also provide [**CLIPLightningModule**](/mfai/pytorch/lightning_modules/clip.p
 
 This module can be instanciated with a simple [ClipSettings](/mfai/pytorch/models/clip.py#19) that informs which image and text encoders to use as well as the embedding size and the initial temperature.
 
+## DGMR
+
+[DGMRLightningModule](/mfai/pytorch/lightning_modules/gan_dgmr.py) is a Pytorch Lightning Module dedicated to training the [DGMR](https://www.nature.com/articles/s41586-021-03854-z) model for precipitation nowcasting.
+
+Code for the GAN architecture is [here](mfai/pytorch/models/gan_dgmr).
+
+This lightning module is largely inspired by [this work](https://github.com/openclimatefix/skillful_nowcasting) from OpenClimateFix.
+
+To find an example of how to use it, check out [this repository](https://github.com/meteofrance/dgmr), where we train the DGMR model from scratch on French radar data.
 
 # Lightning CLI
 

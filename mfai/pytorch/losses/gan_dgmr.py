@@ -40,7 +40,7 @@ class GridCellLoss(nn.Module):
         difference = generated_images - targets
         if self.weight_fn is not None:
             weights = self.weight_fn(targets, self.precip_weight_cap)
-            difference = difference * weights
+            difference *= weights
         difference = difference.norm(p=1)
         return difference / targets.size(1) * targets.size(3) * targets.size(4)
 

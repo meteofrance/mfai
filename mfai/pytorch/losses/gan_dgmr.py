@@ -71,4 +71,4 @@ def loss_hinge_disc(score_generated: Tensor, score_real: Tensor) -> Tensor:
 
 def loss_hinge_gen(score_generated: Tensor) -> Tensor:
     """Generator Hinge loss."""
-    return  -torch.mean(score_generated)
+    return -torch.mean(score_generated)

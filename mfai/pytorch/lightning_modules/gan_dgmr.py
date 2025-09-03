@@ -206,7 +206,9 @@ class DGMRLightningModule(LightningModule):
 
         return generator_loss, grid_cell_reg
 
-    def training_step(self, batch: tuple[NamedTensor, NamedTensor]) -> dict[str, Tensor]:
+    def training_step(
+        self, batch: tuple[NamedTensor, NamedTensor]
+    ) -> dict[str, Tensor]:
         """Performs the training step for the batch."""
         images_nt, future_images_nt = batch
         images_nt.rearrange_(

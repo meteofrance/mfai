@@ -215,8 +215,8 @@ class DGMRLightningModule(LightningModule):
         future_images.rearrange_(
             "batch time height width features -> batch time features height width"
         )
-        images = images["rain"].float()
-        future_images = future_images["rain"].float()
+        images: Tensor = images["rain"].float()
+        future_images: Tensor = future_images["rain"].float()
 
         real_sequence = torch.cat([images, future_images], dim=1)
 
@@ -246,7 +246,11 @@ class DGMRLightningModule(LightningModule):
         self.manual_backward(generator_loss)
         g_opt.step()
 
-        return discriminator_loss, generator_loss, grid_cell_reg
+        return {
+            "discriminator_loss": discriminator_loss,
+            "generator_loss": generator_loss,
+            "grid_cell_reg": grid_cell_reg,
+        }
 
     def configure_optimizers(self) -> tuple[list[torch.optim.Adam], list]:
         """Return the Adam optimizers."""

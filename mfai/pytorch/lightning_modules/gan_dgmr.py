@@ -208,15 +208,15 @@ class DGMRLightningModule(LightningModule):
 
     def training_step(self, batch: tuple[NamedTensor, NamedTensor]) -> tuple[float]:
         """Performs the training step for the batch."""
-        images, future_images = batch
-        images.rearrange_(
+        images_nt, future_images_nt = batch
+        images_nt.rearrange_(
             "batch time height width features -> batch time features height width"
         )
-        future_images.rearrange_(
+        future_images_nt.rearrange_(
             "batch time height width features -> batch time features height width"
         )
-        images = images.__getitem__("rain").float()
-        future_images = future_images.__getitem__("rain").float()
+        images = images_nt["rain"].float()
+        future_images = future_images_nt["rain"].float()
 
         real_sequence = torch.cat([images, future_images], dim=1)
 

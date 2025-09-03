@@ -90,7 +90,7 @@ Currently we support the following neural network architectures:
 
 | Model  | Research Paper  | Input Shape    | ONNX exportable ? | Notes | Use-Cases at MF |
 | :---:   | :---: | :---: | :---: | :---: | :---: |
-| [DGMR](mfai/pytorch/models/gan_dgmr) | [Nature](https://www.nature.com/articles/s41586-021-03854-z)  | (batch time features height width)   | No | Imported and adapted from [OpenClimateFix](https://github.com/openclimatefix/skillful_nowcasting) | [Training DGMR for precipitation nowcasting](https://github.com/meteofrance/dgmr) |
+| [DGMR](mfai/pytorch/models/gan_dgmr) | [Nature](https://www.nature.com/articles/s41586-021-03854-z)  | (batch time features height width) | No | Imported and adapted from [OpenClimateFix](https://github.com/openclimatefix/skillful_nowcasting) | [Training DGMR for precipitation nowcasting](https://github.com/meteofrance/dgmr) |
 
 ## Graph Neural Networks
 

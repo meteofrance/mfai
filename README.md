@@ -48,6 +48,7 @@
 - [Losses](#losses)
   - Perceptual loss
   - LPIPS
+  - GridCell loss and Hinge losses for GANs
 - [Installation](#installation)
 - [Usage](#usage)
     - [Instanciate a model](#instanciate-a-model)
@@ -240,7 +241,7 @@ In addition to metrics available in [**torchmetrics**](https://lightning.ai/docs
 
 # Losses
 
-Pytorch already provide some Loss like Mean Squared Error (torch.nn.MSELoss) or Mean Absolute Error (torch.nn.L1Loss). Here we add two loss functions that focus on perceptual similarity of tensors.
+Pytorch already provide some Loss like Mean Squared Error (torch.nn.MSELoss) or Mean Absolute Error (torch.nn.L1Loss). Here we add two loss functions that focus on perceptual similarity of tensors and four loss functions used for nowcasting with GANs (DGMR).
 
 ## Perceptual Loss
 
@@ -305,6 +306,10 @@ for _ in range():
 ## LPIPS
 
 The [**LPIPS**](mfai/pytorch/losses/perceptual.py#L28) class is a `torch.nn.Module` that computes the Learned Perceptual Image Patch Similarity metric. It is using the aforementionned PerceptualLoss class so it contains the same modes.
+
+## GANs losses for Nowcasting
+
+We add the Grid Cell Regularizer loss from [Skillful Nowcasting](https://arxiv.org/pdf/2104.00954.pdf), as well as a Nowcating loss, Hinge discriminator loss and Hinge generator loss.
 
 
 # Installation
@@ -738,4 +743,4 @@ Météo-France, Berthomier L., Dewasmes O., Guibert F., Pradel B., Tournier T. m
 
 # Acknowledgements
 
-This package is maintained by the DSM/LabIA team at Météo-France. We would like to thank the authors of the papers and codes we used to implement the models (see [above links](#neural-network-architectures) to **arxiv** and **github**) and the authors of the libraries we use to build this package (see our [**requirements.txt**](requirements.txt)).
+This package is maintained by the AI Lab team at Météo-France. We would like to thank the authors of the papers and codes we used to implement the models (see [above links](#neural-network-architectures) to **arxiv** and **github**) and the authors of the libraries we use to build this package (see our [**requirements.txt**](requirements.txt)).

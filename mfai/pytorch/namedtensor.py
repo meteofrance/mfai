@@ -49,8 +49,8 @@ class NamedTensor(TensorWrapper):
     def __init__(
         self,
         tensor: Tensor,
-        names: list[str],
-        feature_names: list[str],
+        names: Sequence[str | Literal[str]],
+        feature_names: Sequence[str | Literal[str]],
         feature_dim_name: str = "features",
     ):
         if len(tensor.shape) != len(names):
@@ -139,7 +139,7 @@ class NamedTensor(TensorWrapper):
         return self.__or__(other)
 
     @staticmethod
-    def stack(nts: list["NamedTensor"], dim_name: str, dim: int = 0) -> "NamedTensor":
+    def stack(nts: Sequence["NamedTensor"], dim_name: str, dim: int = 0) -> "NamedTensor":
         """
         Stack a list of NamedTensors along a new dimension.
         """
@@ -168,7 +168,7 @@ class NamedTensor(TensorWrapper):
             return NamedTensor(new_tensor, names, nts[0].feature_names.copy())
 
     @staticmethod
-    def concat(nts: list["NamedTensor"]) -> "NamedTensor":
+    def concat(nts: Sequence["NamedTensor"]) -> "NamedTensor":
         """
         Safely concat a list of NamedTensors along the last dimension
         in one shot.
@@ -273,7 +273,7 @@ class NamedTensor(TensorWrapper):
         self.tensor = self.tensor.unflatten(dim, unflattened_size)
         self.names = self.names[:dim] + [*unflatten_dim_name] + self.names[dim + 1 :]
 
-    def squeeze_(self, dim_name: Union[list[str], str]) -> None:
+    def squeeze_(self, dim_name: Union[Sequence[str], str]) -> None:
         """
         Squeeze the underlying tensor along the dimension(s)
         given its/their name(s).
@@ -464,7 +464,7 @@ class NamedTensor(TensorWrapper):
 
     @staticmethod
     def collate_fn(
-        batch: list["NamedTensor"],
+        batch: Sequence["NamedTensor"],
         pad_dims: tuple[str, ...] | tuple[()] = (),
         pad_value: int | float = 0,
     ) -> "NamedTensor":

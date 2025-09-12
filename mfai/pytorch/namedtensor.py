@@ -139,7 +139,9 @@ class NamedTensor(TensorWrapper):
         return self.__or__(other)
 
     @staticmethod
-    def stack(nts: Sequence["NamedTensor"], dim_name: str, dim: int = 0) -> "NamedTensor":
+    def stack(
+        nts: Sequence["NamedTensor"], dim_name: str, dim: int = 0
+    ) -> "NamedTensor":
         """
         Stack a list of NamedTensors along a new dimension.
         """

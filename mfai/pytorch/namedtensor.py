@@ -49,8 +49,8 @@ class NamedTensor(TensorWrapper):
     def __init__(
         self,
         tensor: Tensor,
-        names: Sequence[str | Literal[str]],
-        feature_names: Sequence[str | Literal[str]],
+        names: Sequence[str],
+        feature_names: Sequence[str],
         feature_dim_name: str = "features",
     ):
         if len(tensor.shape) != len(names):
@@ -65,12 +65,12 @@ class NamedTensor(TensorWrapper):
 
         super().__init__(tensor)
 
-        self.names = names
+        self.names: list[str] = list(names)
         # build lookup table for fast indexing
         self.feature_names_to_idx = {
             feature_name: idx for idx, feature_name in enumerate(feature_names)
         }
-        self.feature_names = feature_names
+        self.feature_names: list[str] = list(feature_names)
         self.feature_dim_name = feature_dim_name
 
     @property

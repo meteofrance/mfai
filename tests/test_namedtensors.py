@@ -10,7 +10,7 @@ def test_named_tensor() -> None:
     """
     # Create a tensor
     tensor = torch.rand(3, 256, 256, 50)
-    
+
     # Create a NamedTensor
     nt = NamedTensor(
         tensor,

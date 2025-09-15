@@ -10,6 +10,7 @@ def test_named_tensor() -> None:
     """
     # Create a tensor
     tensor = torch.rand(3, 256, 256, 50)
+
     # Create a NamedTensor
     nt = NamedTensor(
         tensor,
@@ -25,6 +26,14 @@ def test_named_tensor() -> None:
     assert nt.dim_size("lat") == 256
     assert nt.dim_size("lon") == 256
     assert nt.dim_size("features") == 50
+
+    # Create a NamedTensor with 'names' and 'feature_names' as tuples
+    nt_tuple = NamedTensor(
+        tensor,
+        names=tuple(["batch", "lat", "lon", "features"]),
+        feature_names=tuple([f"feature_{i}" for i in range(50)]),
+    )
+    assert nt == nt_tuple
 
     nt2 = nt.clone()
 

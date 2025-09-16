@@ -38,7 +38,7 @@ class PatchMaker(nn.Module):
             # checks if y requires padding
             y_padding = (patch_y - (y_size % patch_y)) % patch_y
 
-            self.zero_pad = nn.ZeroPad2d([0, x_padding, 0, y_padding])
+            self.zero_pad = nn.ZeroPad2d((0, x_padding, 0, y_padding))
 
     def forward(self, t: Tensor) -> Tensor:
         """

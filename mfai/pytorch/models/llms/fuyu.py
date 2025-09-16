@@ -116,7 +116,9 @@ class Fuyu(FreezeMLMMixin, nn.Module):
         # Builds linear projection layer for weather input data (same for each time step)
         # lat_dim, lon_dim, timestep_dim, features_dim
         if settings.layer_norm_vis_txt:
-            self.norm_or_ident = nn.LayerNorm(self.settings.emb_dim)
+            self.norm_or_ident: nn.Identity | nn.LayerNorm = nn.LayerNorm(
+                self.settings.emb_dim
+            )
         else:
             self.norm_or_ident = nn.Identity()
 

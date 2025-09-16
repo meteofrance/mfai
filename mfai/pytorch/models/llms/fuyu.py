@@ -1,9 +1,7 @@
-import math
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal
 
-import einops
 import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn

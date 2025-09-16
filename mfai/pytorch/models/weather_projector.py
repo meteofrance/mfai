@@ -3,11 +3,11 @@ This model takes weather/2d inputs (batch, features, height, width)
 and produces tokens for multimodal language models.
 """
 
-from torch import nn, Tensor
 from dataclasses import dataclass
 
 import einops
 from dataclasses_json import dataclass_json
+from torch import Tensor, nn
 
 
 class PatchMaker(nn.Module):

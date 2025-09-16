@@ -17,7 +17,10 @@ from mfai.pytorch.models.resnet import (
     ResNet50MLMSettings,
 )
 from mfai.pytorch.models.vit import VitEncoder, ViTEncoderSettings
-from mfai.pytorch.models.weather_projector import WeatherProjector, WeatherProjectorSettings
+from mfai.pytorch.models.weather_projector import (
+    WeatherProjector,
+    WeatherProjectorSettings,
+)
 from mfai.pytorch.namedtensor import NamedTensor
 
 
@@ -61,7 +64,7 @@ class FuyuSettings:
 
     # mlp output for the vision encoder
     resnet_mlp_output: bool = False
-    
+
     # layer norm vis + txt tokens
     layer_norm_vis_txt: bool = True
 
@@ -120,21 +123,28 @@ class Fuyu(FreezeMLMMixin, nn.Module):
             self.norm_or_ident = nn.Identity()
 
         if self.settings.vision_encoder == "linear":
-            
-            input_dims = settings.vision_input_shape[0], settings.vision_input_shape[1], settings.vision_input_shape[-1]
-            s = WeatherProjectorSettings(input_dims=input_dims, embedding_dim=self.settings.emb_dim)
-            self.vision_encoder: WeatherProjector | ResNet50MLM | VitEncoder = WeatherProjector(settings=s)
+            input_dims = (
+                settings.vision_input_shape[0],
+                settings.vision_input_shape[1],
+                settings.vision_input_shape[-1],
+            )
+            s = WeatherProjectorSettings(
+                input_dims=input_dims, embedding_dim=self.settings.emb_dim
+            )
+            self.vision_encoder: WeatherProjector | ResNet50MLM | VitEncoder = (
+                WeatherProjector(settings=s)
+            )
 
         elif self.settings.vision_encoder == "resnet50":
-             self.vision_encoder = ResNet50MLM(
-                    num_channels=settings.vision_input_shape[3],
-                    num_classes=settings.emb_dim,
-                    settings=ResNet50MLMSettings(
-                        num_tokens=settings.resnet_num_tokens,
-                        pos_embedding=settings.resnet_pos_embedding,
-                        mlp_output=settings.resnet_mlp_output,
-                    ),
-                )
+            self.vision_encoder = ResNet50MLM(
+                num_channels=settings.vision_input_shape[3],
+                num_classes=settings.emb_dim,
+                settings=ResNet50MLMSettings(
+                    num_tokens=settings.resnet_num_tokens,
+                    pos_embedding=settings.resnet_pos_embedding,
+                    mlp_output=settings.resnet_mlp_output,
+                ),
+            )
         elif self.settings.vision_encoder == "vit":
             # Initialize the ViT encoder, we have one input channel per feature per timestep
             self.vision_encoder = VitEncoder(
@@ -159,15 +169,13 @@ class Fuyu(FreezeMLMMixin, nn.Module):
         return self.backend.context_length
 
     def forward(self, token_ids: Tensor, vision_input: NamedTensor) -> Tensor:
-        # Projection of weather input data into LLM token space 
+        # Projection of weather input data into LLM token space
         vis_timesteps_embeds = []
 
         for timestep_nt in vision_input.iter_dim("timestep"):
             # batch, lat, lon, features
             # rearrange to batch, features, lat, lon
-            timestep_nt.rearrange_(
-                "batch lat lon features -> batch features lat lon"
-            )
+            timestep_nt.rearrange_("batch lat lon features -> batch features lat lon")
 
             vis_timesteps_embeds.append(self.vision_encoder(timestep_nt.tensor))
         vis_embeds = torch.cat(vis_timesteps_embeds, dim=1)
@@ -175,10 +183,10 @@ class Fuyu(FreezeMLMMixin, nn.Module):
         text_embeds = self.backend.tok_emb(token_ids)
 
         vis_txt_embeds = torch.cat([vis_embeds, text_embeds], dim=1)
-        
+
         if self.settings.layer_norm_vis_txt:
             vis_txt_embeds = self.norm_or_ident(vis_txt_embeds)
-            
+
         if vis_txt_embeds.shape[1] > self.context_length:
             print(
                 f"Warning: Input sequence length {vis_txt_embeds.shape[1]} is longer than the model's context length {self.context_length}. Truncating input."

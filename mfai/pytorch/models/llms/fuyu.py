@@ -52,7 +52,7 @@ class FuyuSettings:
 
     # choice of vision encoder
     # "resnet50", "linear"
-    vision_encoder: Literal["resnet50", "linear", "vit"] = "linear"
+    vision_encoder: Literal["resnet50", "linear", "vit", "vit_by_timestep", "vit_by_feature"] = "linear"
     # Optional checkpoint path for the resnet encoder
     resnet_checkpoint: None | Path = None
 
@@ -197,6 +197,36 @@ class Fuyu(FreezeMLMMixin, nn.Module):
                 input_shape=settings.vision_input_shape[:2],
             )
 
+        elif self.settings.vision_encoder == "vit_by_timestep":
+            # Initialize the ViT encoder, we have one input channel per feature per timestep
+            self.vision_encoder = VitEncoder(
+                in_channels=settings.vision_input_shape[3],
+                out_channels=settings.emb_dim,
+                settings=ViTEncoderSettings(
+                    emb_dim=settings.emb_dim,
+                    transformer_dropout=settings.drop_rate,
+                    emb_dropout=settings.drop_rate,
+                    autopad_enabled=True,
+                ),
+                input_shape=settings.vision_input_shape[:2],
+            )
+            self.vit_layer_norm = torch.nn.LayerNorm(settings.emb_dim)
+
+        elif self.settings.vision_encoder == "vit_by_feature":
+            # Initialize the ViT encoder, we have one input channel per feature per timestep
+            self.vision_encoder = VitEncoder(
+                in_channels=settings.vision_input_shape[2],
+                out_channels=settings.emb_dim,
+                settings=ViTEncoderSettings(
+                    emb_dim=settings.emb_dim,
+                    transformer_dropout=settings.drop_rate,
+                    emb_dropout=settings.drop_rate,
+                    autopad_enabled=True,
+                ),
+                input_shape=settings.vision_input_shape[:2],
+            )
+            self.vit_layer_norm = torch.nn.LayerNorm(settings.emb_dim)
+
         else:
             raise ValueError(
                 f"Unknown vision encoder: {self.settings.vision_encoder}. Use 'linear' or 'resnet50'."
@@ -259,6 +289,42 @@ class Fuyu(FreezeMLMMixin, nn.Module):
 
             # Normalize the output along embedding dimension
             vis_embeds = vis_embeds / vis_embeds.norm(dim=2, keepdim=True)
+
+        elif self.settings.vision_encoder == "vit_by_timestep":
+            for timestep_nt in vision_input.iter_dim("timestep"):
+                timestep_embed = []
+                # batch, lat, lon, features
+                # rearrange to batch, features, lat, lon
+                new_tensor = einops.rearrange(
+                timestep_nt.tensor,
+                "batch lat lon features -> batch features lat lon",
+                )
+
+                # ViT encoder
+                vis_embeds_nt = self.vision_encoder(new_tensor)
+
+                # Normalize the output along embedding dimension
+                vis_embeds_nt = self.vit_layer_norm(vis_embeds_nt)
+                vis_timesteps_embeds.append(vis_embeds_nt)
+            vis_embeds = torch.cat(vis_timesteps_embeds, dim=1)
+
+        elif self.settings.vision_encoder == "vit_by_feature":
+            for feature_nt in vision_input.iter_dim("features"):
+                feature_embed = []
+                # batch, lat, lon, timesteps
+                # rearrange to batch, timesteps, lat, lon
+                new_tensor = einops.rearrange(
+                feature_nt.tensor,
+                "batch lat lon timestep -> batch timestep lat lon",
+                )
+
+                # ViT encoder
+                vis_embeds_nt = self.vision_encoder(new_tensor)
+
+                # Normalize the output along embedding dimension
+                vis_embeds_nt = self.vit_layer_norm(vis_embeds_nt)
+                vis_timesteps_embeds.append(vis_embeds_nt)
+            vis_embeds = torch.cat(vis_timesteps_embeds, dim=1)
 
         else:
             raise ValueError(

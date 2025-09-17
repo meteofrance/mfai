@@ -1,6 +1,6 @@
 """Modules for generator blocks."""
 
-from typing import Any, Literal
+from typing import Literal
 
 import einops
 import torch

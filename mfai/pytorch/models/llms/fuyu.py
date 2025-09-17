@@ -1,9 +1,7 @@
-import math
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal
 
-import einops
 import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
@@ -13,12 +11,14 @@ from mfai.pytorch.models.llms import FreezeMLMMixin
 from mfai.pytorch.models.llms.gpt2 import GPT2
 from mfai.pytorch.models.llms.llama2 import Llama2
 from mfai.pytorch.models.resnet import (
-    ResNet50,
     ResNet50MLM,
     ResNet50MLMSettings,
-    ResNet50Settings,
 )
 from mfai.pytorch.models.vit import VitEncoder, ViTEncoderSettings
+from mfai.pytorch.models.weather_projector import (
+    WeatherProjector,
+    WeatherProjectorSettings,
+)
 from mfai.pytorch.namedtensor import NamedTensor
 
 
@@ -37,7 +37,6 @@ class FuyuSettings:
     drop_rate: float = 0.1  # Dropout rate
     qkv_bias: bool = False  # Query-Key-Value bias
     hidden_dim: int = 768  # Size of the intermediate dimension in FeedForward - Llama2
-    downsampling_rate: int = 2  # Downsampling rate for the vision input
 
     vision_input_shape: tuple[int, int, int, int] = (
         256,
@@ -45,7 +44,6 @@ class FuyuSettings:
         10,
         10,
     )  # lat_dim, lon_dim, timestep_dim, features_dim
-    layer_norm_vis: bool = True
 
     # Inject vision tokens at each stage ?
     inject_vision_each_stage: bool = False
@@ -64,6 +62,11 @@ class FuyuSettings:
 
     # mlp output for the vision encoder
     resnet_mlp_output: bool = False
+
+    # layer norm vis + txt tokens
+    layer_norm_vis_txt: bool = True
+
+    patch_size: int | tuple[int, int] = 8
 
 
 class Fuyu(FreezeMLMMixin, nn.Module):
@@ -114,92 +117,56 @@ class Fuyu(FreezeMLMMixin, nn.Module):
 
         # Builds linear projection layer for weather input data (same for each time step)
         # lat_dim, lon_dim, timestep_dim, features_dim
+        if settings.layer_norm_vis_txt:
+            self.norm_or_ident: nn.Identity | nn.LayerNorm = nn.LayerNorm(
+                self.settings.emb_dim
+            )
+        else:
+            self.norm_or_ident = nn.Identity()
 
-        downsampled_lat = math.floor(
-            settings.vision_input_shape[0] / settings.downsampling_rate
-        )
-        downsampled_lon = math.floor(
-            settings.vision_input_shape[1] / settings.downsampling_rate
-        )
-        spatial_dims = downsampled_lat * downsampled_lon
-
-        # downsampled spatial dims
-        self.downsampler = nn.MaxPool2d(settings.downsampling_rate)
+        self.vision_encoder: WeatherProjector | ResNet50MLM | VitEncoder
 
         if self.settings.vision_encoder == "linear":
-            # One linear projection per feature/weather field
-            self.vision_encoder: nn.ModuleList | ResNet50 | ResNet50MLM | VitEncoder = (
-                nn.ModuleList(
-                    [
-                        nn.Linear(spatial_dims, settings.emb_dim)
-                        for _ in range(settings.vision_input_shape[3])
-                    ]
-                )
+            input_dims = (
+                settings.vision_input_shape[0],
+                settings.vision_input_shape[1],
+                settings.vision_input_shape[-1],
             )
+            s = WeatherProjectorSettings(
+                input_dims=input_dims,
+                embedding_dim=self.settings.emb_dim,
+                patch_size=self.settings.patch_size,
+            )
+            self.vision_encoder = WeatherProjector(settings=s)
 
-            self.layer_norm_vis = settings.layer_norm_vis
-            if settings.layer_norm_vis:
-                # One Layer Norm per feature
-                self.vis_layer_norms = nn.ModuleList(
-                    [
-                        torch.nn.LayerNorm(spatial_dims)
-                        for _ in range(settings.vision_input_shape[3])
-                    ]
-                )
         elif self.settings.vision_encoder == "resnet50":
-            num_classes = settings.emb_dim
-            num_channels = (
-                settings.vision_input_shape[2] * settings.vision_input_shape[3]
+            self.vision_encoder = ResNet50MLM(
+                num_channels=settings.vision_input_shape[3],
+                num_classes=settings.emb_dim,
+                settings=ResNet50MLMSettings(
+                    num_tokens=settings.resnet_num_tokens,
+                    pos_embedding=settings.resnet_pos_embedding,
+                    mlp_output=settings.resnet_mlp_output,
+                ),
             )
-
-            if settings.resnet_checkpoint:
-                # Load the checkpoint of the pretrained resnet encoder if a path is provided
-                checkpoint = torch.load(settings.resnet_checkpoint, weights_only=True)
-                if checkpoint["num_channels"] != num_channels:
-                    raise ValueError(
-                        f"Checkpoint num_channels {checkpoint['num_channels']} does not match the model num_channels {num_channels}."
-                    )
-                if checkpoint["num_classes"] != num_classes:
-                    raise ValueError(
-                        f"Checkpoint num_classes {checkpoint['num_classes']} does not match the model num_classes {num_classes}."
-                    )
-                # Instantiate the ResNet50 encoder with the same parameters as the checkpoint
-                self.vision_encoder = ResNet50(
-                    num_channels=checkpoint["num_channels"],
-                    num_classes=checkpoint["num_classes"],
-                    settings=ResNet50Settings(**checkpoint["settings"]),
-                )
-                # Load the pretrained weights
-                self.vision_encoder.load_state_dict(checkpoint["model_state_dict"])
-
-            else:
-                self.vision_encoder = ResNet50MLM(
-                    num_channels=num_channels,
-                    num_classes=num_classes,
-                    settings=ResNet50MLMSettings(
-                        num_tokens=settings.resnet_num_tokens,
-                        pos_embedding=settings.resnet_pos_embedding,
-                        mlp_output=settings.resnet_mlp_output,
-                    ),
-                )
         elif self.settings.vision_encoder == "vit":
             # Initialize the ViT encoder, we have one input channel per feature per timestep
             self.vision_encoder = VitEncoder(
-                in_channels=settings.vision_input_shape[2]
-                * settings.vision_input_shape[3],
+                in_channels=settings.vision_input_shape[-1],
                 out_channels=settings.emb_dim,
                 settings=ViTEncoderSettings(
                     emb_dim=settings.emb_dim,
                     transformer_dropout=settings.drop_rate,
                     emb_dropout=settings.drop_rate,
                     autopad_enabled=True,
+                    patch_size=self.settings.patch_size,
                 ),
                 input_shape=settings.vision_input_shape[:2],
             )
 
         else:
             raise ValueError(
-                f"Unknown vision encoder: {self.settings.vision_encoder}. Use 'linear' or 'resnet50'."
+                f"Unknown vision encoder: {self.settings.vision_encoder}. Use 'linear', 'vit' or 'resnet50'."
             )
 
     @property
@@ -207,67 +174,24 @@ class Fuyu(FreezeMLMMixin, nn.Module):
         return self.backend.context_length
 
     def forward(self, token_ids: Tensor, vision_input: NamedTensor) -> Tensor:
-        # Linear projection of weather input data
+        # Projection of weather input data into LLM token space
         vis_timesteps_embeds = []
-        if self.settings.vision_encoder == "linear":
-            for timestep_nt in vision_input.iter_dim("timestep"):
-                timestep_embed = []
-                # batch, lat, lon, features
-                # rearrange to batch, features, lat, lon
-                timestep_nt.rearrange_(
-                    "batch lat lon features -> batch features lat lon"
-                )
 
-                for i in range(timestep_nt.dim_size("features")):
-                    timestep_tensor = timestep_nt.select_tensor_dim("features", i)
-                    timestep_tensor = self.downsampler(timestep_tensor)
-                    timestep_tensor = timestep_tensor.flatten(1, 2)
-                    if self.layer_norm_vis:
-                        timestep_tensor = self.vis_layer_norms[i](timestep_tensor)
-                    timestep_embed.append(
-                        self.vision_encoder[i](timestep_tensor)  # type: ignore[index]
-                    )
+        for timestep_nt in vision_input.iter_dim("timestep"):
+            # batch, lat, lon, features
+            # rearrange to batch, features, lat, lon
+            timestep_nt.rearrange_("batch lat lon features -> batch features lat lon")
 
-                timestep_embed_tensor = torch.stack(timestep_embed, dim=1)
-                vis_timesteps_embeds.append(timestep_embed_tensor)
-            vis_embeds = torch.cat(vis_timesteps_embeds, dim=1)
-
-        elif self.settings.vision_encoder == "resnet50":
-            new_tensor = einops.rearrange(
-                vision_input.tensor,
-                "batch lat lon timestep features -> batch (timestep features) lat lon",
-            )
-
-            # Resnet50 encoder
-            vis_embeds = self.vision_encoder(new_tensor)
-
-            # resnet50mlm already outputs an extra token dim
-            if isinstance(self.vision_encoder, ResNet50):
-                vis_embeds = vis_embeds.unsqueeze(1)
-
-            # Normalize the output along embedding dimension
-            vis_embeds = vis_embeds / vis_embeds.norm(dim=2, keepdim=True)
-
-        elif self.settings.vision_encoder == "vit":
-            # Reshape the vision input for ViT
-            new_tensor = einops.rearrange(
-                vision_input.tensor,
-                "batch lat lon timestep features -> batch (timestep features) lat lon",
-            )
-            # ViT encoder
-            vis_embeds = self.vision_encoder(new_tensor)
-
-            # Normalize the output along embedding dimension
-            vis_embeds = vis_embeds / vis_embeds.norm(dim=2, keepdim=True)
-
-        else:
-            raise ValueError(
-                f"Unknown vision encoder: {self.settings.vision_encoder}. Use 'linear' or 'resnet50'."
-            )
+            vis_timesteps_embeds.append(self.vision_encoder(timestep_nt.tensor))
+        vis_embeds = torch.cat(vis_timesteps_embeds, dim=1)
 
         text_embeds = self.backend.tok_emb(token_ids)
 
         vis_txt_embeds = torch.cat([vis_embeds, text_embeds], dim=1)
+
+        if self.settings.layer_norm_vis_txt:
+            vis_txt_embeds = self.norm_or_ident(vis_txt_embeds)
+
         if vis_txt_embeds.shape[1] > self.context_length:
             print(
                 f"Warning: Input sequence length {vis_txt_embeds.shape[1]} is longer than the model's context length {self.context_length}. Truncating input."

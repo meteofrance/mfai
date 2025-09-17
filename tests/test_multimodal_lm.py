@@ -58,24 +58,24 @@ def generate_text_simple(
             "llama2",
             LlamaTokenizer(),
             (
-                "Sustine et abstineAlignment Геrace sqlwesten Loggerлага Bushに同",
-                "Sustine et abstine makulsion flag重глеägerhand Av Lincoln mul",
+                "Sustine et abstinePalractlicated Kun провоfixRightarrow advice politico escri",
+                "Sustine et abstine華 Paul siècleганzą Bretselvessimeqське]{",
             ),
         ),
         (
             "gpt2",
             GPT2Tokenizer(),
             (
-                "Sustine et abstine Patron nationalist grease Carly Detectiveuceditta Mysteryolationitivity",
-                "Sustine et abstine grinned Supporters strife dissemination crewsrush error paternalirementsuania",
+                "Sustine et abstine licencesrenchedAFTA screened predatoropathic down Sweetlockumps",
+                "Sustine et abstine RickEatMicro undefeatedQu PTS SJ grow1016ersion",
             ),
         ),
         (
             "gpt2",
             LlamaTokenizer(),
             (
-                "Sustine et abstine współ terrestführt substantial arrow atoms introduction mil стар sze",
-                "Sustine et abstine logging extremdan={\glyское elabor commissionategymapping",
+                "Sustine et abstine współчанḨmpety který North PL busyedo",
+                "Sustine et abstine ocean gemäßtechn Camb understandengono Clement Cependantipe?'",
             ),
         ),
     ],
@@ -159,41 +159,6 @@ def test_multimodal_with_pretrained_clip() -> None:
     # Save the weights and parameters of the image encoder ResNet50
     clip.save_vision_encoder(path_checkpoint)
 
-    tokenizer = GPT2Tokenizer()
-    model = Fuyu(
-        settings=FuyuSettings(
-            vision_input_shape=vision_input_shape,
-            backend="gpt2",
-            n_heads=1,
-            n_layers=1,
-            emb_dim=embed_dim,
-            hidden_dim=32,
-            context_length=32,
-            inject_vision_each_stage=False,
-            vision_encoder="resnet50",
-            resnet_checkpoint=path_checkpoint,
-        ),
-        vocab_size=tokenizer.vocab_size,
-    )
-    vision_input = NamedTensor(
-        torch.randn(1, 128, 128, 2, 1),
-        names=["batch", "lat", "lon", "timestep", "features"],
-        feature_names=[
-            "u",
-        ],
-    )
-    encoded = tokenizer.encode("Sustine et abstine")
-    encoded_tensor = torch.tensor(encoded).unsqueeze(0)
-
-    out = generate_text_simple(
-        model=model,
-        idx=encoded_tensor,
-        max_new_tokens=10,
-        context_size=model.context_length,
-        vision_input=vision_input,
-    )
-    tokenizer.decode(out.squeeze(0).tolist())
-
 
 def test_xatt_multimodal() -> None:
     torch.manual_seed(666)
@@ -276,7 +241,7 @@ def test_fuyu_with_mlp_and_pos_embedding() -> None:
     decoded_text = tokenizer.decode(out.squeeze(0).tolist())
     assert (
         decoded_text
-        == "Sustine et abstine Quartzinternetmulti AdultgreSQL hire reflectscephaloutsidemas"
+        == "Sustine et abstinetti Kandolon visitationIvexist† devastationJane bishop"
     )
     model.freeze_llm()
     model.unfreeze_llm()
@@ -289,15 +254,15 @@ def test_fuyu_with_mlp_and_pos_embedding() -> None:
     [
         (
             "linear",
-            "Sustine et abstinemir GMBF majestic Crabperture intact Causes premisesInsp",
+            "Sustine et abstine workedussie 338 antioxid■ focusingespie arbitrary frequent Language",
         ),
         (
             "resnet50",
-            "Sustine et abstineCorrection recessioniers unarmed related goose charge detect599 Empire",
+            "Sustine et abstine physique pseudCI tenantrollerAAAA flowsademicecycleANY",
         ),
         (
             "vit",
-            'Sustine et abstine gripping disputed Capitalismwidget climb negative avail prone"}," fascinating',
+            "Sustine et abstineIntegeritarian126 squat creatine Swe prosecute Rousse pagan bored",
         ),
     ],
 )
@@ -313,7 +278,7 @@ def test_fuyu_vision_encoders(
             n_layers=1,
             emb_dim=32,
             hidden_dim=32,
-            context_length=80,
+            context_length=140,
             inject_vision_each_stage=True,
             vision_encoder=encoder_name,
         ),

@@ -66,7 +66,7 @@ class FuyuSettings:
     # layer norm vis + txt tokens
     layer_norm_vis_txt: bool = True
 
-    patch_size: int | tuple[int, int] = 17
+    patch_size: int | tuple[int, int] = 8
 
 
 class Fuyu(FreezeMLMMixin, nn.Module):

@@ -65,7 +65,7 @@ class PatchMaker(nn.Module):
 @dataclass
 class WeatherProjectorSettings:
     # patch_size
-    patch_size: int = 8
+    patch_size: int | tuple[int, int] = 8
 
     # lat, lon, timesteps, features
     input_dims: tuple[int, int, int] = (51, 51, 23)
@@ -79,15 +79,20 @@ class WeatherProjector(nn.Module):
         super().__init__()
 
         self.settings = settings
+
+        if isinstance(settings.patch_size, int):
+            self.patch_size: tuple[int, int] = (
+                settings.patch_size,
+                settings.patch_size,
+            )
+        else:
+            self.patch_size = settings.patch_size
+
         this_dim = (
-            self.settings.patch_size
-            * self.settings.patch_size
-            * self.settings.input_dims[-1]
+            self.patch_size[0] * self.patch_size[1] * self.settings.input_dims[-1]
         )
 
-        self.patcher = PatchMaker(
-            self.settings.patch_size, self.settings.input_dims[:2]
-        )
+        self.patcher = PatchMaker(self.patch_size, self.settings.input_dims[:2])
         self.proj = nn.Linear(this_dim, self.settings.embedding_dim)
 
     def forward(self, t: Tensor) -> Tensor:

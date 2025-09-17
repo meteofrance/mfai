@@ -12,7 +12,8 @@ from torch import Tensor, nn
 
 class PatchMaker(nn.Module):
     """
-    Converts a vision/weather (B, C, H, W) tensor into a (B, F, T) token tensor.
+    Converts a vision/weather (B, C, H, W) tensor into a (B, T, F) token tensor.
+    T stands for token dimension and F the feature/embedding dimension.
     Each token is built with all the data of one patch of size patch_size
     """
 

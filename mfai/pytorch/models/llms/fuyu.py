@@ -66,6 +66,8 @@ class FuyuSettings:
     # layer norm vis + txt tokens
     layer_norm_vis_txt: bool = True
 
+    patch_size: int | tuple[int, int] = 17
+
 
 class Fuyu(FreezeMLMMixin, nn.Module):
     """
@@ -129,7 +131,9 @@ class Fuyu(FreezeMLMMixin, nn.Module):
                 settings.vision_input_shape[-1],
             )
             s = WeatherProjectorSettings(
-                input_dims=input_dims, embedding_dim=self.settings.emb_dim
+                input_dims=input_dims,
+                embedding_dim=self.settings.emb_dim,
+                patch_size=self.settings.patch_size,
             )
             self.vision_encoder: WeatherProjector | ResNet50MLM | VitEncoder = (
                 WeatherProjector(settings=s)
@@ -155,6 +159,7 @@ class Fuyu(FreezeMLMMixin, nn.Module):
                     transformer_dropout=settings.drop_rate,
                     emb_dropout=settings.drop_rate,
                     autopad_enabled=True,
+                    patch_size=self.settings.patch_size,
                 ),
                 input_shape=settings.vision_input_shape[:2],
             )

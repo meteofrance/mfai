@@ -123,9 +123,9 @@ class Fuyu(FreezeMLMMixin, nn.Module):
             )
         else:
             self.norm_or_ident = nn.Identity()
-        
+
         self.vision_encoder: WeatherProjector | ResNet50MLM | VitEncoder
-        
+
         if self.settings.vision_encoder == "linear":
             input_dims = (
                 settings.vision_input_shape[0],

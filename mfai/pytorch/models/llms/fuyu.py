@@ -123,7 +123,9 @@ class Fuyu(FreezeMLMMixin, nn.Module):
             )
         else:
             self.norm_or_ident = nn.Identity()
-
+        
+        self.vision_encoder: WeatherProjector | ResNet50MLM | VitEncoder
+        
         if self.settings.vision_encoder == "linear":
             input_dims = (
                 settings.vision_input_shape[0],
@@ -135,9 +137,7 @@ class Fuyu(FreezeMLMMixin, nn.Module):
                 embedding_dim=self.settings.emb_dim,
                 patch_size=self.settings.patch_size,
             )
-            self.vision_encoder: WeatherProjector | ResNet50MLM | VitEncoder = (
-                WeatherProjector(settings=s)
-            )
+            self.vision_encoder = WeatherProjector(settings=s)
 
         elif self.settings.vision_encoder == "resnet50":
             self.vision_encoder = ResNet50MLM(

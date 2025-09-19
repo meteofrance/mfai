@@ -97,7 +97,7 @@ class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
 
         elif self.settings.vision_encoder == "resnet50":
             self.vision_encoder = ResNet50MLM(
-                num_channels=settings.vision_input_shape[3],
+                num_channels=settings.vision_input_shape[-1],
                 num_classes=settings.emb_dim,
                 settings=ResNet50MLMSettings(
                     num_tokens=settings.resnet_num_tokens,

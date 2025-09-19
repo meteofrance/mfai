@@ -160,7 +160,26 @@ def test_multimodal_with_pretrained_clip() -> None:
     clip.save_vision_encoder(path_checkpoint)
 
 
-def test_xatt_multimodal() -> None:
+@pytest.mark.parametrize(
+    "vision_encoder, target_text",
+    [
+        (
+            "linear",
+            "Sustine et abstine Kissinger Dire thee visitation au LSDcontin nutrition Mecca skewed",
+        ),
+        (
+            "resnet50",
+            "Sustine et abstine Decl Ng playersolithic starving Wilhelm Unreal 207UP Sav",
+        ),
+        (
+            "vit",
+            "Sustine et abstinedriving begurtle truth converted enrichment humiliatingjee Hallsdeal",
+        ),
+    ],
+)
+def test_xatt_multimodal(
+    vision_encoder: Literal["linear", "resnet50", "vit"], target_text: str
+) -> None:
     torch.manual_seed(666)
     vision_input_shape = (128, 128, 2, 1)
     settings = XAttMultiModalLMSettings(
@@ -170,6 +189,7 @@ def test_xatt_multimodal() -> None:
         emb_dim=32,
         context_length=32,
         x_att_ratio=1,
+        vision_encoder=vision_encoder,
     )
     tokenizer = GPT2Tokenizer()
     model = XAttMultiModalLM(settings=settings, vocab_size=tokenizer.vocab_size)
@@ -192,10 +212,7 @@ def test_xatt_multimodal() -> None:
         vision_input=vision_input,
     )
     decoded_text = tokenizer.decode(token_ids_out.squeeze(0).tolist())
-    assert (
-        decoded_text
-        == "Sustine et abstine enforcedOriginally MoriAbsashes Deckeritudes048 Revelations originals"
-    )
+    assert decoded_text == target_text
     model.freeze_llm()
     model.freeze_vision()
     model.unfreeze_llm()

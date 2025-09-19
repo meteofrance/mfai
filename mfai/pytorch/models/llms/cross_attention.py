@@ -106,7 +106,6 @@ class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
                 ),
             )
         elif self.settings.vision_encoder == "vit":
-
             self.vision_encoder = VitEncoder(
                 in_channels=settings.vision_input_shape[-1],
                 out_channels=settings.emb_dim,
@@ -127,9 +126,7 @@ class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
 
         self.norm_or_ident: nn.Identity | nn.LayerNorm
         if settings.layer_norm_vis:
-            self.norm_or_ident = nn.LayerNorm(
-                self.settings.emb_dim
-            )
+            self.norm_or_ident = nn.LayerNorm(self.settings.emb_dim)
         else:
             self.norm_or_ident = nn.Identity()
 

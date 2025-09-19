@@ -125,8 +125,9 @@ class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
                 f"Unknown vision encoder: {self.settings.vision_encoder}. Use 'linear', 'vit' or 'resnet50'."
             )
 
+        self.norm_or_ident: nn.Identity | nn.LayerNorm
         if settings.layer_norm_vis:
-            self.norm_or_ident: nn.Identity | nn.LayerNorm = nn.LayerNorm(
+            self.norm_or_ident = nn.LayerNorm(
                 self.settings.emb_dim
             )
         else:

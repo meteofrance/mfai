@@ -1,5 +1,4 @@
 from dataclasses import asdict, dataclass
-from pathlib import Path
 from typing import Literal
 
 import torch
@@ -51,8 +50,6 @@ class FuyuSettings:
     # choice of vision encoder
     # "resnet50", "linear"
     vision_encoder: Literal["resnet50", "linear", "vit"] = "linear"
-    # Optional checkpoint path for the resnet encoder
-    resnet_checkpoint: None | Path = None
 
     # number of tokens for ResNet50 encoder
     resnet_num_tokens: int = 32

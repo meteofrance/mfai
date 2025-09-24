@@ -63,6 +63,8 @@ class PerceptualLoss(torch.nn.Module):
         if "cuda" in device and not torch.cuda.is_available():
             self.device = "cpu"
 
+        print("device :", self.device)
+
         # Iteration over channels for perceptual loss
         self.channel_iterative_mode = channel_iterative_mode  # whether to iterates over the channel for perceptual loss
         self.in_channels = in_channels  # Number of input channel for VGG16
@@ -154,6 +156,11 @@ class PerceptualLoss(torch.nn.Module):
                 p.requires_grad = False
 
         self.blocks = torch.nn.ModuleList(blocks)
+        for i, block in enumerate(self.blocks):
+            try:
+                print(f"Block {i} device:", next(block.parameters()).device)
+            except StopIteration:
+                print(f"Block {i} n'a pas de paramètres.")
 
     def _forward_net_single_img(self, x: Tensor) -> tuple:
         """Forward the Network features and styles for a single image.

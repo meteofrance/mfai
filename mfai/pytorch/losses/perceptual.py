@@ -109,13 +109,13 @@ class PerceptualLoss(torch.nn.Module):
                     kernel_size=(3, 3),
                     stride=(1, 1),
                     padding=(1, 1),
-                ).eval()
+                ).eval().to(self.device)
             ]
 
             for id_layer in range(1, self.feature_layer_ids[0] + 1):
                 layers.append(self.network.features[id_layer].eval())
 
-            blocks.append(nn.Sequential(*layers))
+            blocks.append(nn.Sequential(*layers).to(self.device))
 
         else:
             blocks.append(self.network.features[: self.feature_layer_ids[0]].eval())

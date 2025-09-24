@@ -63,8 +63,6 @@ class PerceptualLoss(torch.nn.Module):
         if "cuda" in device and not torch.cuda.is_available():
             self.device = "cpu"
 
-        print("device :", self.device)
-
         # Iteration over channels for perceptual loss
         self.channel_iterative_mode = channel_iterative_mode  # whether to iterates over the channel for perceptual loss
         self.in_channels = in_channels  # Number of input channel for VGG16
@@ -93,6 +91,8 @@ class PerceptualLoss(torch.nn.Module):
                 self.scaling_factor.append(2**i)
 
         self._set_network()
+        # Set the device of the model once in the forward
+        self._set_device = False
 
     def _set_blocks(self) -> list:
         """Set the blocks of layers from the neural network
@@ -156,11 +156,6 @@ class PerceptualLoss(torch.nn.Module):
                 p.requires_grad = False
 
         self.blocks = torch.nn.ModuleList(blocks)
-        for i, block in enumerate(self.blocks):
-            try:
-                print(f"Block {i} device:", next(block.parameters()).device)
-            except StopIteration:
-                print(f"Block {i} n'a pas de paramètres.")
 
     def _forward_net_single_img(self, x: Tensor) -> tuple:
         """Forward the Network features and styles for a single image.
@@ -317,6 +312,13 @@ class PerceptualLoss(torch.nn.Module):
         Note :
             If y is None, the features of y needs to be computed before by calling the function : compute_perceptual_features
         """
+
+        # Send the network and blocks on the same device as the inputs
+        if not self._set_device:
+            self.device = x.device
+            self.network = self.network.to(self.device)
+            self.blocks = torch.nn.ModuleList([b.to(self.device) for b in self.blocks])
+            self._set_device = True
 
         perceptual_loss = torch.tensor(0.0).to(self.device)
 

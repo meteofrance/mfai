@@ -334,6 +334,8 @@ class PerceptualLoss(torch.nn.Module):
         if y is not None:
             for scaling_factor in self.scaling_factor:
                 if self.multi_scale:
+                    print("sahpe x:", x.shape)
+                    print("scaling_factor", scaling_factor)
                     x = self._downscale(x, scaling_factor)
                     y = self._downscale(y, scaling_factor)
 

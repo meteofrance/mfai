@@ -331,13 +331,13 @@ class PerceptualLoss(torch.nn.Module):
         else:
             pass
 
+        x_copy = x.clone()
         if y is not None:
+            y_copy = y.clone()
             for scaling_factor in self.scaling_factor:
                 if self.multi_scale:
-                    print("sahpe x:", x.shape)
-                    print("scaling_factor", scaling_factor)
-                    x = self._downscale(x, scaling_factor)
-                    y = self._downscale(y, scaling_factor)
+                    x = self._downscale(x_copy, scaling_factor)
+                    y = self._downscale(y_copy, scaling_factor)
 
                 if self.channel_iterative_mode:
                     for channel_id in range(x.shape[1]):
@@ -357,7 +357,7 @@ class PerceptualLoss(torch.nn.Module):
                 raise ValueError
             for id_scaling_factor, scaling_factor in enumerate(self.scaling_factor):
                 if self.multi_scale:
-                    x = self._downscale(x, scaling_factor)
+                    x = self._downscale(x_copy, scaling_factor)
                 else:
                     id_scaling_factor = 0
                 if self.channel_iterative_mode:

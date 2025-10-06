@@ -163,15 +163,18 @@ class ViTCore(nn.Module):
         )
 
     def forward(self, img: Tensor) -> Tensor:
+        # img shape = (B, features, h, w)
         x = self.to_patch_embedding(img)
-        b, n, _ = x.shape
+        b, n, _ = x.shape  # (B, n_patches_h * n_patches_w = n, embed_dim)
 
-        cls_tokens = repeat(self.cls_token, "1 1 d -> b 1 d", b=b)
-        x = torch.cat((cls_tokens, x), dim=1)
-        x += self.pos_embedding[:, : (n + 1)]
+        cls_tokens = repeat(self.cls_token, "1 1 d -> b 1 d", b=b) # (B, 1, embed_dim)
+        print('cls_tokens.shape : ', cls_tokens.shape)
+        # Add the "class token" before the sequence of patches:
+        x = torch.cat((cls_tokens, x), dim=1) # (B, n + 1, embed_dim)
+        x += self.pos_embedding # (B, n + 1, embed_dim)
         x = self.dropout(x)
 
-        return self.transformer(x)
+        return self.transformer(x) # (B, n + 1, embed_dim)
 
 
 @dataclass_json
@@ -293,7 +296,7 @@ class ViTClassifier(BaseModel, VitPaddingMixin):
 class VitEncoder(BaseModel, VitPaddingMixin):
     """
     ViT vision encoder for multimodal LLMs.
-    The number of output tokens is equal to the number of patches.
+    The number of output tokens is equal to the number of patches + 1.
     """
 
     settings_kls = ViTEncoderSettings
@@ -338,7 +341,8 @@ class VitEncoder(BaseModel, VitPaddingMixin):
         self.check_required_attributes()
 
     def forward(self, x: Tensor) -> Tensor:
-        x, _ = self._maybe_padding(data_tensor=x)
+        # x shape = (B, features, lat, lon)
+        x, _ = self._maybe_padding(data_tensor=x)  # (B, features, h, w)
         return self.vit(x)
 
     @property

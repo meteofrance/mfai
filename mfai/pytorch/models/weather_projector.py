@@ -47,24 +47,20 @@ class PatchMaker(nn.Module):
         2. check for dim consistency
         3. einops rearrange to patch
         """
-        print("Patch maker")
-        print('t.shape : ', t.shape)
         # t shape = (B, features, lat, lon)
         if self.autopadding:
             t = self.zero_pad(t)
 
-        print('padded t.shape : ', t.shape)
-
         _, _, h, w = t.shape
         p1, p2 = self.patch_size
-        # padded t shape = (B, features, height, width) with heigth = a * p1 and width = b * p2
+        # padded t shape = (B, features, height, width) with heigth = a * p1 and width = d * p2
 
         if not h % p1 == 0 and w % p2 == 0:
             raise ValueError(
                 f"input height {h} and width {w} MUST be multiples of patch_size {self.patch_size}"
             )
 
-        t = einops.rearrange(t, "b c (a p1) (b p2) -> b (a b) (p1 p2 c)", p1=p1, p2=p2)
+        t = einops.rearrange(t, "b c (a p1) (d p2) -> b (a d) (p1 p2 c)", p1=p1, p2=p2)
         return t
 
 

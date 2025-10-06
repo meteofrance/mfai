@@ -350,4 +350,4 @@ def test_fss() -> None:
         FSS(neighbourood=1)
         FSS(neighbourood=1, thresholds=0.5, num_classes=2)
     with pytest.raises(AttributeError):
-        FSS(neighbourood=1, thresholds=0.5, mask=True)
+        FSS(neighbourood=1, thresholds=0.5, mask=True)  # type: ignore[arg-type]

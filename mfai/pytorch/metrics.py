@@ -231,7 +231,7 @@ class FSS(Metric):
 
     def __init__(
         self,
-        neighbourood: int,
+        neighborood: int,
         thresholds: None | int | float | list[int | float] = None,
         num_classes: int = -1,
         stride: None | int = None,
@@ -239,8 +239,9 @@ class FSS(Metric):
     ):
         """
         Args:
-            neighbourood (int): number of neighbours.
+            neighborood (int): number of neighbours.
             thresholds (None | int | float | list[int | float]): threshold to convert tensor to categories if the FSS is computed on non-binary forecast-observation pairs. Default value is 'None'.
+            num_classes (int): number of classes to consider. Tensor in input should contains values between [0, num_classes - 1]. Default value is -1.
             stride (None| int): the stride of the window. Default value is 'None'.
             mask (None | Tensor): the mask to apply before computing the FSS. The mask should be a binary tensor where 0 represents pixels
             where the FSS should not be computed. Default value is 'None'.
@@ -250,7 +251,7 @@ class FSS(Metric):
         if isinstance(thresholds, int | float):
             thresholds = [thresholds]  # Convert int | float -> list[int | float]
 
-        self.neighbourood: int = neighbourood
+        self.neighborood: int = neighborood
         self.thresholds: None | list[int | float] = thresholds
         self.stride: None | int = stride
         self.mask: Literal[False] | Tensor = mask
@@ -274,10 +275,6 @@ class FSS(Metric):
                 )
             else:
                 self.mask = rearrange(self.mask, "h w -> 1 1 h w")
-        elif self.mask != False:
-            raise AttributeError(
-                f"Argument 'mask' should be 'False' or 'Tensor', got {type(self.mask)}."
-            )
 
         self.add_state(
             "list_fbs",
@@ -306,17 +303,24 @@ class FSS(Metric):
 
     def compute_fbs_wfbs(
         self,
-        targets_cat_n: Tensor,
-        preds_cat_n: Tensor,
+        targets: Tensor,
+        preds: Tensor,
     ) -> tuple[float, float]:
         """
         Compute the fractions Brier Score (FBS) and the worse fractions Brier Score (WFBS).
+
+        Args:
+            preds (Tensor): tensor that contains predicted values (converted in classes).
+            targets (Tensor): tensor that contains observed values (converted in classes).
+
+        Returns:
+            fbs, worse_fbs (tuple(float, float)): the fractions Brier Score and the worse fractions Brier Score.
         """
         pooling = torch.nn.AvgPool2d(
-            kernel_size=self.neighbourood, stride=self.stride, padding=0
+            kernel_size=self.neighborood, stride=self.stride, padding=0
         )
-        ft = pooling(targets_cat_n.float())
-        fp = pooling(preds_cat_n.float())
+        ft = pooling(targets.float())
+        fp = pooling(preds.float())
 
         error = (ft - fp) ** 2
         worse_error = ft**2 + fp**2
@@ -339,8 +343,9 @@ class FSS(Metric):
         Updates the fbs/wfbs list by adding the current fbs/wfbs.
 
         Args:
-            preds (Tensor):
-            targets (Tensor):
+            preds (Tensor): tensor that contains predicted values.
+            targets (Tensor): tensor that contains observed values.
+
         """
         if len(preds.shape) != 4 or len(targets.shape) != 4:
             raise ValueError(

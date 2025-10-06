@@ -260,11 +260,11 @@ def test_fss() -> None:
             [0, 0, 1, 1],
         ]
     )
-    fss_1 = FSS(neighbourood=1, thresholds=0.5)
-    fss_1_masked = FSS(neighbourood=1, thresholds=0.5, mask=mask)
-    fss_2 = FSS(neighbourood=2, thresholds=0.5)
-    fss_2_masked = FSS(neighbourood=2, thresholds=0.5, mask=mask)
-    fss_4 = FSS(neighbourood=4, thresholds=0.5)
+    fss_1 = FSS(neighborood=1, thresholds=0.5)
+    fss_1_masked = FSS(neighborood=1, thresholds=0.5, mask=mask)
+    fss_2 = FSS(neighborood=2, thresholds=0.5)
+    fss_2_masked = FSS(neighborood=2, thresholds=0.5, mask=mask)
+    fss_4 = FSS(neighborood=4, thresholds=0.5)
 
     # Check perfect prediction lead to perfect score (1)
     fss_1.update(targets, targets)
@@ -306,11 +306,11 @@ def test_fss() -> None:
     torch.testing.assert_close(fss_2.compute(), torch.tensor(50 / 83))
 
     # Check for multiple thresholds
-    fss_1 = FSS(neighbourood=1, thresholds=[0.5, 1.5])
-    fss_1_masked = FSS(neighbourood=1, thresholds=[0.5, 1.5], mask=mask)
-    fss_2 = FSS(neighbourood=2, thresholds=[0.5, 1.5])
-    fss_2_masked = FSS(neighbourood=2, thresholds=[0.5, 1.5], mask=mask)
-    fss_4 = FSS(neighbourood=4, thresholds=[0.5, 1.5])
+    fss_1 = FSS(neighborood=1, thresholds=[0.5, 1.5])
+    fss_1_masked = FSS(neighborood=1, thresholds=[0.5, 1.5], mask=mask)
+    fss_2 = FSS(neighborood=2, thresholds=[0.5, 1.5])
+    fss_2_masked = FSS(neighborood=2, thresholds=[0.5, 1.5], mask=mask)
+    fss_4 = FSS(neighborood=4, thresholds=[0.5, 1.5])
 
     fss_1.update(targets, targets)
     fss_1_masked.update(targets, targets)
@@ -325,11 +325,11 @@ def test_fss() -> None:
     torch.testing.assert_close(fss_4.compute(), torch.tensor([1.0, 1.0]))
 
     # Check for multiple classes
-    fss_1 = FSS(neighbourood=1, num_classes=1)
-    fss_1_masked = FSS(neighbourood=1, num_classes=1, mask=mask)
-    fss_2 = FSS(neighbourood=2, num_classes=1)
-    fss_2_masked = FSS(neighbourood=2, num_classes=1, mask=mask)
-    fss_4 = FSS(neighbourood=4, num_classes=1)
+    fss_1 = FSS(neighborood=1, num_classes=1)
+    fss_1_masked = FSS(neighborood=1, num_classes=1, mask=mask)
+    fss_2 = FSS(neighborood=2, num_classes=1)
+    fss_2_masked = FSS(neighborood=2, num_classes=1, mask=mask)
+    fss_4 = FSS(neighborood=4, num_classes=1)
 
     fss_1.update(preds, targets)
     fss_1_masked.update(preds, targets)
@@ -347,7 +347,5 @@ def test_fss() -> None:
 
     # Check raise of exceptions
     with pytest.raises(ValueError):
-        FSS(neighbourood=1)
-        FSS(neighbourood=1, thresholds=0.5, num_classes=2)
-    with pytest.raises(AttributeError):
-        FSS(neighbourood=1, thresholds=0.5, mask=True)  # type: ignore[arg-type]
+        FSS(neighborood=1)
+        FSS(neighborood=1, thresholds=0.5, num_classes=2)

@@ -234,7 +234,7 @@ class FSS(Metric):
         self,
         neighbourood: int,
         thresholds: None | Number | list[Number] = None,
-        num_classes: None | int = None,
+        num_classes: int = -1,
         stride: None | int = None,
         mask: Literal[False] | Tensor = False,
     ):
@@ -249,21 +249,24 @@ class FSS(Metric):
         super().__init__()
 
         if isinstance(thresholds, Number):
-            thresholds = [thresholds]
+            thresholds = [thresholds]  # Convert Number -> list[Number]
 
         self.neighbourood: int = neighbourood
         self.thresholds: None | list[Number] = thresholds
         self.stride: None | int = stride
         self.mask: Literal[False] | Tensor = mask
 
-        if (self.thresholds is None and num_classes is None) or (
-            self.thresholds and self.num_classes
+        if (self.thresholds is None and num_classes == -1) or (
+            self.thresholds and num_classes > 0
         ):
             raise ValueError(
                 "Please set one argument between 'thresholds' (to convert values to categories) and 'num_classes' (if the input values are already in categories)."
             )
-        elif self.thresholds:
-            num_classes = len(self.thresholds)
+
+        if self.thresholds:
+            self.num_classes = len(self.thresholds)
+        else:
+            self.num_classes = num_classes
 
         if isinstance(self.mask, Tensor):
             if len(self.mask.shape) != 2:
@@ -272,8 +275,10 @@ class FSS(Metric):
                 )
             else:
                 self.mask = rearrange(self.mask, "h w -> 1 1 h w")
-
-        self.num_classes: int = num_classes
+        elif self.mask != False:
+            raise AttributeError(
+                f"Argument 'mask' should be 'False' or 'Tensor', got {type(self.mask)}."
+            )
 
         self.add_state(
             "list_fbs",
@@ -293,10 +298,10 @@ class FSS(Metric):
         category_tensor: Tensor
         for i, threshold in enumerate(thresholds):
             if i == 0:
-                category_tensor = torch.where(tensor > threshold, 1, 0)
+                category_tensor = torch.where(tensor > torch.tensor(threshold), 1, 0)
             else:
                 category_tensor = torch.where(
-                    tensor > threshold, i + 2, category_tensor
+                    tensor > torch.tensor(threshold), i + 2, category_tensor
                 )
         return category_tensor
 

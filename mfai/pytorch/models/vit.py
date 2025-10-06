@@ -167,14 +167,13 @@ class ViTCore(nn.Module):
         x = self.to_patch_embedding(img)
         b, n, _ = x.shape  # (B, n_patches_h * n_patches_w = n, embed_dim)
 
-        cls_tokens = repeat(self.cls_token, "1 1 d -> b 1 d", b=b) # (B, 1, embed_dim)
-        print('cls_tokens.shape : ', cls_tokens.shape)
+        cls_tokens = repeat(self.cls_token, "1 1 d -> b 1 d", b=b)  # (B, 1, embed_dim)
         # Add the "class token" before the sequence of patches:
-        x = torch.cat((cls_tokens, x), dim=1) # (B, n + 1, embed_dim)
-        x += self.pos_embedding # (B, n + 1, embed_dim)
+        x = torch.cat((cls_tokens, x), dim=1)  # (B, n + 1, embed_dim)
+        x += self.pos_embedding  # (B, n + 1, embed_dim)
         x = self.dropout(x)
 
-        return self.transformer(x) # (B, n + 1, embed_dim)
+        return self.transformer(x)  # (B, n + 1, embed_dim)
 
 
 @dataclass_json

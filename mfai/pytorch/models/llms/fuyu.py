@@ -182,7 +182,7 @@ class Fuyu(FreezeMLMMixin, nn.Module):
         vis_embeds = torch.cat(vis_timesteps_embeds, dim=1)
         # shape = (B, n'_tok * time, embed_dim)
 
-        text_embeds = self.backend.tok_emb(token_ids) # (B, n_tok, embed_dim)
+        text_embeds = self.backend.tok_emb(token_ids)  # (B, n_tok, embed_dim)
 
         vis_txt_embeds = torch.cat([vis_embeds, text_embeds], dim=1)
         # shape = (B, n'_tok * time + n_tok, embed_dim)
@@ -201,7 +201,7 @@ class Fuyu(FreezeMLMMixin, nn.Module):
         if hasattr(self.backend, "pos_emb") and isinstance(
             self.backend.pos_emb, nn.Embedding
         ):
-            pos_embeds = self.backend.pos_emb(embeds_idx) # (max(...), embed_dim)
+            pos_embeds = self.backend.pos_emb(embeds_idx)  # (max(...), embed_dim)
             x = vis_txt_embeds + pos_embeds.unsqueeze(0)
         else:
             x = vis_txt_embeds
@@ -217,4 +217,4 @@ class Fuyu(FreezeMLMMixin, nn.Module):
         # logits shape = (B, max(n'_tok * time + n_tok, context_len), vocab_size)
 
         # removes the vision part of the logits
-        return logits[:, vis_embeds.shape[1] :] # (B, n_tok, vocab_size)
+        return logits[:, vis_embeds.shape[1] :]  # (B, n_tok, vocab_size)

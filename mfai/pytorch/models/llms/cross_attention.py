@@ -149,4 +149,4 @@ class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
         if self.settings.layer_norm_vis:
             vis_embeds = self.norm_or_ident(vis_embeds)
 
-        return self.backend(token_ids, vis_embeds) # (B, n_tok, vocab_size)
+        return self.backend(token_ids, vis_embeds)  # (B, n_tok, vocab_size)

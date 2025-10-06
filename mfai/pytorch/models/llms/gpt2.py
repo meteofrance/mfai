@@ -427,7 +427,7 @@ class CrossAttentionGPT2(nn.Module):
         token_ids = token_ids[
             :, -self.context_length :
         ]  # Keep only the last context_length tokens
-        x = self.embed_tokens(token_ids) # (B, n_tok, embed_dim)
+        x = self.embed_tokens(token_ids)  # (B, n_tok, embed_dim)
         x = self.drop_emb(x)  # (B, n_tok, embed_dim)
 
         for b in self.trf_blocks:
@@ -436,6 +436,6 @@ class CrossAttentionGPT2(nn.Module):
                 x = b(x, vision_inputs)
             else:
                 x = b(x)
-        x = self.final_norm(x) # (B, n_tok, embed_dim)
+        x = self.final_norm(x)  # (B, n_tok, embed_dim)
         logits = self.out_head(x)  # (B, n_tok, vocab_size)
         return logits

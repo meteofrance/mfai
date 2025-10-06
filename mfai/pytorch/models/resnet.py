@@ -250,7 +250,7 @@ class ResNet50MLM(torch.nn.Module):
 
         self.encoder = get_resnet_encoder(
             name="resnet50",
-            in_channels=num_channels, # = num_features
+            in_channels=num_channels,  # = num_features
             depth=settings.encoder_depth,
             weights=settings.encoder_weights,
             output_stride=settings.encoder_stride,
@@ -258,7 +258,7 @@ class ResNet50MLM(torch.nn.Module):
         # For details, see:
         # https://github.com/aladdinpersson/Machine-Learning-Collection/blob/master/ML/Pytorch/CNN_architectures/pytorch_resnet.py
         self.avgpool = torch.nn.AdaptiveAvgPool2d((1, 1))
-        self.num_classes = num_classes # = embed_dim
+        self.num_classes = num_classes  # = embed_dim
         self.settings = settings
 
         if self.settings.pos_embedding:
@@ -286,7 +286,7 @@ class ResNet50MLM(torch.nn.Module):
 
         y_hat = y_hat.reshape(
             y_hat.shape[0], self.settings.num_tokens, self.num_classes
-        ) # (batch, num_tokens, embed_dim = num_classes)
+        )  # (batch, num_tokens, embed_dim = num_classes)
 
         if self.settings.pos_embedding:
             y_hat += self.pos_embedding

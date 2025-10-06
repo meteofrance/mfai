@@ -233,7 +233,7 @@ class FSS(Metric):
         self,
         neighborood: int,
         thresholds: None | int | float | list[int | float] = None,
-        num_classes: int = -1,
+        num_classes: None | int = None,
         stride: None | int = None,
         mask: Literal[False] | Tensor = False,
     ):
@@ -241,7 +241,7 @@ class FSS(Metric):
         Args:
             neighborood (int): number of neighbours.
             thresholds (None | int | float | list[int | float]): threshold to convert tensor to categories if the FSS is computed on non-binary forecast-observation pairs. Default value is 'None'.
-            num_classes (int): number of classes to consider. Tensor in input should contains values between [0, num_classes - 1]. Default value is -1.
+            num_classes (int): number of classes to consider. Tensor in input should contains values between [0, num_classes - 1]. Default value is 'None'.
             stride (None| int): the stride of the window. Default value is 'None'.
             mask (None | Tensor): the mask to apply before computing the FSS. The mask should be a binary tensor where 0 represents pixels
             where the FSS should not be computed. Default value is 'None'.
@@ -256,17 +256,15 @@ class FSS(Metric):
         self.stride: None | int = stride
         self.mask: Literal[False] | Tensor = mask
 
-        if (self.thresholds is None and num_classes == -1) or (
-            self.thresholds and num_classes > 0
-        ):
+        self.num_classes: int
+        if self.thresholds and num_classes is None:
+            self.num_classes = len(self.thresholds)
+        elif num_classes and self.thresholds is None:
+            self.num_classes = num_classes
+        else:
             raise ValueError(
                 "Please set one argument between 'thresholds' (to convert values to categories) and 'num_classes' (if the input values are already in categories)."
             )
-
-        if self.thresholds:
-            self.num_classes = len(self.thresholds)
-        else:
-            self.num_classes = num_classes
 
         if isinstance(self.mask, Tensor):
             if len(self.mask.shape) != 2:

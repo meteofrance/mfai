@@ -1,4 +1,3 @@
-from numbers import Number
 from typing import Any, Literal, Optional
 
 import torch
@@ -233,7 +232,7 @@ class FSS(Metric):
     def __init__(
         self,
         neighbourood: int,
-        thresholds: None | Number | list[Number] = None,
+        thresholds: None | int | float | list[int | float] = None,
         num_classes: int = -1,
         stride: None | int = None,
         mask: Literal[False] | Tensor = False,
@@ -241,18 +240,18 @@ class FSS(Metric):
         """
         Args:
             neighbourood (int): number of neighbours.
-            thresholds (None | Number | list[Number]): threshold to convert tensor to categories if the FSS is computed on non-binary forecast-observation pairs. Default value is 'None'.
+            thresholds (None | int | float | list[int | float]): threshold to convert tensor to categories if the FSS is computed on non-binary forecast-observation pairs. Default value is 'None'.
             stride (None| int): the stride of the window. Default value is 'None'.
             mask (None | Tensor): the mask to apply before computing the FSS. The mask should be a binary tensor where 0 represents pixels
             where the FSS should not be computed. Default value is 'None'.
         """
         super().__init__()
 
-        if isinstance(thresholds, Number):
-            thresholds = [thresholds]  # Convert Number -> list[Number]
+        if isinstance(thresholds, int | float):
+            thresholds = [thresholds]  # Convert int | float -> list[int | float]
 
         self.neighbourood: int = neighbourood
-        self.thresholds: None | list[Number] = thresholds
+        self.thresholds: None | list[int | float] = thresholds
         self.stride: None | int = stride
         self.mask: Literal[False] | Tensor = mask
 
@@ -294,7 +293,7 @@ class FSS(Metric):
         self.list_wfbs: Tensor
 
     @staticmethod
-    def to_category(tensor: Tensor, thresholds: list[Number]) -> Tensor:
+    def to_category(tensor: Tensor, thresholds: list[int | float]) -> Tensor:
         category_tensor: Tensor
         for i, threshold in enumerate(thresholds):
             if i == 0:

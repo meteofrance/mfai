@@ -7,7 +7,7 @@ import pytest
 import torch
 from torch import Tensor
 
-from mfai.pytorch.metrics import FAR, FNR, PR_AUC, CSINeighborhood
+from mfai.pytorch.metrics import FAR, FNR, FSS, PR_AUC, CSINeighborhood
 
 
 @pytest.mark.parametrize("num_neighbors,expected_value", [(0, 0.36), (1, 0.91)])
@@ -225,3 +225,127 @@ def test_fnr() -> None:
     auc_value = fnr.compute()
     expected_value = 0.5
     assert pytest.approx(auc_value.cpu(), 0.001) == expected_value
+
+
+def test_fss() -> None:
+    preds: Tensor = torch.tensor(
+        [
+            [
+                [
+                    [0.0, 0.0, 1.0, 1.0],
+                    [0.0, 0.0, 1.0, 1.0],
+                    [0.0, 0.0, 0.0, 2.0],
+                    [0.0, 0.0, 0.0, 2.0],
+                ]
+            ]
+        ]
+    )
+    targets: Tensor = torch.tensor(
+        [
+            [
+                [
+                    [0.0, 0.0, 0.0, 0.0],
+                    [1.0, 0.0, 0.0, 0.0],
+                    [1.0, 1.0, 2.0, 0.0],
+                    [1.0, 1.0, 2.0, 0.0],
+                ]
+            ]
+        ]
+    )
+    mask: Tensor = torch.tensor(
+        [
+            [0, 0, 1, 1],
+            [0, 0, 1, 1],
+            [0, 0, 1, 1],
+            [0, 0, 1, 1],
+        ]
+    )
+    fss_1 = FSS(neighborood=1, thresholds=0.5)
+    fss_1_masked = FSS(neighborood=1, thresholds=0.5, mask=mask)
+    fss_2 = FSS(neighborood=2, thresholds=0.5)
+    fss_2_masked = FSS(neighborood=2, thresholds=0.5, mask=mask)
+    fss_4 = FSS(neighborood=4, thresholds=0.5)
+
+    # Check perfect prediction lead to perfect score (1)
+    fss_1.update(targets, targets)
+    fss_1_masked.update(targets, targets)
+    fss_2.update(targets, targets)
+    fss_2_masked.update(targets, targets)
+    fss_4.update(targets, targets)
+
+    torch.testing.assert_close(fss_1.compute(), torch.tensor(1.0))
+    torch.testing.assert_close(fss_1_masked.compute(), torch.tensor(1.0))
+    torch.testing.assert_close(fss_2.compute(), torch.tensor(1.0))
+    torch.testing.assert_close(fss_2_masked.compute(), torch.tensor(1.0))
+    torch.testing.assert_close(fss_4.compute(), torch.tensor(1.0))
+
+    # Check for a first batch
+    fss_1.reset()
+    fss_1_masked.reset()
+    fss_2.reset()
+    fss_2_masked.reset()
+    fss_4.reset()
+
+    fss_1.update(preds, targets)
+    fss_1_masked.update(preds, targets)
+    fss_2.update(preds, targets)
+    fss_2_masked.update(preds, targets)
+    fss_4.update(preds, targets)
+
+    torch.testing.assert_close(
+        fss_1.compute(), torch.tensor(0.0)
+    )  # predictions are disjoint from observations
+    torch.testing.assert_close(fss_1.compute(), torch.tensor(0.0))
+    torch.testing.assert_close(fss_2.compute(), torch.tensor(8 / 41))
+    torch.testing.assert_close(fss_2_masked.compute(), torch.tensor(1 / 3))
+    torch.testing.assert_close(fss_4.compute(), torch.tensor(84 / 85))
+
+    # Check for a second batch
+    fss_2.update(targets, targets)
+
+    torch.testing.assert_close(fss_2.compute(), torch.tensor(50 / 83))
+
+    # Check for multiple thresholds
+    fss_1 = FSS(neighborood=1, thresholds=[0.5, 1.5])
+    fss_1_masked = FSS(neighborood=1, thresholds=[0.5, 1.5], mask=mask)
+    fss_2 = FSS(neighborood=2, thresholds=[0.5, 1.5])
+    fss_2_masked = FSS(neighborood=2, thresholds=[0.5, 1.5], mask=mask)
+    fss_4 = FSS(neighborood=4, thresholds=[0.5, 1.5])
+
+    fss_1.update(targets, targets)
+    fss_1_masked.update(targets, targets)
+    fss_2.update(targets, targets)
+    fss_2_masked.update(targets, targets)
+    fss_4.update(targets, targets)
+
+    torch.testing.assert_close(fss_1.compute(), torch.tensor([1.0, 1.0]))
+    torch.testing.assert_close(fss_1_masked.compute(), torch.tensor([1.0, 1.0]))
+    torch.testing.assert_close(fss_2.compute(), torch.tensor([1.0, 1.0]))
+    torch.testing.assert_close(fss_2_masked.compute(), torch.tensor([1.0, 1.0]))
+    torch.testing.assert_close(fss_4.compute(), torch.tensor([1.0, 1.0]))
+
+    # Check for multiple classes
+    fss_1 = FSS(neighborood=1, num_classes=1)
+    fss_1_masked = FSS(neighborood=1, num_classes=1, mask=mask)
+    fss_2 = FSS(neighborood=2, num_classes=1)
+    fss_2_masked = FSS(neighborood=2, num_classes=1, mask=mask)
+    fss_4 = FSS(neighborood=4, num_classes=1)
+
+    fss_1.update(preds, targets)
+    fss_1_masked.update(preds, targets)
+    fss_2.update(preds, targets)
+    fss_2_masked.update(preds, targets)
+    fss_4.update(preds, targets)
+
+    torch.testing.assert_close(
+        fss_1.compute(), torch.tensor(0.0)
+    )  # predictions are disjoint from observations
+    torch.testing.assert_close(fss_1.compute(), torch.tensor(0.0))
+    torch.testing.assert_close(fss_2.compute(), torch.tensor(8 / 41))
+    torch.testing.assert_close(fss_2_masked.compute(), torch.tensor(1 / 3))
+    torch.testing.assert_close(fss_4.compute(), torch.tensor(84 / 85))
+
+    # Check raise of exceptions
+    with pytest.raises(ValueError):
+        FSS(neighborood=1)
+        FSS(neighborood=1, thresholds=0.5, num_classes=2)

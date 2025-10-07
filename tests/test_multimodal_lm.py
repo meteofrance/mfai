@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Literal, Tuple, Union
+from typing import Literal, Tuple
 
 import pytest
 import torch
@@ -17,12 +17,16 @@ from mfai.pytorch.namedtensor import NamedTensor
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer
 
 
+VISION_INPUT_SHAPE = (1, 3, 3)
+BIG_VISION_INPUT_SHAPE = (1, 33, 33)
+
+
 def generate_text_simple(
     model: nn.Module,
     idx: Tensor,
     max_new_tokens: int,
     context_size: int,
-    vision_input: Union[None, NamedTensor, Tensor] = None,
+    vision_inputs: None | Tensor | list[Tensor] = None,
 ) -> Tensor:
     # idx is (B, T) array of indices in the current context
     for _ in range(max_new_tokens):
@@ -33,8 +37,8 @@ def generate_text_simple(
 
         # Get the predictions
         with torch.no_grad():
-            if vision_input is not None:
-                logits = model(idx_cond, vision_input)
+            if vision_inputs is not None:
+                logits = model(idx_cond, vision_inputs)
             else:
                 logits = model(idx_cond)
 
@@ -58,38 +62,38 @@ def generate_text_simple(
             "llama2",
             LlamaTokenizer(),
             (
-                "Sustine et abstinePalractlicated Kun провоfixRightarrow advice politico escri",
-                "Sustine et abstine華 Paul siècleганzą Bretselvessimeqське]{",
+                "Sustine et abstinePal enero totalThey序 carrière∉ Ricmut I",
+                "Sustine et abstineorted führческойtodightarrowsetup Camégrlieder ital",
             ),
         ),
         (
             "gpt2",
             GPT2Tokenizer(),
             (
-                "Sustine et abstine licencesrenchedAFTA screened predatoropathic down Sweetlockumps",
-                "Sustine et abstine RickEatMicro undefeatedQu PTS SJ grow1016ersion",
+                "Sustine et abstineiniulptulin grizzfitted biobler Albuquerque Kennpolitics",
+                "Sustine et abstine lettucerapeUNCH asksacerimmer SUR↑044my",
             ),
         ),
         (
             "gpt2",
             LlamaTokenizer(),
             (
-                "Sustine et abstine współчанḨmpety který North PL busyedo",
-                "Sustine et abstine ocean gemäßtechn Camb understandengono Clement Cependantipe?'",
+                "Sustine et abstine współ terrestführt fr выполxmlns fingers ursprüng into został",
+                "Sustine et abstine Records RETôtel Jones placeholderaryчныеianoryptedниче",
             ),
         ),
     ],
 )
 def test_multimodal_llm(
     llm_backend: Literal["llama2", "gpt2"],
-    tokenizer: Union[GPT2Tokenizer, LlamaTokenizer],
+    tokenizer: GPT2Tokenizer | LlamaTokenizer,
     expected_text: Tuple[str, str],
 ) -> None:
     torch.manual_seed(999)
     for force_vision in (False, True):
         model = Fuyu(
             settings=FuyuSettings(
-                vision_input_shape=(3, 3, 2, 1),
+                vision_input_shape=VISION_INPUT_SHAPE,
                 backend=llm_backend,
                 n_heads=1,
                 n_layers=1,
@@ -101,12 +105,14 @@ def test_multimodal_llm(
             vocab_size=tokenizer.vocab_size,
         )
         vision_input = NamedTensor(
-            torch.randn(1, 3, 3, 2, 1),
-            names=["batch", "lat", "lon", "timestep", "features"],
-            feature_names=[
-                "u",
-            ],
+            torch.randn(1, 2, *VISION_INPUT_SHAPE),
+            names=["batch", "timestep", "features", "lat", "lon"],
+            feature_names=["u"],
         )
+        vision_inputs = [
+            timestep_nt.tensor for timestep_nt in vision_input.iter_dim("timestep")
+        ]
+
         encoded = tokenizer.encode("Sustine et abstine")
         encoded_tensor = torch.tensor(encoded).unsqueeze(0)
 
@@ -115,7 +121,7 @@ def test_multimodal_llm(
             idx=encoded_tensor,
             max_new_tokens=10,
             context_size=model.context_length,
-            vision_input=vision_input,
+            vision_inputs=vision_inputs,
         )
         decoded_text = tokenizer.decode(out.squeeze(0).tolist())
         print(llm_backend, tokenizer.name(), decoded_text)
@@ -165,15 +171,15 @@ def test_multimodal_with_pretrained_clip() -> None:
     [
         (
             "linear",
-            "Sustine et abstine Kissinger Dire thee visitation au LSDcontin nutrition Mecca skewed",
+            "Sustine et abstine Declitely string slips auJustice interpret skeletalOEengineering",
         ),
         (
             "resnet50",
-            "Sustine et abstine Decl Ng playersolithic starving Wilhelm Unreal 207UP Sav",
+            "Sustine et abstine nowherearationsself bell Schedule Pegasus Alm phosphJew cad",
         ),
         (
             "vit",
-            "Sustine et abstinedriving begurtle truth converted enrichment humiliatingjee Hallsdeal",
+            "Sustine et abstine Decl extrem…immigrant Glen fears yogageriesobjSave",
         ),
     ],
 )
@@ -181,9 +187,8 @@ def test_xatt_multimodal(
     vision_encoder: Literal["linear", "resnet50", "vit"], target_text: str
 ) -> None:
     torch.manual_seed(666)
-    vision_input_shape = (128, 128, 2, 1)
     settings = XAttMultiModalLMSettings(
-        vision_input_shape=vision_input_shape,
+        vision_input_shape=BIG_VISION_INPUT_SHAPE,
         n_heads=2,
         n_layers=4,
         emb_dim=32,
@@ -197,19 +202,20 @@ def test_xatt_multimodal(
     encoded = tokenizer.encode("Sustine et abstine")
     token_ids = torch.tensor(encoded).unsqueeze(0)
     vision_input = NamedTensor(
-        torch.randn(1, 128, 128, 2, 1),
-        names=["batch", "lat", "lon", "timestep", "features"],
-        feature_names=[
-            "u",
-        ],
+        torch.randn(1, 2, *BIG_VISION_INPUT_SHAPE),
+        names=["batch", "timestep", "features", "lat", "lon"],
+        feature_names=["u"],
     )
+    vision_inputs = [
+        timestep_nt.tensor for timestep_nt in vision_input.iter_dim("timestep")
+    ]
 
     token_ids_out = generate_text_simple(
         model=model,
         idx=token_ids,
         max_new_tokens=10,
         context_size=model.context_length,
-        vision_input=vision_input,
+        vision_inputs=vision_inputs,
     )
     decoded_text = tokenizer.decode(token_ids_out.squeeze(0).tolist())
     assert decoded_text == target_text
@@ -224,7 +230,7 @@ def test_fuyu_with_mlp_and_pos_embedding() -> None:
     tokenizer = GPT2Tokenizer()
     model = Fuyu(
         settings=FuyuSettings(
-            vision_input_shape=(3, 3, 2, 1),
+            vision_input_shape=VISION_INPUT_SHAPE,
             backend="gpt2",
             n_heads=1,
             n_layers=1,
@@ -239,12 +245,14 @@ def test_fuyu_with_mlp_and_pos_embedding() -> None:
         vocab_size=tokenizer.vocab_size,
     )
     vision_input = NamedTensor(
-        torch.randn(1, 3, 3, 2, 1),
-        names=["batch", "lat", "lon", "timestep", "features"],
-        feature_names=[
-            "u",
-        ],
+        torch.randn(1, 2, *VISION_INPUT_SHAPE),
+        names=["batch", "timestep", "features", "lat", "lon"],
+        feature_names=["u"],
     )
+    vision_inputs = [
+        timestep_nt.tensor for timestep_nt in vision_input.iter_dim("timestep")
+    ]
+
     encoded = tokenizer.encode("Sustine et abstine")
     encoded_tensor = torch.tensor(encoded).unsqueeze(0)
 
@@ -253,12 +261,12 @@ def test_fuyu_with_mlp_and_pos_embedding() -> None:
         idx=encoded_tensor,
         max_new_tokens=10,
         context_size=model.context_length,
-        vision_input=vision_input,
+        vision_inputs=vision_inputs,
     )
     decoded_text = tokenizer.decode(out.squeeze(0).tolist())
     assert (
         decoded_text
-        == "Sustine et abstinetti Kandolon visitationIvexist† devastationJane bishop"
+        == "Sustine et abstine Tehran2014GBTthreatinternet 1889 Bree partition promptingMcC"
     )
     model.freeze_llm()
     model.unfreeze_llm()
@@ -271,15 +279,15 @@ def test_fuyu_with_mlp_and_pos_embedding() -> None:
     [
         (
             "linear",
-            "Sustine et abstine workedussie 338 antioxid■ focusingespie arbitrary frequent Language",
+            "Sustine et abstine tests scripted inferred Zy StephPowerborn PROGRAM Minute infectious",
         ),
         (
             "resnet50",
-            "Sustine et abstine physique pseudCI tenantrollerAAAA flowsademicecycleANY",
+            "Sustine et abstine intellig Housing chuckled HarDave association directors Qual Eval where",
         ),
         (
             "vit",
-            "Sustine et abstineIntegeritarian126 squat creatine Swe prosecute Rousse pagan bored",
+            "Sustine et abstine realityacketurityappa modesty START tsp Kir purch Maybe",
         ),
     ],
 )
@@ -290,7 +298,7 @@ def test_fuyu_vision_encoders(
     tokenizer = GPT2Tokenizer()
     model = Fuyu(
         settings=FuyuSettings(
-            vision_input_shape=(64, 64, 2, 1),
+            vision_input_shape=BIG_VISION_INPUT_SHAPE,
             n_heads=1,
             n_layers=1,
             emb_dim=32,
@@ -302,12 +310,14 @@ def test_fuyu_vision_encoders(
         vocab_size=tokenizer.vocab_size,
     )
     vision_input = NamedTensor(
-        torch.randn(1, 64, 64, 2, 1),
-        names=["batch", "lat", "lon", "timestep", "features"],
-        feature_names=[
-            "u",
-        ],
+        torch.randn(1, 2, *BIG_VISION_INPUT_SHAPE),
+        names=["batch", "timestep", "features", "lat", "lon"],
+        feature_names=["u"],
     )
+    vision_inputs = [
+        timestep_nt.tensor for timestep_nt in vision_input.iter_dim("timestep")
+    ]
+
     encoded = tokenizer.encode("Sustine et abstine")
     encoded_tensor = torch.tensor(encoded).unsqueeze(0)
 
@@ -316,7 +326,7 @@ def test_fuyu_vision_encoders(
         idx=encoded_tensor,
         max_new_tokens=10,
         context_size=model.context_length,
-        vision_input=vision_input,
+        vision_inputs=vision_inputs,
     )
     decoded_text = tokenizer.decode(out.squeeze(0).tolist())
     assert decoded_text == target_text

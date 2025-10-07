@@ -278,7 +278,14 @@ class ResNet50MLM(torch.nn.Module):
             self.fc = torch.nn.Linear(512 * 4, num_classes * settings.num_tokens)
 
     def forward(self, x: Tensor) -> Tensor:
-        # x shape = (B, num_channels, lat, lon)
+        """Forward function of the ResNetMLM vision encoder.
+
+        Args:
+            x (Tensor): tensor of shape (B, num_channels, height, width)
+
+        Returns:
+            Tensor: tensor of shape (B, num_tokens, num_classes)
+        """
         y_hat = self.encoder(x)[-1]  # (B, out_channels = 2048, 2, 2)
         y_hat = self.avgpool(y_hat)
         y_hat = y_hat.reshape(y_hat.shape[0], -1)  # (B, out_channels)

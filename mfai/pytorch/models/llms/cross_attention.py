@@ -135,7 +135,15 @@ class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
         return self.backend.context_length
 
     def forward(self, token_ids: Tensor, vision_input: NamedTensor) -> Tensor:
-        # token_ids shape=(B, n_tok), vision_input shape=(B, lat, lon, features, time)
+        """"Forward function of the Cross-Attention Multimodal language model"
+
+        Args:
+            token_ids (Tensor): tensor of shape (B, n_tok)
+            vision_input (NamedTensor): tensor of shape (B, lat, lon, features, time)
+
+        Returns:
+            Tensor: tensor of shape (B, n_tok, vocab_size)
+        """
         vis_timesteps_embeds = []
 
         for timestep_nt in vision_input.iter_dim("timestep"):

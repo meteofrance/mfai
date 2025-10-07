@@ -171,7 +171,15 @@ class Fuyu(FreezeMLMMixin, nn.Module):
         return self.backend.context_length
 
     def forward(self, token_ids: Tensor, vision_input: NamedTensor) -> Tensor:
-        # token_ids shape=(B, n_tok), vision_input shape=(B, lat, lon, features, time)
+        """Forward function of the Fuyu Multimodal language model
+
+        Args:
+            token_ids (Tensor): tensor of shape (B, n_tok)
+            vision_input (NamedTensor): tensor of shape (B, lat, lon, features, time)
+
+        Returns:
+            Tensor: tensor of shape (B, n_tok, vocab_size)
+        """
 
         # Projection of weather input data into LLM token space
         vis_timesteps_embeds = []

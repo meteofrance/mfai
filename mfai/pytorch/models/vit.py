@@ -4,7 +4,7 @@ Added a multi-token output for multimodal LLMs.
 """
 
 from dataclasses import dataclass
-from typing import Literal, Iterable
+from typing import Iterable, Literal
 
 import torch
 from dataclasses_json import dataclass_json
@@ -340,7 +340,14 @@ class VitEncoder(BaseModel, VitPaddingMixin):
         self.check_required_attributes()
 
     def forward(self, x: Tensor) -> Tensor:
-        # x shape = (B, features, lat, lon)
+        """Forward function of the ViT vision encoder.
+
+        Args:
+            x (Tensor): tensor of shape (B, features, height, width)
+
+        Returns:
+            Tensor: tensor of shape (B, n_patches_h * n_patches_w + 1, embed_dim)
+        """
         x, _ = self._maybe_padding(data_tensor=x)  # (B, features, h, w)
         return self.vit(x)
 

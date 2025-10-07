@@ -171,39 +171,49 @@ class Fuyu(FreezeMLMMixin, nn.Module):
         return self.backend.context_length
 
     def forward(self, token_ids: Tensor, vision_input: NamedTensor) -> Tensor:
+        """Forward function of the Fuyu Multimodal language model
+
+        Args:
+            token_ids (Tensor): tensor of shape (B, n_tok)
+            vision_input (NamedTensor): tensor of shape (B, lat, lon, features, time)
+
+        Returns:
+            Tensor: tensor of shape (B, n_tok, vocab_size)
+        """
+
         # Projection of weather input data into LLM token space
         vis_timesteps_embeds = []
-
         for timestep_nt in vision_input.iter_dim("timestep"):
-            # batch, lat, lon, features
-            # rearrange to batch, features, lat, lon
             timestep_nt.rearrange_("batch lat lon features -> batch features lat lon")
-
             vis_timesteps_embeds.append(self.vision_encoder(timestep_nt.tensor))
+            # shape = (B, n'_tok, embed_dim)
         vis_embeds = torch.cat(vis_timesteps_embeds, dim=1)
+        # shape = (B, n'_tok * time, embed_dim)
 
-        text_embeds = self.backend.tok_emb(token_ids)
+        text_embeds = self.backend.tok_emb(token_ids)  # (B, n_tok, embed_dim)
 
         vis_txt_embeds = torch.cat([vis_embeds, text_embeds], dim=1)
+        # shape = (B, n'_tok * time + n_tok, embed_dim)
 
-        if self.settings.layer_norm_vis_txt:
-            vis_txt_embeds = self.norm_or_ident(vis_txt_embeds)
+        vis_txt_embeds = self.norm_or_ident(vis_txt_embeds)
 
         if vis_txt_embeds.shape[1] > self.context_length:
             print(
                 f"Warning: Input sequence length {vis_txt_embeds.shape[1]} is longer than the model's context length {self.context_length}. Truncating input."
             )
-            # Keep only the last context_length tokens, (batch_size, context_length)
+            # Keep only the last context_length tokens:
+            # shape = (batch_size,max(n'_tok * time + n_tok, context_len), embed_dim)
             vis_txt_embeds = vis_txt_embeds[:, -self.context_length :]
-        embeds_idx = torch.arange(vis_txt_embeds.shape[1], device=token_ids.device)
 
+        embeds_idx = torch.arange(vis_txt_embeds.shape[1], device=token_ids.device)
         if hasattr(self.backend, "pos_emb") and isinstance(
             self.backend.pos_emb, nn.Embedding
         ):
-            pos_embeds = self.backend.pos_emb(embeds_idx)
+            pos_embeds = self.backend.pos_emb(embeds_idx)  # (max(...), embed_dim)
             x = vis_txt_embeds + pos_embeds.unsqueeze(0)
         else:
             x = vis_txt_embeds
+        # x shape = (B, max(n'_tok * time + n_tok, context_len), embed_dim)
 
         if self.settings.inject_vision_each_stage:
             # Inject vision tokens at each stage
@@ -212,6 +222,7 @@ class Fuyu(FreezeMLMMixin, nn.Module):
             )
         else:
             logits = self.backend.forward_vectors(x)
+        # logits shape = (B, max(n'_tok * time + n_tok, context_len), vocab_size)
 
         # removes the vision part of the logits
-        return logits[:, vis_embeds.shape[1] :]
+        return logits[:, vis_embeds.shape[1] :]  # (B, n_tok, vocab_size)

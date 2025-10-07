@@ -4,7 +4,7 @@ Added a multi-token output for multimodal LLMs.
 """
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Iterable, Literal
 
 import torch
 from dataclasses_json import dataclass_json
@@ -92,7 +92,7 @@ class Transformer(nn.Module):
     ):
         super().__init__()
         self.norm = nn.LayerNorm(dim)
-        self.layers = nn.ModuleList([])
+        self.layers: Iterable = nn.ModuleList([])
         for _ in range(depth):
             self.layers.append(
                 nn.ModuleList(
@@ -163,15 +163,17 @@ class ViTCore(nn.Module):
         )
 
     def forward(self, img: Tensor) -> Tensor:
+        # img shape = (B, features, h, w)
         x = self.to_patch_embedding(img)
-        b, n, _ = x.shape
+        b, n, _ = x.shape  # (B, n_patches_h * n_patches_w = n, embed_dim)
 
-        cls_tokens = repeat(self.cls_token, "1 1 d -> b 1 d", b=b)
-        x = torch.cat((cls_tokens, x), dim=1)
-        x += self.pos_embedding[:, : (n + 1)]
+        cls_tokens = repeat(self.cls_token, "1 1 d -> b 1 d", b=b)  # (B, 1, embed_dim)
+        # Add the "class token" before the sequence of patches:
+        x = torch.cat((cls_tokens, x), dim=1)  # (B, n + 1, embed_dim)
+        x += self.pos_embedding  # (B, n + 1, embed_dim)
         x = self.dropout(x)
 
-        return self.transformer(x)
+        return self.transformer(x)  # (B, n + 1, embed_dim)
 
 
 @dataclass_json
@@ -293,7 +295,7 @@ class ViTClassifier(BaseModel, VitPaddingMixin):
 class VitEncoder(BaseModel, VitPaddingMixin):
     """
     ViT vision encoder for multimodal LLMs.
-    The number of output tokens is equal to the number of patches.
+    The number of output tokens is equal to the number of patches + 1.
     """
 
     settings_kls = ViTEncoderSettings
@@ -338,7 +340,15 @@ class VitEncoder(BaseModel, VitPaddingMixin):
         self.check_required_attributes()
 
     def forward(self, x: Tensor) -> Tensor:
-        x, _ = self._maybe_padding(data_tensor=x)
+        """Forward function of the ViT vision encoder.
+
+        Args:
+            x (Tensor): tensor of shape (B, features, height, width)
+
+        Returns:
+            Tensor: tensor of shape (B, n_patches_h * n_patches_w + 1, embed_dim)
+        """
+        x, _ = self._maybe_padding(data_tensor=x)  # (B, features, h, w)
         return self.vit(x)
 
     @property

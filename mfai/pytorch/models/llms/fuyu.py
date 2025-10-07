@@ -37,18 +37,12 @@ class FuyuSettings:
     qkv_bias: bool = False  # Query-Key-Value bias
     hidden_dim: int = 768  # Size of the intermediate dimension in FeedForward - Llama2
 
-    vision_input_shape: tuple[int, int, int, int] = (
-        256,
-        256,
-        10,
-        10,
-    )  # lat_dim, lon_dim, timestep_dim, features_dim
+    vision_input_shape: tuple[int, int, int] = (3, 256, 256)  # channels, lat, lon
 
     # Inject vision tokens at each stage ?
     inject_vision_each_stage: bool = False
 
     # choice of vision encoder
-    # "resnet50", "linear"
     vision_encoder: Literal["resnet50", "linear", "vit"] = "linear"
 
     # number of tokens for ResNet50 encoder
@@ -63,7 +57,7 @@ class FuyuSettings:
     # layer norm vis + txt tokens
     layer_norm_vis_txt: bool = True
 
-    patch_size: int | tuple[int, int] = 8
+    patch_size: None | int | tuple[int, int] = None
 
 
 class Fuyu(FreezeMLMMixin, nn.Module):
@@ -124,11 +118,7 @@ class Fuyu(FreezeMLMMixin, nn.Module):
         self.vision_encoder: WeatherProjector | ResNet50MLM | VitEncoder
 
         if self.settings.vision_encoder == "linear":
-            input_dims = (
-                settings.vision_input_shape[0],
-                settings.vision_input_shape[1],
-                settings.vision_input_shape[-1],
-            )
+            input_dims = settings.vision_input_shape
             s = WeatherProjectorSettings(
                 input_dims=input_dims,
                 embedding_dim=self.settings.emb_dim,
@@ -138,7 +128,7 @@ class Fuyu(FreezeMLMMixin, nn.Module):
 
         elif self.settings.vision_encoder == "resnet50":
             self.vision_encoder = ResNet50MLM(
-                num_channels=settings.vision_input_shape[3],
+                num_channels=settings.vision_input_shape[0],
                 num_classes=settings.emb_dim,
                 settings=ResNet50MLMSettings(
                     num_tokens=settings.resnet_num_tokens,
@@ -149,7 +139,7 @@ class Fuyu(FreezeMLMMixin, nn.Module):
         elif self.settings.vision_encoder == "vit":
             # Initialize the ViT encoder, we have one input channel per feature per timestep
             self.vision_encoder = VitEncoder(
-                in_channels=settings.vision_input_shape[-1],
+                in_channels=settings.vision_input_shape[0],
                 out_channels=settings.emb_dim,
                 settings=ViTEncoderSettings(
                     emb_dim=settings.emb_dim,
@@ -158,7 +148,7 @@ class Fuyu(FreezeMLMMixin, nn.Module):
                     autopad_enabled=True,
                     patch_size=self.settings.patch_size,
                 ),
-                input_shape=settings.vision_input_shape[:2],
+                input_shape=settings.vision_input_shape[-2:],
             )
 
         else:
@@ -170,25 +160,22 @@ class Fuyu(FreezeMLMMixin, nn.Module):
     def context_length(self) -> int:
         return self.backend.context_length
 
-    def forward(self, token_ids: Tensor, vision_input: NamedTensor) -> Tensor:
+    def forward(self, token_ids: Tensor, vision_inputs: Tensor | list[Tensor]) -> Tensor:
         """Forward function of the Fuyu Multimodal language model
 
         Args:
             token_ids (Tensor): tensor of shape (B, n_tok)
-            vision_input (NamedTensor): tensor of shape (B, lat, lon, features, time)
+            vision_inputs (Tensor | list[Tensor]): tensor or list of tensor of shape (B, channels, lat, lon)
 
         Returns:
             Tensor: tensor of shape (B, n_tok, vocab_size)
         """
 
         # Projection of weather input data into LLM token space
-        vis_timesteps_embeds = []
-        for timestep_nt in vision_input.iter_dim("timestep"):
-            timestep_nt.rearrange_("batch lat lon features -> batch features lat lon")
-            vis_timesteps_embeds.append(self.vision_encoder(timestep_nt.tensor))
-            # shape = (B, n'_tok, embed_dim)
-        vis_embeds = torch.cat(vis_timesteps_embeds, dim=1)
-        # shape = (B, n'_tok * time, embed_dim)
+        if isinstance(vision_inputs, Tensor):
+            vision_inputs = [vision_inputs]
+        vis_timesteps_embeds: list[Tensor] = [self.vision_encoder(tensor) for tensor in vision_inputs]
+        vis_embeds = torch.cat(vis_timesteps_embeds, dim=1)  # shape = (B, n'_tok, embed_dim)
 
         text_embeds = self.backend.tok_emb(token_ids)  # (B, n_tok, embed_dim)
 

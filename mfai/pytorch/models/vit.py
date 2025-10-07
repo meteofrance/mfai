@@ -4,7 +4,7 @@ Added a multi-token output for multimodal LLMs.
 """
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, Iterable
 
 import torch
 from dataclasses_json import dataclass_json
@@ -92,7 +92,7 @@ class Transformer(nn.Module):
     ):
         super().__init__()
         self.norm = nn.LayerNorm(dim)
-        self.layers = nn.ModuleList([])
+        self.layers: Iterable = nn.ModuleList([])
         for _ in range(depth):
             self.layers.append(
                 nn.ModuleList(

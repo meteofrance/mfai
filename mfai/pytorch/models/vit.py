@@ -179,7 +179,7 @@ class ViTCore(nn.Module):
 @dataclass_json
 @dataclass
 class ViTEncoderSettings:
-    patch_size: tuple[int, int] | int = 8
+    patch_size: None | tuple[int, int] | int = None
     emb_dim: int = 768  # Embedding dimension
     n_heads: int = 16  # Number of attention heads
     n_layers: int = 6  # Number of layers
@@ -205,11 +205,7 @@ class VitPaddingMixin(AutoPaddingModel):
         Check if the input shape is divisible by the patch size and returns the new shape if padding is required.
         """
         x_size, y_size = input_shape[-2:]
-        patch_size = self.settings.patch_size
-
-        if isinstance(patch_size, int):
-            patch_size = (patch_size, patch_size)
-        patch_x, patch_y = patch_size
+        patch_x, patch_y = self.patch_size
 
         # checks if x requires padding
         x_padding = (patch_x - (x_size % patch_x)) % patch_x
@@ -251,6 +247,11 @@ class ViTClassifier(BaseModel, VitPaddingMixin):
         self.input_shape = input_shape
         self._settings = settings
 
+        if settings.patch_size is None:
+            self.patch_size = input_shape
+        elif isinstance(settings.patch_size, int):
+            self.patch_size = (settings.patch_size, settings.patch_size)
+
         # we create fake data to get the input shape from our padding mixin
         # this is needed to initialize the ViTCore correctly
         fake_data = torch.zeros((1, in_channels, *input_shape))
@@ -258,7 +259,7 @@ class ViTClassifier(BaseModel, VitPaddingMixin):
 
         self.vit = ViTCore(
             image_size=reshaped_data.shape[-2:],
-            patch_size=settings.patch_size,
+            patch_size=self.patch_size,
             emb_dim=settings.emb_dim,
             n_layers=settings.n_layers,
             n_heads=settings.n_heads,
@@ -320,6 +321,11 @@ class VitEncoder(BaseModel, VitPaddingMixin):
         self.input_shape = input_shape
         self._settings = settings
 
+        if settings.patch_size is None:
+            self.patch_size = input_shape
+        elif isinstance(settings.patch_size, int):
+            self.patch_size = (settings.patch_size, settings.patch_size)
+
         # we create fake data to get the input shape from our padding mixin
         # this is needed to initialize the ViTCore correctly
         fake_data = torch.zeros((1, in_channels, *input_shape))
@@ -327,7 +333,7 @@ class VitEncoder(BaseModel, VitPaddingMixin):
 
         self.vit = ViTCore(
             image_size=reshaped_data.shape[-2:],
-            patch_size=settings.patch_size,
+            patch_size=self.patch_size,
             emb_dim=settings.emb_dim,
             n_layers=settings.n_layers,
             n_heads=settings.n_heads,

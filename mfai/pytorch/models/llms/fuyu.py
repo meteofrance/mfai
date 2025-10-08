@@ -160,12 +160,12 @@ class Fuyu(FreezeMLMMixin, nn.Module):
         return self.backend.context_length
 
     def forward(
-        self, token_ids: Tensor, vision_inputs: Tensor | list[Tensor]
+        self, txt_token_ids: Tensor, vision_inputs: Tensor | list[Tensor]
     ) -> Tensor:
         """Forward function of the Fuyu Multimodal language model
 
         Args:
-            token_ids (Tensor): tensor of shape (B, n_tok)
+            txt_token_ids (Tensor): tensor of shape (B, n_tok)
             vision_inputs (Tensor | list[Tensor]): tensor or list of tensor of shape (B, channels, lat, lon)
 
         Returns:
@@ -182,7 +182,7 @@ class Fuyu(FreezeMLMMixin, nn.Module):
             vis_timesteps_embeds, dim=1
         )  # shape = (B, n'_tok, embed_dim)
 
-        text_embeds = self.backend.tok_emb(token_ids)  # (B, n_tok, embed_dim)
+        text_embeds = self.backend.tok_emb(txt_token_ids)  # (B, n_tok, embed_dim)
 
         vis_txt_embeds = torch.cat([vis_embeds, text_embeds], dim=1)
         # shape = (B, n'_tok * time + n_tok, embed_dim)
@@ -197,7 +197,7 @@ class Fuyu(FreezeMLMMixin, nn.Module):
             # shape = (batch_size,max(n'_tok * time + n_tok, context_len), embed_dim)
             vis_txt_embeds = vis_txt_embeds[:, -self.context_length :]
 
-        embeds_idx = torch.arange(vis_txt_embeds.shape[1], device=token_ids.device)
+        embeds_idx = torch.arange(vis_txt_embeds.shape[1], device=txt_token_ids.device)
         if hasattr(self.backend, "pos_emb") and isinstance(
             self.backend.pos_emb, nn.Embedding
         ):

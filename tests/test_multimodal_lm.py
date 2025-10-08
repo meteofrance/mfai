@@ -16,7 +16,6 @@ from mfai.pytorch.models.resnet import ResNet50, ResNet50Settings
 from mfai.pytorch.namedtensor import NamedTensor
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer
 
-
 VISION_INPUT_SHAPE = (1, 3, 3)
 BIG_VISION_INPUT_SHAPE = (1, 33, 33)
 

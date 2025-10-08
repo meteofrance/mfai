@@ -47,13 +47,13 @@ class PatchMaker(nn.Module):
         2. check for dim consistency
         3. einops rearrange to patch
         """
-        # t shape = (B, features, lat, lon)
+        # t shape = (B, channels, height, width)
         if self.autopadding:
             t = self.zero_pad(t)
 
         _, _, h, w = t.shape
         p1, p2 = self.patch_size
-        # padded t shape = (B, features, height, width) with heigth = a * p1 and width = d * p2
+        # padded t shape = (B, channels, height, width) with heigth = a * p1 and width = d * p2
 
         if not h % p1 == 0 and w % p2 == 0:
             raise ValueError(
@@ -68,10 +68,9 @@ class PatchMaker(nn.Module):
 @dataclass
 class WeatherProjectorSettings:
     # patch_size
-    patch_size: int | tuple[int, int] = 8
+    patch_size: None | int | tuple[int, int] = None
 
-    # lat, lon, timesteps, features
-    input_dims: tuple[int, int, int] = (51, 51, 23)
+    input_dims: tuple[int, int, int] = (3, 256, 256)  # channels, lat, lon
 
     # target embedding dimension
     embedding_dim: int = 768
@@ -83,20 +82,18 @@ class WeatherProjector(nn.Module):
 
         self.settings = settings
 
-        if isinstance(settings.patch_size, int):
-            self.patch_size: tuple[int, int] = (
-                settings.patch_size,
-                settings.patch_size,
-            )
+        self.patch_size: tuple[int, int]
+        if settings.patch_size is None:
+            self.patch_size = settings.input_dims[-2:]
+        elif isinstance(settings.patch_size, int):
+            self.patch_size = (settings.patch_size, settings.patch_size)
         else:
             self.patch_size = settings.patch_size
 
-        this_dim = (
-            self.patch_size[0] * self.patch_size[1] * self.settings.input_dims[-1]
-        )
+        input_dim = self.patch_size[0] * self.patch_size[1] * settings.input_dims[0]
 
-        self.patcher = PatchMaker(self.patch_size, self.settings.input_dims[:2])
-        self.proj = nn.Linear(this_dim, self.settings.embedding_dim)
+        self.patcher = PatchMaker(self.patch_size, self.settings.input_dims[-2:])
+        self.proj = nn.Linear(input_dim, self.settings.embedding_dim)
 
     def forward(self, t: Tensor) -> Tensor:
         """Forward function of the WeatherProjector vision encoder.

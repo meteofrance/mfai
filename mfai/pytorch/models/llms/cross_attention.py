@@ -16,7 +16,6 @@ from mfai.pytorch.models.weather_projector import (
     WeatherProjector,
     WeatherProjectorSettings,
 )
-from mfai.pytorch.namedtensor import NamedTensor
 
 
 @dataclass_json
@@ -32,12 +31,7 @@ class XAttMultiModalLMSettings:
     n_layers: int = 12  # Number of layers
     drop_rate: float = 0.1  # Dropout rate
     qkv_bias: bool = False  # Query-Key-Value bias
-    vision_input_shape: tuple[int, int, int, int] = (
-        256,
-        256,
-        10,
-        10,
-    )
+    vision_input_shape: tuple[int, int, int] = (3, 256, 256)  # channels, lat, lon
     x_att_ratio: int = 4  # Cross attention layer ratio
     resnet_num_tokens: int = 32  # Number of vision/weather tokens
     # absolute positional embedding for the vision encoder
@@ -51,7 +45,7 @@ class XAttMultiModalLMSettings:
     # layer norm visual/weather embeddings
     layer_norm_vis: bool = True
 
-    patch_size: int | tuple[int, int] = 8
+    patch_size: None | int | tuple[int, int] = None
 
 
 class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
@@ -83,21 +77,17 @@ class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
         self.vision_encoder: WeatherProjector | ResNet50MLM | VitEncoder
 
         if self.settings.vision_encoder == "linear":
-            input_dims = (
-                settings.vision_input_shape[0],
-                settings.vision_input_shape[1],
-                settings.vision_input_shape[-1],
-            )
+            input_dims = settings.vision_input_shape
             s = WeatherProjectorSettings(
                 input_dims=input_dims,
-                embedding_dim=self.settings.emb_dim,
-                patch_size=self.settings.patch_size,
+                embedding_dim=settings.emb_dim,
+                patch_size=settings.patch_size,
             )
             self.vision_encoder = WeatherProjector(settings=s)
 
         elif self.settings.vision_encoder == "resnet50":
             self.vision_encoder = ResNet50MLM(
-                num_channels=settings.vision_input_shape[-1],
+                num_channels=settings.vision_input_shape[0],
                 num_classes=settings.emb_dim,
                 settings=ResNet50MLMSettings(
                     num_tokens=settings.resnet_num_tokens,
@@ -107,16 +97,16 @@ class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
             )
         elif self.settings.vision_encoder == "vit":
             self.vision_encoder = VitEncoder(
-                in_channels=settings.vision_input_shape[-1],
+                in_channels=settings.vision_input_shape[0],
                 out_channels=settings.emb_dim,
                 settings=ViTEncoderSettings(
                     emb_dim=settings.emb_dim,
                     transformer_dropout=settings.drop_rate,
                     emb_dropout=settings.drop_rate,
                     autopad_enabled=True,
-                    patch_size=self.settings.patch_size,
+                    patch_size=settings.patch_size,
                 ),
-                input_shape=settings.vision_input_shape[:2],
+                input_shape=settings.vision_input_shape[1:],
             )
 
         else:
@@ -134,27 +124,31 @@ class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
     def context_length(self) -> int:
         return self.backend.context_length
 
-    def forward(self, token_ids: Tensor, vision_input: NamedTensor) -> Tensor:
+    def forward(
+        self, txt_token_ids: Tensor, vision_inputs: Tensor | list[Tensor]
+    ) -> Tensor:
         """Forward function of the Cross-Attention Multimodal language model
 
         Args:
-            token_ids (Tensor): tensor of shape (B, n_tok)
-            vision_input (NamedTensor): tensor of shape (B, lat, lon, features, time)
+            txt_token_ids (Tensor): tensor of shape (B, n_tok)
+            vision_inputs (Tensor | list[Tensor]): tensor or list of tensor of shape (B, channels, lat, lon)
 
         Returns:
             Tensor: tensor of shape (B, n_tok, vocab_size)
         """
-        vis_timesteps_embeds = []
 
-        for timestep_nt in vision_input.iter_dim("timestep"):
-            timestep_nt.rearrange_("batch lat lon features -> batch features lat lon")
-            vis_timesteps_embeds.append(self.vision_encoder(timestep_nt.tensor))
-            # shape = (B, n'_tok, embed_dim)
-        vis_embeds = torch.cat(vis_timesteps_embeds, dim=1)
-        # shape = (B, n'_tok * time, embed_dim)
+        # Projection of weather input data into LLM token space
+        if isinstance(vision_inputs, Tensor):
+            vision_inputs = [vision_inputs]
+        vis_timesteps_embeds: list[Tensor] = [
+            self.vision_encoder(tensor) for tensor in vision_inputs
+        ]
+        vis_embeds = torch.cat(
+            vis_timesteps_embeds, dim=1
+        )  # shape = (B, n'_tok, embed_dim)
 
         # Normalize the output
         if self.settings.layer_norm_vis:
             vis_embeds = self.norm_or_ident(vis_embeds)
 
-        return self.backend(token_ids, vis_embeds)  # (B, n_tok, vocab_size)
+        return self.backend(txt_token_ids, vis_embeds)  # (B, n_tok, vocab_size)

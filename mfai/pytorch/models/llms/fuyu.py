@@ -18,7 +18,6 @@ from mfai.pytorch.models.weather_projector import (
     WeatherProjector,
     WeatherProjectorSettings,
 )
-from mfai.pytorch.namedtensor import NamedTensor
 
 
 @dataclass_json
@@ -160,7 +159,9 @@ class Fuyu(FreezeMLMMixin, nn.Module):
     def context_length(self) -> int:
         return self.backend.context_length
 
-    def forward(self, token_ids: Tensor, vision_inputs: Tensor | list[Tensor]) -> Tensor:
+    def forward(
+        self, token_ids: Tensor, vision_inputs: Tensor | list[Tensor]
+    ) -> Tensor:
         """Forward function of the Fuyu Multimodal language model
 
         Args:
@@ -174,8 +175,12 @@ class Fuyu(FreezeMLMMixin, nn.Module):
         # Projection of weather input data into LLM token space
         if isinstance(vision_inputs, Tensor):
             vision_inputs = [vision_inputs]
-        vis_timesteps_embeds: list[Tensor] = [self.vision_encoder(tensor) for tensor in vision_inputs]
-        vis_embeds = torch.cat(vis_timesteps_embeds, dim=1)  # shape = (B, n'_tok, embed_dim)
+        vis_timesteps_embeds: list[Tensor] = [
+            self.vision_encoder(tensor) for tensor in vision_inputs
+        ]
+        vis_embeds = torch.cat(
+            vis_timesteps_embeds, dim=1
+        )  # shape = (B, n'_tok, embed_dim)
 
         text_embeds = self.backend.tok_emb(token_ids)  # (B, n_tok, embed_dim)
 

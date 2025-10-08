@@ -16,8 +16,6 @@ from mfai.pytorch.models.weather_projector import (
     WeatherProjector,
     WeatherProjectorSettings,
 )
-from mfai.pytorch.namedtensor import NamedTensor
-
 
 @dataclass_json
 @dataclass

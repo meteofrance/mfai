@@ -47,13 +47,13 @@ class PatchMaker(nn.Module):
         2. check for dim consistency
         3. einops rearrange to patch
         """
-        # t shape = (B, features, lat, lon)
+        # t shape = (B, channels, height, width)
         if self.autopadding:
             t = self.zero_pad(t)
 
         _, _, h, w = t.shape
         p1, p2 = self.patch_size
-        # padded t shape = (B, features, height, width) with heigth = a * p1 and width = d * p2
+        # padded t shape = (B, channels, height, width) with heigth = a * p1 and width = d * p2
 
         if not h % p1 == 0 and w % p2 == 0:
             raise ValueError(

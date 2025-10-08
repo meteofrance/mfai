@@ -17,6 +17,7 @@ from mfai.pytorch.models.weather_projector import (
     WeatherProjectorSettings,
 )
 
+
 @dataclass_json
 @dataclass
 class XAttMultiModalLMSettings:

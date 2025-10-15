@@ -114,7 +114,7 @@ class PerceptualLoss(torch.nn.Module):
                 ).eval().to(self.device)
             ]
 
-            for id_layer in range(1, self.feature_layer_ids[0] + 1):
+            for id_layer in range(1, self.feature_layer_ids[0]): # sinon prend 2 fois le maxpool
                 layers.append(self.network.features[id_layer].eval())
 
             blocks.append(nn.Sequential(*layers).to(self.device))

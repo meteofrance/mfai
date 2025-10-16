@@ -284,6 +284,28 @@ class PerceptualLoss(torch.nn.Module):
                 gram_y = styles_y[i]
                 loss_style = torch.nn.functional.l1_loss(gram_x, gram_y)
                 loss += self.alpha_style * loss_style
+
+        ########## DEBUG ###################
+        fig = plt.figure(figsize=(30, 30))
+        # x 9 premier plots
+        for i in range(max(x.shape[1],9)):
+            plt.subplot(12,12, i+1, title=f"input {i}")
+            im = plt.imshow(x.detach().numpy()[0,i])
+            cbar.ax.tick_params(labelsize=10)
+            cbar = fig.colorbar(im, aspect=30)
+            cbar.ax.tick_params(labelsize=10)
+            plt.tight_layout()
+        for feature in [features_x, features_y]:
+            for i in self.feature_block_ids:
+                for j in range(2):
+                plt.subplot(12,12, i+9, title=f"feature block {i}, ex {j}")
+                im = plt.imshow(feature[i].detach().numpy()[0,j])
+                cbar.ax.tick_params(labelsize=10)
+                cbar = fig.colorbar(im, aspect=30)
+                cbar.ax.tick_params(labelsize=10)
+        plt.savefig(f"inside_perceptual.png")
+        ######################################
+
         return loss
 
     def _perceptual_loss_given_input_and_target(self, x: Tensor, y: Tensor) -> Tensor:

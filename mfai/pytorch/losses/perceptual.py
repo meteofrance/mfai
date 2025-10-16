@@ -286,8 +286,8 @@ class PerceptualLoss(torch.nn.Module):
         import matplotlib.pyplot as plt
         fig = plt.figure(figsize=(30, 30))
         # x 9 premier plots
-        print(x.shape)
-        for i in range(min(x.shape[1],9)):
+        x_shape = x.shape[1] if len(x.shape) == 4 else 1
+        for i in range(min(x_shape,9)):
             plt.subplot(12,3, i+1, title=f"input {i}")
             im = plt.imshow(x[0,i].detach().cpu().numpy())
             cbar = fig.colorbar(im, aspect=30)

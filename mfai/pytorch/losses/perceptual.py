@@ -289,7 +289,8 @@ class PerceptualLoss(torch.nn.Module):
         x_shape = x.shape[1] if len(x.shape) == 4 else 1
         for i in range(min(x_shape,9)):
             plt.subplot(12,3, i+1, title=f"input {i}")
-            im = plt.imshow(x[0,i].detach().cpu().numpy())
+            x_im = x[0,i] if len(x.shape) == 4 else x[0]
+            im = plt.imshow(x_im.detach().cpu().numpy())
             cbar = fig.colorbar(im, aspect=30)
             cbar.ax.tick_params(labelsize=10)
             plt.tight_layout()

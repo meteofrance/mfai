@@ -7,8 +7,8 @@ from urllib.error import URLError
 
 import torch
 import torch.nn as nn
-from torch import Tensor
 import torchvision.models as models
+from torch import Tensor
 
 
 class PerceptualLoss(torch.nn.Module):

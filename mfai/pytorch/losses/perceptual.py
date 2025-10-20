@@ -5,9 +5,10 @@ from itertools import chain
 from typing import Sequence
 from urllib.error import URLError
 
+import torchvision.models as models
+
 import torch
 import torch.nn as nn
-import torchvision.models as models
 from torch import Tensor
 
 
@@ -111,10 +112,12 @@ class PerceptualLoss(torch.nn.Module):
                     kernel_size=(3, 3),
                     stride=(1, 1),
                     padding=(1, 1),
-                ).eval().to(self.device)
+                )
+                .eval()
+                .to(self.device)
             ]
 
-            for id_layer in range(1, self.feature_layer_ids[0]): # sinon prend 2 fois le maxpool
+            for id_layer in range(1, self.feature_layer_ids[0]):
                 layers.append(self.network.features[id_layer].eval())
 
             blocks.append(nn.Sequential(*layers).to(self.device))
@@ -274,38 +277,15 @@ class PerceptualLoss(torch.nn.Module):
         loss = torch.tensor(0.0).to(self.device)
         for i, _ in enumerate(self.blocks):
             if i in self.feature_block_ids:
-                loss_features = torch.nn.functional.l1_loss(features_x[i], features_y[i])
+                x = features_x[i]
+                y = features_y[i]
+                loss_features = torch.nn.functional.l1_loss(x, y)
                 loss += self.alpha_feature * loss_features
             if i in self.style_block_ids:
                 gram_x = styles_x[i]
                 gram_y = styles_y[i]
                 loss_style = torch.nn.functional.l1_loss(gram_x, gram_y)
                 loss += self.alpha_style * loss_style
-
-        ########## DEBUG ###################
-        import matplotlib.pyplot as plt
-        fig = plt.figure(figsize=(30, 30))
-        # x 9 premier plots
-        x_shape = x.shape[1] if len(x.shape) == 4 else 1
-        for i in range(min(x_shape,9)):
-            plt.subplot(12,3, i+1, title=f"input {i}")
-            x_im = x[0,i] if len(x.shape) == 4 else x[0]
-            im = plt.imshow(x_im.detach().cpu().numpy())
-            cbar = fig.colorbar(im, aspect=30)
-            cbar.ax.tick_params(labelsize=10)
-            plt.tight_layout()
-        for id, feature in enumerate([features_x, features_y]):
-            for i in self.feature_block_ids:
-                for j in range(2):
-                    subplot_index = id * len(self.feature_block_ids) * 2 + i * 2 + j + 10
-                    plt.subplot(12,3, subplot_index, title=f"feature block {i}, ex {j}")
-                    im = plt.imshow(feature[i][0,j].detach().cpu().numpy())
-                    cbar = fig.colorbar(im, aspect=30)
-                    cbar.ax.tick_params(labelsize=10)
-                    plt.tight_layout()
-        plt.savefig(f"inside_perceptual.png")
-        ######################################
-
         return loss
 
     def _perceptual_loss_given_input_and_target(self, x: Tensor, y: Tensor) -> Tensor:

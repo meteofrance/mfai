@@ -91,6 +91,8 @@ class PerceptualLoss(torch.nn.Module):
                 self.scaling_factor.append(2**i)
 
         self._set_network()
+        # Set the device of the model once in the forward
+        self._set_device = False
 
     def _set_blocks(self) -> list:
         """Set the blocks of layers from the neural network
@@ -109,13 +111,13 @@ class PerceptualLoss(torch.nn.Module):
                     kernel_size=(3, 3),
                     stride=(1, 1),
                     padding=(1, 1),
-                ).eval()
+                ).eval().to(self.device)
             ]
 
-            for id_layer in range(1, self.feature_layer_ids[0] + 1):
+            for id_layer in range(1, self.feature_layer_ids[0]): # sinon prend 2 fois le maxpool
                 layers.append(self.network.features[id_layer].eval())
 
-            blocks.append(nn.Sequential(*layers))
+            blocks.append(nn.Sequential(*layers).to(self.device))
 
         else:
             blocks.append(self.network.features[: self.feature_layer_ids[0]].eval())
@@ -267,21 +269,43 @@ class PerceptualLoss(torch.nn.Module):
         Return :
             loss : (troch.Tensor)
         """
-
         features_x, styles_x = self._forward_net_single_img(x)
 
         loss = torch.tensor(0.0).to(self.device)
         for i, _ in enumerate(self.blocks):
             if i in self.feature_block_ids:
-                x = features_x[i]
-                y = features_y[i]
-                loss_features = torch.nn.functional.l1_loss(x, y)
+                loss_features = torch.nn.functional.l1_loss(features_x[i], features_y[i])
                 loss += self.alpha_feature * loss_features
             if i in self.style_block_ids:
                 gram_x = styles_x[i]
                 gram_y = styles_y[i]
                 loss_style = torch.nn.functional.l1_loss(gram_x, gram_y)
                 loss += self.alpha_style * loss_style
+
+        ########## DEBUG ###################
+        import matplotlib.pyplot as plt
+        fig = plt.figure(figsize=(30, 30))
+        # x 9 premier plots
+        x_shape = x.shape[1] if len(x.shape) == 4 else 1
+        for i in range(min(x_shape,9)):
+            plt.subplot(12,3, i+1, title=f"input {i}")
+            x_im = x[0,i] if len(x.shape) == 4 else x[0]
+            im = plt.imshow(x_im.detach().cpu().numpy())
+            cbar = fig.colorbar(im, aspect=30)
+            cbar.ax.tick_params(labelsize=10)
+            plt.tight_layout()
+        for id, feature in enumerate([features_x, features_y]):
+            for i in self.feature_block_ids:
+                for j in range(2):
+                    subplot_index = id * len(self.feature_block_ids) * 2 + i * 2 + j + 10
+                    plt.subplot(12,3, subplot_index, title=f"feature block {i}, ex {j}")
+                    im = plt.imshow(feature[i][0,j].detach().cpu().numpy())
+                    cbar = fig.colorbar(im, aspect=30)
+                    cbar.ax.tick_params(labelsize=10)
+                    plt.tight_layout()
+        plt.savefig(f"inside_perceptual.png")
+        ######################################
+
         return loss
 
     def _perceptual_loss_given_input_and_target(self, x: Tensor, y: Tensor) -> Tensor:
@@ -311,6 +335,13 @@ class PerceptualLoss(torch.nn.Module):
             If y is None, the features of y needs to be computed before by calling the function : compute_perceptual_features
         """
 
+        # Send the network and blocks on the same device as the inputs
+        if not self._set_device:
+            self.device = x.device
+            self.network = self.network.to(self.device)
+            self.blocks = torch.nn.ModuleList([b.to(self.device) for b in self.blocks])
+            self._set_device = True
+
         perceptual_loss = torch.tensor(0.0).to(self.device)
 
         # Check that tensors are normalized
@@ -322,11 +353,13 @@ class PerceptualLoss(torch.nn.Module):
         else:
             pass
 
+        x_copy = x.clone()
         if y is not None:
+            y_copy = y.clone()
             for scaling_factor in self.scaling_factor:
                 if self.multi_scale:
-                    x = self._downscale(x, scaling_factor)
-                    y = self._downscale(y, scaling_factor)
+                    x = self._downscale(x_copy, scaling_factor)
+                    y = self._downscale(y_copy, scaling_factor)
 
                 if self.channel_iterative_mode:
                     for channel_id in range(x.shape[1]):
@@ -346,7 +379,7 @@ class PerceptualLoss(torch.nn.Module):
                 raise ValueError
             for id_scaling_factor, scaling_factor in enumerate(self.scaling_factor):
                 if self.multi_scale:
-                    x = self._downscale(x, scaling_factor)
+                    x = self._downscale(x_copy, scaling_factor)
                 else:
                     id_scaling_factor = 0
                 if self.channel_iterative_mode:

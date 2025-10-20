@@ -4,7 +4,7 @@ Added a multi-token output for multimodal LLMs.
 """
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Iterable, Literal
 
 import torch
 from dataclasses_json import dataclass_json
@@ -92,7 +92,7 @@ class Transformer(nn.Module):
     ):
         super().__init__()
         self.norm = nn.LayerNorm(dim)
-        self.layers = nn.ModuleList([])
+        self.layers: Iterable = nn.ModuleList([])
         for _ in range(depth):
             self.layers.append(
                 nn.ModuleList(
@@ -163,21 +163,23 @@ class ViTCore(nn.Module):
         )
 
     def forward(self, img: Tensor) -> Tensor:
+        # img shape = (B, features, h, w)
         x = self.to_patch_embedding(img)
-        b, n, _ = x.shape
+        b, n, _ = x.shape  # (B, n_patches_h * n_patches_w = n, embed_dim)
 
-        cls_tokens = repeat(self.cls_token, "1 1 d -> b 1 d", b=b)
-        x = torch.cat((cls_tokens, x), dim=1)
-        x += self.pos_embedding[:, : (n + 1)]
+        cls_tokens = repeat(self.cls_token, "1 1 d -> b 1 d", b=b)  # (B, 1, embed_dim)
+        # Add the "class token" before the sequence of patches:
+        x = torch.cat((cls_tokens, x), dim=1)  # (B, n + 1, embed_dim)
+        x += self.pos_embedding  # (B, n + 1, embed_dim)
         x = self.dropout(x)
 
-        return self.transformer(x)
+        return self.transformer(x)  # (B, n + 1, embed_dim)
 
 
 @dataclass_json
 @dataclass
 class ViTEncoderSettings:
-    patch_size: tuple[int, int] | int = 8
+    patch_size: None | tuple[int, int] | int = None
     emb_dim: int = 768  # Embedding dimension
     n_heads: int = 16  # Number of attention heads
     n_layers: int = 6  # Number of layers
@@ -203,11 +205,7 @@ class VitPaddingMixin(AutoPaddingModel):
         Check if the input shape is divisible by the patch size and returns the new shape if padding is required.
         """
         x_size, y_size = input_shape[-2:]
-        patch_size = self.settings.patch_size
-
-        if isinstance(patch_size, int):
-            patch_size = (patch_size, patch_size)
-        patch_x, patch_y = patch_size
+        patch_x, patch_y = self.patch_size
 
         # checks if x requires padding
         x_padding = (patch_x - (x_size % patch_x)) % patch_x
@@ -249,6 +247,11 @@ class ViTClassifier(BaseModel, VitPaddingMixin):
         self.input_shape = input_shape
         self._settings = settings
 
+        if settings.patch_size is None:
+            self.patch_size = input_shape
+        elif isinstance(settings.patch_size, int):
+            self.patch_size = (settings.patch_size, settings.patch_size)
+
         # we create fake data to get the input shape from our padding mixin
         # this is needed to initialize the ViTCore correctly
         fake_data = torch.zeros((1, in_channels, *input_shape))
@@ -256,7 +259,7 @@ class ViTClassifier(BaseModel, VitPaddingMixin):
 
         self.vit = ViTCore(
             image_size=reshaped_data.shape[-2:],
-            patch_size=settings.patch_size,
+            patch_size=self.patch_size,
             emb_dim=settings.emb_dim,
             n_layers=settings.n_layers,
             n_heads=settings.n_heads,
@@ -293,7 +296,7 @@ class ViTClassifier(BaseModel, VitPaddingMixin):
 class VitEncoder(BaseModel, VitPaddingMixin):
     """
     ViT vision encoder for multimodal LLMs.
-    The number of output tokens is equal to the number of patches.
+    The number of output tokens is equal to the number of patches + 1.
     """
 
     settings_kls = ViTEncoderSettings
@@ -318,6 +321,11 @@ class VitEncoder(BaseModel, VitPaddingMixin):
         self.input_shape = input_shape
         self._settings = settings
 
+        if settings.patch_size is None:
+            self.patch_size = input_shape
+        elif isinstance(settings.patch_size, int):
+            self.patch_size = (settings.patch_size, settings.patch_size)
+
         # we create fake data to get the input shape from our padding mixin
         # this is needed to initialize the ViTCore correctly
         fake_data = torch.zeros((1, in_channels, *input_shape))
@@ -325,7 +333,7 @@ class VitEncoder(BaseModel, VitPaddingMixin):
 
         self.vit = ViTCore(
             image_size=reshaped_data.shape[-2:],
-            patch_size=settings.patch_size,
+            patch_size=self.patch_size,
             emb_dim=settings.emb_dim,
             n_layers=settings.n_layers,
             n_heads=settings.n_heads,
@@ -338,7 +346,15 @@ class VitEncoder(BaseModel, VitPaddingMixin):
         self.check_required_attributes()
 
     def forward(self, x: Tensor) -> Tensor:
-        x, _ = self._maybe_padding(data_tensor=x)
+        """Forward function of the ViT vision encoder.
+
+        Args:
+            x (Tensor): tensor of shape (B, features, height, width)
+
+        Returns:
+            Tensor: tensor of shape (B, n_patches_h * n_patches_w + 1, embed_dim)
+        """
+        x, _ = self._maybe_padding(data_tensor=x)  # (B, features, h, w)
         return self.vit(x)
 
     @property

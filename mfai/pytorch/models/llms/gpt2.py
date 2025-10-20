@@ -423,18 +423,19 @@ class CrossAttentionGPT2(nn.Module):
         return tok_embeds + pos_embeds  # Shape [batch_size, num_tokens, emb_size]
 
     def forward(self, token_ids: Tensor, vision_inputs: Tensor) -> Tensor:
+        # token_ids shape=(B, n_tok), vision_input shape=(B, n'_tok * time, embed_dim)
         token_ids = token_ids[
             :, -self.context_length :
         ]  # Keep only the last context_length tokens
-        x = self.embed_tokens(token_ids)
-        x = self.drop_emb(x)
+        x = self.embed_tokens(token_ids)  # (B, n_tok, embed_dim)
+        x = self.drop_emb(x)  # (B, n_tok, embed_dim)
+
         for b in self.trf_blocks:
             if isinstance(b, CrossAttentionTransformerBlock):
                 # If the block is a cross attention block, we pass the vision inputs
                 x = b(x, vision_inputs)
             else:
                 x = b(x)
-
-        x = self.final_norm(x)
-        logits = self.out_head(x)
+        x = self.final_norm(x)  # (B, n_tok, embed_dim)
+        logits = self.out_head(x)  # (B, n_tok, vocab_size)
         return logits

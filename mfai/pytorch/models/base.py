@@ -152,9 +152,7 @@ class AutoPaddingModel(ABC):
         if not self.settings.autopad_enabled:
             return data_tensor, old_shape
 
-        valid_shape, new_shape = self.validate_input_shape(
-            data_tensor.shape[-len(self.input_shape) :]
-        )
+        valid_shape, new_shape = self.validate_input_shape(old_shape)
         if not valid_shape:
             return pad_batch(
                 batch=data_tensor, new_shape=new_shape, pad_value=0

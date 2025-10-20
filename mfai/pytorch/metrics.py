@@ -209,3 +209,168 @@ class CSINeighborhood(Metric):
         if self.average == "macro":
             csi = torch.mean(csi)
         return csi
+
+
+class FSS(Metric):
+    """
+    Fraction Skill Score
+
+    The FSS is normally computed over a sample of forecast-observation pairs, e.g., at different valid times. Mitter-
+    maier (2021) has demonstrated that the FSS is sensitive to the pooling method used to combine the scores of
+    different forecasts. The two possibilities are to average the FSS of all individual forecast-observation pairs,
+    or to aggregate the FSS components (fractions Brier Score (FBS) and worst possible FBS (WFBS)) before computing
+    an overall score. We use this last method to compute the FSS, called pFSS by Necker, T. & al. (2024).
+
+    FSS = 1 - (FBS / WFBS)
+
+    References:
+    - Mittermaier, M.P. (2021) A “meta” analysis of the fractions skill score: The limiting case and implications for aggregation. Monthly Weather Review, 149(10), 3491–3504. Available from: https://doi.org/10.1175/MWR-D-18-0106.1
+    - Necker, T. et al. (2024), The fractions skill score for ensemble forecast verification. Quarterly Journal of the Royal Meteorological Society, 150(764), 4457–4477. Available from: https://doi.org/10.1002/qj.4824
+
+    """
+
+    def __init__(
+        self,
+        neighborood: int,
+        thresholds: None | int | float | list[int | float] = None,
+        num_classes: None | int = None,
+        stride: None | int = None,
+        mask: Literal[False] | Tensor = False,
+    ):
+        """
+        Args:
+            neighborood (int): number of neighbours.
+            thresholds (None | int | float | list[int | float]): threshold to convert tensor to categories if the FSS is computed on non-binary forecast-observation pairs. Default value is 'None'.
+            num_classes (int): number of classes to consider. Tensor in input should contains values between [0, num_classes - 1]. Default value is 'None'.
+            stride (None| int): the stride of the window. Default value is 'None'.
+            mask (None | Tensor): the mask to apply before computing the FSS. The mask should be a binary tensor where 0 represents pixels
+            where the FSS should not be computed. Default value is 'None'.
+        """
+        super().__init__()
+
+        if isinstance(thresholds, int | float):
+            thresholds = [thresholds]  # Convert int | float -> list[int | float]
+
+        self.neighborood: int = neighborood
+        self.thresholds: None | list[int | float] = thresholds
+        self.stride: None | int = stride
+        self.mask: Literal[False] | Tensor = mask
+
+        self.num_classes: int
+        if self.thresholds and num_classes is None:
+            self.num_classes = len(self.thresholds)
+        elif num_classes and self.thresholds is None:
+            self.num_classes = num_classes
+        else:
+            raise ValueError(
+                "Please set one argument between 'thresholds' (to convert values to categories) and 'num_classes' (if the input values are already in categories)."
+            )
+
+        if isinstance(self.mask, Tensor):
+            if len(self.mask.shape) != 2:
+                raise ValueError(
+                    f"'mask' tensor should have exactly 2 dimension (H, W), got {len(self.mask.shape)} instead."
+                )
+            else:
+                self.mask = rearrange(self.mask, "h w -> 1 1 h w")
+
+        self.add_state(
+            "list_fbs",
+            default=torch.zeros(self.num_classes).to(device=self.device),
+            dist_reduce_fx="sum",
+        )
+        self.add_state(
+            "list_wfbs",
+            default=torch.zeros(self.num_classes).to(device=self.device),
+            dist_reduce_fx="sum",
+        )
+        self.list_fbs: Tensor
+        self.list_wfbs: Tensor
+
+    @staticmethod
+    def to_category(tensor: Tensor, thresholds: list[int | float]) -> Tensor:
+        category_tensor: Tensor
+        for i, threshold in enumerate(thresholds):
+            if i == 0:
+                category_tensor = torch.where(tensor > torch.tensor(threshold), 1, 0)
+            else:
+                category_tensor = torch.where(
+                    tensor > torch.tensor(threshold), i + 2, category_tensor
+                )
+        return category_tensor
+
+    def compute_fbs_wfbs(
+        self,
+        targets: Tensor,
+        preds: Tensor,
+    ) -> tuple[float, float]:
+        """
+        Compute the fractions Brier Score (FBS) and the worse fractions Brier Score (WFBS).
+
+        Args:
+            preds (Tensor): tensor that contains predicted values (converted in classes).
+            targets (Tensor): tensor that contains observed values (converted in classes).
+
+        Returns:
+            fbs, worse_fbs (tuple(float, float)): the fractions Brier Score and the worse fractions Brier Score.
+        """
+        pooling = torch.nn.AvgPool2d(
+            kernel_size=self.neighborood, stride=self.stride, padding=0
+        )
+        ft = pooling(targets.float())
+        fp = pooling(preds.float())
+
+        error = (ft - fp) ** 2
+        worse_error = ft**2 + fp**2
+
+        if isinstance(self.mask, Tensor):
+            mask_pool = pooling(self.mask.float())
+            mask = mask_pool != 0
+            mask = mask.flatten()
+
+            error = error.flatten()[mask]
+            worse_error = worse_error.flatten()[mask]
+
+        fbs = torch.mean(error)
+        worse_fbs = torch.mean(worse_error)
+
+        return fbs.item(), worse_fbs.item()
+
+    def update(self, preds: Tensor, targets: Tensor) -> None:
+        """
+        Updates the fbs/wfbs list by adding the current fbs/wfbs.
+
+        Args:
+            preds (Tensor): tensor that contains predicted values.
+            targets (Tensor): tensor that contains observed values.
+
+        """
+        if len(preds.shape) != 4 or len(targets.shape) != 4:
+            raise ValueError(
+                "The dimension of input 'preds' or 'targets' is not equal to 4. Please transform your inputs to have a 4 dimensions tensor (N, C, H, W)."
+            )
+
+        # Convert into categories if necessary
+        if self.thresholds:
+            preds = self.to_category(preds, self.thresholds)
+            targets = self.to_category(targets, self.thresholds)
+
+        # Apply mask
+        if isinstance(self.mask, Tensor):
+            preds = torch.where(self.mask != 0, preds, 0)
+            targets = torch.where(self.mask != 0, targets, 0)
+
+        for n in range(self.num_classes):
+            targets_n = torch.where(targets > n, 1, 0)
+            preds_n = torch.where(preds > n, 1, 0)
+            fbs, wfbs = self.compute_fbs_wfbs(targets_n, preds_n)
+            self.list_fbs[n - 1] += fbs
+            self.list_wfbs[n - 1] += wfbs
+
+    def compute(self) -> Tensor:
+        fss = 1 - self.list_fbs / self.list_wfbs
+
+        # NaN if divide by 0
+        nan_indices = torch.isnan(fss)
+        fss[nan_indices] = 0
+        return fss

@@ -5,11 +5,10 @@ from itertools import chain
 from typing import Sequence
 from urllib.error import URLError
 
-import torchvision.models as models
-
 import torch
 import torch.nn as nn
 from torch import Tensor
+import torchvision.models as models
 
 
 class PerceptualLoss(torch.nn.Module):

@@ -178,7 +178,9 @@ def test_feature_computation() -> None:
 
     assert len(features) == 4
     assert len(styles) == 4
-    assert np.all([features[i][0].shape == (1, 64, 224, 224) for i in range(len(features))])
+    assert np.all(
+        [features[i][0].shape == (1, 64, 224, 224) for i in range(len(features))]
+    )
     assert np.all([styles[i][0].shape == (1, 64, 64) for i in range(len(styles))])
 
     # Test multi blocks
@@ -210,7 +212,6 @@ def test_feature_computation() -> None:
     assert features[0][1].shape == (1, 128, 112, 112)
     assert styles[0][0].shape == (1, 64, 64)
     assert styles[0][1].shape == (1, 128, 128)
-    
 
 
 def test_lpips_on_same_img() -> None:

@@ -176,7 +176,7 @@ def get_resnet_encoder(
 
 
 @dataclass_json
-@dataclass(slots=True)
+@dataclass(slots=False)
 class ResNet50Settings:
     encoder_depth: int = 5
     encoder_weights: bool = False

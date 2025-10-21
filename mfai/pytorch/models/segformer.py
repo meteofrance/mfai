@@ -24,7 +24,7 @@ def cast_tuple(val: Any, depth: int) -> tuple[Any, ...]:
 
 
 @dataclass_json
-@dataclass(slots=True)
+@dataclass(slots=False)
 class SegformerSettings:
     dims: tuple[int, ...] = (32, 64, 160, 256)
     heads: tuple[int, ...] = (1, 2, 5, 8)

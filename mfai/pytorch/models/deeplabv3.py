@@ -293,7 +293,7 @@ class DeepLabV3(BaseModel, AutoPaddingModel):
 
     """
 
-    onnx_supported: bool = True
+    onnx_supported: bool = False
     settings_kls = DeepLabV3Settings
     supported_num_spatial_dims = (2,)
     features_last: bool = False

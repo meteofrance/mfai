@@ -5,7 +5,7 @@ SegFormer adapted from https://github.com/lucidrains/segformer-pytorch
 from dataclasses import dataclass
 from functools import partial
 from math import ceil, sqrt
-from typing import Any, Callable, Literal, Sequence
+from typing import Any, Callable, Literal, Sequence, cast
 
 import torch
 from dataclasses_json import dataclass_json
@@ -219,7 +219,9 @@ class MiT(nn.Module):
 
         layer_outputs = []
         i = 0
-        for get_overlap_patches, overlap_embed, layers in self.stages:
+        for stage in self.stages:
+            stage = cast(nn.ModuleList, stage)
+            get_overlap_patches, overlap_embed, layers = stage
             x = get_overlap_patches(x)
 
             num_patches = x.shape[-1]

@@ -91,7 +91,7 @@ class PerceptualLoss(torch.nn.Module):
                 self.scaling_factor.append(2**i)
 
         self._set_network()
-        # Set the device of the model once in the forward
+        # Keep track of wether or not the model's device has been set
         self._set_device = False
 
     def _set_blocks(self) -> list:

@@ -178,10 +178,10 @@ def test_feature_computation() -> None:
 
     assert len(features) == 4
     assert len(styles) == 4
-    assert np.all(
+    assert torch.all(
         [features[i][0].shape == (1, 64, 224, 224) for i in range(len(features))]
     )
-    assert np.all([styles[i][0].shape == (1, 64, 64) for i in range(len(styles))])
+    assert torch.all([styles[i][0].shape == (1, 64, 64) for i in range(len(styles))])
 
     # Test multi blocks
     # Random VGG16

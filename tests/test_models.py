@@ -6,6 +6,7 @@ Test our pure PyTorch models to make sure they can be :
 4. onnx loaded and used for inference
 """
 
+import dataclasses
 import tempfile
 from dataclasses import asdict
 from pathlib import Path
@@ -19,13 +20,18 @@ from torch import Tensor
 
 from mfai.pytorch import export_to_onnx, onnx_load_and_infer, padding
 from mfai.pytorch.models import (
+    all_nn_architectures,
     autopad_nn_architectures,
     load_from_settings_file,
     nn_architectures,
 )
-from mfai.pytorch.models.base import ModelType
+from mfai.pytorch.models.base import ModelABC, ModelType
 from mfai.pytorch.models.deeplabv3 import DeepLabV3Plus
 from mfai.pytorch.models.half_unet import HalfUNet
+from mfai.pytorch.models.llms.cross_attention import XAttMultiModalLM
+from mfai.pytorch.models.llms.fuyu import Fuyu
+from mfai.pytorch.models.llms.gpt2 import GPT2, CrossAttentionGPT2
+from mfai.pytorch.models.llms.llama2 import Llama2
 from mfai.pytorch.models.vit import ViTClassifier
 
 
@@ -428,3 +434,22 @@ def test_autopad_models(model_class: Any) -> None:
     )
 
     net(input_data)  # assert it does not fail
+
+
+@pytest.mark.parametrize(
+    "model_class",
+    all_nn_architectures + [Fuyu, XAttMultiModalLM, CrossAttentionGPT2, Llama2, GPT2],
+)
+def test_model_attributes(model_class: ModelABC) -> None:
+    """
+    We check that ALL our models have the required attributes
+    settings_kls and model_type
+    """
+    assert (
+        hasattr(model_class, "model_type")
+        and isinstance(model_class.model_type, ModelType)
+    ), f"Model implementation {model_class} is missing attribute 'model_type' of type ModelType"
+    assert (
+        hasattr(model_class, "settings_kls")
+        and dataclasses.is_dataclass(model_class.settings_kls)
+    ), f"Model implementation {model_class} is missing dataclass attribute 'settings_kls'"

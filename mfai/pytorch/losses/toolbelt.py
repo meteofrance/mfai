@@ -126,7 +126,7 @@ class DiceLoss(_Loss):
 
         return self.aggregate_loss(loss)
 
-    def aggregate_loss(self, loss: torch.Tensor):
+    def aggregate_loss(self, loss: torch.Tensor) -> torch.Tensor:
         return loss.mean()
 
     def compute_score(
@@ -135,7 +135,7 @@ class DiceLoss(_Loss):
         target: torch.Tensor,
         smooth: float = 0.0,
         eps: float = 1e-7,
-        dims: None | int | list[int] = None,
+        dims: None | int | list[int] | tuple[int, ...] = None,
     ) -> torch.Tensor:
         """
         Code from /segmentation_models_pytorch/losses/_functional.py
@@ -157,8 +157,8 @@ class SoftCrossEntropyLoss(nn.Module):
     def __init__(
         self,
         reduction: str = "mean",
-        smooth_factor: Optional[float] = 0.0,
-        ignore_index: Optional[int] = -100,
+        smooth_factor: float = 0.0,
+        ignore_index: int = -100,
         dim: int = 1,
     ):
         """
@@ -197,9 +197,9 @@ class SoftCrossEntropyLoss(nn.Module):
         lprobs: torch.Tensor,
         target: torch.Tensor,
         epsilon: float,
-        ignore_index=None,
-        reduction="mean",
-        dim=-1,
+        ignore_index: int | None = None,
+        reduction: str = "mean",
+        dim: int = -1,
     ) -> torch.Tensor:
         """NLL loss with label smoothing
 
@@ -245,11 +245,11 @@ class SoftCrossEntropyLoss(nn.Module):
 class SoftBCEWithLogitsLoss(nn.Module):
     def __init__(
         self,
-        weight: Optional[torch.Tensor] = None,
+        weight: torch.Tensor | None = None,
         ignore_index: Optional[int] = -100,
         reduction: str = "mean",
         smooth_factor: Optional[float] = None,
-        pos_weight: Optional[torch.Tensor] = None,
+        pos_weight: torch.Tensor | None = None,
     ):
         """Drop-in replacement for torch.nn.BCEWithLogitsLoss with few additions: ignore_index and label_smoothing
 
@@ -271,6 +271,8 @@ class SoftBCEWithLogitsLoss(nn.Module):
         self.smooth_factor = smooth_factor
         self.register_buffer("weight", weight)
         self.register_buffer("pos_weight", pos_weight)
+        self.weight: torch.Tensor | None
+        self.pos_weight: torch.Tensor | None
 
     def forward(self, y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
         """

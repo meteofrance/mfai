@@ -55,6 +55,7 @@
   - Perceptual loss
   - LPIPS
   - GridCell loss and Hinge losses for GANs
+- [Transforms](#transforms)
 - [Installation](#installation)
 - [Usage](#usage)
     - [Instanciate a model](#instanciate-a-model)
@@ -328,6 +329,9 @@ The [**LPIPS**](mfai/pytorch/losses/perceptual.py#L28) class is a `torch.nn.Modu
 
 We add the Grid Cell Regularizer loss from [Skillful Nowcasting](https://arxiv.org/pdf/2104.00954.pdf), as well as a Nowcating loss, Hinge discriminator loss and Hinge generator loss.
 
+# Transforms
+
+We provide a [RandomCropWithMinPositivePixels](mfai/pytorch/transforms.py#L7) torch transforms to crop input and output tensor to a desired image size (512, 512) by default with a minimum percentage of positive valued pixels in y (output) or the best we found out of 5 retries otherwise. The goal of this transform is to address class imbalance in binary classification problems where positive labvels are rare. 
 
 # Installation
 

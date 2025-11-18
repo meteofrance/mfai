@@ -331,7 +331,7 @@ We add the Grid Cell Regularizer loss from [Skillful Nowcasting](https://arxiv.o
 
 # Transforms
 
-We provide a [RandomCropWithMinPositivePixels](mfai/pytorch/transforms.py#L7) torch transforms to crop input and output tensor to a desired image size (512, 512) by default with a minimum percentage of positive valued pixels in y (output) or the best we found out of 5 retries otherwise. The goal of this transform is to address class imbalance in binary classification problems where positive labvels are rare. 
+We provide a [RandomCropWithMinPositivePixels](mfai/pytorch/transforms.py#L7) torch transforms to crop input and output tensor to a desired image size (512, 512) by default with a minimum percentage of positive valued pixels in y (output) or the best we found out of 5 retries otherwise. The goal of this transform is to address class imbalance in binary classification problems where positive labels are rare. 
 
 # Installation
 

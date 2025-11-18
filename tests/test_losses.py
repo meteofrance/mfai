@@ -7,6 +7,11 @@ from mfai.pytorch.losses.gan_dgmr import (
     loss_hinge_disc,
     loss_hinge_gen,
 )
+from mfai.pytorch.losses.toolbelt import (
+    DiceLoss,
+    SoftBCEWithLogitsLoss,
+    SoftCrossEntropyLoss,
+)
 
 
 def test_grid_cell_loss() -> None:
@@ -36,3 +41,43 @@ def test_loss_hinge_gen() -> None:
     assert isinstance(loss, torch.Tensor)
     assert loss.shape == torch.Size([])
     assert loss.item() == -2
+
+
+def test_dice_loss() -> None:
+    dice_loss_binary = DiceLoss("binary")
+    y_pred = torch.rand(2, 1, 16, 16)
+    y_true = torch.randint(0, 1, (2, 1, 16, 16)).float()
+    loss = dice_loss_binary(y_true, y_pred)
+    assert isinstance(loss, torch.Tensor)
+    assert loss.shape == torch.Size([])
+
+    dice_loss_multiclass = DiceLoss("multilabel")
+
+    y_pred = torch.rand(2, 4, 16, 16)
+    y_true = torch.randint(0, 1, (2, 4, 16, 16)).float()
+    loss = dice_loss_multiclass(y_true, y_pred)
+    assert isinstance(loss, torch.Tensor)
+    assert loss.shape == torch.Size([])
+
+
+def test_soft_cross_entropy() -> None:
+    # target contains class indices between 0 and 3 included
+    y_true = torch.randint(0, 4, (2, 16, 16))
+
+    # prediction contains class probabilities
+    y_pred = torch.nn.functional.softmax(torch.rand(2, 4, 16, 16), dim=1)
+
+    sce = SoftCrossEntropyLoss()
+    loss = sce(y_pred, y_true)
+    assert isinstance(loss, torch.Tensor)
+    assert loss.shape == torch.Size([])
+
+
+def test_soft_bce() -> None:
+    y_true = torch.randn(2, 4, 16, 16)
+    y_pred = torch.randn(2, 4, 16, 16)
+
+    sbce = SoftBCEWithLogitsLoss()
+    loss = sbce(y_pred, y_true)
+    assert isinstance(loss, torch.Tensor)
+    assert loss.shape == torch.Size([])

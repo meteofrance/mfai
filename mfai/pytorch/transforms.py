@@ -2,6 +2,7 @@ import random
 
 import torch
 import torchvision.transforms.functional as TF
+from torch import Tensor
 
 
 class RandomCropWithMinPositivePixels(object):
@@ -15,12 +16,17 @@ class RandomCropWithMinPositivePixels(object):
     y shape (1, H, W)
     """
 
-    def __init__(self, crop_size=(512, 512), min_positive_percentage=15, tries=5):
+    def __init__(
+        self,
+        crop_size: tuple[int, int] = (512, 512),
+        min_positive_percentage: float = 15.0,
+        tries: int = 5,
+    ):
         self.min_positive_percentage = min_positive_percentage
         self.crop_size = crop_size
         self.tries = tries
 
-    def get_one_crop(self, y: torch.tensor):
+    def get_one_crop(self, y: torch.tensor) -> tuple[int, int, float]:
         nb_pixels_crop = self.crop_size[0] * self.crop_size[1]
 
         # Randomly choose the top-left corner of the crop
@@ -35,7 +41,7 @@ class RandomCropWithMinPositivePixels(object):
         perc = positive_pixels / nb_pixels_crop * 100
         return top, left, perc
 
-    def get_crop(self, y: torch.tensor):
+    def get_crop(self, y: torch.tensor) -> tuple[int, int]:
         best_top, best_left, best_perc = self.get_one_crop(y)
         for _ in range(self.tries - 1):
             top, left, perc = self.get_one_crop(y)
@@ -47,7 +53,9 @@ class RandomCropWithMinPositivePixels(object):
                 best_left, best_top, best_perc = left, top, perc
         return best_left, best_top
 
-    def __call__(self, sample):
+    def __call__(
+        self, sample: tuple[Tensor, Tensor]
+    ) -> tuple[Tensor, Tensor, int, int]:
         x, y = sample
         left, top = self.get_crop(y)
         cropped_x = TF.crop(x, top, left, self.crop_size[0], self.crop_size[1])

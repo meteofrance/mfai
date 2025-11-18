@@ -3,9 +3,11 @@
 ![Unit Tests](https://github.com/meteofrance/mfai/actions/workflows/tests.yml/badge.svg)
 
 **MFAI** is a Python package that provides the following features:
-- A variety of PyTorch Neural Network architectures (CNN, Vision Transformers, ...) adapted to our needs, tested on our projects and datasets. For each architecture, we provide the reference to the original paper and source code if applicable and also the modifications we made.
+- A variety of PyTorch Neural Network architectures (CNN, Vision Transformers, small LLMs, small mulitmodal LMs...) adapted to our needs, tested on our projects and datasets. For each architecture, we provide the reference to the original paper and source code if applicable and also the modifications we made.
 - Per architecture schema validated settings using [dataclasses-json](https://github.com/lidatong/dataclasses-json)
-- A NamedTensor class to handle multi-dimensional data with named dimensions and named features
+- A NamedTensor class to handle multi-dimensional data with named dimensions and named features (a single containing object for a tensor and its metadata)
+- Various losses from the litterature, often tailored to our projects and experimental results
+- Lightning module to speedup recurring tasks: segmentation, regression, DGMR training, ... 
 
 # Table of contents
 
@@ -47,6 +49,9 @@
     - False Negative Rate
     - Precision-Recall Area Under Curve
 - [Losses](#losses)
+  - DiceLoss
+  - SoftCrossEntropyLoss
+  - SoftBCEWithLogitsLoss
   - Perceptual loss
   - LPIPS
   - GridCell loss and Hinge losses for GANs
@@ -252,6 +257,8 @@ In addition to metrics available in [**torchmetrics**](https://lightning.ai/docs
 # Losses
 
 Pytorch already provide some Loss like Mean Squared Error (torch.nn.MSELoss) or Mean Absolute Error (torch.nn.L1Loss). Here we add two loss functions that focus on perceptual similarity of tensors and four loss functions used for nowcasting with GANs (DGMR).
+
+We also provide slightly modified losses (DiceLoss, SoftCrossEntropyLoss, SoftBCEWithLogitsLoss) adapted from [pytorch-toolbet](mfai/pytorch/losses/toolbelt.py).
 
 ## Perceptual Loss
 

@@ -126,11 +126,16 @@ class DiceLoss(_Loss):
 
         return self.aggregate_loss(loss)
 
-    def aggregate_loss(self, loss):
+    def aggregate_loss(self, loss: torch.Tensor):
         return loss.mean()
 
     def compute_score(
-        self, output, target, smooth=0.0, eps=1e-7, dims=None
+        self,
+        output: torch.Tensor,
+        target: torch.Tensor,
+        smooth: float = 0.0,
+        eps: float = 1e-7,
+        dims: None | int | list[int] = None,
     ) -> torch.Tensor:
         """
         Code from /segmentation_models_pytorch/losses/_functional.py

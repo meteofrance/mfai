@@ -18,7 +18,7 @@ from .base import AutoPaddingModel, BaseModel, ModelType
 
 
 def pair(t: torch.Size | tuple[int, int] | int) -> torch.Size | tuple[int, int]:
-    return t if isinstance(t, tuple) else (t, t)
+    return t if isinstance(t, (tuple, list)) else (t, t)
 
 
 # classes

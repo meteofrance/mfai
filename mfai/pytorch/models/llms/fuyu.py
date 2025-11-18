@@ -181,7 +181,6 @@ class Fuyu(FreezeMLMMixin, nn.Module):
         vis_embeds = torch.cat(
             vis_timesteps_embeds, dim=1
         )  # shape = (B, n'_tok, embed_dim)
-        # vis_embeds = vis_embeds / vis_embeds.norm(dim=2, keepdim=True)
 
         text_embeds = self.backend.tok_emb(txt_token_ids)  # (B, n_tok, embed_dim)
 

@@ -5,6 +5,7 @@ import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
 
+from mfai.pytorch.models.base import ModelType
 from mfai.pytorch.models.llms.fuyu import FreezeMLMMixin
 from mfai.pytorch.models.llms.gpt2 import CrossAttentionGPT2
 from mfai.pytorch.models.resnet import (
@@ -53,6 +54,9 @@ class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
     A multimodal LLM with cross attention.
     Can use GPT2 or Llama2 as its LLM backend.
     """
+
+    settings_kls = XAttMultiModalLMSettings
+    model_type = ModelType.MULTIMODAL_LLM
 
     def __init__(
         self,

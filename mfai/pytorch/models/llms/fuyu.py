@@ -66,7 +66,7 @@ class Fuyu(FreezeMLMMixin, nn.Module):
     """
 
     settings_kls = FuyuSettings
-    model_type: Literal[ModelType.MULTIMODAL_LLM]
+    model_type = ModelType.MULTIMODAL_LLM
 
     def __init__(
         self,

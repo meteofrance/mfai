@@ -79,4 +79,3 @@ def test_MeanDimensionSubSampler(idx_to_be_meaned: Sequence[Sequence[int]]) -> N
                 dim=0,
             ),
         )
-

@@ -80,11 +80,3 @@ def test_MeanDimensionSubSampler(idx_to_be_meaned: Sequence[Sequence[int]]) -> N
             ),
         )
 
-
-if __name__ == "__main__":
-    print("Test random crop")
-    test_RandomCropWithMinPositivePixels()
-    print("Test Dimension Subsampler")
-    test_DimensionSubSampler()
-    print("Test Mean Dimension Subsampler")
-    test_MeanDimensionSubSampler()

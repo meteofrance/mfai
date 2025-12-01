@@ -35,6 +35,8 @@ class FuyuSettings:
     drop_rate: float = 0.1  # Dropout rate
     qkv_bias: bool = False  # Query-Key-Value bias
     hidden_dim: int = 768  # Size of the intermediate dimension in FeedForward - Llama2
+    model_size: str = "124M"  # alias used for downloads from official weights, "124M", "355M", "774M", "1558M"
+    attn_tf_compat: bool = False  # set this to true to use a less GPU efficient implementation of attn compatible with official weights
 
     vision_input_shape: tuple[int, int, int] = (3, 256, 256)  # channels, lat, lon
 

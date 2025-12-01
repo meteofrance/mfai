@@ -62,6 +62,78 @@ class FeedForward(nn.Module):
         return self.layers(x)
 
 
+class MultiHeadAttention(nn.Module):
+    """
+    MultiHead Attention compatible with tensorflow original implementation and weigths.
+    """
+
+    def __init__(
+        self,
+        d_in: int,
+        d_out: int,
+        num_heads: int,
+        context_length: int,
+        dropout: float = 0.0,
+        qkv_bias: bool = False,
+    ) -> None:
+        super().__init__()
+        assert d_out % num_heads == 0, "d_out must be divisible by n_heads"
+
+        self.d_out = d_out
+        self.num_heads = num_heads
+        self.head_dim = (
+            d_out // num_heads
+        )  # Reduce the projection dim to match desired output dim
+
+        self.W_query = nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.W_key = nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.W_value = nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.out_proj = nn.Linear(d_out, d_out)  # Linear layer to combine head outputs
+        self.dropout = nn.Dropout(dropout)
+        self.register_buffer(
+            "mask", torch.triu(torch.ones(context_length, context_length), diagonal=1)
+        )
+
+    def forward(self, x: Tensor) -> Tensor:
+        b, num_tokens, _ = x.shape
+
+        keys = self.W_key(x)  # Shape: (b, num_tokens, d_out)
+        queries = self.W_query(x)
+        values = self.W_value(x)
+
+        # We implicitly split the matrix by adding a `num_heads` dimension
+        # Unroll last dim: (b, num_tokens, d_out) -> (b, num_tokens, num_heads, head_dim)
+        keys = keys.view(b, num_tokens, self.num_heads, self.head_dim)
+        values = values.view(b, num_tokens, self.num_heads, self.head_dim)
+        queries = queries.view(b, num_tokens, self.num_heads, self.head_dim)
+
+        # Transpose: (b, num_tokens, num_heads, head_dim) -> (b, num_heads, num_tokens, head_dim)
+        keys = keys.transpose(1, 2)
+        queries = queries.transpose(1, 2)
+        values = values.transpose(1, 2)
+
+        # Compute scaled dot-product attention (aka self-attention) with a causal mask
+        attn_scores = queries @ keys.transpose(2, 3)  # Dot product for each head
+
+        # Original mask truncated to the number of tokens and converted to boolean
+        mask_bool = self.mask.bool()[:num_tokens, :num_tokens]
+
+        # Use the mask to fill attention scores
+        attn_scores.masked_fill_(mask_bool, -torch.inf)
+
+        attn_weights = torch.softmax(attn_scores / keys.shape[-1] ** 0.5, dim=-1)
+        attn_weights = self.dropout(attn_weights)
+
+        # Shape: (b, num_tokens, num_heads, head_dim)
+        context_vec = (attn_weights @ values).transpose(1, 2)
+
+        # Combine heads, where self.d_out = self.num_heads * self.head_dim
+        context_vec = context_vec.reshape(b, num_tokens, self.d_out)
+        context_vec = self.out_proj(context_vec)  # optional projection
+
+        return context_vec
+
+
 class MultiHeadAttentionPySDPA(nn.Module):
     """
     Mutli Head Attention using Pytorch's scaled_dot_product_attention
@@ -209,6 +281,7 @@ class GPT2Settings:
     drop_rate: float = 0.1  # Dropout rate
     qkv_bias: bool = False  # Query-Key-Value bias
     model_size: str = "124M"  # alias used for downloads from official weights, "124M", "355M", "774M", "1558M"
+    attn_tf_compat: bool = False  # set this to true to use a less GPU efficient implementation of attn compatible with official weights
 
 
 class TransformerBlock(nn.Module):
@@ -224,14 +297,24 @@ class TransformerBlock(nn.Module):
 
     def __init__(self, settings: GPT2Settings) -> None:
         super().__init__()
-        self.att = MultiHeadAttentionPySDPA(
-            d_in=settings.emb_dim,
-            d_out=settings.emb_dim,
-            context_length=settings.context_length,
-            num_heads=settings.n_heads,
-            dropout=settings.drop_rate,
-            qkv_bias=settings.qkv_bias,
-        )
+        if settings.attn_tf_compat:
+            self.att = MultiHeadAttention(
+                d_in=settings.emb_dim,
+                d_out=settings.emb_dim,
+                context_length=settings.context_length,
+                num_heads=settings.n_heads,
+                dropout=settings.drop_rate,
+                qkv_bias=True,
+            )
+        else:
+            self.att = MultiHeadAttentionPySDPA(
+                d_in=settings.emb_dim,
+                d_out=settings.emb_dim,
+                context_length=settings.context_length,
+                num_heads=settings.n_heads,
+                dropout=settings.drop_rate,
+                qkv_bias=settings.qkv_bias,
+            )
         self.ff = FeedForward(settings.emb_dim)
         self.norm1 = LayerNorm(settings.emb_dim)
         self.norm2 = LayerNorm(settings.emb_dim)
@@ -365,7 +448,7 @@ class GPT2(nn.Module):
         """
         Downloads a tensorflow checkpoint into model_dir and sets the weights of self.
         """
-        params = download_and_load_gpt2(self.model_size, model_dir)
+        _, params = download_and_load_gpt2(self.model_size, model_dir)
         self.load_weights_from_dict(params)
 
     def forward_vectors(

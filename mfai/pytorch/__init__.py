@@ -1,3 +1,4 @@
+import typing
 from pathlib import Path
 from typing import Any
 
@@ -67,3 +68,10 @@ def onnx_load_and_infer(
     )
 
     return ort_session.run(None, {"input": to_numpy(input)})
+
+
+@typing.no_type_check
+def assign(left: Tensor, right: numpy.ndarray) -> torch.nn.Parameter:
+    if left.shape != right.shape:
+        raise ValueError(f"Shape mismatch. Left: {left.shape}, Right: {right.shape}")
+    return torch.nn.Parameter(torch.tensor(right))

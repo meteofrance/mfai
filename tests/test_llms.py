@@ -71,3 +71,8 @@ def test_cross_attention_gpt2() -> None:
         context_size=model.context_length,
         vision_inputs=torch.randn(1, 8, settings.emb_dim),
     )
+
+
+def test_download_gpt2_weights(tmp_path) -> None:
+    model = GPT2(GPT2Settings(attn_tf_compat=True))
+    model.dowload_weights_from_tf_ckpt(tmp_path)

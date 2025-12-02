@@ -5,13 +5,16 @@ Adapted from https://github.com/rasbt/LLMs-from-scratch
 
 import json
 import os
+from pathlib import Path
 
 import numpy as np
 
 from mfai.http import download_file
 
 
-def download_and_load_gpt2(model_size: str, models_dir: str) -> tuple[dict, dict]:
+def download_and_load_gpt2(
+    model_size: str, models_dir: str | Path
+) -> tuple[dict, dict]:
     """
     Downloads GPT2 official weights from openai with a fallback
     to the LLMs-from-scratch repository.

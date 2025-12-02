@@ -5,6 +5,7 @@ https://github.com/rasbt/LLMs-from-scratch/
 
 import typing
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Union
 
 import numpy as np
@@ -466,7 +467,7 @@ class GPT2(nn.Module):
         else:
             self.out_head.weight = assign(self.out_head.weight, params["wte"])
 
-    def dowload_weights_from_tf_ckpt(self, model_dir: str) -> None:
+    def dowload_weights_from_tf_ckpt(self, model_dir: str | Path) -> None:
         """
         Downloads a tensorflow checkpoint into model_dir and sets the weights of self.
         """

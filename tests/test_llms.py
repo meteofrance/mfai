@@ -1,4 +1,5 @@
 from functools import partial
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -73,6 +74,10 @@ def test_cross_attention_gpt2() -> None:
     )
 
 
-def test_download_gpt2_weights(tmp_path) -> None:
+def test_download_gpt2_weights(tmp_path: Path) -> None:
     model = GPT2(GPT2Settings(attn_tf_compat=True))
+    model.dowload_weights_from_tf_ckpt(tmp_path)
+
+    # test with extra tokens
+    model = GPT2(GPT2Settings(attn_tf_compat=True), vocab_size=50400)
     model.dowload_weights_from_tf_ckpt(tmp_path)

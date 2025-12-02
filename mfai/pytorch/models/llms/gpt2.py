@@ -298,13 +298,15 @@ class TransformerBlock(nn.Module):
     def __init__(self, settings: GPT2Settings) -> None:
         super().__init__()
         if settings.attn_tf_compat:
-            self.att = MultiHeadAttention(
-                d_in=settings.emb_dim,
-                d_out=settings.emb_dim,
-                context_length=settings.context_length,
-                num_heads=settings.n_heads,
-                dropout=settings.drop_rate,
-                qkv_bias=True,
+            self.att: MultiHeadAttention | MultiHeadAttentionPySDPA = (
+                MultiHeadAttention(
+                    d_in=settings.emb_dim,
+                    d_out=settings.emb_dim,
+                    context_length=settings.context_length,
+                    num_heads=settings.n_heads,
+                    dropout=settings.drop_rate,
+                    qkv_bias=True,
+                )
             )
         else:
             self.att = MultiHeadAttentionPySDPA(
@@ -372,7 +374,17 @@ class GPT2(nn.Module):
         training. Use this to finetune from the official weights.
         """
         self.pos_emb.weight = assign(self.pos_emb.weight, params["wpe"])
-        self.tok_emb.weight = assign(self.tok_emb.weight, params["wte"])
+
+        # we allow for adding special tokens
+        if self.tok_emb.weight.shape[0] > len(params["wte"]):
+            self.tok_emb.weight = torch.nn.Parameter(
+                self.tok_emb.weight.index_put(
+                    (torch.LongTensor(range(len(params["wte"]))),),
+                    torch.tensor(params["wte"]),
+                )
+            )
+        else:
+            self.tok_emb.weight = assign(self.tok_emb.weight, params["wte"])
 
         for b in range(len(params["blocks"])):
             q_w, k_w, v_w = np.split(
@@ -442,7 +454,17 @@ class GPT2(nn.Module):
 
         self.final_norm.scale = assign(self.final_norm.scale, params["g"])
         self.final_norm.shift = assign(self.final_norm.shift, params["b"])
-        self.out_head.weight = assign(self.out_head.weight, params["wte"])
+
+        # same here we allow for extra tokens
+        if self.out_head.weight.shape[0] > len(params["wte"]):
+            self.out_head.weight = torch.nn.Parameter(
+                self.out_head.weight.index_put(
+                    (torch.LongTensor(range(len(params["wte"]))),),
+                    torch.tensor(params["wte"]),
+                )
+            )
+        else:
+            self.out_head.weight = assign(self.out_head.weight, params["wte"])
 
     def dowload_weights_from_tf_ckpt(self, model_dir: str) -> None:
         """

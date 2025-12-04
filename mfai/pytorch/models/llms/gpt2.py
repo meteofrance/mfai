@@ -6,7 +6,7 @@ https://github.com/rasbt/LLMs-from-scratch/
 import typing
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Union
+from typing import Literal, Union
 
 import numpy as np
 import torch

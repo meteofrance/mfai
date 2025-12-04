@@ -35,6 +35,10 @@ class FuyuSettings:
     drop_rate: float = 0.1  # Dropout rate
     qkv_bias: bool = False  # Query-Key-Value bias
     hidden_dim: int = 768  # Size of the intermediate dimension in FeedForward - Llama2
+    model_size: Literal["124M", "355M", "774M", "1558M"] = (
+        "124M"  # Alias used to download official weights
+    )
+    attn_tf_compat: bool = False  # If true, uses a less GPU efficient implementation of attn compatible with official weights
 
     vision_input_shape: tuple[int, int, int] = (3, 256, 256)  # channels, lat, lon
 
@@ -54,7 +58,10 @@ class FuyuSettings:
     resnet_mlp_output: bool = False
 
     # layer norm vis + txt tokens
-    layer_norm_vis_txt: bool = True
+    layer_norm_viz_txt: bool = False
+
+    # layer norm for vision tokens only
+    layer_norm_viz: bool = True
 
     patch_size: None | int | tuple[int, int] = None
 
@@ -107,12 +114,19 @@ class Fuyu(FreezeMLMMixin, nn.Module):
 
         # Builds linear projection layer for weather input data (same for each time step)
         # lat_dim, lon_dim, timestep_dim, features_dim
-        if settings.layer_norm_vis_txt:
+        if settings.layer_norm_viz_txt:
             self.norm_or_ident: nn.Identity | nn.LayerNorm = nn.LayerNorm(
                 self.settings.emb_dim
             )
         else:
             self.norm_or_ident = nn.Identity()
+
+        if settings.layer_norm_viz:
+            self.norm_or_ident_viz: nn.Identity | nn.LayerNorm = nn.LayerNorm(
+                self.settings.emb_dim
+            )
+        else:
+            self.norm_or_ident_viz = nn.Identity()
 
         self.vision_encoder: WeatherProjector | ResNet50MLM | VitEncoder
 
@@ -183,6 +197,8 @@ class Fuyu(FreezeMLMMixin, nn.Module):
         )  # shape = (B, n'_tok, embed_dim)
 
         text_embeds = self.backend.tok_emb(txt_token_ids)  # (B, n_tok, embed_dim)
+
+        vis_embeds = self.norm_or_ident_viz(vis_embeds)
 
         vis_txt_embeds = torch.cat([vis_embeds, text_embeds], dim=1)
         # shape = (B, n'_tok * time + n_tok, embed_dim)

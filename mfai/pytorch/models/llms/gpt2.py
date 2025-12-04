@@ -77,6 +77,14 @@ class MultiHeadAttention(nn.Module):
         dropout: float = 0.0,
         qkv_bias: bool = False,
     ) -> None:
+        """
+        Constructor of the multihead attention model with the following parameters:
+        d_in: dimension of the input tensor (Batch, num_tokens, d_in)
+        d_out: dimension of the output tensor (Batch, num_tokens, d_out)
+        qkv_bias: If True, adds a bias learnable parameters to the query, key and value Linear Layers.
+
+        See book and repo for further explanation: https://github.com/rasbt/LLMs-from-scratch
+        """
         super().__init__()
         assert d_out % num_heads == 0, "d_out must be divisible by n_heads"
 

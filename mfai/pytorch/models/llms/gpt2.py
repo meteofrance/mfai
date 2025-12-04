@@ -290,7 +290,7 @@ class GPT2Settings:
     drop_rate: float = 0.1  # Dropout rate
     qkv_bias: bool = False  # Query-Key-Value bias
     model_size: Literal["124M", "355M", "774M", "1558M"] = "124M"  # Alias used to download official weights
-    attn_tf_compat: bool = False  # set this to true to use a less GPU efficient implementation of attn compatible with official weights
+    attn_tf_compat: bool = False  # If true, uses a less GPU efficient implementation of attn compatible with official weights
 
 
 class TransformerBlock(nn.Module):

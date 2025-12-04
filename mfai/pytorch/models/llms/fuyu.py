@@ -56,7 +56,7 @@ class FuyuSettings:
     resnet_mlp_output: bool = False
 
     # layer norm vis + txt tokens
-    layer_norm_vis_txt: bool = False
+    layer_norm_viz_txt: bool = False
 
     # layer norm for vision tokens only
     layer_norm_viz: bool = True
@@ -112,7 +112,7 @@ class Fuyu(FreezeMLMMixin, nn.Module):
 
         # Builds linear projection layer for weather input data (same for each time step)
         # lat_dim, lon_dim, timestep_dim, features_dim
-        if settings.layer_norm_vis_txt:
+        if settings.layer_norm_viz_txt:
             self.norm_or_ident: nn.Identity | nn.LayerNorm = nn.LayerNorm(
                 self.settings.emb_dim
             )

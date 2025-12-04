@@ -289,7 +289,9 @@ class GPT2Settings:
     n_layers: int = 12  # Number of layers
     drop_rate: float = 0.1  # Dropout rate
     qkv_bias: bool = False  # Query-Key-Value bias
-    model_size: Literal["124M", "355M", "774M", "1558M"] = "124M"  # Alias used to download official weights
+    model_size: Literal["124M", "355M", "774M", "1558M"] = (
+        "124M"  # Alias used to download official weights
+    )
     attn_tf_compat: bool = False  # If true, uses a less GPU efficient implementation of attn compatible with official weights
 
 

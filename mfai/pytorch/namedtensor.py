@@ -251,7 +251,9 @@ class NamedTensor(TensorWrapper):
         """
         self.tensor = self.tensor.type(new_type)
 
-    def flatten_(self, flatten_dim_name: str, start_dim: int = 0, end_dim: int = -1) -> None:
+    def flatten_(
+        self, flatten_dim_name: str, start_dim: int = 0, end_dim: int = -1
+    ) -> None:
         """
         Flatten the underlying tensor from start_dim to end_dim.
         Deletes flattened dimension names and insert

@@ -10,7 +10,7 @@
 - Lightning module to speedup recurring tasks: segmentation, regression, DGMR training, ... 
 
 # Table of contents
-
+- [Use Cases](#use-cases)
 - [Neural Network Architectures](#neural-network-architectures)
     - Convolutional Neural Networks:
       - deeplabv3/deeplabv3+
@@ -66,6 +66,21 @@
 - [Publishing](#publishing)
 - [Citation](#citation)
 - [Acknowledgements](#acknowledgements)
+
+# Use Cases
+
+We solve a variety of AI modeling tasks applied to weather data using mfai, you can find some examples below of projects in production at Météo-France.
+
+| **Front Detection**       |  **Radar image artefact removal** |
+|:-------------------------:|:-------------------------:|
+| UNetRPP for multiclass segmentation | UNet for binary segmentation |
+|![](doc/imgs/front_detection.gif)| ![](doc/imgs/radar_image.png) |
+| **Rainfall estimation from satellite channels**|  **Macroalgae detection on satellite channels**|
+| HalfUnet for regression | HalfUnet for binary segmentation |
+![](doc/imgs/rainfall_from_satellite.png)  | ![](doc/imgs/radar_image.png)
+
+
+If you are interested about the technical details of these projects (precise neural network architecture and hyperparameters, source code, ...) feel free to contact us. Most of our projects are proprietary but we can collaborate with other meteorological public institutions.
 
 # Neural Network Architectures
 

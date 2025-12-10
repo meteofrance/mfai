@@ -9,7 +9,19 @@
 - Various losses from the litterature, often tailored to our projects and experimental results
 - Lightning module to speedup recurring tasks: segmentation, regression, DGMR training, ... 
 
-# Table of contents
+<style>
+
+    #tableOfContents {
+        font-size: 1.5em;
+        font-weight: bold;
+    }
+
+</style>
+
+<details>
+
+<summary id="tableOfContents">Table of Contents</summary>
+
 - [Use Cases](#use-cases)
 - [Neural Network Architectures](#neural-network-architectures)
     - Convolutional Neural Networks:
@@ -66,6 +78,7 @@
 - [Publishing](#publishing)
 - [Citation](#citation)
 - [Acknowledgements](#acknowledgements)
+</details>
 
 # Use Cases
 

@@ -17,7 +17,10 @@ We solve a variety of AI modeling tasks applied to weather data using mfai, you 
 |:-------------------------:|:-------------------------:|
 | UNetRPP for multiclass segmentation | UNet for binary segmentation |
 |![](doc/imgs/front_detection.gif)| ![](doc/imgs/radar_image.gif) |
+
+
 | **Rainfall estimation from satellite channels**|  **Macroalgae detection on satellite channels**|
+|:-------------------------:|:-------------------------:|
 | HalfUnet for regression | HalfUnet for binary segmentation |
 ![](doc/imgs/rainfall_from_satellite.png)  | ![](doc/imgs/radar_image.gif)
 

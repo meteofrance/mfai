@@ -22,7 +22,15 @@ We solve a variety of AI modeling tasks applied to weather data using mfai, you 
 | **Rainfall estimation from satellite channels**|  **Macroalgae detection on satellite channels**|
 |:-------------------------:|:-------------------------:|
 | HalfUnet for regression | HalfUnet for binary segmentation |
-![](doc/imgs/rainfall_from_satellite.png)  | ![](doc/imgs/radar_image.gif)
+![](doc/imgs/rainfall_from_satellite.png)  | ![](doc/imgs/sargasses.png) |
+
+
+We also have past and ongoing R&D projects:
+
+| **LAM weather forecasting in py4cast (past)**       |  **Text generation from weather data** |
+|:-------------------------:|:-------------------------:|
+| UNetRPP/HiLAM for regression | Fuyu for multimodal text generation|
+![](doc/imgs/py4cast.gif)  | ![](doc/imgs/bmr.png)
 
 
 If you are interested about the technical details of these projects (precise neural network architecture and hyperparameters, source code, ...) feel free to contact us. Most of our projects are proprietary but we can collaborate with other meteorological public institutions.

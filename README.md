@@ -16,10 +16,10 @@ We solve a variety of AI modeling tasks applied to weather data using mfai, you 
 | **Front Detection**       |  **Radar image artefact removal** |
 |:-------------------------:|:-------------------------:|
 | UNetRPP for multiclass segmentation | UNet for binary segmentation |
-|![](doc/imgs/front_detection.gif)| ![](doc/imgs/radar_image.png) |
+|![](doc/imgs/front_detection.gif)| ![](doc/imgs/radar_image.gif) |
 | **Rainfall estimation from satellite channels**|  **Macroalgae detection on satellite channels**|
 | HalfUnet for regression | HalfUnet for binary segmentation |
-![](doc/imgs/rainfall_from_satellite.png)  | ![](doc/imgs/radar_image.png)
+![](doc/imgs/rainfall_from_satellite.png)  | ![](doc/imgs/radar_image.gif)
 
 
 If you are interested about the technical details of these projects (precise neural network architecture and hyperparameters, source code, ...) feel free to contact us. Most of our projects are proprietary but we can collaborate with other meteorological public institutions.

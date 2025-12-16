@@ -25,7 +25,10 @@ def to_numpy(
 
 
 def export_to_onnx(
-    model: nn.Module, sample: Tensor | tuple[Any, ...], filepath: Path | str
+    model: nn.Module,
+    sample: Tensor | tuple[Any, ...],
+    filepath: Path | str,
+    kwargs: dict[str, Any] | None = None,
 ) -> None:
     """
     Exports a model to ONNX format.
@@ -36,6 +39,16 @@ def export_to_onnx(
     if isinstance(filepath, Path):
         filepath = filepath.as_posix()
 
+    # Allow dynamic batch size by default
+    dynamic_batch_size: dict[str, dict[int, str]] = {
+        "input": {0: "batch"},  # variable batch size
+        "output": {0: "batch"},  # variable batch size
+    }
+    if kwargs is None:
+        kwargs = {"dynamic_axes": dynamic_batch_size}
+    elif "dynamic_axes" not in kwargs.keys():
+        kwargs["dynamic_axes"] = dynamic_batch_size
+
     torch.onnx.export(
         model=model,  # model being run
         args=sample,  # model input (or a tuple for multiple inputs)
@@ -45,10 +58,7 @@ def export_to_onnx(
         do_constant_folding=True,  # whether to execute constant folding for optimization
         input_names=["input"],  # the model's input names
         output_names=["output"],  # the model's output names
-        dynamic_axes={
-            "input": {0: "batch_size"},  # variable length axes
-            "output": {0: "batch_size"},
-        },
+        **kwargs,
     )
 
 

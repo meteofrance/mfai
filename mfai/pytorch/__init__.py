@@ -28,7 +28,7 @@ def export_to_onnx(
     model: nn.Module,
     sample: Tensor | tuple[Any, ...],
     filepath: Path | str,
-    kwargs: dict[str, Any] | None = None,
+    **kwargs: dict[str, Any],
 ) -> None:
     """
     Exports a model to ONNX format.

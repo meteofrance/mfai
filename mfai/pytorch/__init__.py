@@ -44,7 +44,7 @@ def export_to_onnx(
         "input": {0: "batch"},  # variable batch size
         "output": {0: "batch"},  # variable batch size
     }
-    if kwargs is None:
+    if kwargs == {}:
         kwargs = {"dynamic_axes": dynamic_batch_size}
     elif "dynamic_axes" not in kwargs.keys():
         kwargs["dynamic_axes"] = dynamic_batch_size

@@ -61,7 +61,7 @@ class DoubleConv(nn.Module):
 @dataclass(slots=True)
 class UNetSettings:
     """
-    init_features: number of features of the first layer. This number will be used for each folowwing layer. Default is 64.
+    init_features: number of features of the first layer. This number will be used for each following layer. Default is 64.
     autopad_enabled: whether to allow autopadding of input image. Default is False.
     """
 

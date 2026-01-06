@@ -96,7 +96,9 @@ def test_named_tensor() -> None:
 
     # Test flattenting all dims (default behavior)
     nt6_copy = copy(nt6)
-    assert nt6.flatten_("flat_dim") == nt6_copy.flatten_("flat_dim", 0, 3)
+    nt6.flatten_("flat_dim")
+    nt6_copy.flatten_("flat_dim", 0, 3)
+    assert nt6.tensor.shape == nt6_copy.tensor.shape
     assert nt6.names == ["flat_dim"]
 
     # test flattening lat,lon to ndims to simulate gridded data with 2D spatial dims into a GNN

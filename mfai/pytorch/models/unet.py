@@ -248,10 +248,11 @@ class UNet(BaseModel, AutoPaddingModel):
 @dataclass(slots=True)
 class CustomUNetSettings:
     """
-    encoder_name: name of the encoder used as encoder of the UNet. Default is 'resnet18'.
-    encoder_depth: number of layers to use of the initial encoder. Default is 5.
-    encoder_weights: whether to use pretrained weights of the encoder. Default is True.
-    autopad_enabled: whether to allow autopadding of input image. Default is False.
+    Args:
+        encoder_name: Name of the encoder used for the UNet. Defaults to 'resnet18'.
+        encoder_depth: Number of layers to use of the initial encoder. Defaults to 5.
+        encoder_weights: If true, uses pretrained weights of the encoder. Defaults to True.
+        autopad_enabled: If true, allows autopadding of input image. Defaults to False.
     """
 
     encoder_name: Literal["resnet18", "resnet34", "resnet50"] = "resnet18"

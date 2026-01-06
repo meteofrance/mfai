@@ -523,11 +523,13 @@ class CondBasicLayer(EarthSpecificLayer):
             checkpoint_activation=checkpoint_activation,
             lam=lam,
         )
-        self.adaLN_modulation = nn.Sequential(
+        self.adaLN_modulation: nn.Sequential = nn.Sequential(
             nn.SiLU(), nn.Linear(cond_dim, 6 * dim, bias=True)
         )
-        nn.init.constant_(self.adaLN_modulation[-1].weight, 0)
-        nn.init.constant_(self.adaLN_modulation[-1].bias, 0)
+        last_layer = self.adaLN_modulation[-1]
+        assert isinstance(last_layer, nn.Linear)
+        nn.init.constant_(last_layer.weight, 0)
+        nn.init.constant_(last_layer.bias, 0)
 
     def forward(
         self,
@@ -576,7 +578,7 @@ class ArchesWeather(BaseModel):
         self,
         in_channels: int,
         out_channels: int,
-        input_shape: tuple[int, ...],
+        input_shape: tuple[int, int],
         settings: ArchesWeatherSettings = ArchesWeatherSettings(),
     ) -> None:
         """

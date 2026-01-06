@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Literal, Union
+from typing import Any, Literal
 
 import torch
 import torch.nn as nn
@@ -194,7 +194,7 @@ class ResNet50(torch.nn.Module):
         self,
         num_channels: int = 3,
         num_classes: int = 1000,
-        input_shape: Union[None, tuple[int, int]] = None,
+        input_shape: tuple[int, int] | None = None,
         settings: ResNet50Settings = ResNet50Settings(),
     ):
         super().__init__()

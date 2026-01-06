@@ -267,13 +267,10 @@ class CustomUNet(BaseModel, AutoPaddingModel):
     pretrained weights or not (from ResNet encoders).
 
     Args:
-        in_channels: number of input channels.
-        out_channels: number of channels for output mask (or you can think as a number of classes of output mask).
-        input_shape: shape of the input.
-        settings: CustomUNetSettings
-
-    Returns:
-        ``torch.nn.Module``: **CustomUNet**
+        in_channels: Number of input channels.
+        out_channels: Number of channels for output mask (or you can think of it as the number of classes).
+        input_shape: Shape of the input.
+        settings: A CustomUNetSettings instance.
     """
 
     settings_kls = CustomUNetSettings

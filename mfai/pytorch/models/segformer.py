@@ -259,7 +259,7 @@ class Segformer(BaseModel, AutoPaddingModel):
         self,
         in_channels: int,
         out_channels: int,
-        input_shape: tuple[int, int],
+        input_shape: tuple[int, ...],
         settings: SegformerSettings = SegformerSettings(),
         *args: Any,
         **kwargs: Any,

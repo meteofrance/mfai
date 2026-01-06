@@ -83,7 +83,7 @@ class SwinUNetR(ModelABC, MonaiSwinUNETR, AutoPaddingModel):
         self,
         in_channels: int,
         out_channels: int,
-        input_shape: tuple[int, ...] = (1,),
+        input_shape: tuple[int, ...],
         settings: SwinUNetRSettings = SwinUNetRSettings(),
         *args: Any,
         **kwargs: Any,

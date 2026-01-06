@@ -1,7 +1,7 @@
 # Copyright (C) Bull S.A.S - 2025
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import torch
@@ -462,10 +462,10 @@ class LinVert(nn.Module):
     """Linear layer for the vertical dimension
     Args:
         in_features (int): input feature size
-        embedding_size (tuple[int]): embedding size
+        embedding_size (tuple[int, ...]): embedding size
     """
 
-    def __init__(self, in_features: int, embedding_size: Tuple[int, ...]) -> None:
+    def __init__(self, in_features: int, embedding_size: tuple[int, ...]) -> None:
         super().__init__()
         self.embedding_size = embedding_size
         self.fc1 = nn.Linear(
@@ -566,7 +566,7 @@ class ArchesWeather(BaseModel):
     """ArchesWeather model as described in http://arxiv.org/abs/2405.14527"""
 
     onnx_supported: bool = False
-    supported_num_spatial_dims: Tuple = (2,)
+    supported_num_spatial_dims: tuple[int, ...] = (2,)
     settings_kls = ArchesWeatherSettings
     model_type = ModelType.PANGU
     features_last: bool = False
@@ -576,7 +576,7 @@ class ArchesWeather(BaseModel):
         self,
         in_channels: int,
         out_channels: int,
-        input_shape: Tuple[int, ...],
+        input_shape: tuple[int, ...],
         settings: ArchesWeatherSettings = ArchesWeatherSettings(),
     ) -> None:
         """
@@ -762,7 +762,7 @@ class ArchesWeather(BaseModel):
         input_surface: Tensor,
         static_data: Optional[Tensor] = None,
         cond_emb: Optional[Tensor] = None,
-    ) -> Tuple[Tensor, Tensor]:
+    ) -> tuple[Tensor, Tensor]:
         if static_data is not None:
             input_surface = torch.cat([input_surface, static_data], dim=1)
 

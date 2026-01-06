@@ -262,7 +262,7 @@ class CustomUNetSettings:
 
 class CustomUNet(BaseModel, AutoPaddingModel):
     """
-    CustomUNet is a model that allow the user to define a specific configuration, from
+    CustomUNet is a model that allows the user to define a specific configuration, from
     pretrained weights or not (from ResNet encoders).
 
     Args:

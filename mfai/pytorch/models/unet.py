@@ -76,13 +76,13 @@ class UNet(BaseModel, AutoPaddingModel):
     Implementation from the original paper: https://arxiv.org/pdf/1505.04597.pdf.
 
     Args:
-        in_channels: number of input channels.
-        out_channels: number of channels for output mask (or you can think as a number of classes of output mask).
-        input_shape: shape of the input.
-        settings: UNetSettings
+        in_channels: Number of input channels.
+        out_channels: Number of channels for output mask (or you can think of it as the number of classes)
+        input_shape: Shape of the input.
+        settings: A `UNetSettings` instance.
 
     Returns:
-        ``torch.nn.Module``: **UNet**
+        torch.nn.Module: A UNet instance.
     """
 
     settings_kls = UNetSettings

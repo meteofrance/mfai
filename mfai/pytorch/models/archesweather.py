@@ -1,7 +1,7 @@
 # Copyright (C) Bull S.A.S - 2025
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, cast
 
 import numpy as np
 import torch
@@ -523,11 +523,10 @@ class CondBasicLayer(EarthSpecificLayer):
             checkpoint_activation=checkpoint_activation,
             lam=lam,
         )
-        self.adaLN_modulation: nn.Sequential = nn.Sequential(
+        self.adaLN_modulation = nn.Sequential(
             nn.SiLU(), nn.Linear(cond_dim, 6 * dim, bias=True)
         )
-        last_layer = self.adaLN_modulation[-1]
-        assert isinstance(last_layer, nn.Linear)
+        last_layer = cast(nn.Linear, self.adaLN_modulation[-1])
         nn.init.constant_(last_layer.weight, 0)
         nn.init.constant_(last_layer.bias, 0)
 

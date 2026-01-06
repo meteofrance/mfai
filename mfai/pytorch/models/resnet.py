@@ -149,7 +149,9 @@ def get_resnet_encoder(
 
     params = ENCODERS_MAP[name]["params"]
     if depth > 5:
-        raise ValueError(f"The depth could not be equal or higher than the number of out channels ({len(params['out_channels'])}).")
+        raise ValueError(
+            f"The depth could not be equal or higher than the number of out channels ({len(params['out_channels'])})."
+        )
     params.update(depth=depth)
     encoder = Encoder(**params)
 

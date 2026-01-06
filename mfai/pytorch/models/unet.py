@@ -80,7 +80,7 @@ class UNet(BaseModel, AutoPaddingModel):
         out_channels: number of channels for output mask (or you can think as a number of classes of output mask).
         input_shape: shape of the input.
         settings: UNetSettings
-    
+
     Returns:
         ``torch.nn.Module``: **UNet**
     """
@@ -270,10 +270,11 @@ class CustomUNet(BaseModel, AutoPaddingModel):
         out_channels: number of channels for output mask (or you can think as a number of classes of output mask).
         input_shape: shape of the input.
         settings: CustomUNetSettings
-    
+
     Returns:
         ``torch.nn.Module``: **CustomUNet**
     """
+
     settings_kls = CustomUNetSettings
     onnx_supported = True
     supported_num_spatial_dims = (2,)

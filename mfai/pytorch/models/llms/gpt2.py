@@ -384,7 +384,20 @@ class GPT2(nn.Module):
         likely coming from a tensorflow or other framework
         training. Use this to finetune from the official weights.
         """
-        self.pos_emb.weight = assign(self.pos_emb.weight, params["wpe"])
+
+        # we allow context length longer than official implementation
+        # extra parameters are just normally initialised and not loaded
+        # from supplied weights
+
+        if self.pos_emb.weight.shape[0] > len(params["wpe"]):
+            self.pos_emb.weight = torch.nn.Parameter(
+                self.pos_emb.weight.index_put(
+                    (torch.LongTensor(range(len(params["wpe"]))),),
+                    torch.tensor(params["wpe"]),
+                )
+            )
+        else:
+            self.pos_emb.weight = assign(self.pos_emb.weight, params["wpe"])
 
         # we allow for adding special tokens
         if self.tok_emb.weight.shape[0] > len(params["wte"]):

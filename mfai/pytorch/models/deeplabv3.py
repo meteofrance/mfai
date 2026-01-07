@@ -303,9 +303,9 @@ class DeepLabV3(BaseModel, AutoPaddingModel):
 
     def __init__(
         self,
-        input_shape: tuple[int, ...],
-        in_channels: int = 3,
-        out_channels: int = 1,
+        in_channels: int,
+        out_channels: int,
+        input_shape: tuple[int, int],
         settings: DeepLabV3Settings = DeepLabV3Settings(),
     ) -> None:
         super().__init__()
@@ -530,12 +530,12 @@ class DeepLabV3Plus(DeepLabV3):
 
     def __init__(
         self,
-        input_shape: tuple[int, ...],
-        in_channels: int = 3,
-        out_channels: int = 1,
+        in_channels: int,
+        out_channels: int,
+        input_shape: tuple[int, int],
         settings: DeepLabV3PlusSettings = DeepLabV3PlusSettings(),
     ):
-        super().__init__(input_shape, in_channels, out_channels, settings)
+        super().__init__(in_channels, out_channels, input_shape, settings)
 
         self.in_channels = in_channels
         self.out_channels = out_channels

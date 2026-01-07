@@ -238,7 +238,7 @@ class ViTClassifier(BaseModel, VitPaddingMixin):
         self,
         in_channels: int,
         out_channels: int,
-        input_shape: tuple[int, int] = (64, 64),
+        input_shape: tuple[int, int],
         settings: ViTClassifierSettings = ViTClassifierSettings(),
     ) -> None:
         super().__init__()

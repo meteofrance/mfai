@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Literal, Union
+from typing import Any, Literal
 
 import torch
 import torch.nn as nn
@@ -148,6 +148,10 @@ def get_resnet_encoder(
         )
 
     params = ENCODERS_MAP[name]["params"]
+    if depth > 5:
+        raise ValueError(
+            f"The depth cannot be equal or higher than the number of out channels ({len(params['out_channels'])})."
+        )
     params.update(depth=depth)
     encoder = Encoder(**params)
 
@@ -190,7 +194,7 @@ class ResNet50(torch.nn.Module):
         self,
         num_channels: int = 3,
         num_classes: int = 1000,
-        input_shape: Union[None, tuple[int, int]] = None,
+        input_shape: tuple[int, int] | None = None,
         settings: ResNet50Settings = ResNet50Settings(),
     ):
         super().__init__()

@@ -1,3 +1,4 @@
+import typing
 from pathlib import Path
 from typing import Any
 
@@ -24,7 +25,10 @@ def to_numpy(
 
 
 def export_to_onnx(
-    model: nn.Module, sample: Tensor | tuple[Any, ...], filepath: Path | str
+    model: nn.Module,
+    sample: Tensor | tuple[Any, ...],
+    filepath: Path | str,
+    **kwargs: Any,
 ) -> None:
     """
     Exports a model to ONNX format.
@@ -35,6 +39,16 @@ def export_to_onnx(
     if isinstance(filepath, Path):
         filepath = filepath.as_posix()
 
+    # Allow dynamic batch size by default
+    dynamic_batch_size: dict[str, dict[int, str]] = {
+        "input": {0: "batch"},  # variable batch size
+        "output": {0: "batch"},  # variable batch size
+    }
+    if kwargs == {}:
+        kwargs = {"dynamic_axes": dynamic_batch_size}
+    elif "dynamic_axes" not in kwargs.keys():
+        kwargs["dynamic_axes"] = dynamic_batch_size
+
     torch.onnx.export(
         model=model,  # model being run
         args=sample,  # model input (or a tuple for multiple inputs)
@@ -44,10 +58,7 @@ def export_to_onnx(
         do_constant_folding=True,  # whether to execute constant folding for optimization
         input_names=["input"],  # the model's input names
         output_names=["output"],  # the model's output names
-        dynamic_axes={
-            "input": {0: "batch_size"},  # variable length axes
-            "output": {0: "batch_size"},
-        },
+        **kwargs,
     )
 
 
@@ -67,3 +78,17 @@ def onnx_load_and_infer(
     )
 
     return ort_session.run(None, {"input": to_numpy(input)})
+
+
+@typing.no_type_check
+def assign(left: Tensor, right: numpy.ndarray) -> torch.nn.Parameter:
+    """
+    Used when loading weights coming from another training
+    framework in to pytorch models.
+    Checks the shapes matches and creates the learnable parameters from the
+    supplied weights (rights).
+    Copied from the llm from scratch repo "as-is"
+    """
+    if left.shape != right.shape:
+        raise ValueError(f"Shape mismatch. Left: {left.shape}, Right: {right.shape}")
+    return torch.nn.Parameter(torch.tensor(right))

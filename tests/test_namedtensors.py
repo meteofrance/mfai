@@ -1,3 +1,5 @@
+from copy import copy
+
 import pytest
 import torch
 
@@ -10,6 +12,7 @@ def test_named_tensor() -> None:
     """
     # Create a tensor
     tensor = torch.rand(3, 256, 256, 50)
+
     # Create a NamedTensor
     nt = NamedTensor(
         tensor,
@@ -25,6 +28,14 @@ def test_named_tensor() -> None:
     assert nt.dim_size("lat") == 256
     assert nt.dim_size("lon") == 256
     assert nt.dim_size("features") == 50
+
+    # Create a NamedTensor with 'names' and 'feature_names' as tuples
+    nt_tuple = NamedTensor(
+        tensor,
+        names=tuple(["batch", "lat", "lon", "features"]),
+        feature_names=tuple([f"feature_{i}" for i in range(50)]),
+    )
+    assert nt == nt_tuple
 
     nt2 = nt.clone()
 
@@ -75,19 +86,31 @@ def test_named_tensor() -> None:
 
     # test expanding a lower dim NamedTensor to a higher dim NamedTensor
     nt6 = NamedTensor(
-        torch.rand(3, 256),
+        torch.rand(3, 10),
         names=["batch", "features"],
-        feature_names=[f"f_{i}" for i in range(256)],
+        feature_names=[f"f_{i}" for i in range(10)],
     )
     nt6.unsqueeze_and_expand_from_(nt)
-    assert nt6.tensor.shape == (3, 256, 256, 256)
+    assert nt6.tensor.shape == (3, 256, 256, 10)
     assert nt6.names == ["batch", "lat", "lon", "features"]
 
+    # Test flattenting all dims (default behavior)
+    nt6_copy = copy(nt6)
+    nt6.flatten_("flat_dim")
+    nt6_copy.flatten_("flat_dim", 0, 3)
+    assert nt6.tensor.shape == nt6_copy.tensor.shape
+    assert nt6.names == ["flat_dim"]
+
     # test flattening lat,lon to ndims to simulate gridded data with 2D spatial dims into a GNN
-    nt6.flatten_("ngrid", 1, 2)
-    assert nt6.tensor.shape == (3, 65536, 256)
-    assert nt6.names == ["batch", "ngrid", "features"]
-    assert nt6.spatial_dim_idx == [1]
+    nt7 = NamedTensor(
+        torch.rand(3, 256, 256, 10),
+        names=["batch", "lat", "lon", "features"],
+        feature_names=[f"feature_{i}" for i in range(10)],
+    )
+    nt7.flatten_("ngrid", 1, 2)
+    assert nt7.tensor.shape == (3, 256**2, 10)
+    assert nt7.names == ["batch", "ngrid", "features"]
+    assert nt7.spatial_dim_idx == [1]
 
     # test creating a NamedTensor from another NamedTensor
     new_nt = NamedTensor.new_like(torch.rand(3, 256, 256, 50), nt)
@@ -158,6 +181,60 @@ def test_named_tensor() -> None:
     assert nt_collate.tensor.shape == (3, 3, 256, 256, 10)
     assert nt_collate.feature_names == [f"feature_{i}" for i in range(10)]
     assert nt_collate.names == ["batch", "timesteps", "lat", "lon", "features"]
+
+    # test collate of multiple NamedTensors with pad_dims
+    nt_small = NamedTensor(
+        torch.rand(3, 64, 64, 10),
+        names=["timesteps", "lat", "lon", "features"],
+        feature_names=[f"feature_{i}" for i in range(10)],
+    )
+    nt_medium = NamedTensor(
+        torch.rand(3, 128, 128, 10),
+        names=["timesteps", "lat", "lon", "features"],
+        feature_names=[f"feature_{i}" for i in range(10)],
+    )
+    nt_big = NamedTensor(
+        torch.rand(3, 256, 256, 10),
+        names=["timesteps", "lat", "lon", "features"],
+        feature_names=[f"feature_{i}" for i in range(10)],
+    )
+    nt_padded_collated = NamedTensor.collate_fn(
+        [nt_small, nt_medium, nt_big], pad_dims=("lat", "lon"), pad_value=666
+    )
+    assert nt_padded_collated.tensor.shape == (3, 3, 256, 256, 10)
+
+    # check original values are preserved top left of the tensor for each item in the batch
+    assert torch.all(nt_padded_collated.tensor[0, :, :64, :64, :] == nt_small.tensor)
+    assert torch.all(nt_padded_collated.tensor[1, :, :128, :128, :] == nt_medium.tensor)
+    assert torch.all(nt_padded_collated.tensor[2, :, :, :, :] == nt_big.tensor)
+
+    # check padded value is as expected
+    assert torch.all(nt_padded_collated.tensor[0, :, 64:, 64:, :] == 666)
+    assert torch.all(nt_padded_collated.tensor[1, :, 128:, 128:, :] == 666)
+
+    # checks that requesting padding on all the same size tensor works (does not pad)
+    nt_a = NamedTensor(
+        torch.rand(3, 128, 128, 10),
+        names=["timesteps", "lat", "lon", "features"],
+        feature_names=[f"feature_{i}" for i in range(10)],
+    )
+    nt_b = NamedTensor(
+        torch.rand(3, 128, 128, 10),
+        names=["timesteps", "lat", "lon", "features"],
+        feature_names=[f"feature_{i}" for i in range(10)],
+    )
+    nt_padded_collated = NamedTensor.collate_fn(
+        [nt_a, nt_b], pad_dims=("lat", "lon"), pad_value=666
+    )
+    assert nt_padded_collated.tensor.shape == (2, 3, 128, 128, 10)
+    assert torch.all(nt_padded_collated.tensor[0, :, :, :, :] == nt_a.tensor)
+    assert torch.all(nt_padded_collated.tensor[1, :, :, :, :] == nt_b.tensor)
+
+    # Checks requesting padding on non existing dim breaks
+    with pytest.raises(ValueError):
+        nt_padded_collated = NamedTensor.collate_fn(
+            [nt_a, nt_b], pad_dims=("lat", "fake"), pad_value=666
+        )
 
     # test a features dim in the middle of the tensor (not last dim)
 

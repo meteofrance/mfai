@@ -11,7 +11,8 @@ import torch.nn as nn
 from dataclasses_json import dataclass_json
 from torch import Tensor
 
-from mfai.pytorch.models.llms import GPT2, LayerNorm, Llama2
+from mfai.pytorch.models.llms.gpt2 import GPT2, LayerNorm
+from mfai.pytorch.models.llms.llama2 import Llama2
 from mfai.pytorch.models.resnet import ResNet50
 from mfai.pytorch.namedtensor import NamedTensor
 

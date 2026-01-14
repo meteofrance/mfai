@@ -1,18 +1,18 @@
 from functools import partial
+from pathlib import Path
 from typing import Any
 
 import pytest
 import torch
 from test_multimodal_lm import generate_text_simple
 
-from mfai.pytorch.models.llms import (
+from mfai.pytorch.models.llms.gpt2 import (
     GPT2,
     CrossAttentionGPT2,
-    CrossAttGPT2Settings,
+    CrossAttentionGPT2Settings,
     GPT2Settings,
-    Llama2,
-    Llama2Settings,
 )
+from mfai.pytorch.models.llms.llama2 import Llama2, Llama2Settings
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, Tokenizer
 
 
@@ -55,7 +55,7 @@ def test_cross_attention_gpt2() -> None:
     Here we only test that the model is mathematically correct (matmul compat, shapes, attention, ...)
     """
     torch.manual_seed(999)
-    settings = CrossAttGPT2Settings(
+    settings = CrossAttentionGPT2Settings(
         context_length=32,
         n_heads=1,
         n_layers=4,
@@ -70,5 +70,18 @@ def test_cross_attention_gpt2() -> None:
         idx=token_ids,
         max_new_tokens=10,
         context_size=model.context_length,
-        vision_input=torch.randn(1, 8, settings.emb_dim),
+        vision_inputs=torch.randn(1, 8, settings.emb_dim),
     )
+
+
+def test_download_gpt2_weights(tmp_path: Path) -> None:
+    model = GPT2(GPT2Settings(attn_tf_compat=True))
+    model.dowload_weights_from_tf_ckpt(tmp_path)
+
+    # test with extra tokens
+    model = GPT2(GPT2Settings(attn_tf_compat=True), vocab_size=50400)
+    model.dowload_weights_from_tf_ckpt(tmp_path)
+
+    # test with longer context len - default is 1024 for gpt2 small
+    model = GPT2(GPT2Settings(attn_tf_compat=True, context_length=1032))
+    model.dowload_weights_from_tf_ckpt(tmp_path)

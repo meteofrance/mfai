@@ -36,13 +36,6 @@ class Tokenizer(ABC):
     def vocab_size(self) -> int:
         pass
 
-    @abstractmethod
-    def post_init(self) -> None:
-        """
-        Do any post init using the full set of tokens
-        available in the dataset.
-        """
-
 
 class GPT2Tokenizer(Tokenizer):
     def __init__(self) -> None:
@@ -93,9 +86,6 @@ class GPT2Tokenizer(Tokenizer):
     def vocab_size(self) -> int:
         return self.tokenizer.n_vocab
 
-    def post_init(self) -> None:
-        pass
-
 
 class LlamaTokenizer(Tokenizer):
     def __init__(self) -> None:
@@ -132,9 +122,6 @@ class LlamaTokenizer(Tokenizer):
     def vocab_size(self) -> int:
         return self.tokenizer.vocab_size()
 
-    def post_init(self) -> None:
-        pass
-
 
 class MiniGPT2Tokenizer(Tokenizer, ABC):
     """
@@ -150,7 +137,16 @@ class MiniGPT2Tokenizer(Tokenizer, ABC):
         self.token_to_id: dict[int, int] = dict()
         self.id_to_token: dict[int, int] = dict()
 
-        self.post_init()
+        for idx, token_id in enumerate(self.tokens()):
+            self.token_to_id[token_id] = idx
+            self.id_to_token[idx] = token_id
+
+        # Add manually the EOT token if needed
+        mini_eot_id = self.vocab_size
+        base_eot_id = self.gpt2_tokenizer.encode("<|endoftext|>")[0]
+        if base_eot_id not in self.token_to_id.keys():
+            self.token_to_id[base_eot_id] = mini_eot_id
+            self.id_to_token[mini_eot_id] = base_eot_id
 
     @abstractmethod
     def tokens(self) -> set:
@@ -166,22 +162,6 @@ class MiniGPT2Tokenizer(Tokenizer, ABC):
                     unique_tokens.update(tokens)
                 return unique_tokens
         """
-
-    def post_init(self) -> None:
-        """
-        Constructs the forward and backward lookup tables between base tokenizer tokens
-        and reduced set of ids.
-        """
-        for idx, token_id in enumerate(self.tokens()):
-            self.token_to_id[token_id] = idx
-            self.id_to_token[idx] = token_id
-
-        # Add manually the EOT token if needed
-        mini_eot_id = self.vocab_size
-        base_eot_id = self.gpt2_tokenizer.encode("<|endoftext|>")[0]
-        if base_eot_id not in self.token_to_id.keys():
-            self.token_to_id[base_eot_id] = mini_eot_id
-            self.id_to_token[mini_eot_id] = base_eot_id
 
     def add_special_tokens(self, special_tokens: list[str]) -> None:
         """

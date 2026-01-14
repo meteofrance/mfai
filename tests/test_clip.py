@@ -37,5 +37,6 @@ def test_clip_training() -> None:
             "--trainer.limit_train_batches=3",
             "--trainer.limit_val_batches=3",
             "--trainer.limit_test_batches=3",
+            "--trainer.logger=false",
         ]
     )

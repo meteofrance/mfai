@@ -4,7 +4,7 @@ Interface contract for our models.
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Tuple
+from typing import Any
 
 import torch
 from torch import Size, Tensor, nn
@@ -52,7 +52,7 @@ class ModelABC(ABC):
 
     @property
     @abstractmethod
-    def supported_num_spatial_dims(self) -> Tuple[int, ...]:
+    def supported_num_spatial_dims(self) -> tuple[int, ...]:
         """
         Returns the number of input spatial dimensions supported by the model.
         A 2d vision model supporting (H, W) should return (2,).
@@ -119,7 +119,7 @@ class AutoPaddingModel(ABC):
         """
 
     @abstractmethod
-    def validate_input_shape(self, input_shape: Size) -> Tuple[bool, Size]:
+    def validate_input_shape(self, input_shape: Size) -> tuple[bool, Size]:
         """Given an input shape, verifies whether the inputs fit with the
             calling model's specifications.
 
@@ -129,7 +129,7 @@ class AutoPaddingModel(ABC):
                                 For 3D data instead of shape [B,C,W,H,D], instead, [W,H,D] should be passed.
 
         Returns:
-            Tuple[bool, Size]: Returns a tuple where the first element is a boolean signaling whether the given input shape
+            tuple[bool, Size]: Returns a tuple where the first element is a boolean signaling whether the given input shape
                                 already fits the model's requirements. If that value is False, the second element contains the closest
                                 shape that fits the model, otherwise it will be None.
         """
@@ -152,9 +152,7 @@ class AutoPaddingModel(ABC):
         if not self.settings.autopad_enabled:
             return data_tensor, old_shape
 
-        valid_shape, new_shape = self.validate_input_shape(
-            data_tensor.shape[-len(self.input_shape) :]
-        )
+        valid_shape, new_shape = self.validate_input_shape(old_shape)
         if not valid_shape:
             return pad_batch(
                 batch=data_tensor, new_shape=new_shape, pad_value=0

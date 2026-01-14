@@ -45,10 +45,6 @@ class SegmentationLightningModule(pl.LightningModule):
         self.loss = loss
         self.metrics = self.get_metrics()
 
-        # class variables to log metrics for each sample during train/test step
-        self.training_loss: list[Any] = []
-        self.validation_loss: list[Any] = []
-
         self.save_hyperparameters(ignore=["loss", "model"])
 
         # example array to get input / output size in model summary and graph of model:
@@ -198,31 +194,32 @@ class SegmentationLightningModule(pl.LightningModule):
 
         return y_hat, loss
 
-    def _shared_epoch_end(self, outputs: list[Tensor], label: str) -> None:
+    def _shared_epoch_end(self, losses: list[Tensor], label: str) -> None:
         """Computes and logs the averaged loss at the end of an epoch on custom layout.
         Step shared by training and validation epochs.
         """
-        avg_loss = torch.stack(outputs).mean()
-        tb = self.logger.experiment  # type: ignore[union-attr]
-        # tb.add_scalar(f"loss/{label}", avg_loss, self.current_epoch)
+        if not self.trainer.sanity_checking:
+            avg_loss = torch.stack(losses).mean()
+            tb = self.logger.experiment  # type: ignore[union-attr]
+            tb.add_scalar(f"loss/{label}", avg_loss, self.current_epoch)
 
     ########################################################################################
     #                                      TRAIN STEPS                                     #
     ########################################################################################
     def on_train_start(self) -> None:
         """Setup custom scalars panel on tensorboard and log hparams.
-        Useful to easily compare train and valid loss and detect overtfitting."""
-        hparams = self.get_hparams()
-        if self.logger: # and self.logger.log_dir:
+        Useful to easily compare train and valid loss and detect overtfitting."""            
+        self.training_loss: list[Any] = []
+        if self.logger:# and self.logger.log_dir:
             # NOTE self.logger.log_dir is None for mlflow if you use the default
             # Why is it needed for tb?
-
-            # print(
-            #     f"Logs will be saved in \033[96m{self.logger.log_dir}\033[0m"
-            # )  # bright cyan
+            hparams = self.get_hparams()
             if isinstance(self.logger, TensorBoardLogger):
                 self.logger.experiment.add_custom_scalars(layout)
-
+                print(
+                    f"Logs will be saved in \033[96m{self.logger.log_dir}\033[0m"
+                )  # bright cyan
+            # self.logger.log_hyperparams(hparams)
             self.agnostic_logger.log_params(hparams)
 
     def training_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> Any:
@@ -240,6 +237,7 @@ class SegmentationLightningModule(pl.LightningModule):
     #                                      VALID STEPS                                     #
     ########################################################################################
     def on_validation_start(self) -> None:
+        self.validation_loss: list[Any] = []
         self.valid_metrics = self.metrics.clone(prefix="val_")
 
     def val_plot_step(self, batch_idx: int, y: Tensor, y_hat: Tensor) -> None:

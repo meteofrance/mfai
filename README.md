@@ -3,12 +3,41 @@
 ![Unit Tests](https://github.com/meteofrance/mfai/actions/workflows/tests.yml/badge.svg)
 
 **MFAI** is a Python package that provides the following features:
-- A variety of PyTorch Neural Network architectures (CNN, Vision Transformers, ...) adapted to our needs, tested on our projects and datasets. For each architecture, we provide the reference to the original paper and source code if applicable and also the modifications we made.
+- A variety of PyTorch Neural Network architectures (CNN, Vision Transformers, small LLMs, small mulitmodal LMs...) adapted to our needs, tested on our projects and datasets. For each architecture, we provide the reference to the original paper and source code if applicable and also the modifications we made.
 - Per architecture schema validated settings using [dataclasses-json](https://github.com/lidatong/dataclasses-json)
-- A NamedTensor class to handle multi-dimensional data with named dimensions and named features
+- A NamedTensor class to handle multi-dimensional data with named dimensions and named features (a single containing object for a tensor and its metadata)
+- Various losses from the litterature, often tailored to our projects and experimental results
+- Lightning module to speedup recurring tasks: segmentation, regression, DGMR training, ... 
 
-# Table of contents
+# Use Cases
 
+We solve a variety of AI modeling tasks applied to weather data using mfai, you can find some examples below of projects in production at Météo-France.
+
+| **Front Detection**       |  **Radar image artefact removal** |
+|:-------------------------:|:-------------------------:|
+| UNetRPP for multiclass segmentation | UNet for binary segmentation |
+|![](doc/imgs/front_detection.gif)| ![](doc/imgs/radar_image.gif) |
+
+
+| **Rainfall estimation from satellite channels**|  **Macroalgae detection on satellite channels**|
+|:-------------------------:|:-------------------------:|
+| HalfUnet for regression | HalfUnet for binary segmentation |
+![](doc/imgs/rainfall_from_satellite.png)  | ![](doc/imgs/sargasses.png) |
+
+
+We also have past and ongoing R&D projects:
+
+| **LAM weather forecasting in py4cast (past)**       |  **Text generation from weather data** |
+|:-------------------------:|:-------------------------:|
+| UNetRPP/HiLAM for regression | Fuyu for multimodal text generation|
+![](doc/imgs/py4cast.gif)  | ![](doc/imgs/bmr.png)
+
+
+If you are interested about the technical details of these projects (precise neural network architecture and hyperparameters, source code, ...) feel free to contact us. Most of our projects are proprietary but we can collaborate with other meteorological public institutions.
+
+# Table of Content
+
+- [Use Cases](#use-cases)
 - [Neural Network Architectures](#neural-network-architectures)
     - Convolutional Neural Networks:
       - deeplabv3/deeplabv3+
@@ -20,6 +49,9 @@
       - swinunetr
       - unetr++
       - PanguWeather
+      - ArchesWeather
+    - Generative Adversarial Networks:
+      - DGMR
     - Graph Neural Networks:
       - HiLAM
       - GraphLAM
@@ -35,6 +67,7 @@
 - [LightningModule](#lightning-modules)
     - Segmentation
     - CLIP
+    - DGMR
 - [Lightning CLI](#lightning-cli)
 - [NamedTensors](#namedtensors)
 - [Metrics](#metrics)
@@ -43,8 +76,13 @@
     - False Negative Rate
     - Precision-Recall Area Under Curve
 - [Losses](#losses)
+  - DiceLoss
+  - SoftCrossEntropyLoss
+  - SoftBCEWithLogitsLoss
   - Perceptual loss
   - LPIPS
+  - GridCell loss and Hinge losses for GANs
+- [Transforms](#transforms)
 - [Installation](#installation)
 - [Usage](#usage)
     - [Instanciate a model](#instanciate-a-model)
@@ -53,6 +91,7 @@
 - [Running tests](#running-tests)
 - [Contributing](#contributing)
 - [Publishing](#publishing)
+- [Citation](#citation)
 - [Acknowledgements](#acknowledgements)
 
 # Neural Network Architectures
@@ -78,7 +117,15 @@ Currently we support the following neural network architectures:
 | [Segformer](mfai/pytorch/models/segformer.py#L1) | [arxiv link](https://arxiv.org/abs/2105.15203)   | (Batch, features, Height, Width) | Yes | On par with u-net like on Deepsyg (MF internal), added an upsampling stage. Adapted from [Lucidrains' github](https://github.com/lucidrains/segformer-pytorch) | Segmentation tasks |
 | [SwinUNetR](mfai/pytorch/models/swinunetr.py#L1) | [arxiv link](https://arxiv.org/abs/2201.01266)   | (Batch, features, Height, Width)  | No | 2D Swin  Unet transformer (Pangu and archweather uses customised 3D versions of Swin Transformers). Plugged in from [MONAI](https://github.com/Project-MONAI/MONAI/). The decoders use Bilinear2D + Conv2d instead of Conv2dTranspose to remove artefacts/checkerboard effects | Segmentation tasks  |
 | [UNetRPP](mfai/pytorch/models/unetrpp.py#L1) | [arxiv link](https://arxiv.org/abs/2212.04497)  | (Batch, features, Height, Width) or (Batch, features, Height, Width, Depth) | Yes | Vision transformer with a reduced GFLOPS footprint adapted from [author's github](https://github.com/Amshaker/unetr_plus_plus). Modified to work both with 2d and 3d inputs. The decoders use Bilinear2D + Conv2d instead of Conv2dTranspose to remove artefacts/checkerboard effects  | Front Detection, LAM Weather Forecasting |
-| [PanguWeather](mfai/pytorch/models/pangu.py#L1) | [arxiv link](http://arxiv.org/abs/2211.02556)  | (Batch, features, Height, Width) and (Batch, features, Height, Width, Depth) | Yes | 3D Earth-specific transformer based on Swin transformers adapted from [author's github](https://github.com/198808xc/Pangu-Weather) pseudo-code.  | (LAM) Weather Forecasting |
+| [PanguWeather](mfai/pytorch/models/pangu.py#L1) | [arxiv link](http://arxiv.org/abs/2211.02556)  | (Batch, features, Height, Width) and (Batch, features, Height, Width, Depth) | Yes | 3D Earth-specific transformer based on Swin transformers adapted from [author's github](https://github.com/198808xc/Pangu-Weather) pseudo-code and implemented by Atos Eviden | (LAM) Weather Forecasting |
+| [ArchesWeather](mfai/pytorch/models/archesweather.py#L1) | [arxiv link](http://arxiv.org/abs/2405.14527)  | (Batch, features, Height, Width) and (Batch, features, Height, Width, Depth) | Yes | 3D Earth-specific transformer using Pangu code with axial attention, based on [author's repository](https://github.com/gcouairon/ArchesWeather/tree/main) and implemented by Atos Eviden| (LAM) Weather Forecasting |
+| [VIT](mfai/pytorch/models/vit.py#L1) | [openreview link](https://openreview.net/pdf?id=YicbFdNTTy)  | (Batch, features, Height, Width) | Yes | VIT implementation slightly adapted from [lucidrain's github](https://github.com/lucidrains/vit-pytorch/blob/main/vit_pytorch/vit.py) | two flavours: Full sample/image classification + Vision encoding for MLMs|
+
+## Generative Adversarial Networks
+
+| Model  | Research Paper  | Input Shape    | ONNX exportable ? | Notes | Use-Cases at MF |
+| :---:   | :---: | :---: | :---: | :---: | :---: |
+| [DGMR](mfai/pytorch/models/gan_dgmr) | [Nature](https://www.nature.com/articles/s41586-021-03854-z)  | (batch time features height width) | No | Imported and adapted from [OpenClimateFix](https://github.com/openclimatefix/skillful_nowcasting) | [Training DGMR for precipitation nowcasting](https://github.com/meteofrance/dgmr) |
 
 ## Graph Neural Networks
 
@@ -90,16 +137,16 @@ Currently we support the following neural network architectures:
 
 | Model  | Research Paper  | Input Shape    | ONNX exportable ? | Notes | Use-Cases at MF |
 | :---:   | :---: | :---: | :---: | :---: | :---: |
-| [GPT2](mfai/pytorch/models/llms/__init__.py#L182) | [openai paper](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf)  | (Batch, token_id) | No   | Imported and adapted from [Sebastian Raschka's book and github](https://github.com/rasbt/LLMs-from-scratch/) |
-| [Llama2](mfai/pytorch/models/llms/__init__.py#L432) | [arxiv link](https://arxiv.org/abs/2307.09288)  | (Batch, token_id) | No  | Imported and adapted from [Sebastian Raschka's book and github](https://github.com/rasbt/LLMs-from-scratch/) |
+| [GPT2](mfai/pytorch/models/llms/gpt2.py) | [openai paper](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf)  | (Batch, token_id) | No   | Imported and adapted from [Sebastian Raschka's book and github](https://github.com/rasbt/LLMs-from-scratch/) |
+| [Llama2](mfai/pytorch/models/llms/llama2.py) | [arxiv link](https://arxiv.org/abs/2307.09288)  | (Batch, token_id) | No  | Imported and adapted from [Sebastian Raschka's book and github](https://github.com/rasbt/LLMs-from-scratch/) |
 | [Custom GPT-2 with Cross Attention](mfai/pytorch/models/llms/__init__.py#L372) | | (Batch, token_id, other) | No  | Inspired from [Sebastian Raschka's blog](https://magazine.sebastianraschka.com/p/understanding-multimodal-llms) |
 
 ## Multimodal Language Models
 
 | Model  | Research Paper  | Input Shape    | ONNX exportable ? | Notes | Use-Cases at MF |
 | :---:   | :---: | :---: | :---: | :---: | :---: |
-|[Custom Fuyu Like Model](mfai/pytorch/models/llms/multimodal.py#L37)| [arxiv link](https://arxiv.org/abs/2307.09288)  | (Batch, token_id) for text, (Batch, Lat, Lon, Timestep, Features) for weather inputs | No | Inspired from [Adept AI blog post](https://www.adept.ai/blog/fuyu-8b)  and [Sebastian Raschka's blog](https://magazine.sebastianraschka.com/p/understanding-multimodal-llms) | Marine text product generation |
-|[Custom Cross Attention weather + text MLM combining a resnet50 and a cross attention GPT-2](mfai/pytorch/models/llms/multimodal.py#L304)|  | (Batch, token_id) for text, (Batch, Lat, Lon, Timestep, Features) for weather inputs | No | Inspired from [Sebastian Raschka's blog](https://magazine.sebastianraschka.com/p/understanding-multimodal-llms) | Marine text product generation |
+|[Custom Fuyu Like Model](mfai/pytorch/models/llms/fuyu.py#L37)| [arxiv link](https://arxiv.org/abs/2307.09288)  | (Batch, token_id) for text, (Batch, Lat, Lon, Timestep, Features) for weather inputs | No | Inspired from [Adept AI blog post](https://www.adept.ai/blog/fuyu-8b)  and [Sebastian Raschka's blog](https://magazine.sebastianraschka.com/p/understanding-multimodal-llms). We propose 3 different vision encoders: linear, resnet50, vit | Marine text product generation |
+|[Custom Cross Attention weather + text MLM combining a resnet50 and a cross attention GPT-2](mfai/pytorch/models/llms/cross_attention.py)|  | (Batch, token_id) for text, (Batch, Lat, Lon, Timestep, Features) for weather inputs | No | Inspired from [Sebastian Raschka's blog](https://magazine.sebastianraschka.com/p/understanding-multimodal-llms) | Marine text product generation |
 
 ## Vision Language Models
 
@@ -144,6 +191,20 @@ class HalfUNet(BaseModel):
 ```
 </details>
 
+All models can be imported directly from the `mfai.pytorch.models` package. For example, to import the UNet model, you can use:
+
+```python
+from mfai.pytorch.models import UNet
+```
+
+To instanciate a settings class for a model, you can use the `settings_kls` attribute of the model class. For example, to create a settings instance for the HalfUNet model and use it to instanciate the model, you can do:
+
+```python
+from mfai.pytorch.models import HalfUNet
+settings = HalfUNet.settings_kls(num_filters=128, use_ghost=True)
+model = HalfUNet(in_channels=3, out_channels=2, input_shape=(64,64), settings=settings)
+```
+
 
 # Lightning Modules
 
@@ -185,10 +246,19 @@ By default, some metrics are computed in function of the mode of segmentation yo
 - Regression: [`MeanSquaredError`](https://lightning.ai/docs/torchmetrics/stable/regression/mean_squared_error.html), [`MeanAbsoluteError`](https://lightning.ai/docs/torchmetrics/stable/regression/mean_absolute_error.html#torchmetrics.MeanAbsoluteError), [`MeanAbsolutePercentageError`](https://lightning.ai/docs/torchmetrics/stable/regression/mean_absolute_percentage_error.html#torchmetrics.MeanAbsolutePercentageError).
 
 ## Clip
-We also provide [**CLIPLightningModule**](/mfai/pytorch/lightning_modules/clip.py#19), a lightning module dedicated to the training of CLIP models. 
+We also provide [**CLIPLightningModule**](/mfai/pytorch/lightning_modules/clip.py#19), a lightning module dedicated to the training of CLIP models.
 
 This module can be instanciated with a simple [ClipSettings](/mfai/pytorch/models/clip.py#19) that informs which image and text encoders to use as well as the embedding size and the initial temperature.
 
+## DGMR
+
+[DGMRLightningModule](/mfai/pytorch/lightning_modules/gan_dgmr.py) is a Pytorch Lightning Module dedicated to training the [DGMR](https://www.nature.com/articles/s41586-021-03854-z) model for precipitation nowcasting.
+
+Code for the GAN architecture is [here](mfai/pytorch/models/gan_dgmr).
+
+This lightning module is largely inspired by [this work](https://github.com/openclimatefix/skillful_nowcasting) from OpenClimateFix.
+
+To find an example of how to use it, check out [this repository](https://github.com/meteofrance/dgmr), where we train the DGMR model from scratch on French radar data.
 
 # Lightning CLI
 
@@ -214,7 +284,9 @@ In addition to metrics available in [**torchmetrics**](https://lightning.ai/docs
 
 # Losses
 
-Pytorch already provide some Loss like Mean Squared Error (torch.nn.MSELoss) or Mean Absolute Error (torch.nn.L1Loss). Here we add two loss functions that focus on perceptual similarity of tensors.
+Pytorch already provide some Loss like Mean Squared Error (torch.nn.MSELoss) or Mean Absolute Error (torch.nn.L1Loss). Here we add two loss functions that focus on perceptual similarity of tensors and four loss functions used for nowcasting with GANs (DGMR).
+
+We also provide slightly modified losses (DiceLoss, SoftCrossEntropyLoss, SoftBCEWithLogitsLoss) adapted from [pytorch-toolbet](mfai/pytorch/losses/toolbelt.py).
 
 ## Perceptual Loss
 
@@ -280,6 +352,13 @@ for _ in range():
 
 The [**LPIPS**](mfai/pytorch/losses/perceptual.py#L28) class is a `torch.nn.Module` that computes the Learned Perceptual Image Patch Similarity metric. It is using the aforementionned PerceptualLoss class so it contains the same modes.
 
+## GANs losses for Nowcasting
+
+We add the Grid Cell Regularizer loss from [Skillful Nowcasting](https://arxiv.org/pdf/2104.00954.pdf), as well as a Nowcating loss, Hinge discriminator loss and Hinge generator loss.
+
+# Transforms
+
+We provide a [RandomCropWithMinPositivePixels](mfai/pytorch/transforms.py#L7) torch transforms to crop input and output tensor to a desired image size (512, 512) by default with a minimum percentage of positive valued pixels in y (output) or the best we found out of 5 retries otherwise. The goal of this transform is to address class imbalance in binary classification problems where positive labels are rare. 
 
 # Installation
 
@@ -704,6 +783,12 @@ In order to publish to pypi passes the argument **pypi**:
 
 See the [Python Packaging User Guide](https://packaging.python.org/en/latest/guides/using-testpypi/) for more information on how to publish a package to PyPI.
 
+# Citation
+If you use this library in your research project, please cite it as below.
+```
+Météo-France, Berthomier L., Dewasmes O., Guibert F., Pradel B., Tournier T. mfai URL: https://github.com/meteofrance/mfai
+```
+
 # Acknowledgements
 
-This package is maintained by the DSM/LabIA team at Météo-France. We would like to thank the authors of the papers and codes we used to implement the models (see [above links](#neural-network-architectures) to **arxiv** and **github**) and the authors of the libraries we use to build this package (see our [**requirements.txt**](requirements.txt)).
+This package is maintained by the AI Lab team at Météo-France. We would like to thank the authors of the papers and codes we used to implement the models (see [above links](#neural-network-architectures) to **arxiv** and **github**) and the authors of the libraries we use to build this package (see our [**requirements.txt**](requirements.txt)).

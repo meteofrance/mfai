@@ -6,9 +6,11 @@ Test our pure PyTorch models to make sure they can be :
 4. onnx loaded and used for inference
 """
 
+import dataclasses
 import tempfile
+from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Tuple
+from typing import Any
 
 import numpy as np
 import pytest
@@ -18,13 +20,19 @@ from torch import Tensor
 
 from mfai.pytorch import export_to_onnx, onnx_load_and_infer, padding
 from mfai.pytorch.models import (
+    all_nn_architectures,
     autopad_nn_architectures,
     load_from_settings_file,
     nn_architectures,
 )
-from mfai.pytorch.models.base import ModelType
+from mfai.pytorch.models.base import ModelABC, ModelType
 from mfai.pytorch.models.deeplabv3 import DeepLabV3Plus
 from mfai.pytorch.models.half_unet import HalfUNet
+from mfai.pytorch.models.llms.cross_attention import XAttMultiModalLM
+from mfai.pytorch.models.llms.fuyu import Fuyu
+from mfai.pytorch.models.llms.gpt2 import GPT2, CrossAttentionGPT2
+from mfai.pytorch.models.llms.llama2 import Llama2
+from mfai.pytorch.models.vit import ViTClassifier
 
 
 def to_numpy(tensor: Tensor) -> Any:
@@ -34,7 +42,7 @@ def to_numpy(tensor: Tensor) -> Any:
 
 
 class FakeSumDataset(torch.utils.data.Dataset):
-    def __init__(self, input_shape: Tuple[int, ...]) -> None:
+    def __init__(self, input_shape: tuple[int, ...]) -> None:
         self.input_shape = input_shape
         super().__init__()
 
@@ -50,7 +58,7 @@ class FakeSumDataset(torch.utils.data.Dataset):
 class FakePanguDataset(torch.utils.data.Dataset):
     def __init__(
         self,
-        input_shape: Tuple[int, ...],
+        input_shape: tuple[int, ...],
         surface_variables: int,
         plevel_variables: int,
         plevels: int,
@@ -80,7 +88,9 @@ class FakePanguDataset(torch.utils.data.Dataset):
 
 
 def train_model(
-    model: torch.nn.Module, input_shape: Tuple[int, ...]
+    model: torch.nn.Module,
+    input_shape: tuple[int, ...],
+    average_spatial_dims: bool = False,
 ) -> torch.nn.Module:
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     loss_fn = torch.nn.MSELoss()
@@ -100,6 +110,11 @@ def train_model(
 
             # Make predictions for this batch
             outputs = model(inputs)
+
+            if average_spatial_dims:
+                start_dim = 1 if model.features_last else 2
+                end_dim = start_dim + model.num_spatial_dims  # type: ignore[operator]
+                targets = targets.mean(dim=list(range(start_dim, end_dim)))
 
             # Compute the loss and its gradients
             loss = loss_fn(outputs, targets)
@@ -129,6 +144,7 @@ def test_torch_graph_training_loop(model_kls: Any) -> None:
     """
     NUM_INPUTS = 2
     NUM_OUTPUTS = 1
+    torch.manual_seed(666)
 
     settings = model_kls.settings_kls()
 
@@ -180,14 +196,21 @@ def test_torch_convolutional_and_vision_transformer_training_loop(
             settings=settings,
         )
         model = train_model(model, (NUM_INPUTS, *INPUT_SHAPE[:spatial_dims]))
-
         # We test if models claiming to be onnx exportable really are post training.
         # See https://pytorch.org/tutorials/beginner/onnx/export_simple_model_to_onnx_tutorial.html
         if model.onnx_supported:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".onnx") as dst:
                 sample = torch.rand(1, NUM_INPUTS, *INPUT_SHAPE[:spatial_dims])
                 export_to_onnx(model, sample, dst.name)
-                onnx_load_and_infer(dst.name, sample)
+                onnx_logits: np.ndarray = onnx_load_and_infer(dst.name, sample)
+                model_logits: np.ndarray = to_numpy(model(sample))
+                assert np.allclose(
+                    onnx_logits,
+                    model_logits,
+                    rtol=1.0e-2,
+                    atol=1.0e-7,
+                    equal_nan=True,
+                )
 
 
 @pytest.mark.parametrize("model_kls", nn_architectures[ModelType.PANGU])
@@ -195,6 +218,7 @@ def test_torch_pangu_training_loop(model_kls: Any) -> None:
     """
     Checks that our models are trainable on a toy problem (sum).
     """
+    torch.manual_seed(666)
     INPUT_SHAPE = (64, 64, 64)
     NUM_INPUTS = 7
     NUM_OUTPUTS = 6
@@ -280,6 +304,15 @@ def test_torch_pangu_training_loop(model_kls: Any) -> None:
                 samples = (sample_plevel, sample_surface, sample_static)
                 export_to_onnx(model, samples, dst.name)
                 onnx_load_and_infer(dst.name, samples)
+                onnx_logits: np.ndarray = onnx_load_and_infer(dst.name, samples)
+                model_logits: np.ndarray = to_numpy(model(sample))
+                assert np.allclose(
+                    onnx_logits,
+                    model_logits,
+                    rtol=1.0e-4,
+                    atol=1.0e-7,
+                    equal_nan=True,
+                )
 
 
 @pytest.mark.parametrize(
@@ -309,6 +342,24 @@ def test_extra_models(model_and_settings: Any) -> None:
             settings=settings,
         )
         train_model(model, (NUM_INPUTS, *INPUT_SHAPE[:spatial_dims]))
+
+
+@pytest.mark.parametrize("model_kls", [ViTClassifier])
+def test_full_sample_classifiers(model_kls: torch.nn.Module) -> None:
+    """
+    Testing the models classifying the full input/sample/image (and not per pixel).
+    For now we only have our ViTClassifier.
+    """
+    INPUT_SHAPE = (64, 64)
+    NUM_INPUTS = 2
+    NUM_OUTPUTS = 1
+
+    model = model_kls(
+        in_channels=NUM_INPUTS,
+        out_channels=NUM_OUTPUTS,
+        input_shape=INPUT_SHAPE,
+    )
+    train_model(model, (NUM_INPUTS, *INPUT_SHAPE), average_spatial_dims=True)
 
 
 def test_load_model_by_name() -> None:
@@ -345,13 +396,13 @@ def test_load_model_by_name() -> None:
 
 @pytest.mark.parametrize("model_class", autopad_nn_architectures)
 def test_input_shape_validation(model_class: Any) -> None:
-    B, C, W, H = 32, 3, 64, 65
+    B, C, W, H = 8, 3, 61, 65
 
     input_data = torch.randn(B, C, W, H)
     net = model_class(in_channels=C, out_channels=1, input_shape=input_data.shape)
 
     # assert it fails before padding
-    with pytest.raises(RuntimeError):
+    with pytest.raises((RuntimeError, ValueError)):
         net(input_data)
 
     valid_shape, new_shape = net.validate_input_shape(input_data.shape[-2:])
@@ -361,6 +412,12 @@ def test_input_shape_validation(model_class: Any) -> None:
     # assert it does not fail after padding
     input_data_pad = padding.pad_batch(
         batch=input_data, new_shape=new_shape, pad_value=0
+    )
+
+    # re-instantiate the model with autopadding enabled
+    settings = model_class.settings_kls(**asdict(net.settings))
+    net = model_class(
+        in_channels=C, out_channels=1, input_shape=new_shape, settings=settings
     )
     net(input_data_pad)
 
@@ -377,3 +434,22 @@ def test_autopad_models(model_class: Any) -> None:
     )
 
     net(input_data)  # assert it does not fail
+
+
+@pytest.mark.parametrize(
+    "model_class",
+    all_nn_architectures + [Fuyu, XAttMultiModalLM, CrossAttentionGPT2, Llama2, GPT2],
+)
+def test_model_attributes(model_class: ModelABC) -> None:
+    """
+    We check that ALL our models have the required attributes
+    settings_kls and model_type
+    """
+    assert (
+        hasattr(model_class, "model_type")
+        and isinstance(model_class.model_type, ModelType)
+    ), f"Model implementation {model_class} is missing attribute 'model_type' of type ModelType"
+    assert (
+        hasattr(model_class, "settings_kls")
+        and dataclasses.is_dataclass(model_class.settings_kls)
+    ), f"Model implementation {model_class} is missing dataclass attribute 'settings_kls'"

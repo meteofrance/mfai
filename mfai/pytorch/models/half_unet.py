@@ -76,7 +76,7 @@ class HalfUNet(BaseModel, AutoPaddingModel):
         self,
         in_channels: int,
         out_channels: int,
-        input_shape: tuple[int, ...],
+        input_shape: tuple[int, int],
         settings: HalfUNetSettings = HalfUNetSettings(),
         *args: Any,
         **kwargs: Any,

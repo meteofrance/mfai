@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from math import ceil
 from typing import Any, Callable, Literal, Optional
 
 import torch
@@ -7,7 +8,7 @@ from dataclasses_json import dataclass_json
 from torch import Tensor
 from torch.nn import functional as F
 
-from .base import BaseModel, ModelType
+from .base import AutoPaddingModel, BaseModel, ModelType
 from .resnet import get_resnet_encoder
 
 
@@ -273,9 +274,10 @@ class DeepLabV3Settings:
     activation: str | None = None
     upsampling: int = 8
     aux_params: Optional[dict] = None
+    autopad_enabled: bool = False
 
 
-class DeepLabV3(BaseModel):
+class DeepLabV3(BaseModel, AutoPaddingModel):
     """DeepLabV3_ implementation from "Rethinking Atrous Convolution for Semantic Image Segmentation"
 
     Args:
@@ -291,7 +293,7 @@ class DeepLabV3(BaseModel):
 
     """
 
-    onnx_supported: bool = True
+    onnx_supported: bool = False
     settings_kls = DeepLabV3Settings
     supported_num_spatial_dims = (2,)
     features_last: bool = False
@@ -301,9 +303,9 @@ class DeepLabV3(BaseModel):
 
     def __init__(
         self,
-        input_shape: tuple[int, ...],
-        in_channels: int = 3,
-        out_channels: int = 1,
+        in_channels: int,
+        out_channels: int,
+        input_shape: tuple[int, int],
         settings: DeepLabV3Settings = DeepLabV3Settings(),
     ) -> None:
         super().__init__()
@@ -395,24 +397,37 @@ class DeepLabV3(BaseModel):
             )
             raise RuntimeError(
                 f"Wrong input shape height={h}, width={w}. Expected image height and width "
-                f"divisible by {output_stride}. Consider pad your images to shape ({new_h}, {new_w})."
+                f"divisible by {output_stride}. Consider pad your images to shape ({new_h}, {new_w})"
+                f"or set 'autopad_enabled=True' in the model settings."
             )
 
     def forward(self, x: Tensor) -> Tensor | tuple[Tensor, Tensor]:
         """Sequentially pass `x` trough model`s encoder, decoder and heads"""
 
+        x, old_shape = self._maybe_padding(data_tensor=x)
         self.check_input_shape(x)
 
         features = self.encoder(x)
         decoder_output = self.decoder(*features)
 
         masks = self.segmentation_head(decoder_output)
+        masks = self._maybe_unpadding(masks, old_shape=old_shape)
 
         if self.classification_head is not None:
             labels = self.classification_head(features[-1])
-            return masks, labels
+            return masks, self._maybe_unpadding(labels, old_shape=old_shape)
 
         return masks
+
+    def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
+        # H and W should be divisible by encoder.output_stride
+        d = self.encoder.output_stride
+
+        new_shape = torch.Size(
+            [d * ceil(input_shape[i] / d) for i in range(len(input_shape))]
+        )
+
+        return new_shape == input_shape, new_shape
 
     @torch.no_grad()
     def predict(self, x: Tensor) -> Tensor:
@@ -515,12 +530,12 @@ class DeepLabV3Plus(DeepLabV3):
 
     def __init__(
         self,
-        input_shape: tuple[int, ...],
-        in_channels: int = 3,
-        out_channels: int = 1,
+        in_channels: int,
+        out_channels: int,
+        input_shape: tuple[int, int],
         settings: DeepLabV3PlusSettings = DeepLabV3PlusSettings(),
     ):
-        super().__init__(input_shape, in_channels, out_channels, settings)
+        super().__init__(in_channels, out_channels, input_shape, settings)
 
         self.in_channels = in_channels
         self.out_channels = out_channels

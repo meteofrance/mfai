@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Literal, Union
+from typing import Any, Literal
 
 import torch
 import torch.nn as nn
@@ -148,6 +148,10 @@ def get_resnet_encoder(
         )
 
     params = ENCODERS_MAP[name]["params"]
+    if depth > 5:
+        raise ValueError(
+            f"The depth cannot be equal or higher than the number of out channels ({len(params['out_channels'])})."
+        )
     params.update(depth=depth)
     encoder = Encoder(**params)
 
@@ -176,7 +180,7 @@ def get_resnet_encoder(
 
 
 @dataclass_json
-@dataclass(slots=True)
+@dataclass(slots=False)
 class ResNet50Settings:
     encoder_depth: int = 5
     encoder_weights: bool = False
@@ -190,7 +194,7 @@ class ResNet50(torch.nn.Module):
         self,
         num_channels: int = 3,
         num_classes: int = 1000,
-        input_shape: Union[None, tuple[int, int]] = None,
+        input_shape: tuple[int, int] | None = None,
         settings: ResNet50Settings = ResNet50Settings(),
     ):
         super().__init__()
@@ -250,7 +254,7 @@ class ResNet50MLM(torch.nn.Module):
 
         self.encoder = get_resnet_encoder(
             name="resnet50",
-            in_channels=num_channels,
+            in_channels=num_channels,  # = num_features
             depth=settings.encoder_depth,
             weights=settings.encoder_weights,
             output_stride=settings.encoder_stride,
@@ -258,9 +262,8 @@ class ResNet50MLM(torch.nn.Module):
         # For details, see:
         # https://github.com/aladdinpersson/Machine-Learning-Collection/blob/master/ML/Pytorch/CNN_architectures/pytorch_resnet.py
         self.avgpool = torch.nn.AdaptiveAvgPool2d((1, 1))
-        self.num_classes = num_classes
+        self.num_classes = num_classes  # = embed_dim
         self.settings = settings
-        self.num_channels = num_channels
 
         if self.settings.pos_embedding:
             self.pos_embedding = nn.Parameter(
@@ -279,15 +282,22 @@ class ResNet50MLM(torch.nn.Module):
             self.fc = torch.nn.Linear(512 * 4, num_classes * settings.num_tokens)
 
     def forward(self, x: Tensor) -> Tensor:
-        y_hat = self.encoder(x)[-1]
-        y_hat = self.avgpool(y_hat)
-        y_hat = y_hat.reshape(y_hat.shape[0], -1)
-        y_hat = self.fc(y_hat)
+        """Forward function of the ResNetMLM vision encoder.
 
-        # batch, num_tokens, features = num_classes = embed_dim
+        Args:
+            x (Tensor): tensor of shape (B, num_channels, height, width)
+
+        Returns:
+            Tensor: tensor of shape (B, num_tokens, num_classes)
+        """
+        y_hat = self.encoder(x)[-1]  # (B, out_channels = 2048, 2, 2)
+        y_hat = self.avgpool(y_hat)
+        y_hat = y_hat.reshape(y_hat.shape[0], -1)  # (B, out_channels)
+        y_hat = self.fc(y_hat)  # (B, num_classes * num_tokens)
+
         y_hat = y_hat.reshape(
             y_hat.shape[0], self.settings.num_tokens, self.num_classes
-        )
+        )  # (batch, num_tokens, embed_dim = num_classes)
 
         if self.settings.pos_embedding:
             y_hat += self.pos_embedding

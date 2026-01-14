@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from copy import deepcopy
 from dataclasses import dataclass
 from itertools import chain
-from typing import Any, List, Sequence, Union
+from typing import Any, Sequence, Union
 
 import einops
 import torch
@@ -49,8 +49,8 @@ class NamedTensor(TensorWrapper):
     def __init__(
         self,
         tensor: Tensor,
-        names: List[str],
-        feature_names: List[str],
+        names: Sequence[str],
+        feature_names: Sequence[str],
         feature_dim_name: str = "features",
     ):
         if len(tensor.shape) != len(names):
@@ -65,12 +65,12 @@ class NamedTensor(TensorWrapper):
 
         super().__init__(tensor)
 
-        self.names = names
+        self.names: list[str] = list(names)
         # build lookup table for fast indexing
         self.feature_names_to_idx = {
             feature_name: idx for idx, feature_name in enumerate(feature_names)
         }
-        self.feature_names = feature_names
+        self.feature_names: list[str] = list(feature_names)
         self.feature_dim_name = feature_dim_name
 
     @property
@@ -139,7 +139,9 @@ class NamedTensor(TensorWrapper):
         return self.__or__(other)
 
     @staticmethod
-    def stack(nts: List["NamedTensor"], dim_name: str, dim: int = 0) -> "NamedTensor":
+    def stack(
+        nts: Sequence["NamedTensor"], dim_name: str, dim: int = 0
+    ) -> "NamedTensor":
         """
         Stack a list of NamedTensors along a new dimension.
         """
@@ -168,7 +170,7 @@ class NamedTensor(TensorWrapper):
             return NamedTensor(new_tensor, names, nts[0].feature_names.copy())
 
     @staticmethod
-    def concat(nts: List["NamedTensor"]) -> "NamedTensor":
+    def concat(nts: Sequence["NamedTensor"]) -> "NamedTensor":
         """
         Safely concat a list of NamedTensors along the last dimension
         in one shot.
@@ -217,6 +219,7 @@ class NamedTensor(TensorWrapper):
         return self.names.index(dim_name)
 
     def clone(self) -> "NamedTensor":
+        """Clone (with a deepcopy) the NamedTensor."""
         return NamedTensor(
             tensor=deepcopy(self.tensor).to(self.tensor.device),
             names=self.names.copy(),
@@ -248,7 +251,9 @@ class NamedTensor(TensorWrapper):
         """
         self.tensor = self.tensor.type(new_type)
 
-    def flatten_(self, flatten_dim_name: str, start_dim: int, end_dim: int) -> None:
+    def flatten_(
+        self, flatten_dim_name: str, start_dim: int = 0, end_dim: int = -1
+    ) -> None:
         """
         Flatten the underlying tensor from start_dim to end_dim.
         Deletes flattened dimension names and insert
@@ -258,6 +263,7 @@ class NamedTensor(TensorWrapper):
 
         # Remove the flattened dimensions from the names
         # and insert the replacing one
+        end_dim = len(self.names) if end_dim == -1 else end_dim
         self.names = (
             self.names[:start_dim] + [flatten_dim_name] + self.names[end_dim + 1 :]
         )
@@ -272,7 +278,7 @@ class NamedTensor(TensorWrapper):
         self.tensor = self.tensor.unflatten(dim, unflattened_size)
         self.names = self.names[:dim] + [*unflatten_dim_name] + self.names[dim + 1 :]
 
-    def squeeze_(self, dim_name: Union[List[str], str]) -> None:
+    def squeeze_(self, dim_name: Union[Sequence[str], str]) -> None:
         """
         Squeeze the underlying tensor along the dimension(s)
         given its/their name(s).
@@ -362,7 +368,7 @@ class NamedTensor(TensorWrapper):
             raise ValueError(f"Dimension {dim_name} not found in {self.names}") from ve
 
     @property
-    def spatial_dim_idx(self) -> List[int]:
+    def spatial_dim_idx(self) -> list[int]:
         """
         Return the indices of the spatial dimensions in the tensor.
         """
@@ -427,8 +433,7 @@ class NamedTensor(TensorWrapper):
     @staticmethod
     def new_like(tensor: Tensor, other: "NamedTensor") -> "NamedTensor":
         """
-        Create a new NamedTensor with the same names and feature names as another NamedTensor
-        and a tensor of the same shape as the input tensor.
+        Create a new NamedTensor with the same names and feature names as another NamedTensor.
         """
         return NamedTensor(tensor, other.names.copy(), other.feature_names.copy())
 
@@ -463,9 +468,14 @@ class NamedTensor(TensorWrapper):
         self.tensor = self.tensor.to(*args, **kwargs)
 
     @staticmethod
-    def collate_fn(batch: List["NamedTensor"]) -> "NamedTensor":
+    def collate_fn(
+        batch: Sequence["NamedTensor"],
+        pad_dims: tuple[str, ...] | tuple[()] = (),
+        pad_value: int | float = 0,
+    ) -> "NamedTensor":
         """
         Collate a list of NamedTensors into a batched single NamedTensor.
+        Optionnally pads the dimensions specified in pad_dims with pad_value.
         """
         if len(batch) == 0:
             raise ValueError("Cannot collate an empty list of NamedTensors")
@@ -473,4 +483,42 @@ class NamedTensor(TensorWrapper):
             # add batch dim to the single namedtensor (in place operation)
             batch[0].unsqueeze_(dim_name="batch", dim_index=0)
             return batch[0]
-        return NamedTensor.stack(batch, dim_name="batch", dim=0)
+        else:
+            if len(pad_dims):
+                # Find the maximum size for each dimension in pad_dims looking
+                # at each tensor of each NamedTensor in the batch
+                max_sizes: dict[str, int] = {
+                    dim: max(nt.dim_size(dim) for nt in batch) for dim in pad_dims
+                }
+
+                # Pad each tensor in the batch to the maximum size, for each dim we pad after the data
+                padded_batch = []
+                for nt in batch:
+                    padded_shape = list(nt.tensor.shape)
+                    do_pad: bool = False
+
+                    for dim in pad_dims:
+                        dim_idx = nt.dim_index(dim)
+                        if nt.dim_size(dim) < max_sizes[dim]:
+                            padding_size = max_sizes[dim] - nt.dim_size(dim)
+                            padded_shape[dim_idx] += padding_size
+                            do_pad = True
+
+                    if do_pad:
+                        padded_tensor = nt.tensor.new_full(
+                            padded_shape,
+                            pad_value,
+                        )
+
+                        slicer = tuple(slice(0, nt.dim_size(dim)) for dim in nt.names)
+
+                        padded_tensor[slicer] = nt.tensor
+                    else:
+                        padded_tensor = nt.tensor.clone()
+
+                    padded_batch.append(NamedTensor.new_like(padded_tensor, nt))
+
+                return NamedTensor.stack(padded_batch, dim_name="batch", dim=0)
+
+            else:
+                return NamedTensor.stack(batch, dim_name="batch", dim=0)

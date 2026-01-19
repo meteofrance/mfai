@@ -88,16 +88,15 @@ class SwinUNetR(ModelABC, MonaiSwinUNETR, AutoPaddingModel):
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        if settings.autopad_enabled:
-            _, input_shape = self.validate_input_shape(torch.Size(input_shape))
-
         super().__init__(
             in_channels=in_channels,
             out_channels=out_channels,
             spatial_dims=2,
-            img_size=(128, 128),
             **settings.monai_kwargs(),
         )
+
+        if settings.autopad_enabled:
+            _, input_shape = self.validate_input_shape(torch.Size(input_shape))
 
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -156,7 +155,7 @@ class SwinUNetR(ModelABC, MonaiSwinUNETR, AutoPaddingModel):
         return self._maybe_unpadding(logits, old_shape=old_shape)
 
     def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
-        d = super().patch_size ** 5
+        d = self.patch_size**5
 
         new_shape = torch.Size(
             [d * ceil(input_shape[i] / d) for i in range(len(input_shape))]

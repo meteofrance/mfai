@@ -95,7 +95,6 @@ class SwinUNetR(ModelABC, MonaiSwinUNETR, AutoPaddingModel):
             in_channels=in_channels,
             out_channels=out_channels,
             spatial_dims=2,
-            img_size=(128, 128),
             **settings.monai_kwargs(),
         )
 

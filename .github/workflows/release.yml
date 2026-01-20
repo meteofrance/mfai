@@ -44,8 +44,8 @@ jobs:
     - build
     runs-on: ubuntu-latest
     environment:
-      name: testpypi
-      url: https://test.pypi.org/p/mfai
+      name: pypi
+      url: https://pypi.org/p/mfai
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
 
@@ -58,5 +58,4 @@ jobs:
     - name: Publish distribution 📦 to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
-        repository-url: https://test.pypi.org/legacy/
         verbose: true

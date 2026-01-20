@@ -44,7 +44,7 @@ jobs:
     - build
     runs-on: ubuntu-latest
     environment:
-      name: pypi
+      name: testpypi
       url: https://test.pypi.org/p/mfai
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing

@@ -19,7 +19,8 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
 ]
-dynamic = ["dependencies", "version"]
+version="v6.2.0.a0"
+dynamic = ["dependencies"]
 license = {file = "LICENSE"}
 keywords = ["PyTorch", "Deep Learning", "Artificial Intelligence", "Meteo-France"]
 

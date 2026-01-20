@@ -3,7 +3,7 @@ name: 📦 Publish to PyPI
 # Run workflow when a tag is added to branch main
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "auto_release" ]
     tags:        
       - '*'
 
@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/mfai
+      url: https://test.pypi.org/p/mfai
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
 

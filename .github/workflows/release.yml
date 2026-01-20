@@ -5,7 +5,7 @@ on:
   push:
     branches: [ "auto_release" ]
     tags:        
-      - 'v*'
+      - '*'
 
 jobs:
 

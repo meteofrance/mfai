@@ -8,8 +8,11 @@ import torch
 import torchmetrics as tm
 from pytorch_lightning.utilities import rank_zero_only
 from torch import Tensor
+from lightning.pytorch.loggers import TensorBoardLogger, MLFlowLogger
+from lightning.pytorch.loggers.logger import DummyLogger
 
 from mfai.pytorch.models.base import BaseModel
+from mfai.logging import MFAILoggerMLFlow, MFAILoggerTensorBoard, MFAILoggerDummy
 
 # define custom scalar in tensorboard, to have 2 lines on same graph
 layout = {
@@ -51,6 +54,18 @@ class SegmentationLightningModule(pl.LightningModule):
             self.model.input_shape[0],
             self.model.input_shape[1],
         )
+
+
+    def setup(self, stage: str):
+        if stage == "fit":
+            if isinstance(self.logger, MLFlowLogger):
+                self.agnostic_logger = MFAILoggerMLFlow(self.logger)
+            elif isinstance(self.logger, TensorBoardLogger):
+                self.agnostic_logger = MFAILoggerTensorBoard(self.logger)
+            elif isinstance(self.logger, DummyLogger):
+                self.agnostic_logger = MFAILoggerDummy(self.logger)
+            else:
+                raise NotImplementedError(f'Can not deal with logger of type {self.logger.__class__}.')
 
     def get_hparams(self) -> dict:
         """Return the hparams we want to save in logger"""
@@ -138,16 +153,14 @@ class SegmentationLightningModule(pl.LightningModule):
 
     @rank_zero_only
     def save_test_metrics_as_csv(self, df: pd.DataFrame) -> None:
-        if self.logger is None or self.logger.log_dir is None:
+
+        if isinstance(self.logger, TensorBoardLogger) and self.logger.log_dir is None:
             warnings.warn(
-                "SegmentationLightningModule.save_test_metrics_as_csv() called with no logger or no local save path."
+                "SegmentationLightningModule.save_test_metrics_as_csv() called with no local save path."
             )
             return
-        path_csv = Path(self.logger.log_dir) / "metrics_test_set.csv"
-        df.to_csv(path_csv, index=False)
-        print(
-            f"--> Metrics for all samples saved in \033[91;1m{path_csv}\033[0m"
-        )  # bold red
+
+        self.agnostic_logger.log_df(df=df, name='metrics.csv', artifact_path='metric_files')
 
     ########################################################################################
     #                                       OPTIMIZER                                      #
@@ -195,15 +208,19 @@ class SegmentationLightningModule(pl.LightningModule):
     ########################################################################################
     def on_train_start(self) -> None:
         """Setup custom scalars panel on tensorboard and log hparams.
-        Useful to easily compare train and valid loss and detect overtfitting."""
+        Useful to easily compare train and valid loss and detect overtfitting."""            
         self.training_loss: list[Any] = []
-        if self.logger and self.logger.log_dir:
+        if self.logger:# and self.logger.log_dir:
+            # NOTE self.logger.log_dir is None for mlflow if you use the default
+            # Why is it needed for tb?
             hparams = self.get_hparams()
-            print(
-                f"Logs will be saved in \033[96m{self.logger.log_dir}\033[0m"
-            )  # bright cyan
-            self.logger.experiment.add_custom_scalars(layout)
-            self.logger.log_hyperparams(hparams)
+            if isinstance(self.logger, TensorBoardLogger):
+                self.logger.experiment.add_custom_scalars(layout)
+                print(
+                    f"Logs will be saved in \033[96m{self.logger.log_dir}\033[0m"
+                )  # bright cyan
+            # self.logger.log_hyperparams(hparams)
+            self.agnostic_logger.log_params(hparams)
 
     def training_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> Any:
         x, y = batch
@@ -227,12 +244,15 @@ class SegmentationLightningModule(pl.LightningModule):
         """Plots images on first batch of validation and log them in logger.
         Should be overwrited for each specific project, with matplotlib plots."""
         if batch_idx == 0:
-            tb = self.logger.experiment  # type: ignore[union-attr]
+
             step = self.current_epoch
             dformat = "HW" if self.type_segmentation == "multiclass" else "CHW"
             if step == 0:
-                tb.add_image("val_plots/true_image", y[0], dataformats=dformat)
-            tb.add_image("val_plots/pred_image", y_hat[0], step, dataformats=dformat)
+                self.agnostic_logger.log_img(img=y[0], file_name='val_true_img', artifact_path='val_img', dataformats=dformat)
+
+            # TODO consider using the dynamic image logging
+            self.agnostic_logger.log_img(img=y_hat[0], artifact_path='val_img', file_name=f'val_pred_img_{step}', dataformats=dformat)
+
 
     def validation_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> Any:
         x, y = batch
@@ -286,8 +306,9 @@ class SegmentationLightningModule(pl.LightningModule):
     def on_test_epoch_end(self) -> None:
         """Logs metrics in logger hparams view, at the end of run."""
         metrics = self.test_metrics.compute()
-        if self.logger:
-            self.logger.log_hyperparams(self.get_hparams(), metrics=metrics)
+        # if self.logger:
+        #     NOTE why is there a need to log the hyperparameters again ?
+        #     self.logger.log_hyperparams(self.get_hparams(), metrics=metrics)
         df = self.build_metrics_dataframe()
         self.save_test_metrics_as_csv(df)
         df = df.drop("Name", axis=1)

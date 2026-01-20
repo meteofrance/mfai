@@ -59,7 +59,7 @@ jobs:
 
     environment:
       name: testpypi
-      url: https://test.pypi.org/p/mfai
+      url: https://test.pypi.org/p/testmfai
 
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing

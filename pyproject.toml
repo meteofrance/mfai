@@ -19,8 +19,7 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
 ]
-version="v6.2.0.a0"
-dynamic = ["dependencies"]
+dynamic = ["dependencies", "version"]
 license = {file = "LICENSE"}
 keywords = ["PyTorch", "Deep Learning", "Artificial Intelligence", "Meteo-France"]
 
@@ -31,7 +30,6 @@ dependencies = {file = ["requirements.txt"]}
 [tool.setuptools.package-data]
 "mfai" = ["py.typed"]
 
-[tool.setuptools_scm]
 
 [project.urls]
 Homepage = "https://github.com/meteofrance/mfai"

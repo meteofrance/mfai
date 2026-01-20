@@ -3,7 +3,6 @@ name: 📦 Publish to PyPI
 # Run workflow when a tag is added to branch main
 on:
   push:
-    branches: [ "auto_release" ]
     tags:        
       - '*'
 

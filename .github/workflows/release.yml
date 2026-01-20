@@ -5,7 +5,7 @@ on:
   push:
     branches: [ "auto_release" ]
     tags:        
-      - '*'
+      - 'v*'
 
 jobs:
 
@@ -59,4 +59,5 @@ jobs:
     - name: Publish distribution 📦 to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
+        repository-url: https://test.pypi.org/legacy/
         verbose: true

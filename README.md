@@ -381,7 +381,7 @@ pip install mfai
 If you want to target a specific version >= v6.2.1:
 
 ```bash
-pip install mfai==v6.2.1
+pip install mfai>=v6.2.1
 ```
 
 Before version 6.2.1:

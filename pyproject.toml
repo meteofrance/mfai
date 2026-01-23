@@ -1,6 +1,9 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
+requires = ["setuptools", "wheel", "setuptools-git-versioning"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools-git-versioning]
+enabled = true
 
 [project]
 name = "mfai"
@@ -29,8 +32,6 @@ dependencies = {file = ["requirements.txt"]}
 # Include marker file `py.typed` to respect PEP561 and declare this package as type hinted
 [tool.setuptools.package-data]
 "mfai" = ["py.typed"]
-
-[tool.setuptools_scm]
 
 [project.urls]
 Homepage = "https://github.com/meteofrance/mfai"

@@ -194,11 +194,11 @@ def test_pr_auc() -> None:
     """
     preds = torch.tensor([0.0, 1.0, 0.0, 1.0])
     targets = torch.tensor([0, 0, 1, 1])
-    far = PR_AUC()
-    far.update(preds, targets)
-    auc_value = far.compute()
+    pr_auc = PR_AUC()
+    pr_auc.update(preds, targets)
+    pr_auc_value = pr_auc.compute()
     expected_value = 0.125
-    assert pytest.approx(auc_value.cpu(), 0.001) == expected_value
+    assert pytest.approx(pr_auc_value.cpu(), 0.001) == expected_value
 
 
 def test_far() -> None:

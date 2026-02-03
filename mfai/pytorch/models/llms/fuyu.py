@@ -9,6 +9,7 @@ from mfai.pytorch.models.base import ModelType
 from mfai.pytorch.models.llms import FreezeMLMMixin
 from mfai.pytorch.models.llms.gpt2 import GPT2
 from mfai.pytorch.models.llms.llama2 import Llama2
+from mfai.pytorch.models.llms.llama3 import Llama3
 from mfai.pytorch.models.resnet import (
     ResNet50MLM,
     ResNet50MLMSettings,
@@ -27,7 +28,7 @@ class FuyuSettings:
     Settings for a multimodal language model.
     """
 
-    backend: str = "gpt2"
+    backend: Literal["gpt2", "llama2", "llama3"] = "gpt2"
     emb_dim: int = 768  # Embedding dimension
     context_length: int = 1024  # Context length
     n_heads: int = 12  # Number of attention heads
@@ -37,6 +38,8 @@ class FuyuSettings:
     hidden_dim: int = (
         768  # Size of the intermediate dimension in FeedForward - Llama2/Llama3
     )
+    num_kv_groups: int = 2  # LLama3 grouped query attention number of kv groups
+    rope_base: float = 500_000.0  # LLama3 rope base freq
     model_size: Literal["124M", "355M", "774M", "1558M"] = (
         "124M"  # Alias used to download official weights
     )
@@ -88,7 +91,7 @@ class Fuyu(FreezeMLMMixin, nn.Module):
         # Init the backend model
         # Here we only pass the settings that are relevant to the backend model
         # by iterating over the fields of the settings object and filtering out
-        self.backend: GPT2 | Llama2
+        self.backend: GPT2 | Llama2 | Llama3
         if settings.backend == "gpt2":
             self.backend = GPT2(
                 GPT2.settings_kls(
@@ -107,6 +110,17 @@ class Fuyu(FreezeMLMMixin, nn.Module):
                         k: v
                         for k, v in asdict(settings).items()
                         if k in Llama2.settings_kls.__dataclass_fields__
+                    }
+                ),
+                vocab_size=vocab_size,
+            )
+        elif settings.backend == "llama3":
+            self.backend = Llama3(
+                Llama3.settings_kls(
+                    **{
+                        k: v
+                        for k, v in asdict(settings).items()
+                        if k in Llama3.settings_kls.__dataclass_fields__
                     }
                 ),
                 vocab_size=vocab_size,

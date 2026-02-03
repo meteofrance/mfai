@@ -1,7 +1,7 @@
 """
 Llama3 standalone implementation inspired from
 https://github.com/rasbt/LLMs-from-scratch/blob/main/ch05/07_gpt_to_llama/standalone-llama32.ipynb
-Explainations on grouped query attention: https://www.ibm.com/think/topics/grouped-query-attention
+Explanations on grouped query attention: https://www.ibm.com/think/topics/grouped-query-attention
 """
 
 from dataclasses import dataclass

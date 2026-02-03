@@ -2,6 +2,7 @@ from torch import nn
 
 from mfai.pytorch.models.llms.gpt2 import GPT2, CrossAttentionGPT2
 from mfai.pytorch.models.llms.llama2 import Llama2
+from mfai.pytorch.models.llms.llama3 import Llama3
 
 
 class FreezeMLMMixin:
@@ -10,7 +11,7 @@ class FreezeMLMMixin:
     of a multimodal model
     """
 
-    backend: GPT2 | Llama2 | CrossAttentionGPT2
+    backend: GPT2 | Llama2 | CrossAttentionGPT2 | Llama3
     vision_encoder: nn.Module
 
     def freeze_llm(self) -> None:

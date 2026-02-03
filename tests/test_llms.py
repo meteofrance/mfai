@@ -13,6 +13,7 @@ from mfai.pytorch.models.llms.gpt2 import (
     GPT2Settings,
 )
 from mfai.pytorch.models.llms.llama2 import Llama2, Llama2Settings
+from mfai.pytorch.models.llms.llama3 import Llama3, Llama3Settings
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, Tokenizer
 
 
@@ -27,6 +28,11 @@ from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, Tokenizer
         (
             partial(Llama2, Llama2Settings()),
             "Hello, I am LCCN entertain fielGB surface деревняA proposeDid嘉",
+            LlamaTokenizer(),
+        ),
+        (
+            partial(Llama3, Llama3Settings()),
+            "Hello, I am voicessource Cris fjär pltheimer spectral проис mentreinental",
             LlamaTokenizer(),
         ),
     ],

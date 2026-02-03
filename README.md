@@ -58,8 +58,9 @@ If you are interested about the technical details of these projects (precise neu
     - Large Language Models (LLMs):
       - GPT2 (classical and cross attention version)
       - LLama2
+      - LLama3
     - Multimodal Language Models (MLMs):
-      - A custom Fuyu inspired model
+      - A custom Fuyu inspired model with backedn choice: GPT2, Llama2, Llama3
       - A custom model combining a Resnet50 vision encoder with a cross attention GPT2
     - Vision Language Models:
       - CLIP
@@ -139,6 +140,7 @@ Currently we support the following neural network architectures:
 | :---:   | :---: | :---: | :---: | :---: | :---: |
 | [GPT2](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/models/llms/gpt2.py) | [openai paper](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf)  | (Batch, token_id) | No   | Imported and adapted from [Sebastian Raschka's book and github](https://github.com/rasbt/LLMs-from-scratch/) |
 | [Llama2](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/models/llms/llama2.py) | [arxiv link](https://arxiv.org/abs/2307.09288)  | (Batch, token_id) | No  | Imported and adapted from [Sebastian Raschka's book and github](https://github.com/rasbt/LLMs-from-scratch/) |
+| [Llama3](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/models/llms/llama3.py) | [arxiv link](https://arxiv.org/abs/2407.21783)  | (Batch, token_id) | No  | Imported and adapted from [Sebastian Raschka's book and github](https://github.com/rasbt/LLMs-from-scratch/) |
 | [Custom GPT-2 with Cross Attention](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/models/llms/__init__.py#L372) | | (Batch, token_id, other) | No  | Inspired from [Sebastian Raschka's blog](https://magazine.sebastianraschka.com/p/understanding-multimodal-llms) |
 
 ## Multimodal Language Models

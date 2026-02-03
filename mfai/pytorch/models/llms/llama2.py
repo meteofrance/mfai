@@ -36,7 +36,7 @@ class SiLU(nn.Module):
 
 class FeedForwardLlama2(nn.Module):
     def __init__(
-        self, emb_dim: int, hidden_dim: int, dtype: torch.dtype = None
+        self, emb_dim: int, hidden_dim: int, dtype: torch.dtype | None = None
     ) -> None:
         super().__init__()
         self.fc1 = nn.Linear(emb_dim, hidden_dim, dtype=dtype, bias=False)
@@ -111,7 +111,7 @@ class MultiHeadAttentionPySDPALlama2(nn.Module):
         d_out: int,
         num_heads: int,
         context_length: int,
-        dtype: torch.dtype = None,
+        dtype: torch.dtype | None = None,
     ) -> None:
         super().__init__()
 

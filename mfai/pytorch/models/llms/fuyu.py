@@ -34,7 +34,9 @@ class FuyuSettings:
     n_layers: int = 12  # Number of layers
     drop_rate: float = 0.1  # Dropout rate
     qkv_bias: bool = False  # Query-Key-Value bias
-    hidden_dim: int = 768  # Size of the intermediate dimension in FeedForward - Llama2
+    hidden_dim: int = (
+        768  # Size of the intermediate dimension in FeedForward - Llama2/Llama3
+    )
     model_size: Literal["124M", "355M", "774M", "1558M"] = (
         "124M"  # Alias used to download official weights
     )

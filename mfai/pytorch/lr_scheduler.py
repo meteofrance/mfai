@@ -1,6 +1,5 @@
 import math
 import warnings
-from typing import List
 
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
@@ -67,7 +66,7 @@ class LinearWarmupCosineAnnealingLR(_LRScheduler):
 
         super().__init__(optimizer, last_epoch)
 
-    def get_lr(self) -> List[float]:
+    def get_lr(self) -> list[float]:  # type: ignore[override]
         """Compute learning rate using chainable form of the scheduler."""
         if not self._get_lr_called_within_step:
             warnings.warn(
@@ -84,7 +83,7 @@ class LinearWarmupCosineAnnealingLR(_LRScheduler):
                 for base_lr, group in zip(self.base_lrs, self.optimizer.param_groups)
             ]
         if self.last_epoch == self.warmup_epochs:
-            return self.base_lrs
+            return self.base_lrs  # type: ignore[return-value]
         if (self.last_epoch - 1 - self.max_epochs) % (
             2 * (self.max_epochs - self.warmup_epochs)
         ) == 0:
@@ -118,11 +117,11 @@ class LinearWarmupCosineAnnealingLR(_LRScheduler):
             for group in self.optimizer.param_groups
         ]
 
-    def _get_closed_form_lr(self) -> List[float]:
+    def _get_closed_form_lr(self) -> list[float]:
         """Called when epoch is passed as a param to the `step` function of the scheduler."""
         if self.last_epoch < self.warmup_epochs:
             return [
-                self.warmup_start_lr
+                self.warmup_start_lr  # type: ignore[misc]
                 + self.last_epoch
                 * (base_lr - self.warmup_start_lr)
                 / (self.warmup_epochs - 1)
@@ -130,7 +129,7 @@ class LinearWarmupCosineAnnealingLR(_LRScheduler):
             ]
 
         return [
-            self.eta_min
+            self.eta_min  # type: ignore[misc]
             + 0.5
             * (base_lr - self.eta_min)
             * (

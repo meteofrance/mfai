@@ -11,11 +11,11 @@ import torch
 import torch.nn.functional as F
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from matplotlib.figure import Figure
-from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
 from torch import Tensor
 from torch.optim import AdamW
 from torchmetrics import Metric
 
+from mfai.pytorch.lr_scheduler import LinearWarmupCosineAnnealingLR
 from mfai.pytorch.models.clip import Clip, ClipSettings
 from mfai.pytorch.namedtensor import NamedTensor
 

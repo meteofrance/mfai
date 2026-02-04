@@ -60,7 +60,7 @@ If you are interested about the technical details of these projects (precise neu
       - LLama2
       - LLama3
     - Multimodal Language Models (MLMs):
-      - A custom Fuyu inspired model with backedn choice: GPT2, Llama2, Llama3
+      - A custom Fuyu inspired model with backend choice: GPT2, Llama2, Llama3
       - A custom model combining a Resnet50 vision encoder with a cross attention GPT2
     - Vision Language Models:
       - CLIP

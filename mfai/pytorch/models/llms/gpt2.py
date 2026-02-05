@@ -3,14 +3,19 @@ It is widely inspired by Sebastian Raschka's book and work
 https://github.com/rasbt/LLMs-from-scratch/
 """
 
+import typing
 from dataclasses import dataclass
-from typing import Union
+from pathlib import Path
+from typing import Literal, Union
 
+import numpy as np
 import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
 
+from mfai.pytorch import assign
 from mfai.pytorch.models.base import ModelType
+from mfai.tensorflow import download_and_load_gpt2
 
 
 class LayerNorm(nn.Module):
@@ -56,6 +61,86 @@ class FeedForward(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         return self.layers(x)
+
+
+class MultiHeadAttention(nn.Module):
+    """
+    MultiHead Attention compatible with tensorflow original implementation and weigths.
+    """
+
+    def __init__(
+        self,
+        d_in: int,
+        d_out: int,
+        num_heads: int,
+        context_length: int,
+        dropout: float = 0.0,
+        qkv_bias: bool = False,
+    ) -> None:
+        """
+        Constructor of the multihead attention model with the following parameters:
+        d_in: dimension of the input tensor (Batch, num_tokens, d_in)
+        d_out: dimension of the output tensor (Batch, num_tokens, d_out)
+        qkv_bias: If True, adds a bias learnable parameters to the query, key and value Linear Layers.
+
+        See book and repo for further explanation: https://github.com/rasbt/LLMs-from-scratch
+        """
+        super().__init__()
+        assert d_out % num_heads == 0, "d_out must be divisible by n_heads"
+
+        self.d_out = d_out
+        self.num_heads = num_heads
+        self.head_dim = (
+            d_out // num_heads
+        )  # Reduce the projection dim to match desired output dim
+
+        self.W_query = nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.W_key = nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.W_value = nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.out_proj = nn.Linear(d_out, d_out)  # Linear layer to combine head outputs
+        self.dropout = nn.Dropout(dropout)
+        self.register_buffer(
+            "mask", torch.triu(torch.ones(context_length, context_length), diagonal=1)
+        )
+
+    def forward(self, x: Tensor) -> Tensor:
+        b, num_tokens, _ = x.shape
+
+        keys = self.W_key(x)  # Shape: (b, num_tokens, d_out)
+        queries = self.W_query(x)
+        values = self.W_value(x)
+
+        # We implicitly split the matrix by adding a `num_heads` dimension
+        # Unroll last dim: (b, num_tokens, d_out) -> (b, num_tokens, num_heads, head_dim)
+        keys = keys.view(b, num_tokens, self.num_heads, self.head_dim)
+        values = values.view(b, num_tokens, self.num_heads, self.head_dim)
+        queries = queries.view(b, num_tokens, self.num_heads, self.head_dim)
+
+        # Transpose: (b, num_tokens, num_heads, head_dim) -> (b, num_heads, num_tokens, head_dim)
+        keys = keys.transpose(1, 2)
+        queries = queries.transpose(1, 2)
+        values = values.transpose(1, 2)
+
+        # Compute scaled dot-product attention (aka self-attention) with a causal mask
+        attn_scores = queries @ keys.transpose(2, 3)  # Dot product for each head
+
+        # Original mask truncated to the number of tokens and converted to boolean
+        mask_bool = self.mask.bool()[:num_tokens, :num_tokens]  # type: ignore[operator]
+
+        # Use the mask to fill attention scores
+        attn_scores.masked_fill_(mask_bool, -torch.inf)
+
+        attn_weights = torch.softmax(attn_scores / keys.shape[-1] ** 0.5, dim=-1)
+        attn_weights = self.dropout(attn_weights)
+
+        # Shape: (b, num_tokens, num_heads, head_dim)
+        context_vec = (attn_weights @ values).transpose(1, 2)
+
+        # Combine heads, where self.d_out = self.num_heads * self.head_dim
+        context_vec = context_vec.reshape(b, num_tokens, self.d_out)
+        context_vec = self.out_proj(context_vec)  # optional projection
+
+        return context_vec
 
 
 class MultiHeadAttentionPySDPA(nn.Module):
@@ -196,7 +281,7 @@ class MultiHeadCrossAttentionPySDPA(nn.Module):
 @dataclass_json
 @dataclass(slots=True)
 class GPT2Settings:
-    """default settings correspond to a GPT2 small"""
+    """default settings correspond to a GPT2 small '124M'"""
 
     emb_dim: int = 768  # Embedding dimension
     context_length: int = 1024  # Context length
@@ -204,6 +289,10 @@ class GPT2Settings:
     n_layers: int = 12  # Number of layers
     drop_rate: float = 0.1  # Dropout rate
     qkv_bias: bool = False  # Query-Key-Value bias
+    model_size: Literal["124M", "355M", "774M", "1558M"] = (
+        "124M"  # Alias used to download official weights
+    )
+    attn_tf_compat: bool = False  # If true, uses a less GPU efficient implementation of attn compatible with official weights
 
 
 class TransformerBlock(nn.Module):
@@ -219,14 +308,26 @@ class TransformerBlock(nn.Module):
 
     def __init__(self, settings: GPT2Settings) -> None:
         super().__init__()
-        self.att = MultiHeadAttentionPySDPA(
-            d_in=settings.emb_dim,
-            d_out=settings.emb_dim,
-            context_length=settings.context_length,
-            num_heads=settings.n_heads,
-            dropout=settings.drop_rate,
-            qkv_bias=settings.qkv_bias,
-        )
+        if settings.attn_tf_compat:
+            self.att: MultiHeadAttention | MultiHeadAttentionPySDPA = (
+                MultiHeadAttention(
+                    d_in=settings.emb_dim,
+                    d_out=settings.emb_dim,
+                    context_length=settings.context_length,
+                    num_heads=settings.n_heads,
+                    dropout=settings.drop_rate,
+                    qkv_bias=True,
+                )
+            )
+        else:
+            self.att = MultiHeadAttentionPySDPA(
+                d_in=settings.emb_dim,
+                d_out=settings.emb_dim,
+                context_length=settings.context_length,
+                num_heads=settings.n_heads,
+                dropout=settings.drop_rate,
+                qkv_bias=settings.qkv_bias,
+            )
         self.ff = FeedForward(settings.emb_dim)
         self.norm1 = LayerNorm(settings.emb_dim)
         self.norm2 = LayerNorm(settings.emb_dim)
@@ -274,6 +375,127 @@ class GPT2(nn.Module):
 
         self.final_norm = LayerNorm(settings.emb_dim)
         self.out_head = nn.Linear(settings.emb_dim, vocab_size, bias=False)
+        self.model_size = settings.model_size
+
+    @typing.no_type_check
+    def load_weights_from_dict(self, params: dict):
+        """
+        Loads weights into self using a dict
+        likely coming from a tensorflow or other framework
+        training. Use this to finetune from the official weights.
+        """
+
+        # we allow context length longer than official implementation
+        # extra parameters are just normally initialised and not loaded
+        # from supplied weights
+
+        if self.pos_emb.weight.shape[0] > len(params["wpe"]):
+            self.pos_emb.weight = torch.nn.Parameter(
+                self.pos_emb.weight.index_put(
+                    (torch.LongTensor(range(len(params["wpe"]))),),
+                    torch.tensor(params["wpe"]),
+                )
+            )
+        else:
+            self.pos_emb.weight = assign(self.pos_emb.weight, params["wpe"])
+
+        # we allow for adding special tokens
+        if self.tok_emb.weight.shape[0] > len(params["wte"]):
+            self.tok_emb.weight = torch.nn.Parameter(
+                self.tok_emb.weight.index_put(
+                    (torch.LongTensor(range(len(params["wte"]))),),
+                    torch.tensor(params["wte"]),
+                )
+            )
+        else:
+            self.tok_emb.weight = assign(self.tok_emb.weight, params["wte"])
+
+        for b in range(len(params["blocks"])):
+            q_w, k_w, v_w = np.split(
+                (params["blocks"][b]["attn"]["c_attn"])["w"], 3, axis=-1
+            )
+            self.trf_blocks[b].att.W_query.weight = assign(
+                self.trf_blocks[b].att.W_query.weight, q_w.T
+            )
+            self.trf_blocks[b].att.W_key.weight = assign(
+                self.trf_blocks[b].att.W_key.weight, k_w.T
+            )
+            self.trf_blocks[b].att.W_value.weight = assign(
+                self.trf_blocks[b].att.W_value.weight, v_w.T
+            )
+
+            q_b, k_b, v_b = np.split(
+                (params["blocks"][b]["attn"]["c_attn"])["b"], 3, axis=-1
+            )
+            self.trf_blocks[b].att.W_query.bias = assign(
+                self.trf_blocks[b].att.W_query.bias, q_b
+            )
+            self.trf_blocks[b].att.W_key.bias = assign(
+                self.trf_blocks[b].att.W_key.bias, k_b
+            )
+            self.trf_blocks[b].att.W_value.bias = assign(
+                self.trf_blocks[b].att.W_value.bias, v_b
+            )
+
+            self.trf_blocks[b].att.out_proj.weight = assign(
+                self.trf_blocks[b].att.out_proj.weight,
+                params["blocks"][b]["attn"]["c_proj"]["w"].T,
+            )
+            self.trf_blocks[b].att.out_proj.bias = assign(
+                self.trf_blocks[b].att.out_proj.bias,
+                params["blocks"][b]["attn"]["c_proj"]["b"],
+            )
+
+            self.trf_blocks[b].ff.layers[0].weight = assign(
+                self.trf_blocks[b].ff.layers[0].weight,
+                params["blocks"][b]["mlp"]["c_fc"]["w"].T,
+            )
+            self.trf_blocks[b].ff.layers[0].bias = assign(
+                self.trf_blocks[b].ff.layers[0].bias,
+                params["blocks"][b]["mlp"]["c_fc"]["b"],
+            )
+            self.trf_blocks[b].ff.layers[2].weight = assign(
+                self.trf_blocks[b].ff.layers[2].weight,
+                params["blocks"][b]["mlp"]["c_proj"]["w"].T,
+            )
+            self.trf_blocks[b].ff.layers[2].bias = assign(
+                self.trf_blocks[b].ff.layers[2].bias,
+                params["blocks"][b]["mlp"]["c_proj"]["b"],
+            )
+
+            self.trf_blocks[b].norm1.scale = assign(
+                self.trf_blocks[b].norm1.scale, params["blocks"][b]["ln_1"]["g"]
+            )
+            self.trf_blocks[b].norm1.shift = assign(
+                self.trf_blocks[b].norm1.shift, params["blocks"][b]["ln_1"]["b"]
+            )
+            self.trf_blocks[b].norm2.scale = assign(
+                self.trf_blocks[b].norm2.scale, params["blocks"][b]["ln_2"]["g"]
+            )
+            self.trf_blocks[b].norm2.shift = assign(
+                self.trf_blocks[b].norm2.shift, params["blocks"][b]["ln_2"]["b"]
+            )
+
+        self.final_norm.scale = assign(self.final_norm.scale, params["g"])
+        self.final_norm.shift = assign(self.final_norm.shift, params["b"])
+
+        # same here we allow for extra tokens
+        if self.out_head.weight.shape[0] > len(params["wte"]):
+            self.out_head.weight = torch.nn.Parameter(
+                self.out_head.weight.index_put(
+                    (torch.LongTensor(range(len(params["wte"]))),),
+                    torch.tensor(params["wte"]),
+                )
+            )
+        else:
+            self.out_head.weight = assign(self.out_head.weight, params["wte"])
+
+    def dowload_weights_from_tf_ckpt(self, model_dir: str | Path) -> None:
+        """
+        Downloads a tensorflow checkpoint into model_dir and sets the weights of self.
+        """
+        _, params = download_and_load_gpt2(self.model_size, model_dir)
+        self.load_weights_from_dict(params)
 
     def forward_vectors(
         self, embeddings: Tensor, first_embedding: Union[None, Tensor] = None

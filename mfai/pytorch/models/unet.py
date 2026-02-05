@@ -60,15 +60,29 @@ class DoubleConv(nn.Module):
 @dataclass_json
 @dataclass(slots=True)
 class UNetSettings:
+    """
+    init_features: number of features of the first layer. This number will be used for each following layer. Default is 64.
+    autopad_enabled: whether to allow autopadding of input image. Default is False.
+    """
+
     init_features: int = 64
     autopad_enabled: bool = False
 
 
 class UNet(BaseModel, AutoPaddingModel):
     """
-    Returns a u_net architecture, with uninitialised weights, matching desired numbers of input and output channels.
+    Returns a UNet architecture, with uninitialised weights, matching desired numbers of input and output channels.
 
     Implementation from the original paper: https://arxiv.org/pdf/1505.04597.pdf.
+
+    Args:
+        in_channels: Number of input channels.
+        out_channels: Number of channels for output mask (or you can think of it as the number of classes)
+        input_shape: Shape of the input.
+        settings: A `UNetSettings` instance.
+
+    Returns:
+        torch.nn.Module: A UNet instance.
     """
 
     settings_kls = UNetSettings
@@ -83,7 +97,7 @@ class UNet(BaseModel, AutoPaddingModel):
         self,
         in_channels: int,
         out_channels: int,
-        input_shape: tuple[int, ...],
+        input_shape: tuple[int, int],
         settings: UNetSettings = UNetSettings(),
     ) -> None:
         super().__init__()
@@ -233,6 +247,14 @@ class UNet(BaseModel, AutoPaddingModel):
 @dataclass_json
 @dataclass(slots=True)
 class CustomUNetSettings:
+    """
+    Args:
+        encoder_name: Name of the encoder used for the UNet. Defaults to 'resnet18'.
+        encoder_depth: Number of layers to use of the initial encoder. Defaults to 5.
+        encoder_weights: If true, uses pretrained weights of the encoder. Defaults to True.
+        autopad_enabled: If true, allows autopadding of input image. Defaults to False.
+    """
+
     encoder_name: Literal["resnet18", "resnet34", "resnet50"] = "resnet18"
     encoder_depth: int = 5
     encoder_weights: bool = True
@@ -240,6 +262,17 @@ class CustomUNetSettings:
 
 
 class CustomUNet(BaseModel, AutoPaddingModel):
+    """
+    CustomUNet is a model that allows the user to define a specific configuration, from
+    pretrained weights or not (from ResNet encoders).
+
+    Args:
+        in_channels: Number of input channels.
+        out_channels: Number of channels for output mask (or you can think of it as the number of classes).
+        input_shape: Shape of the input.
+        settings: A CustomUNetSettings instance.
+    """
+
     settings_kls = CustomUNetSettings
     onnx_supported = True
     supported_num_spatial_dims = (2,)
@@ -268,8 +301,6 @@ class CustomUNet(BaseModel, AutoPaddingModel):
             depth=settings.encoder_depth,
             weights=settings.encoder_weights,
         )
-
-        self.input_shape = input_shape
 
         decoder_channels = self.encoder.out_channels[
             ::-1

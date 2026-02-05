@@ -1,4 +1,5 @@
 from functools import partial
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -12,6 +13,7 @@ from mfai.pytorch.models.llms.gpt2 import (
     GPT2Settings,
 )
 from mfai.pytorch.models.llms.llama2 import Llama2, Llama2Settings
+from mfai.pytorch.models.llms.llama3 import Llama3, Llama3Settings
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, Tokenizer
 
 
@@ -26,6 +28,11 @@ from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, Tokenizer
         (
             partial(Llama2, Llama2Settings()),
             "Hello, I am LCCN entertain fielGB surface деревняA proposeDid嘉",
+            LlamaTokenizer(),
+        ),
+        (
+            partial(Llama3, Llama3Settings()),
+            "Hello, I am voicessource Cris fjär pltheimer spectral проис mentreinental",
             LlamaTokenizer(),
         ),
     ],
@@ -71,3 +78,16 @@ def test_cross_attention_gpt2() -> None:
         context_size=model.context_length,
         vision_inputs=torch.randn(1, 8, settings.emb_dim),
     )
+
+
+def test_download_gpt2_weights(tmp_path: Path) -> None:
+    model = GPT2(GPT2Settings(attn_tf_compat=True))
+    model.dowload_weights_from_tf_ckpt(tmp_path)
+
+    # test with extra tokens
+    model = GPT2(GPT2Settings(attn_tf_compat=True), vocab_size=50400)
+    model.dowload_weights_from_tf_ckpt(tmp_path)
+
+    # test with longer context len - default is 1024 for gpt2 small
+    model = GPT2(GPT2Settings(attn_tf_compat=True, context_length=1032))
+    model.dowload_weights_from_tf_ckpt(tmp_path)

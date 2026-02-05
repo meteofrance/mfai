@@ -1,3 +1,5 @@
+from copy import copy
+
 import pytest
 import torch
 
@@ -84,19 +86,31 @@ def test_named_tensor() -> None:
 
     # test expanding a lower dim NamedTensor to a higher dim NamedTensor
     nt6 = NamedTensor(
-        torch.rand(3, 256),
+        torch.rand(3, 10),
         names=["batch", "features"],
-        feature_names=[f"f_{i}" for i in range(256)],
+        feature_names=[f"f_{i}" for i in range(10)],
     )
     nt6.unsqueeze_and_expand_from_(nt)
-    assert nt6.tensor.shape == (3, 256, 256, 256)
+    assert nt6.tensor.shape == (3, 256, 256, 10)
     assert nt6.names == ["batch", "lat", "lon", "features"]
 
+    # Test flattenting all dims (default behavior)
+    nt6_copy = copy(nt6)
+    nt6.flatten_("flat_dim")
+    nt6_copy.flatten_("flat_dim", 0, 3)
+    assert nt6.tensor.shape == nt6_copy.tensor.shape
+    assert nt6.names == ["flat_dim"]
+
     # test flattening lat,lon to ndims to simulate gridded data with 2D spatial dims into a GNN
-    nt6.flatten_("ngrid", 1, 2)
-    assert nt6.tensor.shape == (3, 65536, 256)
-    assert nt6.names == ["batch", "ngrid", "features"]
-    assert nt6.spatial_dim_idx == [1]
+    nt7 = NamedTensor(
+        torch.rand(3, 256, 256, 10),
+        names=["batch", "lat", "lon", "features"],
+        feature_names=[f"feature_{i}" for i in range(10)],
+    )
+    nt7.flatten_("ngrid", 1, 2)
+    assert nt7.tensor.shape == (3, 256**2, 10)
+    assert nt7.names == ["batch", "ngrid", "features"]
+    assert nt7.spatial_dim_idx == [1]
 
     # test creating a NamedTensor from another NamedTensor
     new_nt = NamedTensor.new_like(torch.rand(3, 256, 256, 50), nt)

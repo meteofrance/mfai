@@ -61,30 +61,38 @@ def generate_text_simple(
             "llama2",
             LlamaTokenizer(),
             (
-                "Sustine et abstinePal enero totalThey序 carrière∉ Ricmut I",
-                "Sustine et abstineorted führческойtodightarrowsetup Camégrlieder ital",
+                "Sustine et abstineAlignment Геstableန Association Santacleaux vil harder",
+                "Sustine et abstine même NubeckjesকBDuateי${rice",
+            ),
+        ),
+        (
+            "llama3",
+            LlamaTokenizer(),
+            (
+                "Sustine et abstinePalractlicatedoreignrelativeohen apenassiemeParseraf",
+                "Sustine et abstine même Nubeck techni amerik dortэй rejected «�",
             ),
         ),
         (
             "gpt2",
             GPT2Tokenizer(),
             (
-                "Sustine et abstineiniulptulin grizzfitted biobler Albuquerque Kennpolitics",
-                "Sustine et abstine lettucerapeUNCH asksacerimmer SUR↑044my",
+                "Sustine et abstineinipowerful humiliatinggrowingMarcus Items trolls 2009 homophobic 296",
+                "Sustine et abstine lettucerapeUNCHframelsh Capitalism ended 269 initiate Minneapolis",
             ),
         ),
         (
             "gpt2",
             LlamaTokenizer(),
             (
-                "Sustine et abstine współ terrestführt fr выполxmlns fingers ursprüng into został",
-                "Sustine et abstine Records RETôtel Jones placeholderaryчныеianoryptedниче",
+                "Sustine et abstine współ terrestführt fr выполxmlnsполćлы released",
+                "Sustine et abstine Records RET și taililia осоagoggetInstance characteristicApplication",
             ),
         ),
     ],
 )
 def test_multimodal_llm(
-    llm_backend: Literal["llama2", "gpt2"],
+    llm_backend: Literal["llama2", "gpt2", "llama3"],
     tokenizer: GPT2Tokenizer | LlamaTokenizer,
     expected_text: Tuple[str, str],
 ) -> None:
@@ -99,6 +107,7 @@ def test_multimodal_llm(
                 emb_dim=32,
                 hidden_dim=32,
                 context_length=32,
+                num_kv_groups=1,
                 inject_vision_each_stage=force_vision,
             ),
             vocab_size=tokenizer.vocab_size,
@@ -265,7 +274,7 @@ def test_fuyu_with_mlp_and_pos_embedding() -> None:
     decoded_text = tokenizer.decode(out.squeeze(0).tolist())
     assert (
         decoded_text
-        == "Sustine et abstine Tehran2014GBTthreatinternet 1889 Bree partition promptingMcC"
+        == "Sustine et abstine Quartz Assistance popped drains scandal restraint arg suhelpHam"
     )
     model.freeze_llm()
     model.unfreeze_llm()
@@ -282,11 +291,11 @@ def test_fuyu_with_mlp_and_pos_embedding() -> None:
         ),
         (
             "resnet50",
-            "Sustine et abstine intellig Housing chuckled HarDave association directors Qual Eval where",
+            "Sustine et abstine intellig Housing NvidiaBind targets constructing BuffyWithinwings nonexistent",
         ),
         (
             "vit",
-            "Sustine et abstine realityacketurityappa modesty START tsp Kir purch Maybe",
+            "Sustine et abstine bans applianceERGeatured Strawberry purple doorsteploader Jesus Thailand",
         ),
     ],
 )

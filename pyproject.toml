@@ -10,7 +10,7 @@ dependencies = {file = ["requirements.txt"]}
 
 [tool.setuptools.package-data]
 mfai = [
-# Include toktoken cache files
+# Include tiktoken cache files
   "tokenizers/tiktoken_cache/6c7ea1a7e38e3a7f062df639a5b80947f075ffe6",
   "tokenizers/tiktoken_cache/6d1cbeee0f20b3d9449abfede4726ed8212e3aee",
 

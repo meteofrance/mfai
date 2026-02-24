@@ -34,12 +34,15 @@ RUN add-apt-repository ppa:deadsnakes/ppa -y
 RUN $MY_APT update
 RUN $MY_APT install python3.10 python3-pip -y
 
+# Create symlink to python3.10
+RUN ln -s /usr/bin/python3.10 /usr/bin/python
+
 # Install project dependencies
 RUN apt -y update && apt -y install git
 WORKDIR /app
 COPY pyproject.toml pyproject.toml
-RUN python3.10 -m pip install --upgrade build twine setuptools --break-system-packages
-RUN python3.10 -m pip install .[llm,dev] --break-system-packages
+RUN python -m pip install --upgrade build twine setuptools --break-system-packages
+RUN python -m pip install .[llm,dev] --break-system-packages
 
 ADD mfai /app/mfai
 ADD tests /app/tests

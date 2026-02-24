@@ -16,7 +16,7 @@ jobs:
   tests:
     env:
       PYTHONPATH: '.'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
     - uses: actions/checkout@v4
@@ -69,7 +69,7 @@ jobs:
 
     - name: Set up Python 3.10
       if: steps.changed-py-files.outputs.any_changed == 'true'
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: "3.10"
         cache: 'pip'

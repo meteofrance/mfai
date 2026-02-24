@@ -132,23 +132,6 @@ class SegmentationLightningModule(pl.LightningModule):
                 ]
             )
 
-    def build_metrics_dataframe(self) -> pd.DataFrame:
-        columns_name = list(self.list_sample_metrics[0].keys())
-        return pd.DataFrame(self.list_sample_metrics, columns=columns_name)
-
-    @rank_zero_only
-    def save_test_metrics_as_csv(self, df: pd.DataFrame) -> None:
-        if self.logger is None or self.logger.log_dir is None:
-            warnings.warn(
-                "SegmentationLightningModule.save_test_metrics_as_csv() called with no logger or no local save path."
-            )
-            return
-        path_csv = Path(self.logger.log_dir) / "metrics_test_set.csv"
-        df.to_csv(path_csv, index=False)
-        print(
-            f"--> Metrics for all samples saved in \033[91;1m{path_csv}\033[0m"
-        )  # bold red
-
     ########################################################################################
     #                                       OPTIMIZER                                      #
     ########################################################################################
@@ -288,6 +271,4 @@ class SegmentationLightningModule(pl.LightningModule):
         metrics = self.test_metrics.compute()
         if self.logger:
             self.logger.log_hyperparams(self.get_hparams(), metrics=metrics)
-        df = self.build_metrics_dataframe()
-        self.save_test_metrics_as_csv(df)
         df = df.drop("Name", axis=1)

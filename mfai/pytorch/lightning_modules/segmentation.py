@@ -249,7 +249,8 @@ class SegmentationLightningModule(pl.LightningModule):
         self.validation_loss.clear()  # free memory
         if self.logger is None:
             return
-        self.log_dict(self.valid_metrics)
+        self.log_dict(self.valid_metrics.compute())
+        self.valid_metrics.reset()
 
     ########################################################################################
     #                                      TEST STEPS                                      #

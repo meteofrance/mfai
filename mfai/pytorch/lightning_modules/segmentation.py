@@ -242,10 +242,6 @@ class SegmentationLightningModule(pl.LightningModule):
         self.test_metrics = (
             self.metrics.clone()
         )  # Used to compute overall metrics on test dataset
-        self.sample_metrics = (
-            self.test_metrics.clone()
-        )  # Used to compute metrics on each sample, to log metrics in CSV file
-        self.list_sample_metrics: list[dict[str, Any]] = []
 
     def test_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> None:
         """Computes metrics for each sample, at the end of the run."""
@@ -254,16 +250,6 @@ class SegmentationLightningModule(pl.LightningModule):
         y_hat = self.probabilities_to_classes(y_hat)
 
         self.test_metrics.update(y_hat, y)
-
-        # Save metrics values for each sample
-        self.sample_metrics.update(y_hat, y)
-        batch_dict = {"Name": batch_idx, "loss": loss.item()}
-        metrics = self.sample_metrics.compute()
-        metrics_dict = {
-            key: value.item() for key, value in metrics.items()
-        }  # Convert Tensor to float
-        self.list_sample_metrics.append(batch_dict | metrics_dict)
-        self.sample_metrics.reset()
 
     def on_test_epoch_end(self) -> None:
         """Logs metrics in logger hparams view, at the end of run."""

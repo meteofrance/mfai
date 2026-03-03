@@ -256,6 +256,4 @@ class SegmentationLightningModule(pl.LightningModule):
         if self.logger:
             self.logger.log_hyperparams(self.get_hparams(), metrics=metrics)
         self.test_metrics.reset()
-        df = self.build_metrics_dataframe()
-        self.save_test_metrics_as_csv(df)
         df = df.drop("Name", axis=1)

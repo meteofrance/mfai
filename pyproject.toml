@@ -55,10 +55,10 @@ dependencies = [
 
 [project.optional-dependencies]
 llm = [
-  "huggingface_hub~=0.26.5",
-  "sentencepiece~=0.2.0",
-  "tensorflow==2.20.0",
-  "tiktoken~=0.8.0",
+  "huggingface_hub~=0.26",
+  "sentencepiece~=0.2",
+  "tensorflow==2.20",
+  "tiktoken~=0.8",
 ]
 dev = [
   "pytest==8.3.4",

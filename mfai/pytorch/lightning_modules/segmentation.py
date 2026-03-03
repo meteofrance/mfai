@@ -249,8 +249,7 @@ class SegmentationLightningModule(pl.LightningModule):
         self.validation_loss.clear()  # free memory
         if self.logger is None:
             return
-        metrics = self.valid_metrics.compute()
-        self.log_dict(metrics, logger=True if self.logger else False)
+        self.log_dict(self.valid_metrics.compute())
         self.valid_metrics.reset()
 
     ########################################################################################
@@ -288,6 +287,7 @@ class SegmentationLightningModule(pl.LightningModule):
         metrics = self.test_metrics.compute()
         if self.logger:
             self.logger.log_hyperparams(self.get_hparams(), metrics=metrics)
+        self.test_metrics.reset()
         df = self.build_metrics_dataframe()
         self.save_test_metrics_as_csv(df)
         df = df.drop("Name", axis=1)

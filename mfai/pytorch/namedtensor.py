@@ -453,6 +453,7 @@ class NamedTensor(TensorWrapper):
 
     @property
     def device(self) -> torch.device:
+        """Return the device of the underlying tensor."""
         return self.tensor.device
 
     def pin_memory_(self) -> None:

@@ -15,9 +15,13 @@ def pad_batch(
         pads the tensor with the given pad_value.
 
     Args:
-        batch (Tensor): the batch of values of shape (B, C, D, H, W) or (B, C, H, W).
-        new_shape (torch.Size): Target shape (D, H, W) for 3D tensors or (H, W) for 2D tensors to be given.
-        pad_value (float, optional): the padding value to be used. Defaults to 0.
+        batch: The batch of values of shape (B, C, D, H, W) or (B, C, H, W).
+        new_shape: Target shape (D, H, W) for 3D tensors or
+            (H, W) for 2D tensors to be given.
+        mode: The padding mode to be used with `torch.nn.functional.pad`.
+            One of 'constant', 'reflect', 'replicate' or 'circular'.
+            Default: 'constant'.
+        pad_value: The padding value to be used. Defaults to 0.
 
     Returns:
         Tensor: The padded tensor.

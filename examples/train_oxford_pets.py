@@ -19,6 +19,8 @@ class GetClass(object):
     """Retrieves target values for Oxford Pets classification task."""
 
     def __call__(self, y: Tensor) -> Tensor:
+        """Converts the target tensor to class labels."""
+
         return (y * 255 - 1).long()
 
 

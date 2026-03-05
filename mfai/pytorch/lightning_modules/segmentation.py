@@ -1,11 +1,8 @@
-import warnings
-from pathlib import Path
 from typing import Any, Literal, Tuple
 
 import lightning.pytorch as pl
 import torch
 import torchmetrics as tm
-from pytorch_lightning.utilities import rank_zero_only
 from torch import Tensor
 
 from mfai.pytorch.models.base import BaseModel
@@ -152,7 +149,8 @@ class SegmentationLightningModule(pl.LightningModule):
 
     def _shared_forward_step(self, x: Tensor, y: Tensor) -> tuple[Tensor, Any]:
         """Computes forward pass and loss for a batch.
-        Step shared by training, validation and test steps"""
+        Step shared by training, validation and test steps
+        """
         if self.channels_last:
             x = x.to(memory_format=torch.channels_last)
         # We prefer when the last activation function is included in the loss and not in the model.
@@ -177,7 +175,8 @@ class SegmentationLightningModule(pl.LightningModule):
     ########################################################################################
     def on_train_start(self) -> None:
         """Setup custom scalars panel on tensorboard and log hparams.
-        Useful to easily compare train and valid loss and detect overtfitting."""
+        Useful to easily compare train and valid loss and detect overtfitting.
+        """
         self.training_loss: list[Any] = []
         if self.logger and self.logger.log_dir:
             hparams = self.get_hparams()
@@ -207,7 +206,8 @@ class SegmentationLightningModule(pl.LightningModule):
 
     def val_plot_step(self, batch_idx: int, y: Tensor, y_hat: Tensor) -> None:
         """Plots images on first batch of validation and log them in logger.
-        Should be overwrited for each specific project, with matplotlib plots."""
+        Should be overwrited for each specific project, with matplotlib plots.
+        """
         if batch_idx == 0:
             tb = self.logger.experiment  # type: ignore[union-attr]
             step = self.current_epoch

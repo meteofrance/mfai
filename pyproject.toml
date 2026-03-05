@@ -61,10 +61,10 @@ llm = [
   "tiktoken~=0.8",
 ]
 dev = [
+  "pyright==1.1.408",
   "pytest==8.3.4",
   "pytest-cov==6.0.0",
   "ruff==0.8.1",
-  "mypy==1.15.0",
   "types-tabulate>=0.9.0",
   "types-tensorflow==2.18.0.20251008",
   "types-tqdm==4.67.0.20250809",
@@ -73,9 +73,65 @@ dev = [
 [project.urls]
 Homepage = "https://github.com/meteofrance/mfai"
 
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+builtins = ["_"]
+include = [
+  "mfai/**/*.py",
+  "tests/**/*.py",
+  "examples/**/*.py",
+]
+exclude = [
+  "mfai/pytorch/lightining_modules/**/*.py",
+  "mfai/pytorch/losses/**/*.py",
+  "mfai/pytorch/models/**/*.py",
+]
+
+[tool.ruff.format]
+docstring-code-format = true
+
 [tool.ruff.lint]
-select = ["I"]  # I = isort
-extend-select = ["F401"]  # F401 = unused-import
+select = [
+  "I",  # I = isort
+  "F",  # pyflakes
+  "W",  # pycodestyle warnings
+  "E",  # pycodestyle errors
+  "D",  # pydocstyle
+]
+ignore = [
+    "D100",  # Allow undocumented-public-module
+    "D200",  # Allow unnecessayry-multiline-docstring
+    "D202",  # Allow blank-line-after-function after function docstring
+    "D203",  # Allow incorrect-blank-line-before-class
+    "D205",  # Allow missing-blank-line-after-summary
+    "D212",  # Allow multi-line-summary-first-line
+    "D213",  # Allow multi-line-summary-second-line
+    "D415",  # Allow missing-terminal-punctuation
+
+    # "D101",  # Allow undocumented-public-class
+    # "D102",  # Allow undocumented-public-method
+    # "D103",  # Allow undocumented-public-function
+    "D104",  # Allow undocumented-public-package
+    "D105",  # Allow undocumented-magic-method
+    "D107",  # Allow undocumented-public-init
+
+    "E501",  # Allow line too long
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+# ignore-var-parameters = true
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 88
+ignore-overlong-task-comments = true
+
+[tool.ruff.lint.flake8-unused-arguments]
+ignore-variadic-names = true
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D"]  # Allow all docstring errors in tests
 
 [tool.mypy]
 # [mypy configuration file doc](https://mypy.readthedocs.io/en/stable/config_file.html#confval-exclude)

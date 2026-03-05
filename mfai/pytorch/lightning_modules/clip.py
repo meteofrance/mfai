@@ -25,7 +25,8 @@ class CLIPAccuracySkillScore(Metric):
     The accuracy is computed from the probabilities matrix returned by CLIP.
     Then we use a uniformly random model as a reference for the skill score.
     * 0 or negative = worse than random model
-    * 1 = perfect model"""
+    * 1 = perfect model
+    """
 
     def __init__(self, top_k: int, batch_size: int) -> None:
         super().__init__()

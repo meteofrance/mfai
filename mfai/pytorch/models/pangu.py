@@ -311,6 +311,7 @@ class PanguWeather(BaseModel):
     ) -> Tuple[Tensor, Tensor]:
         """
         Forward pass of the PanguWeather model.
+
         Args:
             input_plevel (Tensor): Input tensor of shape (N, C, Z, H, W) for pressure level data.
             input_surface (Tensor): Input tensor of shape (N, C, H, W) for surface data.

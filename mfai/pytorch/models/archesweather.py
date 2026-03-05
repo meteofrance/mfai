@@ -333,6 +333,7 @@ class EarthSpecificLayer(nn.Module):
 
 class Interpolate(nn.Module):
     """Interpolation module.
+
     Args:
         scale_factor (float): scaling
         mode (str): interpolation mode

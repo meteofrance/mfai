@@ -9,12 +9,12 @@ class LinearWarmupCosineAnnealingLR(_LRScheduler):
     """Sets the learning rate of each parameter group to follow a linear warmup schedule between warmup_start_lr and
     base_lr followed by a cosine annealing schedule between base_lr and eta_min.
 
-    .. warning::
+    Warning:
         It is recommended to call :func:`.step()` for :class:`LinearWarmupCosineAnnealingLR`
         after each iteration as calling it after each epoch will keep the starting lr at
         warmup_start_lr for the first epoch which is 0 in most cases.
 
-    .. warning::
+    Warning:
         passing epoch to :func:`.step()` is being deprecated and comes with an EPOCH_DEPRECATION_WARNING.
         It calls the :func:`_get_closed_form_lr()` method for this scheduler instead of
         :func:`get_lr()`. Though this does not change the behavior of the scheduler, when passing
@@ -24,7 +24,7 @@ class LinearWarmupCosineAnnealingLR(_LRScheduler):
     Example:
         >>> import torch.nn as nn
         >>> from torch.optim import Adam
-        >>> #
+        >>>
         >>> layer = nn.Linear(10, 1)
         >>> optimizer = Adam(layer.parameters(), lr=0.02)
         >>> scheduler = LinearWarmupCosineAnnealingLR(optimizer, warmup_epochs=10, max_epochs=40)
@@ -38,7 +38,6 @@ class LinearWarmupCosineAnnealingLR(_LRScheduler):
         ...     scheduler.step(epoch)
         ...     # train(...)
         ...     # validate(...)
-
     """
 
     def __init__(
@@ -52,12 +51,12 @@ class LinearWarmupCosineAnnealingLR(_LRScheduler):
     ) -> None:
         """
         Args:
-            optimizer (Optimizer): Wrapped optimizer.
-            warmup_epochs (int): Maximum number of iterations for linear warmup
-            max_epochs (int): Maximum number of iterations
-            warmup_start_lr (float): Learning rate to start the linear warmup. Default: 0.
-            eta_min (float): Minimum learning rate. Default: 0.
-            last_epoch (int): The index of last epoch. Default: -1.
+            optimizer: Wrapped optimizer.
+            warmup_epochs: Maximum number of iterations for linear warmup
+            max_epochs: Maximum number of iterations
+            warmup_start_lr: Learning rate to start the linear warmup. Default: 0.
+            eta_min: Minimum learning rate. Default: 0.
+            last_epoch: The index of last epoch. Default: -1.
         """
         self.warmup_epochs = warmup_epochs
         self.max_epochs = max_epochs

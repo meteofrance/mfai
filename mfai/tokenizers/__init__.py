@@ -4,7 +4,7 @@ Module with various LLM tokenizers wrapped in a common interface.
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, List
+from typing import Any
 
 import sentencepiece as spm
 import tiktoken  # noqa
@@ -14,38 +14,46 @@ from mfai.encoding import get_tiktoken_encoding
 
 
 class Tokenizer(ABC):
+    """Abstract base class for tokenizers."""
+
     @abstractmethod
     def name(self) -> str:
-        pass
+        """Returns the name of the tokenizer."""
+        raise NotImplementedError
 
     @abstractmethod
-    def encode(self, text: str, *args: Any, **kwargs: Any) -> List[int]:
-        pass
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> list[int]:
+        """Encodes a string into a list of token ids."""
+        raise NotImplementedError
 
     @abstractmethod
-    def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
-        pass
+    def decode(self, tokens: list[int], *args: Any, **kwargs: Any) -> str:
+        """Decodes a list of token ids back into a string."""
+        raise NotImplementedError
 
     @property
     @abstractmethod
     def eot_token(self) -> int:
-        pass
+        """Returns the token id for the end-of-text token."""
+        raise NotImplementedError
 
     @property
     @abstractmethod
     def vocab_size(self) -> int:
-        pass
+        """Returns the size of the tokenizer's vocabulary."""
+        raise NotImplementedError
 
 
 class GPT2Tokenizer(Tokenizer):
+    """Tokenizer based on the GPT-2 tokenizer from the tiktoken library."""
+
     def __init__(self) -> None:
         self.base_tokenizer = get_tiktoken_encoding("gpt2")
         self.special_tokens: list[str] = []
         self.tokenizer = self.base_tokenizer
 
     def add_special_tokens(self, new_special_tokens: list[str]) -> None:
-        """
-        Method to add some special tokens to the tokenizer.
+        """Method to add some special tokens to the tokenizer.
 
         For more details about extending a tiktoken.Encoding
         https://github.com/openai/tiktoken/tree/main?tab=readme-ov-file#extending-tiktoken
@@ -57,7 +65,7 @@ class GPT2Tokenizer(Tokenizer):
             ):
                 self.special_tokens.append(tok)
 
-        special_tokens = {
+        special_tokens: dict[str, int] = {
             tok: self.base_tokenizer.n_vocab + i
             for i, tok in enumerate(self.special_tokens)
         }
@@ -70,24 +78,53 @@ class GPT2Tokenizer(Tokenizer):
         )
 
     def name(self) -> str:
+        """Returns the name of the tokenizer."""
         return "gpt2"
 
-    def encode(self, text: str, *args: Any, **kwargs: Any) -> List[int]:
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> list[int]:
+        """Encodes a string into a list of token ids.
+
+        Args:
+            text: The input string to encode.
+            *args: Additional positional arguments to pass to the tokenizer.
+            **kwargs: Additional keyword arguments to pass to the tokenizer.
+
+        Returns:
+            list[int]: A list of token ids representing the encoded input string.
+        """
+
         return self.tokenizer.encode(text, allowed_special="all", *args, **kwargs)
 
-    def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
+    def decode(self, tokens: list[int], *args: Any, **kwargs: Any) -> str:
+        """Decodes a list of token ids back into a string.
+
+        Args:
+            tokens: A list of token ids to decode.
+            *args: Additional positional arguments to pass to the tokenizer.
+            **kwargs: Additional keyword arguments to pass to the tokenizer.
+
+        Returns:
+            str: The decoded string corresponding to the input list of token ids.
+        """
+
         return self.tokenizer.decode(tokens, *args, **kwargs)
 
     @property
     def eot_token(self) -> int:
+        """Returns the token id for the end-of-text token."""
+
         return self.tokenizer.eot_token
 
     @property
     def vocab_size(self) -> int:
+        """Returns the size of the tokenizer's vocabulary."""
+
         return self.tokenizer.n_vocab
 
 
 class LlamaTokenizer(Tokenizer):
+    """Tokenizer based on the LLaMA tokenizer from the sentencepiece library."""
+
     def __init__(self) -> None:
         sp = spm.SentencePieceProcessor()
 
@@ -106,20 +143,48 @@ class LlamaTokenizer(Tokenizer):
         self.tokenizer = sp
 
     def name(self) -> str:
+        """Returns the name of the tokenizer."""
+
         return "llama"
 
-    def encode(self, text: str, *args: Any, **kwargs: Any) -> List[int]:
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> list[int]:
+        """Encodes a string into a list of token ids.
+
+        Args:
+            text: The input string to encode.
+            *args: Additional positional arguments to pass to the tokenizer.
+            **kwargs: Additional keyword arguments to pass to the tokenizer.
+
+        Returns:
+            list[int]: A list of token ids representing the encoded input string.
+        """
+
         return self.tokenizer.encode_as_ids(text)
 
     def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
+        """Decodes a list of token ids back into a string.
+
+        Args:
+            tokens: A list of token ids to decode.
+            *args: Additional positional arguments to pass to the tokenizer.
+            **kwargs: Additional keyword arguments to pass to the tokenizer.
+
+        Returns:
+            str: The decoded string corresponding to the input list of token ids.
+        """
+
         return self.tokenizer.decode_pieces(tokens)
 
     @property
     def eot_token(self) -> int:
+        """Returns the token id for the end-of-text token."""
+
         return self.tokenizer.eos_id()
 
     @property
     def vocab_size(self) -> int:
+        """Returns the size of the tokenizer's vocabulary."""
+
         return self.tokenizer.vocab_size()
 
 
@@ -149,7 +214,7 @@ class MiniGPT2Tokenizer(Tokenizer, ABC):
             self.id_to_token[mini_eot_id] = base_eot_id
 
     @abstractmethod
-    def tokens(self) -> set:
+    def tokens(self) -> set[int]:
         """
         Method that return a set of tokenized words.
 
@@ -183,20 +248,45 @@ class MiniGPT2Tokenizer(Tokenizer, ABC):
                 self.id_to_token[mini_tok_id] = base_tok_id
 
     def name(self) -> str:
+        """Returns the name of the tokenizer."""
         return "mini_" + self.gpt2_tokenizer.name()
 
-    def encode(self, text: str, *args: Any, **kwargs: Any) -> List[int]:
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> list[int]:
+        """Encodes a string into a list of token ids.
+
+        Args:
+            text: The input string to encode.
+            *args: Additional positional arguments to pass to the tokenizer.
+            **kwargs: Additional keyword arguments to pass to the tokenizer.
+
+        Returns:
+            list[int]: A list of token ids representing the encoded input string.
+        """
+
         base_token_ids = self.gpt2_tokenizer.encode(text)
         return [self.token_to_id[x] for x in base_token_ids]
 
     def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
+        """Decodes a list of token ids back into a string.
+
+        Args:
+            tokens: A list of token ids to decode.
+            *args: Additional positional arguments to pass to the tokenizer.
+            **kwargs: Additional keyword arguments to pass to the tokenizer.
+
+        Returns:
+            str: The decoded string corresponding to the input list of token ids.
+        """
+
         base_tokens = [self.id_to_token[x] for x in tokens]
         return self.gpt2_tokenizer.decode(base_tokens)
 
     @property
     def eot_token(self) -> int:
+        """Returns the token id for the end-of-text token."""
         return self.token_to_id[self.gpt2_tokenizer.eot_token]
 
     @property
     def vocab_size(self) -> int:
+        """Returns the size of the tokenizer's vocabulary."""
         return len(self.token_to_id)

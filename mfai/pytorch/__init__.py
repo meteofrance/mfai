@@ -12,15 +12,28 @@ from torch import Tensor, nn
 def to_numpy(
     input: Tensor | tuple[Tensor, ...],
 ) -> numpy.ndarray | tuple[numpy.ndarray, ...]:
+    """Converts a PyTorch tensor or a tuple of tensors to a NumPy array or a
+    tuple of NumPy arrays.
+
+    Args:
+        input: A PyTorch tensor or a tuple of PyTorch tensors to convert.
+
+    Returns:
+        numpy.ndarray | tuple[numpy.ndarray, ...]: A NumPy array if the input
+            is a single tensor, or a tuple of NumPy arrays if the input is
+            a tuple of tensors.
+    """
+
     if isinstance(input, tuple):
-        l = []
+        ndarrays = []
         for tensor in input:
-            l.append(
+            ndarrays.append(
                 tensor.detach().cpu().numpy()
                 if tensor.requires_grad
                 else tensor.cpu().numpy()
             )
-        return tuple(l)
+        return tuple(ndarrays)
+
     return input.detach().cpu().numpy() if input.requires_grad else input.cpu().numpy()
 
 
@@ -30,9 +43,17 @@ def export_to_onnx(
     filepath: Path | str,
     **kwargs: Any,
 ) -> None:
+    """Exports a model to ONNX format.
+
+    Args:
+        model: The PyTorch model to export.
+        sample: A sample input tensor or a tuple of tensors
+            to use for tracing the model.
+        filepath: The path where the ONNX model will be saved.
+        **kwargs: Additional keyword arguments to pass to the
+            torch.onnx.export function.
     """
-    Exports a model to ONNX format.
-    """
+
     if isinstance(sample, Tensor):
         sample = (sample,)
 
@@ -65,9 +86,14 @@ def export_to_onnx(
 def onnx_load_and_infer(
     filepath: Path | str, input: Tensor | tuple[Tensor, ...]
 ) -> numpy.ndarray:
+    """Loads a model using onnx, checks it, and performs an inference.
+
+    Args:
+        filepath: The path to the ONNX model file.
+        input: A PyTorch tensor or a tuple of tensors to use as input for the
+            inference.
     """
-    Loads a model using onnx, checks it, and performs an inference.
-    """
+
     onnx_model = onnx.load(filepath)
     onnx.checker.check_model(onnx_model)
 
@@ -82,13 +108,13 @@ def onnx_load_and_infer(
 
 @typing.no_type_check
 def assign(left: Tensor, right: numpy.ndarray) -> torch.nn.Parameter:
-    """
-    Used when loading weights coming from another training
-    framework in to pytorch models.
-    Checks the shapes matches and creates the learnable parameters from the
-    supplied weights (rights).
+    """Used when loading weights coming from another training framework in
+    to pytorch models. Checks the shapes matches and creates the learnable
+    parameters from the supplied weights (rights).
+
     Copied from the llm from scratch repo "as-is"
     """
+
     if left.shape != right.shape:
         raise ValueError(f"Shape mismatch. Left: {left.shape}, Right: {right.shape}")
     return torch.nn.Parameter(torch.tensor(right))

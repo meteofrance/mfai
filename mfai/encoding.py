@@ -1,5 +1,6 @@
 """Wrapper of tiktoken.get_encoding to retrieve tokenizer files from disk.
-Usefull for machines which are behind a proxy."""
+Usefull for machines which are behind a proxy.
+"""
 
 import os
 from pathlib import Path

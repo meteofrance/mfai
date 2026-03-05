@@ -164,6 +164,11 @@ cython_debug/
 # Lightning logs
 logs/
 
-# Meteo France certificates
+# Matplotlib cache
 matplotlibrc
+
+# Meteo France certificates
 mf.crt
+
+# IDEs
+.vscode

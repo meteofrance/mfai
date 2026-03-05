@@ -66,6 +66,14 @@ def generate_text_simple(
             ),
         ),
         (
+            "llama3",
+            LlamaTokenizer(),
+            (
+                "Sustine et abstinePalractlicatedoreignrelativeohen apenassiemeParseraf",
+                "Sustine et abstine même Nubeck techni amerik dortэй rejected «�",
+            ),
+        ),
+        (
             "gpt2",
             GPT2Tokenizer(),
             (
@@ -84,7 +92,7 @@ def generate_text_simple(
     ],
 )
 def test_multimodal_llm(
-    llm_backend: Literal["llama2", "gpt2"],
+    llm_backend: Literal["llama2", "gpt2", "llama3"],
     tokenizer: GPT2Tokenizer | LlamaTokenizer,
     expected_text: Tuple[str, str],
 ) -> None:
@@ -99,6 +107,7 @@ def test_multimodal_llm(
                 emb_dim=32,
                 hidden_dim=32,
                 context_length=32,
+                num_kv_groups=1,
                 inject_vision_each_stage=force_vision,
             ),
             vocab_size=tokenizer.vocab_size,

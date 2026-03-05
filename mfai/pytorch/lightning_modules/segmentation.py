@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Any, Literal, Tuple
 
 import lightning.pytorch as pl
-import pandas as pd
 import torch
 import torchmetrics as tm
 from pytorch_lightning.utilities import rank_zero_only
@@ -132,23 +131,6 @@ class SegmentationLightningModule(pl.LightningModule):
                 ]
             )
 
-    def build_metrics_dataframe(self) -> pd.DataFrame:
-        columns_name = list(self.list_sample_metrics[0].keys())
-        return pd.DataFrame(self.list_sample_metrics, columns=columns_name)
-
-    @rank_zero_only
-    def save_test_metrics_as_csv(self, df: pd.DataFrame) -> None:
-        if self.logger is None or self.logger.log_dir is None:
-            warnings.warn(
-                "SegmentationLightningModule.save_test_metrics_as_csv() called with no logger or no local save path."
-            )
-            return
-        path_csv = Path(self.logger.log_dir) / "metrics_test_set.csv"
-        df.to_csv(path_csv, index=False)
-        print(
-            f"--> Metrics for all samples saved in \033[91;1m{path_csv}\033[0m"
-        )  # bold red
-
     ########################################################################################
     #                                       OPTIMIZER                                      #
     ########################################################################################
@@ -249,8 +231,7 @@ class SegmentationLightningModule(pl.LightningModule):
         self.validation_loss.clear()  # free memory
         if self.logger is None:
             return
-        metrics = self.valid_metrics.compute()
-        self.log_dict(metrics, logger=True if self.logger else False)
+        self.log_dict(self.valid_metrics.compute())
         self.valid_metrics.reset()
 
     ########################################################################################
@@ -260,10 +241,6 @@ class SegmentationLightningModule(pl.LightningModule):
         self.test_metrics = (
             self.metrics.clone()
         )  # Used to compute overall metrics on test dataset
-        self.sample_metrics = (
-            self.test_metrics.clone()
-        )  # Used to compute metrics on each sample, to log metrics in CSV file
-        self.list_sample_metrics: list[dict[str, Any]] = []
 
     def test_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> None:
         """Computes metrics for each sample, at the end of the run."""
@@ -273,21 +250,9 @@ class SegmentationLightningModule(pl.LightningModule):
 
         self.test_metrics.update(y_hat, y)
 
-        # Save metrics values for each sample
-        self.sample_metrics.update(y_hat, y)
-        batch_dict = {"Name": batch_idx, "loss": loss.item()}
-        metrics = self.sample_metrics.compute()
-        metrics_dict = {
-            key: value.item() for key, value in metrics.items()
-        }  # Convert Tensor to float
-        self.list_sample_metrics.append(batch_dict | metrics_dict)
-        self.sample_metrics.reset()
-
     def on_test_epoch_end(self) -> None:
         """Logs metrics in logger hparams view, at the end of run."""
         metrics = self.test_metrics.compute()
         if self.logger:
             self.logger.log_hyperparams(self.get_hparams(), metrics=metrics)
-        df = self.build_metrics_dataframe()
-        self.save_test_metrics_as_csv(df)
-        df = df.drop("Name", axis=1)
+        self.test_metrics.reset()

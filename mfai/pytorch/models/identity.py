@@ -16,7 +16,7 @@ class IdentityModelSettings:
 
 
 class IdentityModel(BaseModel):
-    """Implementation of an identity model. It means that it return
+    """Implementation of an identity model. Its forward method returns
     the input tensor.
     """
 

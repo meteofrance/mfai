@@ -5,7 +5,9 @@ or add the class path to your lightning yaml config file."""
 import lightning as L
 from lightning.fabric.utilities.exceptions import MisconfigurationException
 from lightning.pytorch.loggers.mlflow import MLFlowLogger
-from mlflow.system_metrics.system_metrics_monitor import SystemMetricsMonitor # type: ignore[import-not-found]
+from mlflow.system_metrics.system_metrics_monitor import (
+    SystemMetricsMonitor,  # type: ignore[import-not-found]
+)
 from typing_extensions import override
 
 

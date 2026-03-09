@@ -1,9 +1,7 @@
 import lightning as L
 from lightning.fabric.utilities.exceptions import MisconfigurationException
 from lightning.pytorch.loggers.mlflow import MLFlowLogger
-
 from mlflow.system_metrics.system_metrics_monitor import SystemMetricsMonitor
-
 from typing_extensions import override
 
 
@@ -29,4 +27,3 @@ class MLFlowSystemMonitorCallback(L.Callback):
     @override
     def on_fit_end(self, trainer: L.Trainer, pl_module: L.LightningModule) -> None:
         self.system_monitor.finish()
-

@@ -1,7 +1,11 @@
+"""This module contains callbacks that can be used with lightning.
+Usage: instanciate the callback and add it to the lightning Trainer's arguments,
+or add the class path to your lightning yaml config file."""
+
 import lightning as L
 from lightning.fabric.utilities.exceptions import MisconfigurationException
 from lightning.pytorch.loggers.mlflow import MLFlowLogger
-from mlflow.system_metrics.system_metrics_monitor import SystemMetricsMonitor
+from mlflow.system_metrics.system_metrics_monitor import SystemMetricsMonitor # type: ignore[import-not-found]
 from typing_extensions import override
 
 
@@ -19,7 +23,7 @@ class MLFlowSystemMonitorCallback(L.Callback):
                 "MLFlowSystemMonitorCallback requires MLFlowLogger"
             )
 
-        self.system_monitor = SystemMetricsMonitor(  # type: ignore[reportUninitializedInstanceVariable]
+        self.system_monitor = SystemMetricsMonitor(
             run_id=trainer.logger.run_id,
         )
         self.system_monitor.start()

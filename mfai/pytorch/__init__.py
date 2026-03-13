@@ -13,14 +13,14 @@ def to_numpy(
     input: Tensor | tuple[Tensor, ...],
 ) -> numpy.ndarray | tuple[numpy.ndarray, ...]:
     if isinstance(input, tuple):
-        l = []
+        tensors = []
         for tensor in input:
-            l.append(
+            tensors.append(
                 tensor.detach().cpu().numpy()
                 if tensor.requires_grad
                 else tensor.cpu().numpy()
             )
-        return tuple(l)
+        return tuple(tensors)
     return input.detach().cpu().numpy() if input.requires_grad else input.cpu().numpy()
 
 

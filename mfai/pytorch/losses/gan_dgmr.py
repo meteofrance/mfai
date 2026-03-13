@@ -32,7 +32,7 @@ class GridCellLoss(nn.Module):
         predictions from 6 calls to the generator (Monte Carlo estimation of the
         expectations for the latent variable).
 
-        .. math:: L_R(\Theta) = \frac{1}{HWN} \| (\mathbb{E}_Z [G_|theta(Z; X_{1:M})] - X_{M+1:M+N}) \circ w(X_{M+1:M+N}) \|_1
+        .. math:: L_R(\\Theta) = \frac{1}{HWN} \\| (\\mathbb{E}_Z [G_|theta(Z; X_{1:M})] - X_{M+1:M+N}) \\circ w(X_{M+1:M+N}) \\|_1
 
         where H, W and N represent height, width and leadtimes.
 

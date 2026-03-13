@@ -950,12 +950,20 @@ class HiLAM(BaseHiGraphModel):
         ):
             # Down
             mesh_rep_levels, mesh_same_rep, mesh_down_rep = self.mesh_down_step(
-                mesh_rep_levels, mesh_same_rep, mesh_down_rep, down_gnns, down_same_gnns  # type: ignore[arg-type]
+                mesh_rep_levels,
+                mesh_same_rep,
+                mesh_down_rep,
+                down_gnns,
+                down_same_gnns,  # type: ignore[arg-type]
             )
 
             # Up
             mesh_rep_levels, mesh_same_rep, mesh_up_rep = self.mesh_up_step(
-                mesh_rep_levels, mesh_same_rep, mesh_up_rep, up_gnns, up_same_gnns  # type: ignore[arg-type]
+                mesh_rep_levels,
+                mesh_same_rep,
+                mesh_up_rep,
+                up_gnns,
+                up_same_gnns,  # type: ignore[arg-type]
             )
 
         # Note: We return all, even though only down edges really are used later

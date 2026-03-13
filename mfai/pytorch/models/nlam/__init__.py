@@ -953,7 +953,7 @@ class HiLAM(BaseHiGraphModel):
                 mesh_rep_levels,
                 mesh_same_rep,
                 mesh_down_rep,
-                down_gnns,
+                down_gnns,  # type: ignore[arg-type]
                 down_same_gnns,  # type: ignore[arg-type]
             )
 
@@ -962,7 +962,7 @@ class HiLAM(BaseHiGraphModel):
                 mesh_rep_levels,
                 mesh_same_rep,
                 mesh_up_rep,
-                up_gnns,
+                up_gnns,  # type: ignore[arg-type]
                 up_same_gnns,  # type: ignore[arg-type]
             )
 

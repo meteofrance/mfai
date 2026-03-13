@@ -13,7 +13,7 @@ from torch_geometric.utils.convert import from_networkx
 
 
 def torch_save(data: Tensor | list[Tensor], path: Path) -> None:
-    """Saving files with torch to be writeable by anyone"""
+    """Saving files with torch to be writeable by anyone."""
     if path.exists():
         path.unlink()
     torch.save(data, path)

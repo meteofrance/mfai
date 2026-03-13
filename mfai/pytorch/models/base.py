@@ -88,7 +88,7 @@ class ModelABC(ABC):
         """
         Indicates if the features are the last dimension in the input/output tensors.
         Conv and ViT typically have features as the second dimension (Batch, Features, ...)
-        versus GNNs for which features are the last dimension (Batch, ..., Features)
+        versus GNNs for which features are the last dimension (Batch, ..., Features).
         """
 
     @property

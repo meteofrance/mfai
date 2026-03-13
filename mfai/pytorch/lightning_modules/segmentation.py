@@ -50,7 +50,7 @@ class SegmentationLightningModule(pl.LightningModule):
         )
 
     def get_hparams(self) -> dict:
-        """Return the hparams we want to save in logger"""
+        """Return the hparams we want to save in logger."""
         hparams = dict(self.hparams)
         hparams["loss"] = self.loss.__class__.__name__
         hparams["model"] = self.model.__class__.__name__
@@ -65,7 +65,7 @@ class SegmentationLightningModule(pl.LightningModule):
         return y_hat
 
     def probabilities_to_classes(self, y_hat: Tensor) -> Tensor:
-        """Transfrom probalistics predictions to discrete classes"""
+        """Transfrom probalistics predictions to discrete classes."""
         if self.type_segmentation == "multiclass":
             y_hat = y_hat.argmax(dim=1)
         elif self.type_segmentation in ["binary", "multilabel"]:
@@ -150,7 +150,7 @@ class SegmentationLightningModule(pl.LightningModule):
 
     def _shared_forward_step(self, x: Tensor, y: Tensor) -> tuple[Tensor, Any]:
         """Computes forward pass and loss for a batch.
-        Step shared by training, validation and test steps
+        Step shared by training, validation and test steps.
         """
         if self.channels_last:
             x = x.to(memory_format=torch.channels_last)

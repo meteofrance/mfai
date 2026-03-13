@@ -28,7 +28,7 @@ from .base import BaseModel, ModelType
 def define_3d_earth_position_index(window_size: Tuple[int, int, int]) -> Tensor:
     """Build the index for the Earth specific positional bias of sliding
     attention windows from PanguWeather.
-    See http://arxiv.org/abs/2211.02556
+    See http://arxiv.org/abs/2211.02556.
 
     Args:
         window_size (Tuple[int, int, int]): size of the sliding window
@@ -84,7 +84,7 @@ def generate_3d_attention_mask(
     lam: bool = False,
 ) -> Tensor:
     """Method to generate attention mask for sliding window attention in the context of 3D data.
-    Based on https://pytorch.org/vision/main/_modules/torchvision/models/swin_transformer.html#swin_s
+    Based on https://pytorch.org/vision/main/_modules/torchvision/models/swin_transformer.html#swin_s.
 
     Args:
         x (Tensor): input data, used to generate the mask on the same device
@@ -167,7 +167,7 @@ class PanguWeatherSettings:
 class PanguWeather(BaseModel):
     """
     PanguWeather network as described in http://arxiv.org/abs/2211.02556 and https://www.nature.com/articles/s41586-023-06185-3.
-    This implementation follows the official pseudo code here: https://github.com/198808xc/Pangu-Weather
+    This implementation follows the official pseudo code here: https://github.com/198808xc/Pangu-Weather.
     """
 
     onnx_supported: bool = False
@@ -497,7 +497,7 @@ class CustomPad2d(ConstantPad2d):
 
 class PatchEmbedding(nn.Module):
     """Patch embedding operation. Apply a linear projection for patch_size[0]*patch_size[1]*patch_size[2] patches,
-        patch_size = (2, 4, 4) in the original paper
+        patch_size = (2, 4, 4) in the original paper.
 
     Args:
         c_dim (_type_): embeeding channel size
@@ -714,7 +714,7 @@ class UpSample(nn.Module):
 
 
 class EarthSpecificLayer(nn.Module):
-    """Basic layer of our network, contains 2 or 6 blocks
+    """Basic layer of our network, contains 2 or 6 blocks.
 
     Args:
         depth (int): number of blocks

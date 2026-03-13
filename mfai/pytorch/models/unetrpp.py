@@ -648,9 +648,9 @@ class UNetRUpBlock(nn.Module):
     def forward(self, inp: Tensor, skip: Tensor | None = None) -> Tensor:
         """
         Forward pass:
-        1. Upsampling using bi/tri-linear OR Conv{2,3}dTranspose
-        2. Adds skip connection if available
-        3. Conv or Transformer block
+        1. Upsampling using bi/tri-linear OR Conv{2,3}dTranspose.
+        2. Adds skip connection if available.
+        3. Conv or Transformer block.
         """
         out = self.transp_conv(inp)
         out = out + skip if skip is not None else out
@@ -691,7 +691,7 @@ class UNetRPPSettings:
 class UNetRPP(BaseModel, AutoPaddingModel):
     """
     UNetR++ based on: "Shaker et al.,
-    UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation"
+    UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation".
     """
 
     onnx_supported = False

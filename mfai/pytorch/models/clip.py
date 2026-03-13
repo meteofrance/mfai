@@ -1,5 +1,5 @@
 """
-Implementation of CLIP (Contrastive Langage-Image Pre-training) model. Based on the original https://arxiv.org/abs/2103.00020
+Implementation of CLIP (Contrastive Langage-Image Pre-training) model. Based on the original https://arxiv.org/abs/2103.00020.
 """
 
 from dataclasses import asdict, dataclass
@@ -34,7 +34,7 @@ class Clip(nn.Module):
     """
     Implementation of CLIP (Contrastive Langage-Image Pre-training) model.
     - Based on the original article from OpenAI:
-        https://arxiv.org/abs/2103.00020
+        https://arxiv.org/abs/2103.00020.
     """
 
     def __init__(self, settings: ClipSettings):
@@ -92,7 +92,7 @@ class Clip(nn.Module):
 
     def save_vision_encoder(self, path: Path) -> None:
         """
-        Save the weights and parameters of the image encoder ResNet50
+        Save the weights and parameters of the image encoder ResNet50.
         """
         ckpt = {
             "model_state_dict": self.image_encoder.state_dict(),

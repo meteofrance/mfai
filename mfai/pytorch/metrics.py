@@ -213,7 +213,7 @@ class CSINeighborhood(Metric):
 
 class FSS(Metric):
     """
-    Fraction Skill Score
+    Fraction Skill Score.
 
     The FSS is normally computed over a sample of forecast-observation pairs, e.g., at different valid times. Mitter-
     maier (2021) has demonstrated that the FSS is sensitive to the pooling method used to combine the scores of

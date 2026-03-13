@@ -14,7 +14,7 @@ class PatchMaker(nn.Module):
     """
     Converts a vision/weather (B, C, H, W) tensor into a (B, T, F) token tensor.
     T stands for token dimension and F the feature/embedding dimension.
-    Each token is built with all the data of one patch of size patch_size
+    Each token is built with all the data of one patch of size patch_size.
     """
 
     def __init__(
@@ -45,7 +45,7 @@ class PatchMaker(nn.Module):
         """
         1. zero pad if padding is enabled
         2. check for dim consistency
-        3. einops rearrange to patch
+        3. einops rearrange to patch.
         """
         # t shape = (B, channels, height, width)
         if self.autopadding:

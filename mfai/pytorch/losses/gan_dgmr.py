@@ -26,7 +26,7 @@ class GridCellLoss(nn.Module):
         self.precip_weight_cap = precip_weight_cap
 
     def forward(self, generated_images: Tensor, targets: Tensor) -> Tensor:
-        """
+        r"""
         Forward function.
 
         Calculates the grid cell regularizer value, assumes generated images are the mean

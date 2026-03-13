@@ -273,7 +273,7 @@ class EarthSpecificBlock(nn.Module):
 
 
 class EarthSpecificLayer(nn.Module):
-    """Basic layer of our network, contains 2 or 6 blocks
+    """Basic layer of our network, contains 2 or 6 blocks.
 
     Args:
         depth (int): number of blocks
@@ -372,7 +372,7 @@ class PatchRecoveryConv(nn.Module):
         hidden_dim (int): hidden feature size
         plevel_variables (int): number of level variables
         surface_variables (int): number of surface variables
-        plevels (int): number of levels
+        plevels (int): number of levels.
     """
 
     def __init__(
@@ -466,7 +466,7 @@ class LinVert(nn.Module):
     """Linear layer for the vertical dimension
     Args:
         in_features (int): input feature size
-        embedding_size (tuple[int, ...]): embedding size
+        embedding_size (tuple[int, ...]): embedding size.
     """
 
     def __init__(self, in_features: int, embedding_size: tuple[int, ...]) -> None:
@@ -550,7 +550,7 @@ class CondBasicLayer(EarthSpecificLayer):
 @dataclass_json
 @dataclass
 class ArchesWeatherSettings(PanguWeatherSettings):
-    """ArchesWeather configuration class"""
+    """ArchesWeather configuration class."""
 
     plevel_patch_size: tuple = (2, 2, 2)
     num_heads: tuple = (6, 12, 12, 6)
@@ -568,7 +568,7 @@ class ArchesWeatherSettings(PanguWeatherSettings):
 
 
 class ArchesWeather(BaseModel):
-    """ArchesWeather model as described in http://arxiv.org/abs/2405.14527"""
+    """ArchesWeather model as described in http://arxiv.org/abs/2405.14527."""
 
     onnx_supported: bool = False
     supported_num_spatial_dims: tuple[int, ...] = (2,)

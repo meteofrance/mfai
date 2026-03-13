@@ -192,11 +192,11 @@ class Fuyu(FreezeMLMMixin, nn.Module):
     def forward(
         self, txt_token_ids: Tensor, vision_inputs: Tensor | list[Tensor]
     ) -> Tensor:
-        """Forward function of the Fuyu Multimodal language model
+        """Forward function of the Fuyu Multimodal language model.
 
         Args:
-            txt_token_ids (Tensor): tensor of shape (B, n_tok)
-            vision_inputs (Tensor | list[Tensor]): tensor or list of tensor of shape (B, channels, lat, lon)
+            txt_token_ids (Tensor): tensor of shape (B, n_tok).
+            vision_inputs (Tensor | list[Tensor]): tensor or list of tensor of shape (B, channels, lat, lon).
 
         Returns:
             Tensor: tensor of shape (B, n_tok, vocab_size)

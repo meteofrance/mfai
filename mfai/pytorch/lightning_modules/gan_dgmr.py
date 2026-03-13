@@ -59,7 +59,7 @@ class DGMRLightningModule(LightningModule):
     ) -> None:
         """
         From OpenClimateFix, Skillfull Nowcasting:
-        https://github.com/openclimatefix/skillful_nowcasting/blob/main/dgmr/dgmr.py
+        https://github.com/openclimatefix/skillful_nowcasting/blob/main/dgmr/dgmr.py.
 
         Initialize the Deep Generative Model of Radar model.
 

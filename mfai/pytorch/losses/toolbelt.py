@@ -23,7 +23,7 @@ class DiceLoss(_Loss):
         eps: float = 1e-7,
     ):
         """Dice loss for image segmentation task.
-        It supports binary, multiclass and multilabel cases
+        It supports binary, multiclass and multilabel cases.
 
         Args:
             mode: Loss mode 'binary', 'multiclass' or 'multilabel'
@@ -139,7 +139,7 @@ class DiceLoss(_Loss):
         dims: None | int | list[int] | tuple[int, ...] = None,
     ) -> torch.Tensor:
         """
-        Code from /segmentation_models_pytorch/losses/_functional.py
+        Code from /segmentation_models_pytorch/losses/_functional.py.
         """
         assert output.size() == target.size()
         if dims is not None:
@@ -163,7 +163,7 @@ class SoftCrossEntropyLoss(nn.Module):
         dim: int = 1,
     ):
         """
-        Drop-in replacement for torch.nn.CrossEntropyLoss with label_smoothing
+        Drop-in replacement for torch.nn.CrossEntropyLoss with label_smoothing.
 
         Args:
             smooth_factor: Factor to smooth target (e.g. if smooth_factor=0.1 then [1, 0, 0] -> [0.9, 0.05, 0.05])
@@ -203,7 +203,7 @@ class SoftCrossEntropyLoss(nn.Module):
         reduction: str = "mean",
         dim: int = -1,
     ) -> torch.Tensor:
-        """NLL loss with label smoothing
+        """NLL loss with label smoothing.
 
         References:
             https://github.com/pytorch/fairseq/blob/master/fairseq/criterions/label_smoothed_cross_entropy.py
@@ -253,7 +253,7 @@ class SoftBCEWithLogitsLoss(nn.Module):
         smooth_factor: Optional[float] = None,
         pos_weight: torch.Tensor | None = None,
     ):
-        """Drop-in replacement for torch.nn.BCEWithLogitsLoss with few additions: ignore_index and label_smoothing
+        """Drop-in replacement for torch.nn.BCEWithLogitsLoss with few additions: ignore_index and label_smoothing.
 
         Args:
             ignore_index: Specifies a target value that is ignored and does not contribute to the input gradient.
@@ -279,8 +279,8 @@ class SoftBCEWithLogitsLoss(nn.Module):
     def forward(self, y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
         """
         Args:
-            y_pred: torch.Tensor of shape (N, C, H, W)
-            y_true: torch.Tensor of shape (N, H, W)  or (N, 1, H, W)
+            y_pred: torch.Tensor of shape (N, C, H, W).
+            y_true: torch.Tensor of shape (N, H, W)  or (N, 1, H, W).
 
         Returns:
             loss: torch.Tensor

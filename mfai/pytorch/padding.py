@@ -89,7 +89,7 @@ def _get_3D_padding(
 
 
 def undo_padding(batch: Tensor, old_shape: torch.Size, inplace: bool = False) -> Tensor:
-    """Removes the padding added by pad_batch
+    """Removes the padding added by pad_batch.
 
     Args:
         batch (Tensor): The padded batch of data

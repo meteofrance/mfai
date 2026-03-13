@@ -17,8 +17,8 @@ from mfai.pytorch.models import utils
 
 class ResNetEncoder(ResNet):
     """Resnet with encoder functionality such as:
-    - output channels specification of feature tensors (produced by encoder)
-    - patching first convolution for arbitrary input channels
+    - output channels specification of feature tensors (produced by encoder).
+    - patching first convolution for arbitrary input channels.
     """
 
     def __init__(self, out_channels: tuple[int, ...], depth: int = 5, **kwargs: Any):
@@ -54,7 +54,7 @@ class ResNetEncoder(ResNet):
 
     @property
     def out_channels(self) -> tuple[int, ...]:
-        """Return channels dimensions for each tensor of forward output of encoder"""
+        """Return channels dimensions for each tensor of forward output of encoder."""
         return self._out_channels[: self._depth + 1]
 
     @property
@@ -62,7 +62,7 @@ class ResNetEncoder(ResNet):
         return min(self._output_stride, 2**self._depth)
 
     def set_in_channels(self, in_channels: int, pretrained: bool = True) -> None:
-        """Change first convolution channels"""
+        """Change first convolution channels."""
         if in_channels == 3:
             return
 

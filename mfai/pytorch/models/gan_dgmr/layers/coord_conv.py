@@ -12,8 +12,8 @@ class AddCoords(nn.Module):
     def __init__(self, with_r: bool = False) -> None:
         """
         Args:
-            with_r: a condition to check if radical distance should included in the spatial
-            information (bool) default = false
+            with_r: a condition to check if radical distance should included in the spatial.
+            information (bool) default = false.
 
         """
         super().__init__()
@@ -68,10 +68,10 @@ class CoordConv(nn.Module):
     ) -> None:
         """
         Args:
-            in_channels : number of input channels
-            out_channels : number of output channels,
-            with_r : boolean =False,
-            **kwargs : dict[str, Unknown]
+            in_channels : number of input channels.
+            out_channels : number of output channels.
+            with_r : boolean =False,.
+            **kwargs : dict[str, Unknown].
 
         """
         super().__init__()

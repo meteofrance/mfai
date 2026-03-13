@@ -20,6 +20,7 @@ class GridCellLoss(nn.Module):
         Args:
             weight_fn: A function to compute weights for the loss.
             precip_weight_cap: Custom ceiling value for the weight function.
+
         """
         super().__init__()
         self.precip_weight_cap = precip_weight_cap
@@ -42,6 +43,7 @@ class GridCellLoss(nn.Module):
 
         Returns:
             Grid Cell Regularizer term
+
         """
         difference = generated_images - targets
         if self.weight_fn is not None:
@@ -62,6 +64,7 @@ class GridCellLoss(nn.Module):
 
         Returns:
             Weights for each grid cell.
+
         """
         return torch.max(y + 1, torch.tensor(precip_weight_cap, device=y.device))
 

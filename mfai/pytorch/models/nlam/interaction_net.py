@@ -112,6 +112,7 @@ class InteractionNet(pyg.nn.MessagePassing):
         Returns:
         rec_rep: (N_rec, d_h), updated vector representations of receiver nodes
         (optionally) edge_rep: (M, d_h), updated vector representations of edges
+
         """
         # Always concatenate to [rec_nodes, send_nodes] for propagation, but only
         # aggregate to rec_nodes
@@ -180,6 +181,7 @@ class SplitMLPs(nn.Module):
 
         Returns:
         joined_output: (..., N, d), concatenated results from the different MLPs
+
         """
         chunks = torch.split(x, self.chunk_sizes, dim=-2)
         chunk_outputs = [

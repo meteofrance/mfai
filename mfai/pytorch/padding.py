@@ -21,6 +21,7 @@ def pad_batch(
 
     Returns:
         Tensor: The padded tensor.
+
     """
 
     fits = batch.shape[-len(new_shape) :] == new_shape
@@ -61,6 +62,7 @@ def _get_2D_padding(
 
     Returns:
         Tuple[int]: left,right,top and bottom sizes to be added.
+
     """
 
     diff_x = new_shape[1] - old_shape[-1]
@@ -94,6 +96,7 @@ def undo_padding(batch: Tensor, old_shape: torch.Size, inplace: bool = False) ->
         old_shape (torch.Size): The original shape of the data
         inplace (bool): Whether the returned tensor is just a sliced view of the
                         given tensor or a new copy.
+
     """
 
     new_shape = batch.shape[-len(old_shape) :]

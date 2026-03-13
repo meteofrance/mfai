@@ -133,6 +133,7 @@ class AutoPaddingModel(ABC):
             tuple[bool, Size]: Returns a tuple where the first element is a boolean signaling whether the given input shape
                                 already fits the model's requirements. If that value is False, the second element contains the closest
                                 shape that fits the model, otherwise it will be None.
+
         """
 
     def _maybe_padding(self, data_tensor: Tensor) -> tuple[Tensor, torch.Size]:
@@ -147,6 +148,7 @@ class AutoPaddingModel(ABC):
             tuple[Tensor, torch.Size]: the padded tensor, where the original data is found in the center,
             and the old size. If padding not possible or the shape is already fine,
             the data is returned untouched with it's old shape, which is unchanged.
+
         """
         old_shape = data_tensor.shape[-len(self.input_shape) :]
 
@@ -175,6 +177,7 @@ class AutoPaddingModel(ABC):
 
         Returns:
             Tensor: The data tensor with the padding removed, or untouched if already at the right shape.
+
         """
         if self.settings.autopad_enabled:
             return undo_padding(data_tensor, old_shape=old_shape)

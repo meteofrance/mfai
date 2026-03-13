@@ -289,6 +289,7 @@ class ResNet50MLM(torch.nn.Module):
 
         Returns:
             Tensor: tensor of shape (B, num_tokens, num_classes)
+
         """
         y_hat = self.encoder(x)[-1]  # (B, out_channels = 2048, 2, 2)
         y_hat = self.avgpool(y_hat)

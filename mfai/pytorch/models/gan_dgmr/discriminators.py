@@ -30,6 +30,7 @@ class Discriminator(torch.nn.Module):
             num_spatial_frames: Number of spatial frames (int)
             conv_type: the specified convolution type (str)
             **kwargs: allow initialize of the parameters above through key pairs
+
         """
         super().__init__()
 
@@ -70,6 +71,7 @@ class TemporalDiscriminator(torch.nn.Module):
             crop_size: Size of the crop, in the paper half the width of the input images
             num_layers: Number of intermediate DBlock layers to use
             conv_type: Type of 2d convolutions to use, see satflow/models/utils.py for options
+
         """
         super().__init__()
 
@@ -163,6 +165,7 @@ class SpatialDiscriminator(torch.nn.Module):
             num_timesteps: Number of timesteps to use, in the paper 8/18 timesteps were chosen
             num_layers: Number of intermediate DBlock layers to use
             conv_type: Type of 2d convolutions to use, see satflow/models/utils.py for options
+
         """
         super().__init__()
 

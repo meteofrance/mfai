@@ -103,6 +103,7 @@ class WeatherProjector(nn.Module):
 
         Returns:
             Tensor: tensor of shape (B, num_patches_h * num_patches_w, embed_dim)
+
         """
         t = self.patcher(t)
         # t shape = (B, num_patches_h * num_patches_w, patch_size_h * patch_size_w * features)

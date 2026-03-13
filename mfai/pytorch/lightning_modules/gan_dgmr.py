@@ -85,6 +85,7 @@ class DGMRLightningModule(LightningModule):
             inputs/outputs.
             precip_weight_cap: Custom ceiling for the weight function to compute the grid cell loss.
             **kwargs: Allow initialization of the parameters above through key pairs
+
         """
         super().__init__(**kwargs)
 

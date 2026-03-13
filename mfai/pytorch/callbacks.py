@@ -1,6 +1,7 @@
 """This module contains callbacks that can be used with lightning.
 Usage: instanciate the callback and add it to the lightning Trainer's arguments,
-or add the class path to your lightning yaml config file."""
+or add the class path to your lightning yaml config file.
+"""
 
 import lightning as L
 from lightning.fabric.utilities.exceptions import MisconfigurationException

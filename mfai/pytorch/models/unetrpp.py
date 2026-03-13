@@ -94,6 +94,7 @@ def trunc_normal_(
     Examples:
         >>> w = torch.empty(3, 5)
         >>> nn.init.trunc_normal_(w)
+
     """
     with torch.no_grad():
         return _trunc_normal_(tensor, mean, std, a, b)
@@ -159,6 +160,7 @@ class TransformerBlock(nn.Module):
             pos_embed: bool argument to determine if positional embedding is used.
             proj_size: size of the projection space for Spatial Attention.
             attention_code: type of attention implementation to use. See EPA for more details.
+
         """
 
         super().__init__()
@@ -501,6 +503,7 @@ class UNetRUpBlock(nn.Module):
             num_heads: number of heads inside each EPA module.
             out_size: spatial size for each decoder.
             depth: number of blocks for the current decoder stage.
+
         """
 
         super().__init__()
@@ -718,6 +721,7 @@ class UNetRPP(BaseModel, AutoPaddingModel):
             depths: number of blocks for each stage.
             conv_op: type of convolution operation.
             do_ds: use deep supervision to compute the loss.
+
         """
 
         super().__init__()

@@ -93,7 +93,7 @@ select = [
   "F",  # pyflakes
   "W",  # pycodestyle warnings
   "E",  # pycodestyle errors
-  # "D",  # pydocstyle
+  "D",  # pydocstyle
 ]
 ignore = [
     "D100",  # Allow undocumented-public-module

@@ -31,6 +31,7 @@ class GBlock(torch.nn.Module):
             output_channels: Number of output channels
             conv_type: Type of convolution desired, see satflow/models/utils.py for options
             spectral_normalized_eps: constrains the spectral norm of the weights.
+
         """
         super().__init__()
         self.output_channels = output_channels
@@ -104,6 +105,7 @@ class UpsampleGBlock(torch.nn.Module):
             output_channels: Number of output channels.
             conv_type: Type of convolution desired, see satflow/models/utils.py for options.
             spectral_normalized_eps: constrains the spectral norm of the weights.
+
         """
         super().__init__()
         self.output_channels = output_channels
@@ -181,6 +183,7 @@ class DBlock(torch.nn.Module):
             first_relu: Whether to have an ReLU before the first 3x3 convolution
             keep_same_output: Whether the output should have the same spatial dimensions
             as input, if False, downscales by 2
+
         """
         super().__init__()
         self.input_channels = input_channels
@@ -326,6 +329,7 @@ class ContextConditioningStack(torch.nn.Module):
             output_channels: Number of output channels for the lowest block
             num_context_steps: number of context steps (int)
             conv_type: Type of 2D convolution to use, see satflow/models/utils.py for options
+
         """
         super().__init__()
 
@@ -457,6 +461,7 @@ class LatentConditioningStack(torch.nn.Module):
             shape: Shape of the latent space, Should be (x,H/32,W/32) of the final image shape
             output_channels: Number of output channels for the conditioning stack
             use_attention: Whether to have a self-attention block or not
+
         """
         super().__init__()
 

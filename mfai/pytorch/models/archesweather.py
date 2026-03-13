@@ -52,6 +52,7 @@ class EarthSpecificBlock(nn.Module):
         Defaults to False.
         lam (bool, optional): whether to use limited area setting for shifted-window attention.
         Defaults to False.
+
     """
 
     def __init__(
@@ -280,6 +281,7 @@ class EarthSpecificLayer(nn.Module):
         dim (int): see EarthSpecificBlock
         drop_path_ratio_list (list[float]): see EarthSpecificBlock
         num_heads (int): see EarthSpecificBlock
+
     """
 
     def __init__(
@@ -333,10 +335,12 @@ class EarthSpecificLayer(nn.Module):
 
 class Interpolate(nn.Module):
     """Interpolation module.
+
     Args:
         scale_factor (float): scaling
         mode (str): interpolation mode
         align_corners (bool): align corners
+
     """
 
     def __init__(
@@ -609,6 +613,7 @@ class ArchesWeather(BaseModel):
             plevel_variables: number of variables in the level data
             plevels: number of atmospheric levels in the level data
             spatial_dims: number of spatial dimensions (2).
+
         """
         super().__init__()
 

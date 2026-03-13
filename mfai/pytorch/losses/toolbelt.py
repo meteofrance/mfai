@@ -41,6 +41,7 @@ class DiceLoss(_Loss):
 
         Reference
             https://github.com/BloodAxe/pytorch-toolbelt
+
         """
         super(DiceLoss, self).__init__()
         self.mode = mode
@@ -174,6 +175,7 @@ class SoftCrossEntropyLoss(nn.Module):
         Reference
             https://github.com/BloodAxe/pytorch-toolbelt
             https://github.com/pytorch/fairseq/blob/master/fairseq/criterions/label_smoothed_cross_entropy.py
+
         """
         super().__init__()
         self.smooth_factor = smooth_factor
@@ -282,6 +284,7 @@ class SoftBCEWithLogitsLoss(nn.Module):
 
         Returns:
             loss: torch.Tensor
+
         """
 
         if self.smooth_factor is not None:

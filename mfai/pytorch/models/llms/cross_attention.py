@@ -139,6 +139,7 @@ class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
 
         Returns:
             Tensor: tensor of shape (B, n_tok, vocab_size)
+
         """
 
         # Projection of weather input data into LLM token space

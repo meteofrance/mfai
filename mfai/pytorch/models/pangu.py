@@ -35,6 +35,7 @@ def define_3d_earth_position_index(window_size: Tuple[int, int, int]) -> Tensor:
 
     Returns:
         Tensor: index
+
     """
     if len(window_size) != 3:
         raise ValueError(
@@ -92,6 +93,7 @@ def generate_3d_attention_mask(
 
     Returns:
         Tensor: attention mask
+
     """
     assert x.dim() == 5, "Data must be 3D, but has {} dimension(s)".format(x.dim())
     _, pad_z, pad_h, pad_w, _ = x.shape
@@ -200,6 +202,7 @@ class PanguWeather(BaseModel):
             dropout_rate: faction of the input units to drop.
             checkpoint_activation: whether to use checkpoint activation.
             lam: whether to use the limited area attention mask.
+
         """
 
         super().__init__()
@@ -311,10 +314,12 @@ class PanguWeather(BaseModel):
     ) -> Tuple[Tensor, Tensor]:
         """
         Forward pass of the PanguWeather model.
+
         Args:
             input_plevel (Tensor): Input tensor of shape (N, C, Z, H, W) for pressure level data.
             input_surface (Tensor): Input tensor of shape (N, C, H, W) for surface data.
             static_data (Tensor, optional): Static data tensor, e.g., land sea mask, of shape (N, C, H, W). Defaults to None.
+
         """
         if static_data is not None:
             surface_data = torch.cat([input_surface, static_data], dim=1)
@@ -386,6 +391,7 @@ class CustomPad3d(ConstantPad3d):
         data_size (torch.Size): data size
         patch_size (Tuple[int, int, int]): patch size for the token embedding operation
         value (float, optional): padding value. Defaults to 0.
+
     """
 
     def __init__(
@@ -451,6 +457,7 @@ class CustomPad2d(ConstantPad2d):
         data_size (torch.Size): data size
         patch_size (Tuple[int, int]): patch size for the token embedding operation
         value (float, optional): padding value. Defaults to 0.
+
     """
 
     def __init__(
@@ -497,6 +504,7 @@ class PatchEmbedding(nn.Module):
         patch_size (Tuple[int, int, int]): patch size for pressure level data
         plevel_size (torch.Size): pressure level data size
         surface_size (torch.Size): surface data size
+
     """
 
     def __init__(
@@ -565,6 +573,7 @@ class PatchRecovery(nn.Module):
         patch_size (Tuple[int, int, int]): pressure level patch size, e. g., (2, 4, 4) as in the original paper
         plevel_channels (int, optional): pressure level data channel size
         surface_channels (int, optional): surface data channel size
+
     """
 
     def __init__(
@@ -610,6 +619,7 @@ class DownSample(nn.Module):
     Args:
         data_size (torch.Size): data size in terms of embeded plevel, latitude, longitude
         dim (int): initial size of the tokens
+
     """
 
     def __init__(self, data_size: torch.Size, dim: int) -> None:
@@ -658,6 +668,7 @@ class UpSample(nn.Module):
         Args:
             input_dim (int): input token size
             output_dim (int): output token size
+
         """
         super().__init__()
         # Linear layers without bias to increase channels of the data
@@ -715,6 +726,7 @@ class EarthSpecificLayer(nn.Module):
         dropout_rate (float, optional): see EarthSpecificBlock
         checkpoint_activation (bool, optional): see EarthSpecificBlock
         lam (bool, optional): see EarthSpecificBlock
+
     """
 
     def __init__(
@@ -771,6 +783,7 @@ class EarthSpecificBlock(nn.Module):
         dropout_rate (float, optional): dropout rate in the MLP. Defaults to 0..
         checkpoint_activation (bool, optional): whether to use checkpoint activation. Defaults to False.
         lam (bool, optional): whether to use the limited area attention mask. Defaults to False.
+
     """
 
     def __init__(
@@ -932,6 +945,7 @@ class EarthAttention3D(nn.Module):
         num_heads (int): number of heads
         dropout_rate (float): dropout rate
         window_size (Tuple[int, int, int]): window size (z, h ,w)
+
     """
 
     def __init__(
@@ -1096,6 +1110,7 @@ class MLP(nn.Module):
     Args:
         dim (int): input and output token size
         dropout_rate (float): dropout rate applied after each linear layer
+
     """
 
     def __init__(self, dim: int, dropout_rate: float) -> None:

@@ -63,7 +63,7 @@ def plot_graph(graph: networkx.Graph, title: str = None) -> tuple[plt.Figure, pl
     edge_lines = np.stack((from_pos, to_pos), axis=1)
     axis.add_collection(
         matplotlib.collections.LineCollection(
-            edge_lines, lw=0.4, colors="black", zorder=1
+            edge_lines, lw=0.4, colors="black", zorder=1  # type: ignore[arg-type]
         )
     )
 

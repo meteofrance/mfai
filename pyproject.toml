@@ -114,6 +114,18 @@ ignore = [
     "E501",  # Allow line too long
 ]
 
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+# ignore-var-parameters = true
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 88
+ignore-overlong-task-comments = true
+
+[tool.ruff.lint.flake8-unused-arguments]
+ignore-variadic-names = true
+
+
 [tool.mypy]
 # [mypy configuration file doc](https://mypy.readthedocs.io/en/stable/config_file.html#confval-exclude)
 exclude = [

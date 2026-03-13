@@ -458,9 +458,11 @@ class LatentConditioningStack(torch.nn.Module):
         Latent conditioning stack from Skillful Nowcasting, see https://arxiv.org/pdf/2104.00954.pdf.
 
         Args:
-            shape: Shape of the latent space, Should be (x,H/32,W/32) of the final image shape
-            output_channels: Number of output channels for the conditioning stack
-            use_attention: Whether to have a self-attention block or not
+            input_channels: Shape of the latent space, Should be (x,H/32,W/32)
+                of the final image shape.
+            output_channels: Number of output channels for the conditioning
+                stack.
+            use_attention: Whether to have a self-attention block or not.
 
         """
         super().__init__()

@@ -26,10 +26,12 @@ class Discriminator(torch.nn.Module):
         Initialize the discriminator.
 
         Args:
-            input_channels: Number of input channels (int)
-            num_spatial_frames: Number of spatial frames (int)
-            conv_type: the specified convolution type (str)
-            **kwargs: allow initialize of the parameters above through key pairs
+            input_channels: Number of input channels.
+            num_spatial_frames: Number of spatial frames.
+            conv_type: the specified convolution type.
+            temporal_num_layers: Number of intermediate DBlock layers to use in the temporal discriminator.
+            spatial_num_layers: Number of intermediate DBlock layers to use in the spatial discriminator.
+            **kwargs: allow initialize of the parameters above through key pairs.
 
         """
         super().__init__()

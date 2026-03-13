@@ -99,12 +99,12 @@ class WeatherProjector(nn.Module):
         """Forward function of the WeatherProjector vision encoder.
 
         Args:
-            x (Tensor): tensor of shape (B, nu_channels, height, width)
+            t: tensor of shape (B, nu_channels, height, width)
 
         Returns:
             Tensor: tensor of shape (B, num_patches_h * num_patches_w, embed_dim)
-
         """
+
         t = self.patcher(t)
         # t shape = (B, num_patches_h * num_patches_w, patch_size_h * patch_size_w * features)
         return self.proj(t)

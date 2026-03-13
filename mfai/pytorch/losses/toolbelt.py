@@ -166,7 +166,17 @@ class SoftCrossEntropyLoss(nn.Module):
         Drop-in replacement for torch.nn.CrossEntropyLoss with label_smoothing.
 
         Args:
-            smooth_factor: Factor to smooth target (e.g. if smooth_factor=0.1 then [1, 0, 0] -> [0.9, 0.05, 0.05])
+            reduction: specifies the reduction to apply to the output:
+                'none': No reduction will be applied,
+                'mean': The sum of the output will be divided by the number of
+                    elements in the output,
+                'sum': The output will be summed. Defaults to 'mean'.
+            smooth_factor: Factor to smooth target.
+                (e.g. if smooth_factor=0.1 then [1, 0, 0] -> [0.9, 0.05, 0.05])
+            ignore_index: Specifies a target value that is ignored and does not
+                contribute to the input gradient. Defaults to -100.
+            dim: The dimension along which the class probabilities are computed.
+                Defaults to 1.
 
         Shape
              - **y_pred** - torch.Tensor of shape (N, C, H, W)
@@ -209,8 +219,19 @@ class SoftCrossEntropyLoss(nn.Module):
             https://github.com/pytorch/fairseq/blob/master/fairseq/criterions/label_smoothed_cross_entropy.py
 
         Args:
-            lprobs (torch.Tensor): Log-probabilities of predictions (e.g after log_softmax)
+            lprobs: Log-probabilities of predictions (e.g after log_softmax).
+            target: Ground truth labels.
+            epsilon: Smoothing factor.
+            ignore_index: Index to ignore.
+            reduction: Reduction method.
+                "none": No reduction will be applied,
+                "mean": The sum of the output will be divided by the number of
+                    elements in the output,
+                "sum": The output will be summed.
+            dim: Dimension along which to compute the loss.
 
+        Returns:
+            Tensor: Loss values.
         """
         if target.dim() == lprobs.dim() - 1:
             target = target.unsqueeze(dim)
@@ -256,8 +277,20 @@ class SoftBCEWithLogitsLoss(nn.Module):
         """Drop-in replacement for torch.nn.BCEWithLogitsLoss with few additions: ignore_index and label_smoothing.
 
         Args:
-            ignore_index: Specifies a target value that is ignored and does not contribute to the input gradient.
-            smooth_factor: Factor to smooth target (e.g. if smooth_factor=0.1 then [1, 0, 1] -> [0.9, 0.1, 0.9])
+            weight: A manual rescaling weight given to each class. If given,
+                has to be a Tensor of size C (number of classes).
+                Otherwise, it is treated as if having all ones.
+            ignore_index: Specifies a target value that is ignored and does
+                not contribute to the input gradient.
+            reduction: specifies the reduction to apply to the output:
+                'none': No reduction will be applied,
+                'mean': The sum of the output will be divided by the number of elements in the output,
+                'sum': The output will be summed.
+                Defaults to 'mean'.
+            smooth_factor: Factor to smooth target.
+                (e.g. if smooth_factor=0.1 then [1, 0, 1] -> [0.9, 0.1, 0.9])
+            pos_weight: a weight of positive examples. Must be a vector with length
+                equal to the number of classes.
 
         Shape
              - **y_pred** - torch.Tensor of shape NxCxHxW

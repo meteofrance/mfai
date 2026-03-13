@@ -87,12 +87,13 @@ def generate_3d_attention_mask(
     Based on https://pytorch.org/vision/main/_modules/torchvision/models/swin_transformer.html#swin_s.
 
     Args:
-        x (Tensor): input data, used to generate the mask on the same device
-        window_size (Tuple[int, int, int]): size of the sliding window
-        shift_size (Tuple[int, ...]): size of the shift for the sliding window
+        x: input data, used to generate the mask on the same device.
+        window_size: size of the sliding window.
+        shift_size: size of the shift for the sliding window.
+        lam: whether to use the LAM attention mechanism.
 
     Returns:
-        Tensor: attention mask
+        Tensor: attention mask.
 
     """
     assert x.dim() == 5, "Data must be 3D, but has {} dimension(s)".format(x.dim())
@@ -149,6 +150,31 @@ def generate_3d_attention_mask(
 @dataclass_json
 @dataclass
 class PanguWeatherSettings:
+    """PanguWeather configuration class, containing the hyperparameters for the
+    model.
+
+    Args:
+        plevel_patch_size: Patch size for the pressure level data.
+            Default is (2, 4, 4). Setting (2, 8, 8) leads to Pangu Lite.
+        token_size: Size of the tokens (equivalent to channel size) of the
+            first layer. Default is 192.
+        layer_depth: Number of blocks in layers. Default is (2, 6), meaning
+            that the first and fourth layers contain 2 blocks, and the second
+                and third contain 6.
+        num_heads: Number of heads in attention layers. Default is (6, 12),
+            corresponding to respectively first and fourth layers, and second
+            and third.
+        spatial_dims: number of spatial dimensions (2 or 3).
+        surface_variables: number of surface variables.
+        plevel_variables: number of pressure level variables.
+        plevels: number of pressure levels.
+        static_length: number of static variables (e.g., land sea mask).
+        window_size: size of the sliding window.
+        dropout_rate: faction of the input units to drop.
+        checkpoint_activation: whether to use checkpoint activation.
+        lam: whether to use the limited area attention mask.
+    """
+
     plevel_patch_size: Tuple[int, int, int] = (2, 4, 4)
     token_size: int = 192
     layer_depth: Tuple[int, int] = (2, 6)
@@ -189,20 +215,8 @@ class PanguWeather(BaseModel):
             in_channels: dimension of input channels, including constant mask if any.
             out_channels: dimension of output channels.
             input_shape: dimension of input image.
-            plevel_patch_size : Patch size for the pressure level data. Default is (2, 4, 4). Setting (2, 8, 8) leads to Pangu Lite.
-            token_size : Size of the tokens (equivalent to channel size) of the first layer. Default is 192.
-            layer_depth : Number of blocks in layers. Default is (2, 6), meaning that the first and fourth layers contain 2 blocks, and the second and third contain 6.
-            num_heads : Number of heads in attention layers. Default is (6, 12), corresponding to respectively first and fourth layers, and second and third.
-            spatial_dims: number of spatial dimensions (2 or 3).
-            surface_variables: number of surface variables.
-            plevel_variables: number of pressure level variables.
-            plevels: number of pressure levels.
-            static_length: number of static variables (e.g., land sea mask).
-            window_size: size of the sliding window.
-            dropout_rate: faction of the input units to drop.
-            checkpoint_activation: whether to use checkpoint activation.
-            lam: whether to use the limited area attention mask.
-
+            settings: PanguWeatherSettings dataclass, containing the
+                hyperparameters for the model.
         """
 
         super().__init__()

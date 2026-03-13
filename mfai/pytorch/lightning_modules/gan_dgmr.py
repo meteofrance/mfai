@@ -70,20 +70,29 @@ class DGMRLightningModule(LightningModule):
             forecast_steps: Number of steps to predict in the future.
             input_channels: Number of input channels per image.
             gen_lr: Learning rate for the generator.
-            disc_lr: Learning rate for the discriminators, shared for both temporal and spatial
-            discriminator.
-            conv_type: Type of 2d convolution to use, see satflow/models/utils.py for options.
+            disc_lr: Learning rate for the discriminators, shared for both
+                temporal and spatial discriminator.
+            conv_type: Type of 2d convolution to use,
+                see satflow/models/utils.py for options.
+            grid_lambda: Lambda for the grid regularization loss.
             beta1: Beta1 for Adam optimizer.
             beta2: Beta2 for Adam optimizer.
-            grid_lambda: Lambda for the grid regularization loss.
+            latent_channels: Number of channels that the latent space should be
+                reshaped to, input dimension into ConvGRU, also affects the
+                number of channels for other linked inputs/outputs.
             context_channels: Number of context channels (int)
-            generation_steps: Number of generation steps to use in forward pass, in paper is 6
-            and the best is chosen for the loss this results in huge amounts of GPU memory though,
-            so less might work better for training.
-            latent_channels: Number of channels that the latent space should be reshaped to, input
-            dimension into ConvGRU, also affects the number of channels for other linked
-            inputs/outputs.
-            precip_weight_cap: Custom ceiling for the weight function to compute the grid cell loss.
+            generation_steps: Number of generation steps to use in forward pass,
+                in paper is 6 and the best is chosen for the loss this results
+                in huge amounts of GPU memory though, so less might work better
+                for training.
+            precip_weight_cap: Custom ceiling for the weight function to
+                compute the grid cell loss.
+            use_attention: Whether to have a self-attention block in the latent
+                conditioning stack or not.
+            temporal_num_layers: Number of intermediate DBlock layers to use in
+                the temporal discriminator.
+            spatial_num_layers: Number of intermediate DBlock layers to use in
+                the spatial discriminator.
             **kwargs: Allow initialization of the parameters above through key pairs
 
         """

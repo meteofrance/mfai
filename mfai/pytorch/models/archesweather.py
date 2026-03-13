@@ -550,7 +550,36 @@ class CondBasicLayer(EarthSpecificLayer):
 @dataclass_json
 @dataclass
 class ArchesWeatherSettings(PanguWeatherSettings):
-    """ArchesWeather configuration class."""
+    """ArchesWeather configuration class.
+    Inherits from PanguWeatherSettings, with additional hyperparameters for
+    Earth-Specific bias and window attention.
+
+    Args:
+        token_size: embedding size
+        cond_dim: conditioning embedding size
+        num_heads: number of heads per EarthSpecificLayer
+        droppath_coeff: drop path coefficient
+        plevel_patch_size: patch size for input data embedding
+        window_size: window size for shifted-window attention of EarthSpecificBlock
+        depth_multiplier: depth multiplier for the number of blocks in EarthSpecificLayer
+        position_embs_dim: dimension of positional embeddings
+        use_prev: whether to use previous state
+        use_skip: whether to use skip connections
+        conv_head: whether to use a convolutional head for patch recovery
+        dropout_rate: dropout rate
+        first_interaction_layer: whether to use a linear interaction layer before the first EarthSpecificLayer
+        checkpoint_activation: whether to use gradient checkpointing
+        axial_attn: whether to use axial attention
+        axial_attn_head: number of heads for axial attention
+        lam: whether to use limited area setting in the attention mask
+        lon_resolution: longitude resolution
+        lat_resolution: latitude resolution
+        surface_variables: number of variables in the surface data
+        static_length: number of variables in the mask data
+        plevel_variables: number of variables in the level data
+        plevels: number of atmospheric levels in the level data
+        spatial_dims: number of spatial dimensions (2).
+    """
 
     plevel_patch_size: tuple = (2, 2, 2)
     num_heads: tuple = (6, 12, 12, 6)
@@ -586,34 +615,12 @@ class ArchesWeather(BaseModel):
     ) -> None:
         """
         Args:
-            in_channels: dimension of input channels, including constant mask if any.
+            in_channels: dimension of input channels, including constant
+                mask if any.
             out_channels: dimension of output channels.
             input_shape: dimension of input image.
-            token_size: embedding size
-            cond_dim: conditioning embedding size
-            num_heads: number of heads per EarthSpecificLayer
-            droppath_coeff: drop path coefficient
-            plevel_patch_size: patch size for input data embedding
-            window_size: window size for shifted-window attention of EarthSpecificBlock
-            depth_multiplier: depth multiplier for the number of blocks in EarthSpecificLayer
-            position_embs_dim: dimension of positional embeddings
-            use_prev: whether to use previous state
-            use_skip: whether to use skip connections
-            conv_head: whether to use a convolutional head for patch recovery
-            dropout_rate: dropout rate
-            first_interaction_layer: whether to use a linear interaction layer before the first EarthSpecificLayer
-            checkpoint_activation: whether to use gradient checkpointing
-            axial_attn: whether to use axial attention
-            axial_attn_head: number of heads for axial attention
-            lam: whether to use limited area setting in the attention mask
-            lon_resolution: longitude resolution
-            lat_resolution: latitude resolution
-            surface_variables: number of variables in the surface data
-            static_length: number of variables in the mask data
-            plevel_variables: number of variables in the level data
-            plevels: number of atmospheric levels in the level data
-            spatial_dims: number of spatial dimensions (2).
-
+            settings: ArchesWeatherSettings object containing the
+                hyperparameters of the model.
         """
         super().__init__()
 

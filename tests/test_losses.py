@@ -7,6 +7,7 @@ from mfai.pytorch.losses.gan_dgmr import (
     loss_hinge_disc,
     loss_hinge_gen,
 )
+import pytest
 from mfai.pytorch.losses.toolbelt import (
     DiceLoss,
     SoftBCEWithLogitsLoss,
@@ -58,6 +59,10 @@ def test_dice_loss() -> None:
     loss = dice_loss_multiclass(y_true, y_pred)
     assert isinstance(loss, torch.Tensor)
     assert loss.shape == torch.Size([])
+
+    # Masking classes is not supported with mode binary
+    with pytest.raises(ValueError):
+        DiceLoss(mode="binary", classes=[0])
 
 
 def test_soft_cross_entropy() -> None:

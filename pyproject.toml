@@ -77,6 +77,18 @@ Homepage = "https://github.com/meteofrance/mfai"
 select = ["I"]  # I = isort
 extend-select = ["F401"]  # F401 = unused-import
 
+[tool.coverage.run]
+source = ["cams/", "scripts/"]
+omit = ["cams/plots.py", "scripts/plot_sample.py"]
+fail_under = 85
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = [
+    'def __repr__',
+    'if __name__ == .__main__.:',
+]
+
 [tool.mypy]
 # [mypy configuration file doc](https://mypy.readthedocs.io/en/stable/config_file.html#confval-exclude)
 exclude = [

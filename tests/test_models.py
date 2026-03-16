@@ -1,9 +1,9 @@
 """
 Test our pure PyTorch models to make sure they can be :
-1. Instanciated
-2. Trained
-3. onnx exported
-4. onnx loaded and used for inference
+1. Instanciated.
+2. Trained.
+3. onnx exported.
+4. onnx loaded and used for inference.
 """
 
 import dataclasses
@@ -444,7 +444,7 @@ def test_autopad_models(model_class: Any) -> None:
 def test_model_attributes(model_class: ModelABC) -> None:
     """
     We check that ALL our models have the required attributes
-    settings_kls and model_type
+    settings_kls and model_type.
     """
     assert (
         hasattr(model_class, "model_type")

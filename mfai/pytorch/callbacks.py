@@ -1,6 +1,7 @@
 """This module contains callbacks that can be used with lightning.
 Usage: instanciate the callback and add it to the lightning Trainer's arguments,
-or add the class path to your lightning yaml config file."""
+or add the class path to your lightning yaml config file.
+"""
 
 import lightning as L
 from lightning.fabric.utilities.exceptions import MisconfigurationException
@@ -15,7 +16,7 @@ class MLFlowSystemMonitorCallback(L.Callback):
     """A Lightning callback to log system metrics (GPU usage etc.) in MLFlow.
     We use this callback because the default MLFLOW_ENABLE_SYSTEM_METRICS_LOGGING
     option from mlflow doesn't work with lightning.
-    See this issue: https://github.com/Lightning-AI/pytorch-lightning/issues/20563
+    See this issue: https://github.com/Lightning-AI/pytorch-lightning/issues/20563.
     """
 
     @override

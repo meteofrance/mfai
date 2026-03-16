@@ -1,4 +1,4 @@
-"""Test DGMR GAN loss functions"""
+"""Test DGMR GAN loss functions."""
 
 import pytest
 import torch

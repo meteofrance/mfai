@@ -25,7 +25,8 @@ class CLIPAccuracySkillScore(Metric):
     The accuracy is computed from the probabilities matrix returned by CLIP.
     Then we use a uniformly random model as a reference for the skill score.
     * 0 or negative = worse than random model
-    * 1 = perfect model"""
+    * 1 = perfect model.
+    """
 
     def __init__(self, top_k: int, batch_size: int) -> None:
         super().__init__()
@@ -75,7 +76,7 @@ class CLIPLightningModule(pl.LightningModule):
         self.save_hyperparameters()
 
     def get_hparams(self) -> dict[str, Any]:
-        """Return the hparams we want to save in tensorboard logger"""
+        """Return the hparams we want to save in tensorboard logger."""
         model_params: dict[str, Any] = {}
         model_params["model/name"] = self.model.__class__.__name__
         model_params["img_encoder/name"] = self.model.image_encoder.__class__.__name__
@@ -109,7 +110,7 @@ class CLIPLightningModule(pl.LightningModule):
         """
         Lightning method to define optimizers and learning-rate schedulers used for optimization.
         For more details about this method, please see:
-        https://lightning.ai/docs/pytorch/stable/api/lightning.pytorch.core.LightningModule.html#lightning.pytorch.core.LightningModule.configure_optimizers
+        https://lightning.ai/docs/pytorch/stable/api/lightning.pytorch.core.LightningModule.html#lightning.pytorch.core.LightningModule.configure_optimizers.
         """
         optimizer = AdamW(self.parameters(), lr=self.learning_rate)
         if self.lr_scheduler_interval in ["step", "epoch"]:

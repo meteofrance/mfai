@@ -28,6 +28,7 @@ class SegmentationLightningModule(pl.LightningModule):
             model (BaseModel): Torch neural network model in [DeepLabV3, DeepLabV3Plus, HalfUNet, Segformer, SwinUNetR, UNet, CustomUNet, UNetRPP]
             type_segmentation (Literal["binary", "multiclass", "multilabel", "regression"]): Type of segmentation we want to do
             loss (torch.nn.modules.loss._Loss): Loss function
+
         """
         super().__init__()
         self.model = model
@@ -49,7 +50,7 @@ class SegmentationLightningModule(pl.LightningModule):
         )
 
     def get_hparams(self) -> dict:
-        """Return the hparams we want to save in logger"""
+        """Return the hparams we want to save in logger."""
         hparams = dict(self.hparams)
         hparams["loss"] = self.loss.__class__.__name__
         hparams["model"] = self.model.__class__.__name__
@@ -64,7 +65,7 @@ class SegmentationLightningModule(pl.LightningModule):
         return y_hat
 
     def probabilities_to_classes(self, y_hat: Tensor) -> Tensor:
-        """Transfrom probalistics predictions to discrete classes"""
+        """Transfrom probalistics predictions to discrete classes."""
         if self.type_segmentation == "multiclass":
             y_hat = y_hat.argmax(dim=1)
         elif self.type_segmentation in ["binary", "multilabel"]:
@@ -149,7 +150,8 @@ class SegmentationLightningModule(pl.LightningModule):
 
     def _shared_forward_step(self, x: Tensor, y: Tensor) -> tuple[Tensor, Any]:
         """Computes forward pass and loss for a batch.
-        Step shared by training, validation and test steps"""
+        Step shared by training, validation and test steps.
+        """
         if self.channels_last:
             x = x.to(memory_format=torch.channels_last)
         # We prefer when the last activation function is included in the loss and not in the model.
@@ -174,7 +176,8 @@ class SegmentationLightningModule(pl.LightningModule):
     ########################################################################################
     def on_train_start(self) -> None:
         """Setup custom scalars panel on tensorboard and log hparams.
-        Useful to easily compare train and valid loss and detect overtfitting."""
+        Useful to easily compare train and valid loss and detect overtfitting.
+        """
         self.training_loss: list[Any] = []
         if self.logger and self.logger.log_dir:
             hparams = self.get_hparams()
@@ -204,7 +207,8 @@ class SegmentationLightningModule(pl.LightningModule):
 
     def val_plot_step(self, batch_idx: int, y: Tensor, y_hat: Tensor) -> None:
         """Plots images on first batch of validation and log them in logger.
-        Should be overwrited for each specific project, with matplotlib plots."""
+        Should be overwrited for each specific project, with matplotlib plots.
+        """
         if batch_idx == 0:
             tb = self.logger.experiment  # type: ignore[union-attr]
             step = self.current_epoch

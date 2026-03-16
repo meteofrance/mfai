@@ -8,7 +8,7 @@ from mfai.pytorch.models.llms.llama3 import Llama3
 class FreezeMLMMixin:
     """
     A Mixin for (un)freezing llm and vision stages
-    of a multimodal model
+    of a multimodal model.
     """
 
     backend: GPT2 | Llama2 | CrossAttentionGPT2 | Llama3
@@ -16,28 +16,28 @@ class FreezeMLMMixin:
 
     def freeze_llm(self) -> None:
         """
-        Freeze the LLM layers (not the vision layers)
+        Freeze the LLM layers (not the vision layers).
         """
         for param in self.backend.parameters():
             param.requires_grad = False
 
     def unfreeze_llm(self) -> None:
         """
-        Unfreeze the LLM layers
+        Unfreeze the LLM layers.
         """
         for param in self.backend.parameters():
             param.requires_grad = True
 
     def freeze_vision(self) -> None:
         """
-        Freeze the vision encoder layers
+        Freeze the vision encoder layers.
         """
         for param in self.vision_encoder.parameters():
             param.requires_grad = False
 
     def unfreeze_vision(self) -> None:
         """
-        Unfreeze the vision encoder layers
+        Unfreeze the vision encoder layers.
         """
         for param in self.vision_encoder.parameters():
             param.requires_grad = True

@@ -1,5 +1,5 @@
 """
-Graph Neural Network architectures adapted from https://github.com/mllam/neural-lam
+Graph Neural Network architectures adapted from https://github.com/mllam/neural-lam.
 """
 
 from dataclasses import dataclass
@@ -27,7 +27,7 @@ def offload_to_cpu(model: nn.ModuleList) -> nn.ModuleList:
 @dataclass(slots=True)
 class GraphLamSettings:
     """
-    Settings for graph-based models
+    Settings for graph-based models.
     """
 
     tmp_dir: Path = Path("/tmp")  # nosec B108
@@ -275,28 +275,28 @@ class BaseGraphModel(BaseModel):
 
     def finalize_graph_model(self) -> None:
         """
-        Method to be overridden by subclasses for finalizing the graph model
+        Method to be overridden by subclasses for finalizing the graph model.
         """
         pass
 
     def get_num_mesh(self) -> tuple[int, int]:
         """
         Compute number of mesh nodes from loaded features,
-        and number of mesh nodes that should be ignored in encoding/decoding
+        and number of mesh nodes that should be ignored in encoding/decoding.
         """
         raise NotImplementedError("get_num_mesh not implemented")
 
     def embedd_mesh_nodes(self) -> Tensor:
         """
         Embedd static mesh features
-        Returns tensor of shape (N_mesh, d_h)
+        Returns tensor of shape (N_mesh, d_h).
         """
         raise NotImplementedError("embedd_mesh_nodes not implemented")
 
     def process_step(self, mesh_rep: Tensor) -> Tensor:
         """
         Process step of embedd-process-decode framework
-        Processes the representation on the mesh, possible in multiple steps
+        Processes the representation on the mesh, possible in multiple steps.
 
         mesh_rep: has shape (B, N_mesh, d_h)
         Returns mesh_rep: (B, N_mesh, d_h)
@@ -311,7 +311,7 @@ class BaseGraphModel(BaseModel):
         Step state one step ahead using prediction model, X_{t-1}, X_t -> X_t+1
         prev_state: (B, N_grid, feature_dim), X_t
         prev_prev_state: (B, N_grid, feature_dim), X_{t-1}
-        forcing: (B, N_grid, forcing_dim)
+        forcing: (B, N_grid, forcing_dim).
         """
         batch_size = x.shape[0]
 
@@ -467,7 +467,7 @@ class BaseHiGraphModel(BaseGraphModel):
     def get_num_mesh(self) -> tuple[int, int]:
         """
         Compute number of mesh nodes from loaded features,
-        and number of mesh nodes that should be ignored in encoding/decoding
+        and number of mesh nodes that should be ignored in encoding/decoding.
         """
         N_mesh = sum(node_feat.shape[0] for node_feat in self.mesh_static_features)
         N_mesh_ignore = N_mesh - self.mesh_static_features[0].shape[0]
@@ -477,14 +477,14 @@ class BaseHiGraphModel(BaseGraphModel):
         """
         Embedd static mesh features
         This embedds only bottom level, rest is done at beginning of processing step
-        Returns tensor of shape (N_mesh[0], d_h)
+        Returns tensor of shape (N_mesh[0], d_h).
         """
         return self.mesh_embedders[0](self.mesh_static_features[0])
 
     def process_step(self, mesh_rep: Tensor) -> Tensor:
         """
         Process step of embedd-process-decode framework
-        Processes the representation on the mesh, possible in multiple steps
+        Processes the representation on the mesh, possible in multiple steps.
 
         mesh_rep: has shape (B, N_mesh, d_h)
         Returns mesh_rep: (B, N_mesh, d_h)
@@ -633,21 +633,21 @@ class GraphLAM(BaseGraphModel):
     def get_num_mesh(self) -> tuple[int, int]:
         """
         Compute number of mesh nodes from loaded features,
-        and number of mesh nodes that should be ignored in encoding/decoding
+        and number of mesh nodes that should be ignored in encoding/decoding.
         """
         return len(self.mesh_static_features), 0
 
     def embedd_mesh_nodes(self) -> Tensor:
         """
         Embedd static mesh features
-        Returns tensor of shape (N_mesh, d_h)
+        Returns tensor of shape (N_mesh, d_h).
         """
         return self.mesh_embedder(self.mesh_static_features[0])  # (N_mesh, d_h)
 
     def process_step(self, mesh_rep: Tensor) -> Tensor:
         """
         Process step of embedd-process-decode framework
-        Processes the representation on the mesh, possible in multiple steps
+        Processes the representation on the mesh, possible in multiple steps.
 
         mesh_rep: has shape (B, N_mesh, d_h)
         Returns mesh_rep: (B, N_mesh, d_h)
@@ -755,7 +755,7 @@ class HiLAM(BaseHiGraphModel):
     """
     Hierarchical graph model with message passing that goes sequentially down and up
     the hierarchy during processing.
-    The Hi-LAM model from Oskarsson et al. (2023)
+    The Hi-LAM model from Oskarsson et al. (2023).
     """
 
     register: bool = True
@@ -950,12 +950,20 @@ class HiLAM(BaseHiGraphModel):
         ):
             # Down
             mesh_rep_levels, mesh_same_rep, mesh_down_rep = self.mesh_down_step(
-                mesh_rep_levels, mesh_same_rep, mesh_down_rep, down_gnns, down_same_gnns
+                mesh_rep_levels,
+                mesh_same_rep,
+                mesh_down_rep,
+                down_gnns,  # type: ignore[arg-type]
+                down_same_gnns,  # type: ignore[arg-type]
             )
 
             # Up
             mesh_rep_levels, mesh_same_rep, mesh_up_rep = self.mesh_up_step(
-                mesh_rep_levels, mesh_same_rep, mesh_up_rep, up_gnns, up_same_gnns
+                mesh_rep_levels,
+                mesh_same_rep,
+                mesh_up_rep,
+                up_gnns,  # type: ignore[arg-type]
+                up_same_gnns,  # type: ignore[arg-type]
             )
 
         # Note: We return all, even though only down edges really are used later

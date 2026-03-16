@@ -20,19 +20,20 @@ class GridCellLoss(nn.Module):
         Args:
             weight_fn: A function to compute weights for the loss.
             precip_weight_cap: Custom ceiling value for the weight function.
+
         """
         super().__init__()
         self.precip_weight_cap = precip_weight_cap
 
     def forward(self, generated_images: Tensor, targets: Tensor) -> Tensor:
-        """
+        r"""
         Forward function.
 
         Calculates the grid cell regularizer value, assumes generated images are the mean
         predictions from 6 calls to the generator (Monte Carlo estimation of the
         expectations for the latent variable).
 
-        .. math:: L_R(\Theta) = \frac{1}{HWN} \| (\mathbb{E}_Z [G_|theta(Z; X_{1:M})] - X_{M+1:M+N}) \circ w(X_{M+1:M+N}) \|_1
+        .. math:: L_R(\\Theta) = \frac{1}{HWN} \\| (\\mathbb{E}_Z [G_|theta(Z; X_{1:M})] - X_{M+1:M+N}) \\circ w(X_{M+1:M+N}) \\|_1
 
         where H, W and N represent height, width and leadtimes.
 
@@ -42,6 +43,7 @@ class GridCellLoss(nn.Module):
 
         Returns:
             Grid Cell Regularizer term
+
         """
         difference = generated_images - targets
         if self.weight_fn is not None:
@@ -62,6 +64,7 @@ class GridCellLoss(nn.Module):
 
         Returns:
             Weights for each grid cell.
+
         """
         return torch.max(y + 1, torch.tensor(precip_weight_cap, device=y.device))
 

@@ -27,7 +27,9 @@ class LinearWarmupCosineAnnealingLR(_LRScheduler):
         >>> #
         >>> layer = nn.Linear(10, 1)
         >>> optimizer = Adam(layer.parameters(), lr=0.02)
-        >>> scheduler = LinearWarmupCosineAnnealingLR(optimizer, warmup_epochs=10, max_epochs=40)
+        >>> scheduler = LinearWarmupCosineAnnealingLR(
+        ...     optimizer, warmup_epochs=10, max_epochs=40
+        ... )
         >>> # the default case
         >>> for epoch in range(40):
         ...     # train(...)
@@ -58,6 +60,7 @@ class LinearWarmupCosineAnnealingLR(_LRScheduler):
             warmup_start_lr (float): Learning rate to start the linear warmup. Default: 0.
             eta_min (float): Minimum learning rate. Default: 0.
             last_epoch (int): The index of last epoch. Default: -1.
+
         """
         self.warmup_epochs = warmup_epochs
         self.max_epochs = max_epochs

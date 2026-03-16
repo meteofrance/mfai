@@ -8,9 +8,9 @@ LOREM_IPSUM = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do e
 LOREM_IPSUM_SPECIAL_TOKENS = "<|Lorem ipsum|> dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<|endoftext|>"
 
 
-##########################################################################################################
-#################################         MiniGPT2Tokenizer           ####################################
-##########################################################################################################
+########################################################################################
+########################         MiniGPT2Tokenizer           ###########################
+########################################################################################
 class LoremMiniTokenizer(MiniGPT2Tokenizer):
     def tokens(self) -> set:
         unique_tokens = set()
@@ -24,9 +24,9 @@ def test_mini_tokenizer() -> None:
     assert tokenizer.vocab_size == 40
 
 
-##########################################################################################################
-###################################         Special Tokens           #####################################
-##########################################################################################################
+########################################################################################
+##########################         Special Tokens           ############################
+########################################################################################
 @pytest.mark.parametrize("tokenizer", [GPT2Tokenizer(), LoremMiniTokenizer()])
 def test_add_special_tokens(tokenizer: Tokenizer) -> None:
     base_tokenizer = copy.deepcopy(tokenizer)

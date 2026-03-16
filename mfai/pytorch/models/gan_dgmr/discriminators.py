@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from torch import Tensor
 from torch.nn.modules.pixelshuffle import PixelUnshuffle
 from torch.nn.utils.parametrizations import spectral_norm
+from torchvision.transforms import RandomCrop
 
 from .blocks import DBlock
 
@@ -59,6 +60,7 @@ class TemporalDiscriminator(torch.nn.Module):
     def __init__(
         self,
         input_channels: int = 12,
+        crop_size: tuple[int, int] = (128, 128),
         num_layers: int = 3,
         conv_type: Literal["standard", "coord", "3d"] = "standard",
     ) -> None:
@@ -73,7 +75,7 @@ class TemporalDiscriminator(torch.nn.Module):
         """
         super().__init__()
 
-        self.downsample = torch.nn.AvgPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
+        self.random_crop = RandomCrop(crop_size)
         self.space2depth = PixelUnshuffle(downscale_factor=2)
         internal_chn = 48
         self.d1 = DBlock(
@@ -110,12 +112,12 @@ class TemporalDiscriminator(torch.nn.Module):
         self.bn = torch.nn.BatchNorm1d(2 * internal_chn * input_channels)
 
     def forward(self, x: Tensor) -> Tensor:
-        x = self.downsample(x)
+        x = self.random_crop(x)
 
         x = self.space2depth(x)
         # Have to move time and channels
         x = torch.permute(x, dims=(0, 2, 1, 3, 4))
-        # 2 residual 3D blocks to halve resolution if image, double number of channels and reduce
+        # 2 residual 3D blocks to have resolution if image, double number of channels and reduce
         # number of time steps
         x = self.d1(x)
         x = self.d2(x)

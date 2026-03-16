@@ -83,6 +83,7 @@ class UNet(BaseModel, AutoPaddingModel):
 
     Returns:
         torch.nn.Module: A UNet instance.
+
     """
 
     settings_kls = UNetSettings
@@ -253,6 +254,7 @@ class CustomUNetSettings:
         encoder_depth: Number of layers to use of the initial encoder. Defaults to 5.
         encoder_weights: If true, uses pretrained weights of the encoder. Defaults to True.
         autopad_enabled: If true, allows autopadding of input image. Defaults to False.
+
     """
 
     encoder_name: Literal["resnet18", "resnet34", "resnet50"] = "resnet18"
@@ -271,6 +273,7 @@ class CustomUNet(BaseModel, AutoPaddingModel):
         out_channels: Number of channels for output mask (or you can think of it as the number of classes).
         input_shape: Shape of the input.
         settings: A CustomUNetSettings instance.
+
     """
 
     settings_kls = CustomUNetSettings

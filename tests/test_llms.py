@@ -58,7 +58,7 @@ def test_llms(model_target_tokenizer: tuple[Any, str, Tokenizer]) -> None:
 
 def test_cross_attention_gpt2() -> None:
     """
-    Here we only test that the model is mathematically correct (matmul compat, shapes, attention, ...)
+    Here we only test that the model is mathematically correct (matmul compat, shapes, attention, ...).
     """
     torch.manual_seed(999)
     settings = CrossAttentionGPT2Settings(

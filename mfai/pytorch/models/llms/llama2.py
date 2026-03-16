@@ -1,6 +1,6 @@
 """Pytorch implementation of Llama2.
 It is widely inspired by Sebastian Raschka's book and work
-https://github.com/rasbt/LLMs-from-scratch/
+https://github.com/rasbt/LLMs-from-scratch/.
 """
 
 from dataclasses import dataclass
@@ -99,7 +99,7 @@ def compute_rope(x: Tensor, cos: Tensor, sin: Tensor) -> Tensor:
 
 class MultiHeadAttentionPySDPALlama2(nn.Module):
     """
-    Mutli Head Attention using Pytorch's scaled_dot_product_attention
+    Mutli Head Attention using Pytorch's scaled_dot_product_attention.
     """
 
     cos: Tensor
@@ -179,7 +179,7 @@ class Llama2Settings:
 
 class TransformerBlockLlama2(nn.Module):
     """A transformer block
-    - Based on Sebastian Raschka's book and github repo : https://github.com/rasbt/LLMs-from-scratch/
+    - Based on Sebastian Raschka's book and github repo : https://github.com/rasbt/LLMs-from-scratch/.
 
     - Attention used is based on pytorch's scaled_dot_product_attention
     ( Most efficient MultiHeadAttention module accodring S.Raschka's benchmark
@@ -219,7 +219,7 @@ class TransformerBlockLlama2(nn.Module):
 class Llama2(nn.Module):
     """Llama2 implementation
     - Based on Sebastian Raschka's book and github repo :
-        https://github.com/rasbt/LLMs-from-scratch/
+        https://github.com/rasbt/LLMs-from-scratch/.
 
     """
 

@@ -1,5 +1,5 @@
 """
-SegFormer adapted from https://github.com/lucidrains/segformer-pytorch
+SegFormer adapted from https://github.com/lucidrains/segformer-pytorch.
 """
 
 from dataclasses import dataclass

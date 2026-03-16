@@ -126,6 +126,18 @@ ignore-overlong-task-comments = true
 ignore-variadic-names = true
 
 
+[tool.coverage.run]
+source = ["`mfai/"]
+omit = []
+fail_under = 85
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = [
+    'def __repr__',
+    'if __name__ == .__main__.:',
+]
+
 [tool.mypy]
 # [mypy configuration file doc](https://mypy.readthedocs.io/en/stable/config_file.html#confval-exclude)
 exclude = [

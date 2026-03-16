@@ -46,7 +46,7 @@ class DiceLoss(_Loss):
         super(DiceLoss, self).__init__()
         self.mode = mode
         if classes is not None and self.mode == "binary":
-            raise Exception("Masking classes is not supported with mode=binary")
+            raise ValueError("Masking classes is not supported with mode=binary")
 
         self.classes = classes
         self.from_logits = from_logits

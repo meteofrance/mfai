@@ -30,7 +30,8 @@ jobs:
 
             - name: Generate API docs
               run: |
-                sphinx-apidoc -o doc/api mfai --force
+                sphinx-apidoc -o doc/api mfai --force --templatedir doc/_templates/apidoc
+                mv doc/api/modules.rst doc/api/index.rst
 
             - name: Build docs
               run: |

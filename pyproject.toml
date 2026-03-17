@@ -60,6 +60,13 @@ llm = [
   "tensorflow==2.20",
   "tiktoken~=0.8",
 ]
+docs = [
+  "sphinx>=7.0.0",
+  "furo",
+  "sphinx-autodoc-typehints",
+  "myst-parser",
+  "ghp-import",
+]
 dev = [
   "pytest==8.3.4",
   "pytest-cov==6.0.0",

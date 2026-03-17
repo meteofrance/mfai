@@ -2,8 +2,8 @@ name: Deploy Sphinx Docs
 
 on:
   push:
-    tags:        
-      - '*'
+    branches:        
+      - sphinx
 
 permissions:
     contents: write
@@ -28,7 +28,7 @@ jobs:
 
             - name: Generate API docs
               run: |
-                sphinx api-doc -o doc/api mfai --force
+                python3 -m sphinx api-doc -o doc/api mfai --force
 
             - name: Build docs
               run: |
@@ -36,6 +36,6 @@ jobs:
 
             - name: Deploy to Github Pages
               run: |
-                ghp-import -n -p -f doc/_build/html
+                python3 -m ghp-import -n -p -f doc/_build/html
               env:
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

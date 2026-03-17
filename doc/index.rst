@@ -70,4 +70,5 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-* :ref:`coverage`
+
+.. include:: ./coverage.rst

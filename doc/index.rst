@@ -63,7 +63,6 @@ Quick start
 
    api/modules
 
-* `Documentation coverage report <coverage.txt>`
 
 Indices and tables
 ==================
@@ -71,3 +70,4 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+* :ref:`coverage`

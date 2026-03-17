@@ -50,7 +50,9 @@ class MLFlowSaveConfigCallback(SaveConfigCallback):
         self.save_to_log_dir = False
 
     @override
-    def save_config(self, trainer: L.Trainer, pl_module: L.LightningModule, stage: str) -> None:
+    def save_config(
+        self, trainer: L.Trainer, pl_module: L.LightningModule, stage: str
+    ) -> None:
         if trainer.logger and trainer.logger.save_dir:
             dir_runs = Path(trainer.logger.save_dir)
             dir_run = dir_runs / trainer.logger.experiment_id / trainer.logger.run_id

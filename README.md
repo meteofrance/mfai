@@ -1,6 +1,12 @@
 # MFAI: Météo-France's AI Python package
 
-![Unit Tests](https://github.com/meteofrance/mfai/actions/workflows/tests.yml/badge.svg)
+[![Unit Tests](https://github.com/meteofrance/mfai/actions/workflows/tests.yml/badge.svg)](https://github.com/meteofrance/mfai/actions/workflows/tests.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License Apache 2.0](https://img.shields.io/github/license/meteofrance/mfai.svg)](https://github.com/meteofrance/mfai/blob/main/LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/meteofrance/mfai)](https://github.com/meteofrance/mfai/releases)
+[![PyTorch compatible](https://img.shields.io/badge/PyTorch-compatible-orange?logo=pytorch)](https://pytorch.org)
+[![Latest PyPI version](https://img.shields.io/pypi/v/mfai.svg)](https://pypi.org/project/mfai/)
+[![Release status](https://github.com/meteofrance/mfai/actions/workflows/release.yml/badge.svg)](https://github.com/meteofrance/mfai/actions/workflows/release.yml)
 
 **MFAI** is a Python package that provides the following features:
 - A variety of PyTorch Neural Network architectures (CNN, Vision Transformers, small LLMs, small mulitmodal LMs...) adapted to our needs, tested on our projects and datasets. For each architecture, we provide the reference to the original paper and source code if applicable and also the modifications we made.

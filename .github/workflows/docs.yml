@@ -32,7 +32,8 @@ jobs:
 
             - name: Build docs
               run: |
-                make -C doc html
+                make -C doc html coverage
+                cp doc/_build/coverage/python.txt doc/_build/html/coverage.txt
 
             - name: Deploy to Github Pages
               run: |

@@ -42,6 +42,8 @@ intersphinx_mapping = {
     'numpy': ('https://numpy.org/doc/stable', None),
 }
 
+coverage_show_missing_items = True
+
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 

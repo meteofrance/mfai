@@ -37,7 +37,7 @@ If you are interested about the technical details of these projects (precise neu
 
 # Package Documentation
 
-The full package documentationis available at [meteofrance.github.io/mfai](https://meteofrance.github.io/mfai).
+The full package documentation is available at [meteofrance.github.io/mfai](https://meteofrance.github.io/mfai).
 
 # Table of Content
 

@@ -33,7 +33,8 @@ class IdentityModel(BaseModel):
         """
         Args:
             *args: unused arguments.
-            *kwargs: unused keywords arguments.
+            **kwargs: unused keywords arguments.
+
         """
         super().__init__()
 

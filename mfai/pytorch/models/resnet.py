@@ -10,15 +10,15 @@ from torchvision.models.resnet import BasicBlock, Bottleneck, ResNet
 
 from mfai.pytorch.models import utils
 
-##########################################################################################################
-######################################         Encoders           ########################################
-##########################################################################################################
+########################################################################################
+#############################         Encoders           ###############################
+########################################################################################
 
 
 class ResNetEncoder(ResNet):
     """Resnet with encoder functionality such as:
-    - output channels specification of feature tensors (produced by encoder)
-    - patching first convolution for arbitrary input channels
+    - output channels specification of feature tensors (produced by encoder).
+    - patching first convolution for arbitrary input channels.
     """
 
     def __init__(self, out_channels: tuple[int, ...], depth: int = 5, **kwargs: Any):
@@ -54,7 +54,7 @@ class ResNetEncoder(ResNet):
 
     @property
     def out_channels(self) -> tuple[int, ...]:
-        """Return channels dimensions for each tensor of forward output of encoder"""
+        """Return channels dimensions for each tensor of forward output of encoder."""
         return self._out_channels[: self._depth + 1]
 
     @property
@@ -62,7 +62,7 @@ class ResNetEncoder(ResNet):
         return min(self._output_stride, 2**self._depth)
 
     def set_in_channels(self, in_channels: int, pretrained: bool = True) -> None:
-        """Change first convolution channels"""
+        """Change first convolution channels."""
         if in_channels == 3:
             return
 
@@ -174,9 +174,9 @@ def get_resnet_encoder(
     return encoder
 
 
-##########################################################################################################
-#######################################         ResNet           #########################################
-##########################################################################################################
+########################################################################################
+##############################         ResNet           ################################
+########################################################################################
 
 
 @dataclass_json
@@ -289,6 +289,7 @@ class ResNet50MLM(torch.nn.Module):
 
         Returns:
             Tensor: tensor of shape (B, num_tokens, num_classes)
+
         """
         y_hat = self.encoder(x)[-1]  # (B, out_channels = 2048, 2, 2)
         y_hat = self.avgpool(y_hat)

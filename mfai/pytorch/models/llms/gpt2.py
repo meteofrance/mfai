@@ -1,6 +1,6 @@
 """Pytorch implementation of GPT-2.
 It is widely inspired by Sebastian Raschka's book and work
-https://github.com/rasbt/LLMs-from-scratch/
+https://github.com/rasbt/LLMs-from-scratch/.
 """
 
 import typing
@@ -145,7 +145,7 @@ class MultiHeadAttention(nn.Module):
 
 class MultiHeadAttentionPySDPA(nn.Module):
     """
-    Mutli Head Attention using Pytorch's scaled_dot_product_attention
+    Mutli Head Attention using Pytorch's scaled_dot_product_attention.
     """
 
     def __init__(
@@ -281,7 +281,7 @@ class MultiHeadCrossAttentionPySDPA(nn.Module):
 @dataclass_json
 @dataclass(slots=True)
 class GPT2Settings:
-    """default settings correspond to a GPT2 small '124M'"""
+    """default settings correspond to a GPT2 small '124M'."""
 
     emb_dim: int = 768  # Embedding dimension
     context_length: int = 1024  # Context length
@@ -297,12 +297,12 @@ class GPT2Settings:
 
 class TransformerBlock(nn.Module):
     """A transformer block
-    - Based on Sebastian Raschka's book and github repo : https://github.com/rasbt/LLMs-from-scratch/
+    - Based on Sebastian Raschka's book and github repo : https://github.com/rasbt/LLMs-from-scratch/.
 
     - Attention used is based on pytorch's scaled_dot_product_attention
     ( Most efficient MultiHeadAttention module accodring S.Raschka's benchmark
     https://github.com/rasbt/LLMs-from-scratch/tree/main/ch03/02_bonus_efficient-multihead-attention
-    )
+    ).
 
     """
 
@@ -354,7 +354,7 @@ class TransformerBlock(nn.Module):
 class GPT2(nn.Module):
     """GPT implementation
     - Based on Sebastian Raschka's book and github repo :
-        https://github.com/rasbt/LLMs-from-scratch/
+        https://github.com/rasbt/LLMs-from-scratch/.
 
     """
 
@@ -551,7 +551,7 @@ class CrossAttentionGPT2Settings(GPT2Settings):
 
 class CrossAttentionTransformerBlock(nn.Module):
     """
-    A cross attention transformer block
+    A cross attention transformer block.
     """
 
     def __init__(self, settings: CrossAttentionGPT2Settings) -> None:
@@ -604,7 +604,7 @@ class CrossAttentionTransformerBlock(nn.Module):
 class CrossAttentionGPT2(nn.Module):
     """
     A GPT2 with cross attention to allow vision/weather data injection as key/values into some of the transformer block.
-    Freely inspired by Llama3.2 as described here : https://magazine.sebastianraschka.com/i/151078631/the-llama-herd-of-models
+    Freely inspired by Llama3.2 as described here : https://magazine.sebastianraschka.com/i/151078631/the-llama-herd-of-models.
     """
 
     settings_kls = CrossAttentionGPT2Settings

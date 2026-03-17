@@ -36,6 +36,11 @@ Météo-France's AI Python package - PyTorch neural network architectures for we
   :target: https://pytorch.org
   :alt: PyTorch compatible
 
+.. image:: https://img.shields.io/pypi/v/mfai.svg
+  :target: https://pypi.org/project/mfai/
+  :alt: Latest PyPI version
+
+
 ---
 
 mfai provides:

@@ -24,19 +24,17 @@ Météo-France's AI Python package - PyTorch neural network architectures for we
   :target: https://github.com/meteofrance/mfai/stargazers
   :alt: Github stars
 
-.. image:: https://img.shields.io/badge/github/actions/workflow/status/meteofrance/mfai/release.yml?label=release
-  :target: https://github.com/meteofrance/mfai/actions
+.. image:: https://github.com/meteofrance/mfai/actions/workflows/release.yml/badge.svg
+  :target: https://github.com/meteofrance/mfai/actions/workflows/release.yml
   :alt: Release status
-
-.. image:: https://img.shields.io/badge/PyTorch-compatible-orange?logo=pytorch
-  :target: https://pytorch.org
-  :alt: PyTorch compatible
 
 .. image:: https://github.com/meteofrance/mfai/actions/workflows/tests.yml/badge.svg
   :target: https://github.com/meteofrance/mfai/actions/workflows/tests.yml
   :alt: Tests status
 
-.. 
+.. image:: https://img.shields.io/badge/PyTorch-compatible-orange?logo=pytorch
+  :target: https://pytorch.org
+  :alt: PyTorch compatible
 
 ---
 

@@ -63,6 +63,8 @@ Quick start
 
    api/modules
 
+* `Documentation coverage report <coverage.txt>`
+
 Indices and tables
 ==================
 

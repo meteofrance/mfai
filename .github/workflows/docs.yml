@@ -2,8 +2,8 @@ name: Deploy Sphinx Docs
 
 on:
   push:
-    branches:        
-      - sphinx
+    tags:        
+      - "*"
 
 permissions:
     contents: write

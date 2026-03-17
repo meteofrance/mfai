@@ -35,6 +35,10 @@ We also have past and ongoing R&D projects:
 
 If you are interested about the technical details of these projects (precise neural network architecture and hyperparameters, source code, ...) feel free to contact us. Most of our projects are proprietary but we can collaborate with other meteorological public institutions.
 
+# Package Documentation
+
+The full package documentationis available at [meteofrance.github.io/mfai](https://meteofrance.github.io/mfai).
+
 # Table of Content
 
 - [Use Cases](#use-cases)

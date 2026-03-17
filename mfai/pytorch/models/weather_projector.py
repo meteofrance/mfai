@@ -14,7 +14,7 @@ class PatchMaker(nn.Module):
     """
     Converts a vision/weather (B, C, H, W) tensor into a (B, T, F) token tensor.
     T stands for token dimension and F the feature/embedding dimension.
-    Each token is built with all the data of one patch of size patch_size
+    Each token is built with all the data of one patch of size patch_size.
     """
 
     def __init__(
@@ -45,7 +45,7 @@ class PatchMaker(nn.Module):
         """
         1. zero pad if padding is enabled
         2. check for dim consistency
-        3. einops rearrange to patch
+        3. einops rearrange to patch.
         """
         # t shape = (B, channels, height, width)
         if self.autopadding:
@@ -99,11 +99,12 @@ class WeatherProjector(nn.Module):
         """Forward function of the WeatherProjector vision encoder.
 
         Args:
-            x (Tensor): tensor of shape (B, nu_channels, height, width)
+            t: tensor of shape (B, nu_channels, height, width)
 
         Returns:
             Tensor: tensor of shape (B, num_patches_h * num_patches_w, embed_dim)
         """
+
         t = self.patcher(t)
         # t shape = (B, num_patches_h * num_patches_w, patch_size_h * patch_size_w * features)
         return self.proj(t)

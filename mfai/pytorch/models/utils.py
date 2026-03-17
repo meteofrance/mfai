@@ -15,8 +15,8 @@ def patch_first_conv(
 ) -> None:
     """Change first convolution layer input channels.
     In case:
-        in_channels == 1 or in_channels == 2 -> reuse original weights
-        in_channels > 3 -> make random kaiming normal initialization
+        in_channels == 1 or in_channels == 2 -> reuse original weights.
+        in_channels > 3 -> make random kaiming normal initialization.
     """
 
     # get first conv
@@ -57,7 +57,7 @@ def patch_first_conv(
 
 
 def replace_strides_with_dilation(module: torch.nn.Module, dilation: int) -> None:
-    """Patch Conv2d modules replacing strides with dilation"""
+    """Patch Conv2d modules replacing strides with dilation."""
     for mod in module.modules():
         if isinstance(mod, nn.Conv2d):
             mod.stride = (1, 1)
@@ -120,7 +120,7 @@ def features_second_to_last(y: Tensor) -> Tensor:
 
 def expand_to_batch(x: Tensor, batch_size: int) -> Tensor:
     """
-    Expand tensor with initial batch dimension
+    Expand tensor with initial batch dimension.
     """
     # In order to be generic (for 1D or 2D grid)
     sizes: list[int] = [batch_size] + [-1 for _ in x.shape]

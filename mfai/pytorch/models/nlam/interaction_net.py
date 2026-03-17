@@ -7,7 +7,7 @@ from torch.utils.checkpoint import checkpoint
 
 
 class CheckpointWrapper(nn.Module):
-    """Wrapper for checkpointing a module. Comes from AIFS"""
+    """Wrapper for checkpointing a module. Comes from AIFS."""
 
     def __init__(self, module: nn.Module) -> None:
         super().__init__()
@@ -19,7 +19,7 @@ class CheckpointWrapper(nn.Module):
 
 class InteractionNet(pyg.nn.MessagePassing):
     """
-    Implementation of a generic Interaction Network, from Battaglia et al. (2016)
+    Implementation of a generic Interaction Network, from Battaglia et al. (2016).
     """
 
     def __init__(
@@ -35,7 +35,7 @@ class InteractionNet(pyg.nn.MessagePassing):
         checkpoint: bool = False,
     ):
         """
-        Create a new InteractionNet
+        Create a new InteractionNet.
 
         edge_index: (2,M), Edges in pyg format
         input_dim: Dimensionality of input representations, for both nodes and edges
@@ -112,6 +112,7 @@ class InteractionNet(pyg.nn.MessagePassing):
         Returns:
         rec_rep: (N_rec, d_h), updated vector representations of receiver nodes
         (optionally) edge_rep: (M, d_h), updated vector representations of edges
+
         """
         # Always concatenate to [rec_nodes, send_nodes] for propagation, but only
         # aggregate to rec_nodes
@@ -174,12 +175,13 @@ class SplitMLPs(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         """
-        Chunk up input and feed through MLPs
+        Chunk up input and feed through MLPs.
 
         x: (..., N, d), where N = sum(chunk_sizes)
 
         Returns:
         joined_output: (..., N, d), concatenated results from the different MLPs
+
         """
         chunks = torch.split(x, self.chunk_sizes, dim=-2)
         chunk_outputs = [
@@ -195,7 +197,7 @@ def make_mlp(
     Create MLP from list blueprint, with
     input dimensionality: blueprint[0]
     output dimensionality: blueprint[-1] and
-    hidden layers of dimensions: blueprint[1], ..., blueprint[-2]
+    hidden layers of dimensions: blueprint[1], ..., blueprint[-2].
 
     if layer_norm is True, includes a LayerNorm layer at
     the output (as used in GraphCast)

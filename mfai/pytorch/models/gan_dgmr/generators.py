@@ -42,6 +42,7 @@ class Sampler(torch.nn.Module):
             latent_channels: Number of input channels to the lowest ConvGRU layer (int)
             context_channels: Number of context channels (int)
             output_channels: Number of output channels (int)
+
         """
         super().__init__()
         self.forecast_steps = forecast_steps
@@ -208,6 +209,7 @@ class Generator(torch.nn.Module):
             conditioning_stack: (torch.nn.Module)
             latent_stack: (torch.nn.Module)
             sampler: Combines the conditioning information and latent information (torch.nn.Module)
+
         """
         super().__init__()
         self.conditioning_stack = conditioning_stack

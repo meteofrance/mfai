@@ -1,5 +1,5 @@
 """
-Tests for our pytorch metrics
+Tests for our pytorch metrics.
 """
 
 import numpy as np

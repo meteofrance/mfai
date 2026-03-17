@@ -6,6 +6,9 @@
 .. include:: ../README.md
   :parser: myst_parser.sphinx_
 
+Packages documentation
+==================
+
 .. toctree::
    :maxdepth: 2
    :caption: Guide

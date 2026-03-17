@@ -12,7 +12,7 @@ Météo-France's AI Python package - PyTorch neural network architectures for we
   :target: https://www.python.org/downloads/
   :alt: Python 3.10+
 
-.. image:: https://img.shields.io/badge/license-Apache%202.0-green.svg
+.. image:: https://img.shields.io/github/license/meteofrance/mfai.svg
   :target: https://github.com/meteofrance/mfai/blob/main/LICENSE
   :alt: License Apache 2.0
 
@@ -31,6 +31,12 @@ Météo-France's AI Python package - PyTorch neural network architectures for we
 .. image:: https://img.shields.io/badge/PyTorch-compatible-orange?logo=pytorch
   :target: https://pytorch.org
   :alt: PyTorch compatible
+
+.. image:: https://github.com/meteofrance/mfai/actions/workflows/tests.yml/badge.svg
+  :target: https://github.com/meteofrance/mfai/actions/workflows/tests.yml
+  :alt: Tests status
+
+.. 
 
 ---
 
@@ -79,13 +85,13 @@ Quick start
 
 .. toctree::
    :maxdepth: 2
-   :caption: Guide:
+   :caption: Guide
 
    namedtensor
 
 .. toctree::
    :maxdepth: 2
-   :caption: API Reference:
+   :caption: API Reference
 
    api/modules
 

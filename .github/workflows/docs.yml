@@ -28,7 +28,7 @@ jobs:
 
             - name: Generate API docs
               run: |
-                python3 -m sphinx api-doc -o doc/api mfai --force
+                python3 -m sphinx api-doc -o doc/api mfai
 
             - name: Build docs
               run: |

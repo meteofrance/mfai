@@ -9,7 +9,28 @@ Welcome to mfai's documentation!
 Météo-France's AI Python package - PyTorch neural network architectures for weather data.
 
 .. image:: https://img.shields.io/badge/python-3.10+-blue.svg
+  :target: https://www.python.org/downloads/
+  :alt: Python 3.10+
+
 .. image:: https://img.shields.io/badge/license-Apache%202.0-green.svg
+  :target: https://github.com/meteofrance/mfai/blob/main/LICENSE
+  :alt: License Apache 2.0
+
+.. image:: https://img.shields.io/github/v/release/meteofrance/mfai
+  :target: https://github.com/meteofrance/mfai/releases
+  :alt: Latest release
+
+.. image:: https://img.shields.io/badge/github/stars/meteofrance/mfai?style=flat
+  :target: https://github.com/meteofrance/mfai/stargazers
+  :alt: Github stars
+
+.. image:: https://img.shields.io/badge/github/actions/workflow/status/meteofrance/mfai/release.yml?label=release
+  :target: https://github.com/meteofrance/mfai/actions
+  :alt: Release status
+
+.. image:: https://img.shields.io/badge/PyTorch-compatible-orange?logo=pytorch
+  :target: https://pytorch.org
+  :alt: PyTorch compatible
 
 ---
 
@@ -56,6 +77,11 @@ Quick start
    model = UNet(in_channels=3, out_channels=1)
 
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Guide:
+
+   namedtensor
 
 .. toctree::
    :maxdepth: 2

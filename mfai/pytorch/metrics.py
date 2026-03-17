@@ -213,7 +213,7 @@ class CSINeighborhood(Metric):
 
 class FSS(Metric):
     """
-    Fraction Skill Score
+    Fraction Skill Score.
 
     The FSS is normally computed over a sample of forecast-observation pairs, e.g., at different valid times. Mitter-
     maier (2021) has demonstrated that the FSS is sensitive to the pooling method used to combine the scores of
@@ -245,6 +245,7 @@ class FSS(Metric):
             stride (None| int): the stride of the window. Default value is 'None'.
             mask (None | Tensor): the mask to apply before computing the FSS. The mask should be a binary tensor where 0 represents pixels
             where the FSS should not be computed. Default value is 'None'.
+
         """
         super().__init__()
 
@@ -313,6 +314,7 @@ class FSS(Metric):
 
         Returns:
             fbs, worse_fbs (tuple(float, float)): the fractions Brier Score and the worse fractions Brier Score.
+
         """
         pooling = torch.nn.AvgPool2d(
             kernel_size=self.neighborood, stride=self.stride, padding=0

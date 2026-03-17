@@ -55,5 +55,5 @@ html_theme = "furo"
 autodoc_typehints = "description"
 html_static_path = ["_static"]
 
-html_logo = "_static/logo.png"
-html_favicon = "_static/logo.png"
+html_logo = "imgs/logo.png"
+html_favicon = "imgs/logo.png"

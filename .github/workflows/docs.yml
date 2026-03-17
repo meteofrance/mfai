@@ -28,7 +28,7 @@ jobs:
 
             - name: Generate API docs
               run: |
-                python3 -m sphinx-apidoc -o doc/api mfai
+                sphinx-apidoc -o doc/api mfai --force
 
             - name: Build docs
               run: |
@@ -36,6 +36,6 @@ jobs:
 
             - name: Deploy to Github Pages
               run: |
-                python3 -m ghp-import -n -p -f doc/_build/html
+                ghp-import -n -p -f doc/_build/html
               env:
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

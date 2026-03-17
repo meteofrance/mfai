@@ -1,0 +1,25 @@
+{{ pkgname }}
+{{ "=" * pkgname | length }}
+
+.. automodule:: {{ pkgname }}
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+{% if subpackages %}
+.. toctree::
+  :maxdepth: 1
+
+{% for subpackage in subpackages %}
+  {{ subpackage }}
+{% endfor %}
+{% endif %}
+
+{% if submodules %}
+.. toctree::
+  :maxdepth: 1
+
+{% for submodule in submodules %}
+  {{ submodule }}
+{% endfor %}
+{% endif %}

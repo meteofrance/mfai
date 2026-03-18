@@ -3,23 +3,33 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. include:: ../README.md
-  :parser: myst_parser.sphinx_
 
 Packages documentation
 ==================
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Guide
+   :maxdepth: 1
 
+   installation
+   quickstart
+   usecases
    namedtensor
 
 .. toctree::
    :maxdepth: 2
 
-   api/index
+   api/modules
+   api/losses
+   api/transforms
+   api/metrics
+   api/lightning
+   api/index   
 
+.. toctree::
+   :maxdepth: 1
+
+   about
+   contributing
 
 Indices and tables
 ==================

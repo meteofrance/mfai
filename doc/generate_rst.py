@@ -13,7 +13,7 @@ import inspect
 import pkgutil
 import sys
 from pathlib import Path
-from typing import Sequence, Generator
+from typing import Literal, Sequence, Generator
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -34,20 +34,18 @@ def is_subclass_of_names(cls: type, base_names: Sequence[str | list[str]]) -> bo
     Returns:
         True if the class matches any condition, False otherwise.
     """
-    try:
-        if not inspect.isclass(cls):
-            return False
-        mro_names = [base.__name__ for base in cls.__mro__[1:]]
-        for condition in base_names:
-            if isinstance(condition, list):
-                if all(name in mro_names for name in condition):
-                    return True
-            else:
-                if condition in mro_names:
-                    return True
+    if not inspect.isclass(cls):
         return False
-    except TypeError:
-        return False
+    mro_names = [base.__name__ for base in cls.__mro__[1:]]
+    for condition in base_names:
+        if isinstance(condition, list):
+            if all(name in mro_names for name in condition):
+                return True
+        else:
+            if condition in mro_names:
+                return True
+    return False
+
 
 
 def iter_all_modules(package_path: str) -> Generator[str, None, None]:
@@ -90,7 +88,7 @@ def get_classes_matching(package_path: str, base_names: Sequence[str | list[str]
     for module_name in iter_all_modules(package_path):
         try:
             mod = importlib.import_module(module_name)
-        except Exception:
+        except ImportError:
             continue
         for name, obj in inspect.getmembers(mod, inspect.isclass):
             if name.startswith("_"):
@@ -103,7 +101,7 @@ def get_classes_matching(package_path: str, base_names: Sequence[str | list[str]
     return matches
 
 
-def write_rst(title: str, sections: list[dict], output_path: Path) -> None:
+def write_rst(title: str, sections: list[dict[Literal["title", "classes"], str]], output_path: Path) -> None:
     """Generate a RST file with autosummary blocks for the given sections.
 
     Each section produces a titled subsection with an autosummary directive

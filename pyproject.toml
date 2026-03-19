@@ -40,6 +40,7 @@ dependencies = [
   "dataclasses-json~=0.6",
   "einops~=0.8",
   "lightning[pytorch-extra]",
+  "mlflow==3.10.*",
   "monai==1.5.*",
   "onnx~=1.17.0",
   "onnxruntime~=1.20",

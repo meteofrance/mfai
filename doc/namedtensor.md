@@ -1,4 +1,4 @@
-# mfai.NamedTensor
+# NamedTensor
 
 ```python
 class mfai.NamedTensor(tensor: Tensor, names: List[str], feature_names: List[str], feature_dim_name: str = "features")

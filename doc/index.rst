@@ -16,9 +16,9 @@ Packages documentation
    namedtensor
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
-   api/modules
+   api/models
    api/losses
    api/transforms
    api/metrics

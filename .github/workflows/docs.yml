@@ -28,6 +28,10 @@ jobs:
               run: |
                 pip install -e ".[docs]"
 
+            - name: Generate RST files
+              run: |
+                ./doc/generate_rst
+
             - name: Generate API docs
               run: |
                 sphinx-apidoc -o doc/api mfai --force --templatedir doc/_templates/apidoc

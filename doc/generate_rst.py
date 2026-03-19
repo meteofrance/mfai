@@ -86,7 +86,7 @@ if __name__ == "__main__":
     write_rst(
         title="Models",
         sections=[
-            {"title": "Base Class", "classes": ["mfai.pytorch.models.base.ModelABC"]},
+            {"title": "Models", "classes": ["mfai.pytorch.models.base.ModelABC"]},
             {
                 "title": "Models",
                 "classes": get_classes_matching(

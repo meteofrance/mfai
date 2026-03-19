@@ -64,5 +64,5 @@ autodoc_typehints = "description"
 html_static_path = ["_static"]
 html_extra_path = ["imgs"]
 
-html_logo = "imgs/logo.png"
-html_favicon = "imgs/logo.png"
+html_logo = "./logo.png"
+html_favicon = "./logo.png"

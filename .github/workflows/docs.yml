@@ -30,7 +30,7 @@ jobs:
 
             - name: Generate RST files
               run: |
-                ./doc/generate_rst
+                python doc/generate_rst.py
 
             - name: Generate API docs
               run: |

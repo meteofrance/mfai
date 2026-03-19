@@ -43,6 +43,7 @@ intersphinx_mapping = {
     "torch": ("https://pytorch.org/docs/stable", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "lightning": ("https://lightning.ai/docs/pytorch/stable", None),
+    "torchmetrics": ("https://lightning.ai/docs/torchmetrics/stable", None),
 }
 
 suppress_warnings = ["toc.not_included", "ref.ref"]

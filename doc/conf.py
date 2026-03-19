@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.abspath(".."))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "mfai"
-copyright = "2026, Météo-France AI Lab"
+copyright = "2026, Météo-France LabIA"
 author = "Météo-France AI Lab"
 
 # -- General configuration ---------------------------------------------------
@@ -62,6 +62,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_theme = "furo"
 autodoc_typehints = "description"
 html_static_path = ["_static"]
+html_extra_path = ["imgs"]
 
 html_logo = "imgs/logo.png"
 html_favicon = "imgs/logo.png"

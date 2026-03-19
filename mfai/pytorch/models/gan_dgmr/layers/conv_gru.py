@@ -23,6 +23,7 @@ class ConvGRUCell(torch.nn.Module):
           output_channels: number of output channels (int)
           kernel_size: kernel size of the convolutions. Default: 3.
           sn_eps: constant for spectral normalization. Default: 1e-4.
+
         """
         super().__init__()
         self._kernel_size: int = kernel_size
@@ -65,6 +66,7 @@ class ConvGRUCell(torch.nn.Module):
 
         Returns:
             New tensor plus the new state
+
         """
         # Concatenate the inputs and previous state along the channel axis.
         xh = torch.cat([x, prev_state], dim=1)

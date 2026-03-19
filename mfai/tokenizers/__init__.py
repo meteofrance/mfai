@@ -161,6 +161,7 @@ class MiniGPT2Tokenizer(Tokenizer, ABC):
                     tokens = self.gpt2_tokenizer.encode(text)
                     unique_tokens.update(tokens)
                 return unique_tokens
+
         """
 
     def add_special_tokens(self, special_tokens: list[str]) -> None:

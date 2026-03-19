@@ -1,12 +1,8 @@
-import warnings
-from pathlib import Path
 from typing import Any, Literal, Tuple
 
 import lightning.pytorch as pl
-import pandas as pd
 import torch
 import torchmetrics as tm
-from pytorch_lightning.utilities import rank_zero_only
 from torch import Tensor
 
 from mfai.pytorch.models.base import BaseModel
@@ -32,6 +28,7 @@ class SegmentationLightningModule(pl.LightningModule):
             model (BaseModel): Torch neural network model in [DeepLabV3, DeepLabV3Plus, HalfUNet, Segformer, SwinUNetR, UNet, CustomUNet, UNetRPP]
             type_segmentation (Literal["binary", "multiclass", "multilabel", "regression"]): Type of segmentation we want to do
             loss (torch.nn.modules.loss._Loss): Loss function
+
         """
         super().__init__()
         self.model = model
@@ -53,7 +50,7 @@ class SegmentationLightningModule(pl.LightningModule):
         )
 
     def get_hparams(self) -> dict:
-        """Return the hparams we want to save in logger"""
+        """Return the hparams we want to save in logger."""
         hparams = dict(self.hparams)
         hparams["loss"] = self.loss.__class__.__name__
         hparams["model"] = self.model.__class__.__name__
@@ -68,7 +65,7 @@ class SegmentationLightningModule(pl.LightningModule):
         return y_hat
 
     def probabilities_to_classes(self, y_hat: Tensor) -> Tensor:
-        """Transfrom probalistics predictions to discrete classes"""
+        """Transfrom probalistics predictions to discrete classes."""
         if self.type_segmentation == "multiclass":
             y_hat = y_hat.argmax(dim=1)
         elif self.type_segmentation in ["binary", "multilabel"]:
@@ -132,23 +129,6 @@ class SegmentationLightningModule(pl.LightningModule):
                 ]
             )
 
-    def build_metrics_dataframe(self) -> pd.DataFrame:
-        columns_name = list(self.list_sample_metrics[0].keys())
-        return pd.DataFrame(self.list_sample_metrics, columns=columns_name)
-
-    @rank_zero_only
-    def save_test_metrics_as_csv(self, df: pd.DataFrame) -> None:
-        if self.logger is None or self.logger.log_dir is None:
-            warnings.warn(
-                "SegmentationLightningModule.save_test_metrics_as_csv() called with no logger or no local save path."
-            )
-            return
-        path_csv = Path(self.logger.log_dir) / "metrics_test_set.csv"
-        df.to_csv(path_csv, index=False)
-        print(
-            f"--> Metrics for all samples saved in \033[91;1m{path_csv}\033[0m"
-        )  # bold red
-
     ########################################################################################
     #                                       OPTIMIZER                                      #
     ########################################################################################
@@ -170,7 +150,8 @@ class SegmentationLightningModule(pl.LightningModule):
 
     def _shared_forward_step(self, x: Tensor, y: Tensor) -> tuple[Tensor, Any]:
         """Computes forward pass and loss for a batch.
-        Step shared by training, validation and test steps"""
+        Step shared by training, validation and test steps.
+        """
         if self.channels_last:
             x = x.to(memory_format=torch.channels_last)
         # We prefer when the last activation function is included in the loss and not in the model.
@@ -195,7 +176,8 @@ class SegmentationLightningModule(pl.LightningModule):
     ########################################################################################
     def on_train_start(self) -> None:
         """Setup custom scalars panel on tensorboard and log hparams.
-        Useful to easily compare train and valid loss and detect overtfitting."""
+        Useful to easily compare train and valid loss and detect overtfitting.
+        """
         self.training_loss: list[Any] = []
         if self.logger and self.logger.log_dir:
             hparams = self.get_hparams()
@@ -225,7 +207,8 @@ class SegmentationLightningModule(pl.LightningModule):
 
     def val_plot_step(self, batch_idx: int, y: Tensor, y_hat: Tensor) -> None:
         """Plots images on first batch of validation and log them in logger.
-        Should be overwrited for each specific project, with matplotlib plots."""
+        Should be overwrited for each specific project, with matplotlib plots.
+        """
         if batch_idx == 0:
             tb = self.logger.experiment  # type: ignore[union-attr]
             step = self.current_epoch
@@ -249,8 +232,7 @@ class SegmentationLightningModule(pl.LightningModule):
         self.validation_loss.clear()  # free memory
         if self.logger is None:
             return
-        metrics = self.valid_metrics.compute()
-        self.log_dict(metrics, logger=True if self.logger else False)
+        self.log_dict(self.valid_metrics.compute())
         self.valid_metrics.reset()
 
     ########################################################################################
@@ -260,10 +242,6 @@ class SegmentationLightningModule(pl.LightningModule):
         self.test_metrics = (
             self.metrics.clone()
         )  # Used to compute overall metrics on test dataset
-        self.sample_metrics = (
-            self.test_metrics.clone()
-        )  # Used to compute metrics on each sample, to log metrics in CSV file
-        self.list_sample_metrics: list[dict[str, Any]] = []
 
     def test_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> None:
         """Computes metrics for each sample, at the end of the run."""
@@ -273,21 +251,9 @@ class SegmentationLightningModule(pl.LightningModule):
 
         self.test_metrics.update(y_hat, y)
 
-        # Save metrics values for each sample
-        self.sample_metrics.update(y_hat, y)
-        batch_dict = {"Name": batch_idx, "loss": loss.item()}
-        metrics = self.sample_metrics.compute()
-        metrics_dict = {
-            key: value.item() for key, value in metrics.items()
-        }  # Convert Tensor to float
-        self.list_sample_metrics.append(batch_dict | metrics_dict)
-        self.sample_metrics.reset()
-
     def on_test_epoch_end(self) -> None:
         """Logs metrics in logger hparams view, at the end of run."""
         metrics = self.test_metrics.compute()
         if self.logger:
             self.logger.log_hyperparams(self.get_hparams(), metrics=metrics)
-        df = self.build_metrics_dataframe()
-        self.save_test_metrics_as_csv(df)
-        df = df.drop("Name", axis=1)
+        self.test_metrics.reset()

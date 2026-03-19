@@ -1,9 +1,9 @@
 """
 Test our pure PyTorch models to make sure they can be :
-1. Instanciated
-2. Trained
-3. onnx exported
-4. onnx loaded and used for inference
+1. Instanciated.
+2. Trained.
+3. onnx exported.
+4. onnx loaded and used for inference.
 """
 
 import dataclasses
@@ -28,6 +28,7 @@ from mfai.pytorch.models import (
 from mfai.pytorch.models.base import ModelABC, ModelType
 from mfai.pytorch.models.deeplabv3 import DeepLabV3Plus
 from mfai.pytorch.models.half_unet import HalfUNet
+from mfai.pytorch.models.identity import IdentityModel
 from mfai.pytorch.models.llms.cross_attention import XAttMultiModalLM
 from mfai.pytorch.models.llms.fuyu import Fuyu
 from mfai.pytorch.models.llms.gpt2 import GPT2, CrossAttentionGPT2
@@ -443,7 +444,7 @@ def test_autopad_models(model_class: Any) -> None:
 def test_model_attributes(model_class: ModelABC) -> None:
     """
     We check that ALL our models have the required attributes
-    settings_kls and model_type
+    settings_kls and model_type.
     """
     assert (
         hasattr(model_class, "model_type")
@@ -453,3 +454,12 @@ def test_model_attributes(model_class: ModelABC) -> None:
         hasattr(model_class, "settings_kls")
         and dataclasses.is_dataclass(model_class.settings_kls)
     ), f"Model implementation {model_class} is missing dataclass attribute 'settings_kls'"
+
+
+def test_IdentityModel() -> None:
+    """Testing that the IdentityModel do not changes
+    the input Tensor.
+    """
+    model = IdentityModel()
+    x: Tensor = torch.rand(*(2, 16, 16))
+    torch.testing.assert_close(x, model(x))

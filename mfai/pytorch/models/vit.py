@@ -353,6 +353,7 @@ class VitEncoder(BaseModel, VitPaddingMixin):
 
         Returns:
             Tensor: tensor of shape (B, n_patches_h * n_patches_w + 1, embed_dim)
+
         """
         x, _ = self._maybe_padding(data_tensor=x)  # (B, features, h, w)
         return self.vit(x)

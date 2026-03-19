@@ -20,7 +20,7 @@ class TensorWrapper:
     Wrapper around a torch tensor.
     We do this separated dataclass to allow lightning's introspection to see our batch size
     and move our tensors to the right device, otherwise we have this error/warning:
-    "Trying to infer the `batch_size` from an ambiguous collection ..."
+    "Trying to infer the `batch_size` from an ambiguous collection ...".
     """
 
     tensor: Tensor
@@ -244,7 +244,7 @@ class NamedTensor(TensorWrapper):
     def type_(self, new_type: str | torch.dtype) -> None:
         """
         Modify the type of the underlying torch tensor
-        by calling torch's .type method
+        by calling torch's .type method.
 
         in_place operation for this class, the internal
         tensor is replaced by the new one.
@@ -273,7 +273,7 @@ class NamedTensor(TensorWrapper):
     ) -> None:
         """
         Unflatten the dimension dim of the underlying tensor.
-        Insert unflattened_size dimension instead
+        Insert unflattened_size dimension instead.
         """
         self.tensor = self.tensor.unflatten(dim, unflattened_size)
         self.names = self.names[:dim] + [*unflatten_dim_name] + self.names[dim + 1 :]
@@ -292,7 +292,7 @@ class NamedTensor(TensorWrapper):
 
     def unsqueeze_(self, dim_name: str, dim_index: int) -> None:
         """
-        Insert a new dimension dim_name of size 1 at dim_index
+        Insert a new dimension dim_name of size 1 at dim_index.
         """
         self.tensor = torch.unsqueeze(self.tensor, dim_index)
         self.names.insert(dim_index, dim_name)
@@ -302,7 +302,7 @@ class NamedTensor(TensorWrapper):
         Return the tensor indexed along the dimension dim_name
         with the index index.
         The given dimension is removed from the tensor.
-        See https://pytorch.org/docs/stable/generated/torch.select.html
+        See https://pytorch.org/docs/stable/generated/torch.select.html.
         """
         if dim_name == self.feature_dim_name:
             raise ValueError(
@@ -331,7 +331,7 @@ class NamedTensor(TensorWrapper):
         The returned tensor has the same number of dimensions as the original tensor (input).
         The dimth dimension has the same size as the length of index; other dimensions have
         the same size as in the original tensor.
-        See https://pytorch.org/docs/stable/generated/torch.index_select.html
+        See https://pytorch.org/docs/stable/generated/torch.index_select.html.
         """
         return NamedTensor(
             self.tensor.index_select(

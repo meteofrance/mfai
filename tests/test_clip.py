@@ -26,6 +26,7 @@ def cli_main(args: ArgsType = None) -> None:
         DummyMultiModalDataModule,
         run=False,
         args=args,
+        save_config_callback=None,
     )
     cli.trainer.fit(cli.model, datamodule=cli.datamodule)
 

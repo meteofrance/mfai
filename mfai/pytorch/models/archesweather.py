@@ -52,6 +52,7 @@ class EarthSpecificBlock(nn.Module):
         Defaults to False.
         lam (bool, optional): whether to use limited area setting for shifted-window attention.
         Defaults to False.
+
     """
 
     def __init__(
@@ -272,7 +273,7 @@ class EarthSpecificBlock(nn.Module):
 
 
 class EarthSpecificLayer(nn.Module):
-    """Basic layer of our network, contains 2 or 6 blocks
+    """Basic layer of our network, contains 2 or 6 blocks.
 
     Args:
         depth (int): number of blocks
@@ -280,6 +281,7 @@ class EarthSpecificLayer(nn.Module):
         dim (int): see EarthSpecificBlock
         drop_path_ratio_list (list[float]): see EarthSpecificBlock
         num_heads (int): see EarthSpecificBlock
+
     """
 
     def __init__(
@@ -333,10 +335,12 @@ class EarthSpecificLayer(nn.Module):
 
 class Interpolate(nn.Module):
     """Interpolation module.
+
     Args:
         scale_factor (float): scaling
         mode (str): interpolation mode
         align_corners (bool): align corners
+
     """
 
     def __init__(
@@ -368,7 +372,7 @@ class PatchRecoveryConv(nn.Module):
         hidden_dim (int): hidden feature size
         plevel_variables (int): number of level variables
         surface_variables (int): number of surface variables
-        plevels (int): number of levels
+        plevels (int): number of levels.
     """
 
     def __init__(
@@ -462,7 +466,7 @@ class LinVert(nn.Module):
     """Linear layer for the vertical dimension
     Args:
         in_features (int): input feature size
-        embedding_size (tuple[int, ...]): embedding size
+        embedding_size (tuple[int, ...]): embedding size.
     """
 
     def __init__(self, in_features: int, embedding_size: tuple[int, ...]) -> None:
@@ -546,7 +550,36 @@ class CondBasicLayer(EarthSpecificLayer):
 @dataclass_json
 @dataclass
 class ArchesWeatherSettings(PanguWeatherSettings):
-    """ArchesWeather configuration class"""
+    """ArchesWeather configuration class.
+    Inherits from PanguWeatherSettings, with additional hyperparameters for
+    Earth-Specific bias and window attention.
+
+    Args:
+        token_size: embedding size
+        cond_dim: conditioning embedding size
+        num_heads: number of heads per EarthSpecificLayer
+        droppath_coeff: drop path coefficient
+        plevel_patch_size: patch size for input data embedding
+        window_size: window size for shifted-window attention of EarthSpecificBlock
+        depth_multiplier: depth multiplier for the number of blocks in EarthSpecificLayer
+        position_embs_dim: dimension of positional embeddings
+        use_prev: whether to use previous state
+        use_skip: whether to use skip connections
+        conv_head: whether to use a convolutional head for patch recovery
+        dropout_rate: dropout rate
+        first_interaction_layer: whether to use a linear interaction layer before the first EarthSpecificLayer
+        checkpoint_activation: whether to use gradient checkpointing
+        axial_attn: whether to use axial attention
+        axial_attn_head: number of heads for axial attention
+        lam: whether to use limited area setting in the attention mask
+        lon_resolution: longitude resolution
+        lat_resolution: latitude resolution
+        surface_variables: number of variables in the surface data
+        static_length: number of variables in the mask data
+        plevel_variables: number of variables in the level data
+        plevels: number of atmospheric levels in the level data
+        spatial_dims: number of spatial dimensions (2).
+    """
 
     plevel_patch_size: tuple = (2, 2, 2)
     num_heads: tuple = (6, 12, 12, 6)
@@ -564,7 +597,7 @@ class ArchesWeatherSettings(PanguWeatherSettings):
 
 
 class ArchesWeather(BaseModel):
-    """ArchesWeather model as described in http://arxiv.org/abs/2405.14527"""
+    """ArchesWeather model as described in http://arxiv.org/abs/2405.14527."""
 
     onnx_supported: bool = False
     supported_num_spatial_dims: tuple[int, ...] = (2,)
@@ -582,33 +615,12 @@ class ArchesWeather(BaseModel):
     ) -> None:
         """
         Args:
-            in_channels: dimension of input channels, including constant mask if any.
+            in_channels: dimension of input channels, including constant
+                mask if any.
             out_channels: dimension of output channels.
             input_shape: dimension of input image.
-            token_size: embedding size
-            cond_dim: conditioning embedding size
-            num_heads: number of heads per EarthSpecificLayer
-            droppath_coeff: drop path coefficient
-            plevel_patch_size: patch size for input data embedding
-            window_size: window size for shifted-window attention of EarthSpecificBlock
-            depth_multiplier: depth multiplier for the number of blocks in EarthSpecificLayer
-            position_embs_dim: dimension of positional embeddings
-            use_prev: whether to use previous state
-            use_skip: whether to use skip connections
-            conv_head: whether to use a convolutional head for patch recovery
-            dropout_rate: dropout rate
-            first_interaction_layer: whether to use a linear interaction layer before the first EarthSpecificLayer
-            checkpoint_activation: whether to use gradient checkpointing
-            axial_attn: whether to use axial attention
-            axial_attn_head: number of heads for axial attention
-            lam: whether to use limited area setting in the attention mask
-            lon_resolution: longitude resolution
-            lat_resolution: latitude resolution
-            surface_variables: number of variables in the surface data
-            static_length: number of variables in the mask data
-            plevel_variables: number of variables in the level data
-            plevels: number of atmospheric levels in the level data
-            spatial_dims: number of spatial dimensions (2).
+            settings: ArchesWeatherSettings object containing the
+                hyperparameters of the model.
         """
         super().__init__()
 

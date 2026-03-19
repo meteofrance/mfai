@@ -264,7 +264,7 @@ class DeepLabV3Settings:
             - pooling (str): One of "max", "avg". Default is "avg"
             - dropout (float): Dropout factor in [0, 1)
             - activation (str): An activation function to apply "sigmoid"/"softmax"
-                (could be **None** to return logits)
+                (could be **None** to return logits).
     """
 
     encoder_name: Literal["resnet18", "resnet34", "resnet50"] = "resnet18"
@@ -278,7 +278,7 @@ class DeepLabV3Settings:
 
 
 class DeepLabV3(BaseModel, AutoPaddingModel):
-    """DeepLabV3_ implementation from "Rethinking Atrous Convolution for Semantic Image Segmentation"
+    """DeepLabV3_ implementation from "Rethinking Atrous Convolution for Semantic Image Segmentation".
 
     Args:
         in_channels: A number of input channels for the model, default is 3 (RGB images)
@@ -402,7 +402,7 @@ class DeepLabV3(BaseModel, AutoPaddingModel):
             )
 
     def forward(self, x: Tensor) -> Tensor | tuple[Tensor, Tensor]:
-        """Sequentially pass `x` trough model`s encoder, decoder and heads"""
+        """Sequentially pass `x` trough model`s encoder, decoder and heads."""
 
         x, old_shape = self._maybe_padding(data_tensor=x)
         self.check_input_shape(x)
@@ -431,7 +431,7 @@ class DeepLabV3(BaseModel, AutoPaddingModel):
 
     @torch.no_grad()
     def predict(self, x: Tensor) -> Tensor:
-        """Inference method. Switch model to `eval` mode, call `.forward(x)` with `torch.no_grad()`
+        """Inference method. Switch model to `eval` mode, call `.forward(x)` with `torch.no_grad()`.
 
         Args:
             x: 4D torch tensor with shape (batch_size, in_channels, height, width)
@@ -501,7 +501,7 @@ class DeepLabV3PlusSettings(DeepLabV3Settings):
     """
     encoder_output_stride: Downsampling factor for last encoder features (see original paper for explanation)
     decoder_atrous_rates: Dilation rates for ASPP module (should be a tuple of 3 integer values)
-    upsampling: Final upsampling factor. Default is 4 to preserve input-output spatial shape identity
+    upsampling: Final upsampling factor. Default is 4 to preserve input-output spatial shape identity.
     """
 
     encoder_output_stride: int = 16
@@ -511,7 +511,7 @@ class DeepLabV3PlusSettings(DeepLabV3Settings):
 
 class DeepLabV3Plus(DeepLabV3):
     """DeepLabV3+ implementation from "Encoder-Decoder with Atrous Separable
-    Convolution for Semantic Image Segmentation"
+    Convolution for Semantic Image Segmentation".
 
     Args:
         in_channels: A number of input channels for the model, default is 3 (RGB images)

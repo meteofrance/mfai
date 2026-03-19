@@ -5,6 +5,16 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools-git-versioning]
 enabled = true
 
+[tool.setuptools.package-data]
+mfai = [
+# Include tiktoken cache files
+  "tokenizers/tiktoken_cache/6c7ea1a7e38e3a7f062df639a5b80947f075ffe6",
+  "tokenizers/tiktoken_cache/6d1cbeee0f20b3d9449abfede4726ed8212e3aee",
+
+# Include marker file `py.typed` to respect PEP561 and declare this package as type hinted
+  "py.typed",
+]
+
 [project]
 name = "mfai"
 authors = [
@@ -22,23 +32,119 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
 ]
-dynamic = ["dependencies", "version"]
+dynamic = ["version"]
 license = {file = "LICENSE"}
 keywords = ["PyTorch", "Deep Learning", "Artificial Intelligence", "Meteo-France"]
+dependencies = [
+  "axial-attention==0.6.1",
+  "dataclasses-json~=0.6",
+  "einops~=0.8",
+  "lightning[pytorch-extra]",
+  "monai==1.5.*",
+  "onnx~=1.17.0",
+  "onnxruntime~=1.20",
+  "onnxscript~=0.1",
+  "scipy~=1.14",
+  "torch~=2.5",
+  "torchvision~=0.19",
+  "tabulate~=0.9",
+  "timm~=1.0",
+  "torchmetrics~=1.6",
+  "torch-geometric~=2.6",
+]
 
-[tool.setuptools.dynamic]
-dependencies = {file = ["requirements.txt"]}
-
-# Include marker file `py.typed` to respect PEP561 and declare this package as type hinted
-[tool.setuptools.package-data]
-"mfai" = ["py.typed"]
+[project.optional-dependencies]
+llm = [
+  "huggingface_hub~=0.26",
+  "sentencepiece~=0.2",
+  "tensorflow==2.20",
+  "tiktoken~=0.8",
+]
+docs = [
+  "sphinx>=7.0.0",
+  "furo",
+  "sphinx-autodoc-typehints",
+  "myst-parser",
+  "ghp-import",
+]
+dev = [
+  "pytest==8.3.4",
+  "pytest-cov==6.0.0",
+  "ruff==0.8.1",
+  "mypy==1.15.0",
+  "types-tabulate>=0.9.0",
+  "types-tensorflow==2.18.0.20251008",
+  "types-tqdm==4.67.0.20250809",
+]
 
 [project.urls]
 Homepage = "https://github.com/meteofrance/mfai"
 
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+builtins = ["_"]
+include = [
+  "mfai/**/*.py",
+  "exemples/**/*.py",
+  "tests/**/*.py",
+  "doc/**/*.py",
+]
+exclude = []
+
+[tool.ruff.format]
+docstring-code-format = true
+
 [tool.ruff.lint]
-select = ["I"]  # I = isort
-extend-select = ["F401"]  # F401 = unused-import
+select = [
+  "I",  # I = isort
+  "F",  # pyflakes
+  "W",  # pycodestyle warnings
+  "E",  # pycodestyle errors
+  "D",  # pydocstyle
+]
+ignore = [
+    "D100",  # Allow undocumented-public-module
+    "D200",  # Allow unnecessayry-multiline-docstring
+    "D202",  # Allow blank-line-after-function after function docstring
+    "D203",  # Allow incorrect-blank-line-before-class
+    "D205",  # Allow missing-blank-line-after-summary
+    "D212",  # Allow multi-line-summary-first-line
+    "D213",  # Allow multi-line-summary-second-line
+    "D415",  # Allow missing-terminal-punctuation
+
+    "D101",  # Allow undocumented-public-class
+    "D102",  # Allow undocumented-public-method
+    "D103",  # Allow undocumented-public-function
+    "D104",  # Allow undocumented-public-package
+    "D105",  # Allow undocumented-magic-method
+    "D107",  # Allow undocumented-public-init
+    "E501",  # Allow line too long
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+# ignore-var-parameters = true
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 88
+ignore-overlong-task-comments = true
+
+[tool.ruff.lint.flake8-unused-arguments]
+ignore-variadic-names = true
+
+
+[tool.coverage.run]
+source = ["`mfai/"]
+omit = []
+fail_under = 85
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = [
+    'def __repr__',
+    'if __name__ == .__main__.:',
+]
 
 [tool.mypy]
 # [mypy configuration file doc](https://mypy.readthedocs.io/en/stable/config_file.html#confval-exclude)

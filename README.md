@@ -1,6 +1,12 @@
 # MFAI: Météo-France's AI Python package
 
-![Unit Tests](https://github.com/meteofrance/mfai/actions/workflows/tests.yml/badge.svg)
+[![Unit Tests](https://github.com/meteofrance/mfai/actions/workflows/tests.yml/badge.svg)](https://github.com/meteofrance/mfai/actions/workflows/tests.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License Apache 2.0](https://img.shields.io/github/license/meteofrance/mfai.svg)](https://github.com/meteofrance/mfai/blob/main/LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/meteofrance/mfai)](https://github.com/meteofrance/mfai/releases)
+[![PyTorch compatible](https://img.shields.io/badge/PyTorch-compatible-orange?logo=pytorch)](https://pytorch.org)
+[![Latest PyPI version](https://img.shields.io/pypi/v/mfai.svg)](https://pypi.org/project/mfai/)
+[![Release status](https://github.com/meteofrance/mfai/actions/workflows/release.yml/badge.svg)](https://github.com/meteofrance/mfai/actions/workflows/release.yml)
 
 **MFAI** is a Python package that provides the following features:
 - A variety of PyTorch Neural Network architectures (CNN, Vision Transformers, small LLMs, small mulitmodal LMs...) adapted to our needs, tested on our projects and datasets. For each architecture, we provide the reference to the original paper and source code if applicable and also the modifications we made.
@@ -34,6 +40,10 @@ We also have past and ongoing R&D projects:
 
 
 If you are interested about the technical details of these projects (precise neural network architecture and hyperparameters, source code, ...) feel free to contact us. Most of our projects are proprietary but we can collaborate with other meteorological public institutions.
+
+# Package Documentation
+
+The full package documentation is available at [meteofrance.github.io/mfai](https://meteofrance.github.io/mfai).
 
 # Table of Content
 
@@ -390,6 +400,14 @@ Before version 6.2.1:
 
 ```bash
 pip install git+https://github.com/meteofrance/mfai@v1.0.1
+```
+
+After version 7.0.0, mfai comes with optional dependencies for llm models.
+To install them, add `[llm]` behind the pip installation instruction:
+```bash
+pip install .[dev]
+# or
+pip install mfai[llm]>=7.0.0
 ```
 
 # Usage

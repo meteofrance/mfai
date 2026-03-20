@@ -47,7 +47,6 @@ def is_subclass_of_names(cls: type, base_names: Sequence[str | list[str]]) -> bo
     return False
 
 
-
 def iter_all_modules(package_path: str) -> Generator[str, None, None]:
     """Recursively yield all module names within a given package.
 
@@ -70,7 +69,9 @@ def iter_all_modules(package_path: str) -> Generator[str, None, None]:
             yield mod_info.name
 
 
-def get_classes_matching(package_path: str, base_names: Sequence[str | list[str]]) -> list[str]:
+def get_classes_matching(
+    package_path: str, base_names: Sequence[str | list[str]]
+) -> list[str]:
     """Find all classes in a package that match the given inheritance conditions.
 
     Only classes that are defined directly in their module (not re-exported
@@ -101,7 +102,11 @@ def get_classes_matching(package_path: str, base_names: Sequence[str | list[str]
     return matches
 
 
-def write_rst(title: str, sections: list[dict[Literal["title", "classes"], str]], output_path: Path) -> None:
+def write_rst(
+    title: str,
+    sections: list[dict[Literal["title", "classes"], str]],
+    output_path: Path,
+) -> None:
     """Generate a RST file with autosummary blocks for the given sections.
 
     Each section produces a titled subsection with an autosummary directive

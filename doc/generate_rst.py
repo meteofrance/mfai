@@ -13,7 +13,7 @@ import inspect
 import pkgutil
 import sys
 from pathlib import Path
-from typing import Literal, Sequence, Generator
+from typing import Generator, Literal, Sequence
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 

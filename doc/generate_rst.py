@@ -104,7 +104,7 @@ def get_classes_matching(
 
 def write_rst(
     title: str,
-    sections: list[dict[Literal["title", "classes"], str]],
+    sections: list[dict[Literal["title", "classes"], str | list[str]]],
     output_path: Path,
 ) -> None:
     """Generate a RST file with autosummary blocks for the given sections.
@@ -119,7 +119,7 @@ def write_rst(
             - 'classes' (list[str]): fully qualified class names to include.
         output_path: The Path where the RST file will be written.
     """
-    lines = []
+    lines: list[str] = []
     lines.append(title)
     lines.append("=" * len(title))
     lines.append("")
@@ -129,6 +129,9 @@ def write_rst(
             continue
 
         if section.get("title") and section["title"] != title:
+            if isinstance(section["title"], list):
+                raise ValueError("Title should be a string")
+
             lines.append(section["title"])
             lines.append("-" * len(section["title"]))
             lines.append("")

@@ -20,6 +20,7 @@ author = "Météo-France AI Lab"
 
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
@@ -41,7 +42,14 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "torch": ("https://pytorch.org/docs/stable", None),
     "numpy": ("https://numpy.org/doc/stable", None),
+    "lightning": ("https://lightning.ai/docs/pytorch/stable", None),
+    "torchmetrics": ("https://lightning.ai/docs/torchmetrics/stable", None),
 }
+
+suppress_warnings = ["toc.not_included", "ref.ref"]
+
+autosummary_generate = True
+autosummary_generate_overwrite = True
 
 coverage_show_missing_items = True
 
@@ -54,6 +62,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_theme = "furo"
 autodoc_typehints = "description"
 html_static_path = ["_static"]
+html_extra_path = ["imgs"]
 
 html_logo = "imgs/logo.png"
 html_favicon = "imgs/logo.png"

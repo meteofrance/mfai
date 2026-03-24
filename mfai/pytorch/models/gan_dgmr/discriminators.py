@@ -4,9 +4,11 @@ from typing import Literal
 
 import torch
 import torch.nn.functional as F
+from einops import rearrange
 from torch import Tensor
 from torch.nn.modules.pixelshuffle import PixelUnshuffle
 from torch.nn.utils.parametrizations import spectral_norm
+from torchvision.transforms import RandomCrop
 
 from .blocks import DBlock
 
@@ -49,7 +51,11 @@ class Discriminator(torch.nn.Module):
         )
 
     def forward(self, x: Tensor) -> Tensor:
-        """Mixes the spatial loss and temporal loss of the tensor prior to returning it."""
+        """Mixes the spatial loss and temporal loss of the tensor prior to returning it.
+
+        Args:
+            x: a tensor with a complete observation (b, t, c, h, w).
+        """
         spatial_loss = self.spatial_discriminator(x)
         temporal_loss = self.temporal_discriminator(x)
 
@@ -77,7 +83,6 @@ class TemporalDiscriminator(torch.nn.Module):
         """
         super().__init__()
 
-        self.downsample = torch.nn.AvgPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
         self.space2depth = PixelUnshuffle(downscale_factor=2)
         internal_chn = 48
         self.d1 = DBlock(
@@ -114,39 +119,52 @@ class TemporalDiscriminator(torch.nn.Module):
         self.bn = torch.nn.BatchNorm1d(2 * internal_chn * input_channels)
 
     def forward(self, x: Tensor) -> Tensor:
-        x = self.downsample(x)
+        """
+        Args:
+            x: tensor of predictions or observations of shape (b, t, c, h, w).
+        """
+        batch_size, timesteps, _, height, width = x.size()
 
+        # Choose the offset of a random crop of size 128x128 out of 256x256 and
+        # pick full sequence samples.
+        random_crop = RandomCrop(size=(height // 2, width // 2))
+        x = random_crop(x)
+
+        # Process each of the timesteps inputs independently.
+        x = rearrange(x, "b t c h w -> (b t) c h w")
+
+        # Space-to-depth stacking from (1, 128, 128) to (4, 64, 64).
         x = self.space2depth(x)
-        # Have to move time and channels
-        x = torch.permute(x, dims=(0, 2, 1, 3, 4))
-        # 2 residual 3D blocks to halve resolution if image, double number of channels and reduce
-        # number of time steps
+
+        # Stack back to sequences of length timesteps.
+        x = rearrange(x, "(b t) c h w -> b c t h w", b=batch_size, t=timesteps)
+
+        # Two residual 3D Blocks to halve the resolution of the image, double
+        # the number of channels, and reduce the number of time steps.
         x = self.d1(x)
         x = self.d2(x)
-        # Convert back to T x C x H x W
-        x = torch.permute(x, dims=(0, 2, 1, 3, 4))
-        # Per Timestep part now, same as spatial discriminator
-        representations = []
-        for idx in range(x.size(1)):
-            # Intermediate DBlocks
-            # Three residual D Blocks to halve the resolution of the image and double
-            # the number of channels.
-            rep = x[:, idx, :, :, :]
-            for d in self.intermediate_dblocks:
-                rep = d(rep)
-            # One more D Block without downsampling or increase number of channels
-            rep = self.d_last(rep)
 
-            rep = torch.sum(F.relu(rep), dim=[2, 3])
-            rep = self.bn(rep)
-            rep = self.fc(rep)
+        # Process each of the t images independently.
+        y = rearrange(x, "b c t h w -> (b t) c h w")
 
-            representations.append(rep)
-        # The representations are summed together before the ReLU
-        x = torch.stack(representations, dim=1)
-        # Should be [Batch, N, 1]
-        x = torch.sum(x, keepdim=True, dim=1)
-        return x
+        # Three residual D Blocks to halve the resolution of the image and double
+        # the number of channels.
+        for dblocks in self.intermediate_dblocks:
+            y = dblocks(y)
+
+        # One more D Block without downsampling or increase number of channels
+        y = self.d_last(y)
+
+        # Sum-pool the representations and feed to spectrally normalized lin. layer.
+        y = torch.sum(F.relu(y), dim=[2, 3])
+        y = self.bn(y)
+        y = self.fc(y)
+
+        # Take the sum across the t samples. Note: we apply the ReLU to
+        # (1 - score_real) and (1 + score_generated) in the loss.
+        out = rearrange(y, "(b t) c -> b t c", b=batch_size)
+        out = torch.sum(out, keepdim=True, dim=1)
+        return out
 
 
 class SpatialDiscriminator(torch.nn.Module):
@@ -206,38 +224,39 @@ class SpatialDiscriminator(torch.nn.Module):
         self.bn = torch.nn.BatchNorm1d(2 * internal_chn * input_channels)
 
     def forward(self, x: Tensor) -> Tensor:
+        """
+        Args:
+            x: tensor of predictions or observations of shape (b, t, c, h, w).
+        """
+        batch_size, timesteps, _, _, _ = x.size()
         # x should be the chosen 8 or so
-        idxs = torch.randint(low=0, high=x.size()[1], size=(self.num_timesteps,))
-        representations = []
-        for idx in idxs:
-            rep = self.mean_pool(x[:, idx, :, :, :])  # 128x128
-            rep = self.space2depth(rep)  # 64x64x4
-            rep = self.d1(rep)  # 32x32
-            # Intermediate DBlocks
-            for d in self.intermediate_dblocks:
-                rep = d(rep)
-            rep = self.d6(rep)  # 2x2
-            rep = torch.sum(F.relu(rep), dim=[2, 3])
-            rep = self.bn(rep)
-            rep = self.fc(rep)
-            """
-            Pseudocode from DeepMind
-            # Sum-pool the representations and feed to spectrally normalized lin. layer.
-            y = tf.reduce_sum(tf.nn.relu(y), axis=[1, 2])
-            y = layers.BatchNorm(calc_sigma=False)(y)
-            output_layer = layers.Linear(output_size=1)
-            output = output_layer(y)
+        random_indices = torch.randint(
+            low=0, high=timesteps, size=(self.num_timesteps,), device=x.device
+        )
+        x = x.index_select(1, random_indices)
 
-            # Take the sum across the t samples. Note: we apply the ReLU to
-            # (1 - score_real) and (1 + score_generated) in the loss.
-            output = tf.reshape(output, [b, n, 1])
-            output = tf.reduce_sum(output, keepdims=True, axis=1)
-            return output
-            """
-            representations.append(rep)
+        # Process each of the n inputs independently.
+        frames = rearrange(x, "b t c h w -> (b t) c h w")
 
-        # The representations are summed together before the ReLU
-        x = torch.stack(representations, dim=1)
-        # Should be [Batch, N, 1]
-        x = torch.sum(x, keepdim=True, dim=1)
-        return x
+        # Space-to-depth stacking from (1, 128, 128) to (4, 64, 64).
+        y = self.mean_pool(frames)
+        y = self.space2depth(y)
+
+        # Five residual D Blocks to halve the resolution of the image and double
+        # the number of channels.
+        y = self.d1(y)  # (48, 32, 32)
+        for d in self.intermediate_dblocks:  # Intermediate DBlocks
+            y = d(y)
+        # One more D Block without downsampling or increase in number of channels.
+        y = self.d6(y)  # (768, 2, 2)
+
+        # Sum-pool the representations and feed to spectrally normalized linear layer.
+        y = torch.sum(F.relu(y), dim=[2, 3])
+        y = self.bn(y)
+        y = self.fc(y)  # (1,)
+
+        # Take the sum across the t samples. Note: we apply the ReLU to
+        # (1 - score_real) and (1 + score_generated) in the loss.
+        out = rearrange(y, "(b t) c -> b t c", b=batch_size, t=self.num_timesteps, c=1)
+        out = torch.sum(out, keepdim=True, dim=1)
+        return out

@@ -1,0 +1,49 @@
+name: Deploy Sphinx Docs
+
+on:
+  push:
+    branches:
+      - sphinx
+    tags:        
+      - "*"
+
+permissions:
+    contents: write
+
+jobs:
+    build-and-deploy:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Set up Python 3.10
+              uses: actions/setup-python@v6
+              with:
+                python-version: '3.10'
+                cache: 'pip'
+            
+            - name: Install dependencies
+              run: |
+                pip install -e ".[docs]"
+
+            - name: Generate RST files
+              run: |
+                python doc/generate_rst.py
+
+            - name: Generate API docs
+              run: |
+                sphinx-apidoc -o doc/api mfai --force --templatedir doc/_templates/apidoc
+                mv doc/api/modules.rst doc/api/index.rst
+
+            - name: Build docs
+              run: |
+                make -C doc html coverage
+                cp doc/_build/coverage/python.txt doc/_build/html/coverage.txt
+
+            - name: Deploy to Github Pages
+              run: |
+                ghp-import -n -p -f doc/_build/html
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

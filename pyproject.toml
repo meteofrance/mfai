@@ -40,6 +40,7 @@ dependencies = [
   "dataclasses-json~=0.6",
   "einops~=0.8",
   "lightning[pytorch-extra]",
+  "mlflow==3.10.*",
   "monai==1.5.*",
   "onnx~=1.17.0",
   "onnxruntime~=1.20",
@@ -59,6 +60,13 @@ llm = [
   "sentencepiece~=0.2",
   "tensorflow==2.20",
   "tiktoken~=0.8",
+]
+docs = [
+  "sphinx>=7.0.0",
+  "furo",
+  "sphinx-autodoc-typehints",
+  "myst-parser",
+  "ghp-import",
 ]
 dev = [
   "pytest==8.3.4",
@@ -81,6 +89,7 @@ include = [
   "mfai/**/*.py",
   "exemples/**/*.py",
   "tests/**/*.py",
+  "doc/**/*.py",
 ]
 exclude = []
 

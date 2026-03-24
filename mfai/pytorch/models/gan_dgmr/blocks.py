@@ -231,10 +231,10 @@ class DBlock(torch.nn.Module):
         """Apply the D residual block.
 
         Args:
-            x: a tensor with a complete observation (b, 256, 256, 1)
+            x: a tensor with a complete observation (b, c, h, w)
 
         Returns:
-            A tensor with discriminator loss scalars [b].
+            A tensor with discriminator loss scalars (b,)
         """
         # The residual connection, make sure it has the same dimensionality
         # with additional 1x1 convolution and downsampling if needed.

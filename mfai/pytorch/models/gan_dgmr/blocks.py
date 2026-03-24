@@ -199,7 +199,7 @@ class DBlock(torch.nn.Module):
         else:
             self.pooling = torch.nn.AvgPool2d(kernel_size=2, stride=2)
 
-        self.conv_sc = spectral_norm(
+        self.conv_sc = spectral_norm(  # Conv with skip connection
             conv(
                 in_channels=input_channels,
                 out_channels=output_channels,

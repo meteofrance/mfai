@@ -191,32 +191,31 @@ class DBlock(torch.nn.Module):
         self.first_relu = first_relu
         self.keep_same_output = keep_same_output
         self.conv_type = conv_type
-        conv2d = get_conv_layer(conv_type)
+        conv = get_conv_layer(conv_type)
 
         self.pooling: torch.nn.AvgPool3d | torch.nn.AvgPool2d
         if conv_type == "3d":
-            # 3D Average pooling
             self.pooling = torch.nn.AvgPool3d(kernel_size=2, stride=2)
         else:
             self.pooling = torch.nn.AvgPool2d(kernel_size=2, stride=2)
 
-        self.conv_1x1 = spectral_norm(
-            conv2d(
+        self.conv_sc = spectral_norm(
+            conv(
                 in_channels=input_channels,
                 out_channels=output_channels,
                 kernel_size=1,
             )
         )
-        self.first_conv_3x3 = spectral_norm(
-            conv2d(
+        self.first_conv = spectral_norm(
+            conv(
                 in_channels=input_channels,
                 out_channels=output_channels,
                 kernel_size=3,
                 padding=1,
             )
         )
-        self.last_conv_3x3 = spectral_norm(
-            conv2d(
+        self.last_conv = spectral_norm(
+            conv(
                 in_channels=output_channels,
                 out_channels=output_channels,
                 kernel_size=3,
@@ -229,24 +228,37 @@ class DBlock(torch.nn.Module):
         # Concatenate to double final channels and keep reduced spatial extent
 
     def forward(self, x: Tensor) -> Tensor:
-        """Apply the D residual block."""
-        if self.input_channels != self.output_channels:
-            x1 = self.conv_1x1(x)
-            if not self.keep_same_output:
-                x1 = self.pooling(x1)
-        else:
-            x1 = x
+        """Apply the D residual block.
 
+        Args:
+            x: a tensor with a complete observation (b, 256, 256, 1)
+
+        Returns:
+            A tensor with discriminator loss scalars [b].
+        """
+        # The residual connection, make sure it has the same dimensionality
+        # with additional 1x1 convolution and downsampling if needed.
+        if self.input_channels != self.output_channels:
+            sc = self.conv_sc(x)
+            if not self.keep_same_output:
+                sc = self.pooling(sc)
+        else:
+            sc = x
+
+        # Pre-activation.
         if self.first_relu:
             x = self.relu(x)
-        x = self.first_conv_3x3(x)
+        # First convolution.
+        x = self.first_conv(x)
         x = self.relu(x)
-        x = self.last_conv_3x3(x)
-
+        # Second convolution.
+        x = self.last_conv(x)
+        # Downsampling.
         if not self.keep_same_output:
             x = self.pooling(x)
-        x = x1 + x  # Sum the outputs should be half spatial and double channels
-        return x
+
+        # Residual connection.
+        return x + sc
 
 
 class LBlock(torch.nn.Module):

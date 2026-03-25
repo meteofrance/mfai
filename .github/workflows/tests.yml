@@ -46,8 +46,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Check disk space
-      run: df . -h
+    - name: Install git  # necessary for the tj-action/changed-py-files
+      run: apt-get update && apt-get install -y git
 
     - name: Gather Python changed files
       id: changed-py-files

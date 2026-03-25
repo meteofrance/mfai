@@ -39,10 +39,12 @@ jobs:
   tests:
     env:
       PYTHONPATH: '.'
-      SCIPY_ARRAY_API: 1
     runs-on: ubuntu-latest
     container:
       image: python/python:3.10-slim
+
+    steps:
+    - uses: actions/checkout@v4
 
     - name: Check disk space
       run: df . -h

@@ -41,7 +41,7 @@ jobs:
       PYTHONPATH: '.'
     runs-on: ubuntu-latest
     container:
-      image: python/python:3.10-slim
+      image: python:3.10-slim
 
     steps:
     - uses: actions/checkout@v4

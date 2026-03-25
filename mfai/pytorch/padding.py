@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Literal, Optional, Tuple
 
 import torch
 import torch.nn.functional as F
@@ -8,7 +8,7 @@ from torch import Tensor
 def pad_batch(
     batch: Tensor,
     new_shape: torch.Size,
-    mode: str = "constant",
+    mode: Literal["constant", "reflect", "replicate", "circular"] = "constant",
     pad_value: Optional[float] = 0,
 ) -> Tensor:
     """Given batch of 2D or 3D data and a shape new_shape,
@@ -17,7 +17,7 @@ def pad_batch(
     Args:
         batch: the batch of values of shape (B, C, D, H, W) or (B, C, H, W).
         new_shape: Target shape (D, H, W) for 3D tensors or (H, W) for 2D tensors to be given.
-        mode: the padding mode to be used. Defaults to "constant".
+        mode: the padding mode to be used. Defaults to "constant". Same as torch.nn.functional.Pad
         pad_value: the padding value to be used. Defaults to 0.
 
     Returns:
@@ -27,6 +27,7 @@ def pad_batch(
 
     fits = batch.shape[-len(new_shape) :] == new_shape
 
+    # torch.nn.functional.Pad only accepts the value pad_value when the mode is set to 'constant'.
     if mode != "constant":
         pad_value = None
 

@@ -1,6 +1,6 @@
 """
 Tensorflow utilities.
-Adapted from https://github.com/rasbt/LLMs-from-scratch
+Adapted from https://github.com/rasbt/LLMs-from-scratch.
 """
 
 import json

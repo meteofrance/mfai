@@ -13,7 +13,7 @@ from torch_geometric.utils.convert import from_networkx
 
 
 def torch_save(data: Tensor | list[Tensor], path: Path) -> None:
-    """Saving files with torch to be writeable by anyone"""
+    """Saving files with torch to be writeable by anyone."""
     if path.exists():
         path.unlink()
     torch.save(data, path)
@@ -63,7 +63,10 @@ def plot_graph(graph: networkx.Graph, title: str = None) -> tuple[plt.Figure, pl
     edge_lines = np.stack((from_pos, to_pos), axis=1)
     axis.add_collection(
         matplotlib.collections.LineCollection(
-            edge_lines, lw=0.4, colors="black", zorder=1
+            edge_lines,  # type: ignore[arg-type]
+            lw=0.4,
+            colors="black",
+            zorder=1,
         )
     )
 

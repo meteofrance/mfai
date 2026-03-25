@@ -29,7 +29,7 @@ class PerceptualLoss(torch.nn.Module):
     ) -> None:
         """Class that computes the Perceptual Loss based on selected Network.
             For more details : See Johnson et al. - Perceptual losses for real-time style transfer and super-resolution.
-            (https://arxiv.org/pdf/1603.08155)
+            (https://arxiv.org/pdf/1603.08155).
 
         Arguments :
                 - device: (str) - Device where to store the Neural Network (default = 'cuda')
@@ -95,7 +95,7 @@ class PerceptualLoss(torch.nn.Module):
         self._set_device = False
 
     def _set_blocks(self) -> list:
-        """Set the blocks of layers from the neural network
+        """Set the blocks of layers from the neural network.
 
         Return :
             blocks: (list)
@@ -288,7 +288,7 @@ class PerceptualLoss(torch.nn.Module):
         return loss
 
     def _perceptual_loss_given_input_and_target(self, x: Tensor, y: Tensor) -> Tensor:
-        """Computes the Perceptual Loss between two images
+        """Computes the Perceptual Loss between two images.
 
         Arguments :
             x: (Tensor)
@@ -305,7 +305,8 @@ class PerceptualLoss(torch.nn.Module):
         )
 
     def forward(self, x: Tensor, y: Tensor | None = None) -> Tensor:
-        r"""Computes the Perceptual loss between two images
+        r"""Computes the Perceptual loss between two images.
+
         Arguments :
             x: (Tensor)
             y: (Tensor) (default=None)
@@ -399,7 +400,7 @@ class PerceptualLoss(torch.nn.Module):
 class LPIPS(nn.Module):
     """Creates a criterion that measures Learned Perceptual Image Patch Similarity (LPIPS).
     For more info see : Zhang et al. The Unreasonable Effectiveness of Deep Features as a Perceptual Metric
-    (https://arxiv.org/pdf/1801.03924)
+    (https://arxiv.org/pdf/1801.03924).
 
     This code is inspired from : https://github.com/richzhang/PerceptualSimilarity/
 

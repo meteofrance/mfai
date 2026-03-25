@@ -6,7 +6,7 @@ from mfai.pytorch.losses.perceptual import LPIPS, PerceptualLoss
 
 def test_perceptual_loss_on_same_img() -> None:
     """
-    Test of the Perceptual Loss on the same image
+    Test of the Perceptual Loss on the same image.
     """
     # Test with 3-channels images
 
@@ -65,7 +65,7 @@ def test_perceptual_loss_on_same_img() -> None:
 
 def test_perceptual_loss_on_different_img() -> None:
     """
-    Test of the Perceptual Loss on the different image
+    Test of the Perceptual Loss on the different image.
     """
 
     # Test with 3-channels images
@@ -127,7 +127,7 @@ def test_perceptual_loss_on_different_img() -> None:
 
 def test_feature_computation() -> None:
     """
-    Test of the Perceptual Loss on feature computation
+    Test of the Perceptual Loss on feature computation.
     """
     preds = torch.rand(size=(1, 1, 224, 224))
     # Random VGG16
@@ -215,7 +215,7 @@ def test_feature_computation() -> None:
 
 def test_lpips_on_same_img() -> None:
     """
-    Test of the Perceptual Loss on the same image
+    Test of the Perceptual Loss on the same image.
     """
     # Test with 3-channel images
 
@@ -274,7 +274,7 @@ def test_lpips_on_same_img() -> None:
 
 def test_lpips_on_different_img() -> None:
     """
-    Test of the Perceptual Loss on the different image
+    Test of the Perceptual Loss on the different image.
     """
 
     # Test with 3-channel images

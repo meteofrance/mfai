@@ -94,6 +94,7 @@ def trunc_normal_(
     Examples:
         >>> w = torch.empty(3, 5)
         >>> nn.init.trunc_normal_(w)
+
     """
     with torch.no_grad():
         return _trunc_normal_(tensor, mean, std, a, b)
@@ -157,6 +158,7 @@ class TransformerBlock(nn.Module):
             num_heads: number of attention heads.
             dropout_rate: faction of the input units to drop.
             pos_embed: bool argument to determine if positional embedding is used.
+            spatial_dims: number of spatial dimensions (2 or 3).
             proj_size: size of the projection space for Spatial Attention.
             attention_code: type of attention implementation to use. See EPA for more details.
         """
@@ -496,11 +498,20 @@ class UNetRUpBlock(nn.Module):
             in_channels: number of input channels.
             out_channels: number of output channels.
             kernel_size: convolution kernel size.
-            upsample_kernel_size: convolution kernel size for transposed convolution layers.
+            upsample_kernel_size: convolution kernel size for transposed
+                convolution layers.
             norm_name: feature normalization type and arguments.
             num_heads: number of heads inside each EPA module.
             out_size: spatial size for each decoder.
             depth: number of blocks for the current decoder stage.
+            conv_decoder: whether to use convolutional blocks instead of
+                transformer blocks in the decoder.
+            linear_upsampling: whether to use linear upsampling instead of
+                transposed convolution for upsampling.
+            proj_size: projection size for the spatial attention module in
+                he EPA block.
+            attention_code: type of attention implementation to use.
+                See EPA for more details.
         """
 
         super().__init__()
@@ -645,9 +656,9 @@ class UNetRUpBlock(nn.Module):
     def forward(self, inp: Tensor, skip: Tensor | None = None) -> Tensor:
         """
         Forward pass:
-        1. Upsampling using bi/tri-linear OR Conv{2,3}dTranspose
-        2. Adds skip connection if available
-        3. Conv or Transformer block
+        1. Upsampling using bi/tri-linear OR Conv{2,3}dTranspose.
+        2. Adds skip connection if available.
+        3. Conv or Transformer block.
         """
         out = self.transp_conv(inp)
         out = out + skip if skip is not None else out
@@ -659,6 +670,19 @@ class UNetRUpBlock(nn.Module):
 @dataclass_json
 @dataclass
 class UNetRPPSettings:
+    """Settings dataclass for UNetRPP. Contains all the hyperparameters needed to initialize the model.
+
+    Args:
+        hidden_size: dimensions of  the last encoder.
+        num_heads: number of attention heads.
+        pos_embed: position embedding layer type.
+        norm_name: feature normalization type and arguments.
+        dropout_rate: faction of the input units to drop.
+        depths: number of blocks for each stage.
+        conv_op: type of convolution operation.
+        do_ds: use deep supervision to compute the loss.
+    """
+
     hidden_size: int = 256
     num_heads_encoder: int = 4
     num_heads_decoder: int = 4
@@ -688,7 +712,7 @@ class UNetRPPSettings:
 class UNetRPP(BaseModel, AutoPaddingModel):
     """
     UNetR++ based on: "Shaker et al.,
-    UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation"
+    UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation".
     """
 
     onnx_supported = False
@@ -709,15 +733,8 @@ class UNetRPP(BaseModel, AutoPaddingModel):
         Args:
             in_channels: dimension of input channels.
             out_channels: dimension of output channels.
-            img_size: dimension of input image.
-            hidden_size: dimensions of  the last encoder.
-            num_heads: number of attention heads.
-            pos_embed: position embedding layer type.
-            norm_name: feature normalization type and arguments.
-            dropout_rate: faction of the input units to drop.
-            depths: number of blocks for each stage.
-            conv_op: type of convolution operation.
-            do_ds: use deep supervision to compute the loss.
+            input_shape: dimension of input image.
+            settings: UNetRPPSettings dataclass containing the model hyperparameters.
         """
 
         super().__init__()

@@ -28,13 +28,14 @@ from .base import BaseModel, ModelType
 def define_3d_earth_position_index(window_size: Tuple[int, int, int]) -> Tensor:
     """Build the index for the Earth specific positional bias of sliding
     attention windows from PanguWeather.
-    See http://arxiv.org/abs/2211.02556
+    See http://arxiv.org/abs/2211.02556.
 
     Args:
         window_size (Tuple[int, int, int]): size of the sliding window
 
     Returns:
         Tensor: index
+
     """
     if len(window_size) != 3:
         raise ValueError(
@@ -83,15 +84,17 @@ def generate_3d_attention_mask(
     lam: bool = False,
 ) -> Tensor:
     """Method to generate attention mask for sliding window attention in the context of 3D data.
-    Based on https://pytorch.org/vision/main/_modules/torchvision/models/swin_transformer.html#swin_s
+    Based on https://pytorch.org/vision/main/_modules/torchvision/models/swin_transformer.html#swin_s.
 
     Args:
-        x (Tensor): input data, used to generate the mask on the same device
-        window_size (Tuple[int, int, int]): size of the sliding window
-        shift_size (Tuple[int, ...]): size of the shift for the sliding window
+        x: input data, used to generate the mask on the same device.
+        window_size: size of the sliding window.
+        shift_size: size of the shift for the sliding window.
+        lam: whether to use the LAM attention mechanism.
 
     Returns:
-        Tensor: attention mask
+        Tensor: attention mask.
+
     """
     assert x.dim() == 5, "Data must be 3D, but has {} dimension(s)".format(x.dim())
     _, pad_z, pad_h, pad_w, _ = x.shape
@@ -147,6 +150,31 @@ def generate_3d_attention_mask(
 @dataclass_json
 @dataclass
 class PanguWeatherSettings:
+    """PanguWeather configuration class, containing the hyperparameters for the
+    model.
+
+    Args:
+        plevel_patch_size: Patch size for the pressure level data.
+            Default is (2, 4, 4). Setting (2, 8, 8) leads to Pangu Lite.
+        token_size: Size of the tokens (equivalent to channel size) of the
+            first layer. Default is 192.
+        layer_depth: Number of blocks in layers. Default is (2, 6), meaning
+            that the first and fourth layers contain 2 blocks, and the second
+                and third contain 6.
+        num_heads: Number of heads in attention layers. Default is (6, 12),
+            corresponding to respectively first and fourth layers, and second
+            and third.
+        spatial_dims: number of spatial dimensions (2 or 3).
+        surface_variables: number of surface variables.
+        plevel_variables: number of pressure level variables.
+        plevels: number of pressure levels.
+        static_length: number of static variables (e.g., land sea mask).
+        window_size: size of the sliding window.
+        dropout_rate: faction of the input units to drop.
+        checkpoint_activation: whether to use checkpoint activation.
+        lam: whether to use the limited area attention mask.
+    """
+
     plevel_patch_size: Tuple[int, int, int] = (2, 4, 4)
     token_size: int = 192
     layer_depth: Tuple[int, int] = (2, 6)
@@ -165,7 +193,7 @@ class PanguWeatherSettings:
 class PanguWeather(BaseModel):
     """
     PanguWeather network as described in http://arxiv.org/abs/2211.02556 and https://www.nature.com/articles/s41586-023-06185-3.
-    This implementation follows the official pseudo code here: https://github.com/198808xc/Pangu-Weather
+    This implementation follows the official pseudo code here: https://github.com/198808xc/Pangu-Weather.
     """
 
     onnx_supported: bool = False
@@ -187,19 +215,8 @@ class PanguWeather(BaseModel):
             in_channels: dimension of input channels, including constant mask if any.
             out_channels: dimension of output channels.
             input_shape: dimension of input image.
-            plevel_patch_size : Patch size for the pressure level data. Default is (2, 4, 4). Setting (2, 8, 8) leads to Pangu Lite.
-            token_size : Size of the tokens (equivalent to channel size) of the first layer. Default is 192.
-            layer_depth : Number of blocks in layers. Default is (2, 6), meaning that the first and fourth layers contain 2 blocks, and the second and third contain 6.
-            num_heads : Number of heads in attention layers. Default is (6, 12), corresponding to respectively first and fourth layers, and second and third.
-            spatial_dims: number of spatial dimensions (2 or 3).
-            surface_variables: number of surface variables.
-            plevel_variables: number of pressure level variables.
-            plevels: number of pressure levels.
-            static_length: number of static variables (e.g., land sea mask).
-            window_size: size of the sliding window.
-            dropout_rate: faction of the input units to drop.
-            checkpoint_activation: whether to use checkpoint activation.
-            lam: whether to use the limited area attention mask.
+            settings: PanguWeatherSettings dataclass, containing the
+                hyperparameters for the model.
         """
 
         super().__init__()
@@ -311,10 +328,12 @@ class PanguWeather(BaseModel):
     ) -> Tuple[Tensor, Tensor]:
         """
         Forward pass of the PanguWeather model.
+
         Args:
             input_plevel (Tensor): Input tensor of shape (N, C, Z, H, W) for pressure level data.
             input_surface (Tensor): Input tensor of shape (N, C, H, W) for surface data.
             static_data (Tensor, optional): Static data tensor, e.g., land sea mask, of shape (N, C, H, W). Defaults to None.
+
         """
         if static_data is not None:
             surface_data = torch.cat([input_surface, static_data], dim=1)
@@ -386,6 +405,7 @@ class CustomPad3d(ConstantPad3d):
         data_size (torch.Size): data size
         patch_size (Tuple[int, int, int]): patch size for the token embedding operation
         value (float, optional): padding value. Defaults to 0.
+
     """
 
     def __init__(
@@ -451,6 +471,7 @@ class CustomPad2d(ConstantPad2d):
         data_size (torch.Size): data size
         patch_size (Tuple[int, int]): patch size for the token embedding operation
         value (float, optional): padding value. Defaults to 0.
+
     """
 
     def __init__(
@@ -490,13 +511,14 @@ class CustomPad2d(ConstantPad2d):
 
 class PatchEmbedding(nn.Module):
     """Patch embedding operation. Apply a linear projection for patch_size[0]*patch_size[1]*patch_size[2] patches,
-        patch_size = (2, 4, 4) in the original paper
+        patch_size = (2, 4, 4) in the original paper.
 
     Args:
         c_dim (_type_): embeeding channel size
         patch_size (Tuple[int, int, int]): patch size for pressure level data
         plevel_size (torch.Size): pressure level data size
         surface_size (torch.Size): surface data size
+
     """
 
     def __init__(
@@ -565,6 +587,7 @@ class PatchRecovery(nn.Module):
         patch_size (Tuple[int, int, int]): pressure level patch size, e. g., (2, 4, 4) as in the original paper
         plevel_channels (int, optional): pressure level data channel size
         surface_channels (int, optional): surface data channel size
+
     """
 
     def __init__(
@@ -610,6 +633,7 @@ class DownSample(nn.Module):
     Args:
         data_size (torch.Size): data size in terms of embeded plevel, latitude, longitude
         dim (int): initial size of the tokens
+
     """
 
     def __init__(self, data_size: torch.Size, dim: int) -> None:
@@ -658,6 +682,7 @@ class UpSample(nn.Module):
         Args:
             input_dim (int): input token size
             output_dim (int): output token size
+
         """
         super().__init__()
         # Linear layers without bias to increase channels of the data
@@ -703,7 +728,7 @@ class UpSample(nn.Module):
 
 
 class EarthSpecificLayer(nn.Module):
-    """Basic layer of our network, contains 2 or 6 blocks
+    """Basic layer of our network, contains 2 or 6 blocks.
 
     Args:
         depth (int): number of blocks
@@ -715,6 +740,7 @@ class EarthSpecificLayer(nn.Module):
         dropout_rate (float, optional): see EarthSpecificBlock
         checkpoint_activation (bool, optional): see EarthSpecificBlock
         lam (bool, optional): see EarthSpecificBlock
+
     """
 
     def __init__(
@@ -771,6 +797,7 @@ class EarthSpecificBlock(nn.Module):
         dropout_rate (float, optional): dropout rate in the MLP. Defaults to 0..
         checkpoint_activation (bool, optional): whether to use checkpoint activation. Defaults to False.
         lam (bool, optional): whether to use the limited area attention mask. Defaults to False.
+
     """
 
     def __init__(
@@ -932,6 +959,7 @@ class EarthAttention3D(nn.Module):
         num_heads (int): number of heads
         dropout_rate (float): dropout rate
         window_size (Tuple[int, int, int]): window size (z, h ,w)
+
     """
 
     def __init__(
@@ -1096,6 +1124,7 @@ class MLP(nn.Module):
     Args:
         dim (int): input and output token size
         dropout_rate (float): dropout rate applied after each linear layer
+
     """
 
     def __init__(self, dim: int, dropout_rate: float) -> None:

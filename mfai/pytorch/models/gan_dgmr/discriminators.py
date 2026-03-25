@@ -33,7 +33,6 @@ class Discriminator(torch.nn.Module):
             conv_type: the specified convolution type.
             temporal_num_layers: Number of intermediate DBlock layers to use in the temporal discriminator.
             spatial_num_layers: Number of intermediate DBlock layers to use in the spatial discriminator.
-            **kwargs: allow initialize of the parameters above through key pairs.
 
         """
         super().__init__()
@@ -76,7 +75,6 @@ class TemporalDiscriminator(torch.nn.Module):
 
         Args:
             input_channels: Number of channels per timestep
-            crop_size: Size of the crop, in the paper half the width of the input images
             num_layers: Number of intermediate DBlock layers to use
             conv_type: Type of 2d convolutions to use, see satflow/models/utils.py for options
 

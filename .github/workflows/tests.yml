@@ -49,6 +49,14 @@ jobs:
     - name: Check disk space
       run: df . -h
 
+    - name: Gather Python changed files
+      id: changed-py-files
+      uses: tj-actions/changed-files@7dee1b0c1557f278e5c7dc244927139d78c0e22a # v47.0.4
+      with:
+        files: |
+          *.py
+          **/*.py
+
     - name: Install dependencies
       if: steps.changed-py-files.outputs.any_changed == 'true'
       run: |

@@ -2,6 +2,7 @@ FROM python:3.10-slim
 
 ARG INJECT_MF_CERT
 COPY mf.crt /usr/local/share/ca-certificates/mf.crt
+RUN export PIP_CERT=/usr/local/share/ca-certificates/mf.crt
 RUN ( test $INJECT_MF_CERT -eq 1 && update-ca-certificates ) || echo "MF certificate not injected"
 ARG REQUESTS_CA_BUNDLE
 ARG CURL_CA_BUNDLE

@@ -67,6 +67,7 @@ docs = [
   "sphinx-autodoc-typehints",
   "myst-parser",
   "ghp-import",
+  "sphinxcontrib-mermaid",
 ]
 dev = [
   "pytest==8.3.4",

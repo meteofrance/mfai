@@ -1,9 +1,11 @@
 import tempfile
+from pathlib import Path
 from typing import Literal
 
 import lightning.pytorch as L
 import pytest
 import torch
+import yaml
 from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
 from lightning.pytorch.cli import ArgsType, LightningCLI
 from lightning.pytorch.loggers import TensorBoardLogger
@@ -74,7 +76,31 @@ def cli_main(args: ArgsType = None) -> None:
     cli.trainer.fit(cli.model, datamodule=cli.datamodule)
 
 
-def test_cli() -> None:
+def _write_lightning_config(
+    source_config: Path,
+    destination: Path,
+    *,
+    root_dir: Path,
+    checkpoint_dir: Path | None = None,
+    log_dir: Path | None = None,
+) -> Path:
+    config = yaml.safe_load(source_config.read_text())
+    trainer_config = config.setdefault("trainer", {})
+    trainer_config["default_root_dir"] = str(root_dir)
+
+    if log_dir is not None and isinstance(trainer_config.get("logger"), dict):
+        trainer_config["logger"].setdefault("init_args", {})["save_dir"] = str(log_dir)
+
+    if checkpoint_dir is not None:
+        for callback in trainer_config.get("callbacks", []):
+            if callback.get("class_path") == "lightning.pytorch.callbacks.ModelCheckpoint":
+                callback.setdefault("init_args", {})["dirpath"] = str(checkpoint_dir)
+
+    destination.write_text(yaml.safe_dump(config, sort_keys=False))
+    return destination
+
+
+def test_cli(tmp_path: Path) -> None:
     cli_main(
         [
             "--model.model=Segformer",
@@ -85,12 +111,21 @@ def test_cli() -> None:
             "--model.model.input_shape=[64, 64]",
             "--optimizer=AdamW",
             "--trainer.fast_dev_run=True",
+            f"--trainer.default_root_dir={tmp_path}",
         ]
     )
 
 
-def test_cli_with_config_file() -> None:
-    cli_main(["--config=mfai/config/cli_fit_test.yaml", "--trainer.fast_dev_run=True"])
+def test_cli_with_config_file(tmp_path: Path) -> None:
+    config_path = _write_lightning_config(
+        Path(__file__).parents[1] / "mfai/config/cli_fit_test.yaml",
+        tmp_path / "cli_fit_test.yaml",
+        root_dir=tmp_path,
+        checkpoint_dir=tmp_path / "checkpoints",
+        log_dir=tmp_path / "logs",
+    )
+
+    cli_main([f"--config={config_path}", "--trainer.fast_dev_run=True"])
 
 
 def test_dgmr_lightningmodule() -> None:

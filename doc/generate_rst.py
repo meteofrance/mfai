@@ -149,17 +149,14 @@ def _type_hint(annotation) -> str:
     return hint
 
 
-def _class_block(cls: type, include_members: bool = True) -> list[str]:
+def _class_block(cls: type) -> list[str]:
     """
     Generate the Mermaid `class Foo { ... }` block for a given class.
 
     Args:
         cls: The class object.
-        include_members: If False, generate an empty block (for root/abstract nodes).
     """
     name = cls.__name__
-    if not include_members:
-        return [f"    class {name}"]
 
     lines = [f"    class {name} {{"]
 
@@ -220,7 +217,7 @@ def diagram_for_class(fqn: str, all_fqns: list[str]) -> str:
     lines = ["classDiagram"]
 
     # --- Focal class (full detail) ---
-    lines += _class_block(cls, include_members=True)
+    lines += _class_block(cls)
 
     # --- Parents (walk MRO, stop at object) ---
     for parent in cls.__mro__[1:]:
@@ -229,16 +226,16 @@ def diagram_for_class(fqn: str, all_fqns: list[str]) -> str:
         parent_name = parent.__name__
         if parent_name in ABSTRACT_ROOTS:
             # Show as abstract root, no members
-            lines += _class_block(parent, include_members=False)
+            lines += _class_block(parent)
             lines.append(f"    <<abstract>> {parent_name}")
-            lines.append(f"    {parent_name} <|-- {cls.__name__} : hérite")
+            lines.append(f"    {parent_name} <|-- {cls.__name__} : herits")
         else:
             # Show with members if it's a known project class
             parent_fqn = next((f for f in all_fqns if f.endswith(f".{parent_name}")), None)
             if parent_fqn:
                 parent_cls = _resolve_class(parent_fqn)
                 if parent_cls:
-                    lines += _class_block(parent_cls, include_members=True)
+                    lines += _class_block(parent_cls)
                     lines.append(f"    {parent_name} <|-- {cls.__name__} : hérite")
 
     # --- Children (classes in all_fqns that inherit from cls) ---
@@ -249,7 +246,7 @@ def diagram_for_class(fqn: str, all_fqns: list[str]) -> str:
         if child_cls is None:
             continue
         if cls in child_cls.__mro__[1:] and child_cls.__name__ != cls.__name__:
-            lines += _class_block(child_cls, include_members=True)
+            lines += _class_block(child_cls)
             lines.append(f"    {cls.__name__} <|-- {child_cls.__name__} : hérite")
 
     return "\n".join(lines)

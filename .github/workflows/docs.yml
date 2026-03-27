@@ -41,7 +41,6 @@ jobs:
               run: |
                 make -C doc html coverage
                 cp doc/_build/coverage/python.txt doc/_build/html/coverage.txt
-                cp -r doc/model_diagrams/* doc/_build/html/
 
             - name: Deploy to Github Pages
               run: |

@@ -9,5 +9,6 @@
    :show-inheritance:
    :inherited-members:
 
-.. image:: /{{ objname }}.svg
-   :alt: 
+.. raw :: html
+
+   <img src="{{ pathto(objname + '.svg', 1) }}" alt="" />

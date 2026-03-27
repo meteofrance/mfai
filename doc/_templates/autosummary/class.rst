@@ -9,4 +9,5 @@
    :show-inheritance:
    :inherited-members:
 
-.. image:: model_diagrams/{{ objname }}.svg
+.. image:: /model_diagrams/{{ objname }}.svg
+   :alt: {{ objname }} architecture

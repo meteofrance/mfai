@@ -9,4 +9,4 @@
    :show-inheritance:
    :inherited-members:
 
-.. image:: model_diagrams/{{ module }}.svg
+.. image:: model_diagrams/{{ objname }}.svg

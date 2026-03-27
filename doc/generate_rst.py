@@ -238,7 +238,7 @@ def diagram_for_class(fqn: str, all_fqns: list[str]) -> str:
                 parent_cls = _resolve_class(parent_fqn)
                 if parent_cls:
                     lines += _class_block(parent_cls)
-                    lines.append(f"    {parent_name} <|-- {cls.__name__} : hérite")
+                    lines.append(f"    {parent_name} <|-- {cls.__name__} : herits")
 
     # --- Children (classes in all_fqns that inherit from cls) ---
     for child_fqn in all_fqns:
@@ -249,7 +249,7 @@ def diagram_for_class(fqn: str, all_fqns: list[str]) -> str:
             continue
         if cls in child_cls.__mro__[1:] and child_cls.__name__ != cls.__name__:
             lines += _class_block(child_cls)
-            lines.append(f"    {cls.__name__} <|-- {child_cls.__name__} : hérite")
+            lines.append(f"    {cls.__name__} <|-- {child_cls.__name__} : herits")
 
     return "\n".join(lines)
 

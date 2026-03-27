@@ -157,7 +157,7 @@ def _class_block(cls: type) -> list[str]:
         cls: The class object.
     """
     name = cls.__name__
-    if not name == 'Module':
+    if name == 'Module':
         return [f"    class {name}"]
 
     lines = [f"    class {name} {{"]

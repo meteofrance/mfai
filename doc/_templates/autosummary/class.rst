@@ -9,5 +9,5 @@
    :show-inheritance:
    :inherited-members:
 
-.. image:: ../../../../{{ objname }}.svg
+.. image:: ../../../{{ objname }}.svg
    :alt: 

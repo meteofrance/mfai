@@ -1,0 +1,21 @@
+mfai.pytorch.models.gan_dgmr.layers
+===================================
+
+.. automodule:: mfai.pytorch.models.gan_dgmr.layers
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+
+
+.. toctree::
+  :maxdepth: 1
+
+
+  mfai.pytorch.models.gan_dgmr.layers.attention
+
+  mfai.pytorch.models.gan_dgmr.layers.conv_gru
+
+  mfai.pytorch.models.gan_dgmr.layers.coord_conv
+

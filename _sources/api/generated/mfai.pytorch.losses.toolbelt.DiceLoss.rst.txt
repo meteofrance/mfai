@@ -1,0 +1,10 @@
+﻿DiceLoss
+========
+
+.. currentmodule:: mfai.pytorch.losses.toolbelt
+
+.. autoclass:: DiceLoss
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

@@ -1,0 +1,10 @@
+﻿PR\_AUC
+=======
+
+.. currentmodule:: mfai.pytorch.metrics
+
+.. autoclass:: PR_AUC
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

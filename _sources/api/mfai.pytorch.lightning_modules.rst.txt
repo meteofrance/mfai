@@ -1,0 +1,21 @@
+mfai.pytorch.lightning_modules
+==============================
+
+.. automodule:: mfai.pytorch.lightning_modules
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+
+
+.. toctree::
+  :maxdepth: 1
+
+
+  mfai.pytorch.lightning_modules.clip
+
+  mfai.pytorch.lightning_modules.gan_dgmr
+
+  mfai.pytorch.lightning_modules.segmentation
+

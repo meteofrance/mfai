@@ -1,0 +1,10 @@
+﻿MLFlowSaveConfigCallback
+========================
+
+.. currentmodule:: mfai.pytorch.callbacks
+
+.. autoclass:: MLFlowSaveConfigCallback
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

@@ -1,0 +1,21 @@
+mfai.pytorch.losses
+===================
+
+.. automodule:: mfai.pytorch.losses
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+
+
+.. toctree::
+  :maxdepth: 1
+
+
+  mfai.pytorch.losses.gan_dgmr
+
+  mfai.pytorch.losses.perceptual
+
+  mfai.pytorch.losses.toolbelt
+

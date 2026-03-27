@@ -1,0 +1,1152 @@
+Models
+======
+
+ModelABC
+~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       class ArchesWeather {
+           +bool onnx_supported
+           +tuple supported_num_spatial_dims
+           +bool features_last
+           +bool register
+           +forward() tuple
+       }
+       ModelABC <|-- ArchesWeather : herits
+       class BaseModel {
+       }
+       ModelABC <|-- BaseModel : herits
+       class DeepLabV3 {
+           +bool onnx_supported
+           +bool features_last
+           +ModelType model_type
+           +int num_spatial_dims
+           +bool register
+           +check_input_shape() None
+           +forward() torch.Tensor | tuple[torch.Tensor, torch.Tensor]
+           +get_classification_head() Sequential
+           +get_decoder() DeepLabV3Decoder
+           +get_segmentation_head() Sequential
+           +initialize() None
+           +initialize_decoder() None
+           +initialize_head() None
+           +predict() Tensor
+           +validate_input_shape() tuple
+       }
+       ModelABC <|-- DeepLabV3 : herits
+       class DeepLabV3Plus {
+       }
+       ModelABC <|-- DeepLabV3Plus : herits
+       class HalfUNet {
+           +bool onnx_supported
+           +tuple supported_num_spatial_dims
+           +int num_spatial_dims
+           +bool features_last
+           +ModelType model_type
+           +bool register
+           #_block() Sequential
+           +forward() Tensor
+           +validate_input_shape() tuple
+       }
+       ModelABC <|-- HalfUNet : herits
+       class IdentityModel {
+           +int num_spatial_dims
+           +bool register
+           +forward() Tensor
+       }
+       ModelABC <|-- IdentityModel : herits
+       class BaseGraphModel {
+           +int num_spatial_dims
+           +bool features_last
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +forward() Tensor
+           +get_num_mesh() tuple
+           +load_graph() None
+           +process_step() Tensor
+       }
+       ModelABC <|-- BaseGraphModel : herits
+       class BaseHiGraphModel {
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +get_num_mesh() tuple
+           +hi_processor_step() tuple
+           +process_step() Tensor
+       }
+       ModelABC <|-- BaseHiGraphModel : herits
+       class GraphLAM {
+           +bool register
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +get_num_mesh() tuple
+           +process_step() Tensor
+       }
+       ModelABC <|-- GraphLAM : herits
+       class HiLAM {
+           +bool register
+           +finalize_graph_model() None
+           +hi_processor_step() tuple
+           +make_down_gnns() ModuleList
+           +make_same_gnns() ModuleList
+           +make_up_gnns() ModuleList
+           +mesh_down_step() tuple
+           +mesh_up_step() tuple
+       }
+       ModelABC <|-- HiLAM : herits
+       class HiLAMParallel {
+           +bool register
+           +finalize_graph_model() None
+           +hi_processor_step() tuple
+       }
+       ModelABC <|-- HiLAMParallel : herits
+       class PanguWeather {
+           +bool onnx_supported
+           +Tuple supported_num_spatial_dims
+           +bool features_last
+           +bool register
+           +forward() Tuple
+       }
+       ModelABC <|-- PanguWeather : herits
+       class Segformer {
+           +int num_spatial_dims
+           +bool register
+           +forward() Tensor
+           +validate_input_shape() tuple
+       }
+       ModelABC <|-- Segformer : herits
+       class SwinUNetR {
+           +bool onnx_supported
+           +tuple supported_num_spatial_dims
+           +bool features_last
+           +ModelType model_type
+           +int num_spatial_dims
+           +bool register
+           +forward() Tensor
+           +validate_input_shape() tuple
+       }
+       ModelABC <|-- SwinUNetR : herits
+       class CustomUNet {
+           +int num_spatial_dims
+           +bool register
+           +forward() Tensor
+           +validate_input_shape() Tuple
+       }
+       ModelABC <|-- CustomUNet : herits
+       class UNet {
+           +int num_spatial_dims
+           +bool register
+           #_block() Sequential
+           +forward() Tensor
+           +validate_input_shape() tuple
+       }
+       ModelABC <|-- UNet : herits
+       class UNetRPP {
+           +bool features_last
+           +bool register
+           +forward() torch.Tensor | list[torch.Tensor]
+           +proj_feat() Tensor
+           +validate_input_shape() tuple
+       }
+       ModelABC <|-- UNetRPP : herits
+       class ViTClassifier {
+           +bool onnx_supported
+           +tuple supported_num_spatial_dims
+           +bool features_last
+           +ModelType model_type
+           +int num_spatial_dims
+           +bool register
+           +forward() Tensor
+       }
+       ModelABC <|-- ViTClassifier : herits
+       class VitEncoder {
+           +bool onnx_supported
+           +tuple supported_num_spatial_dims
+           +bool features_last
+           +ModelType model_type
+           +int num_spatial_dims
+           +bool register
+           +forward() Tensor
+       }
+       ModelABC <|-- VitEncoder : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.base.ModelABC
+
+ArchesWeather
+~~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class ArchesWeather {
+           +bool onnx_supported
+           +tuple supported_num_spatial_dims
+           +bool features_last
+           +bool register
+           +forward() tuple
+       }
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- ArchesWeather : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- ArchesWeather : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- ArchesWeather : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.archesweather.ArchesWeather
+
+BaseModel
+~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class BaseModel {
+       }
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- BaseModel : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- BaseModel : herits
+       class ArchesWeather {
+           +bool onnx_supported
+           +tuple supported_num_spatial_dims
+           +bool features_last
+           +bool register
+           +forward() tuple
+       }
+       BaseModel <|-- ArchesWeather : herits
+       class DeepLabV3 {
+           +bool onnx_supported
+           +bool features_last
+           +ModelType model_type
+           +int num_spatial_dims
+           +bool register
+           +check_input_shape() None
+           +forward() torch.Tensor | tuple[torch.Tensor, torch.Tensor]
+           +get_classification_head() Sequential
+           +get_decoder() DeepLabV3Decoder
+           +get_segmentation_head() Sequential
+           +initialize() None
+           +initialize_decoder() None
+           +initialize_head() None
+           +predict() Tensor
+           +validate_input_shape() tuple
+       }
+       BaseModel <|-- DeepLabV3 : herits
+       class DeepLabV3Plus {
+       }
+       BaseModel <|-- DeepLabV3Plus : herits
+       class HalfUNet {
+           +bool onnx_supported
+           +tuple supported_num_spatial_dims
+           +int num_spatial_dims
+           +bool features_last
+           +ModelType model_type
+           +bool register
+           #_block() Sequential
+           +forward() Tensor
+           +validate_input_shape() tuple
+       }
+       BaseModel <|-- HalfUNet : herits
+       class IdentityModel {
+           +int num_spatial_dims
+           +bool register
+           +forward() Tensor
+       }
+       BaseModel <|-- IdentityModel : herits
+       class BaseGraphModel {
+           +int num_spatial_dims
+           +bool features_last
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +forward() Tensor
+           +get_num_mesh() tuple
+           +load_graph() None
+           +process_step() Tensor
+       }
+       BaseModel <|-- BaseGraphModel : herits
+       class BaseHiGraphModel {
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +get_num_mesh() tuple
+           +hi_processor_step() tuple
+           +process_step() Tensor
+       }
+       BaseModel <|-- BaseHiGraphModel : herits
+       class GraphLAM {
+           +bool register
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +get_num_mesh() tuple
+           +process_step() Tensor
+       }
+       BaseModel <|-- GraphLAM : herits
+       class HiLAM {
+           +bool register
+           +finalize_graph_model() None
+           +hi_processor_step() tuple
+           +make_down_gnns() ModuleList
+           +make_same_gnns() ModuleList
+           +make_up_gnns() ModuleList
+           +mesh_down_step() tuple
+           +mesh_up_step() tuple
+       }
+       BaseModel <|-- HiLAM : herits
+       class HiLAMParallel {
+           +bool register
+           +finalize_graph_model() None
+           +hi_processor_step() tuple
+       }
+       BaseModel <|-- HiLAMParallel : herits
+       class PanguWeather {
+           +bool onnx_supported
+           +Tuple supported_num_spatial_dims
+           +bool features_last
+           +bool register
+           +forward() Tuple
+       }
+       BaseModel <|-- PanguWeather : herits
+       class Segformer {
+           +int num_spatial_dims
+           +bool register
+           +forward() Tensor
+           +validate_input_shape() tuple
+       }
+       BaseModel <|-- Segformer : herits
+       class CustomUNet {
+           +int num_spatial_dims
+           +bool register
+           +forward() Tensor
+           +validate_input_shape() Tuple
+       }
+       BaseModel <|-- CustomUNet : herits
+       class UNet {
+           +int num_spatial_dims
+           +bool register
+           #_block() Sequential
+           +forward() Tensor
+           +validate_input_shape() tuple
+       }
+       BaseModel <|-- UNet : herits
+       class UNetRPP {
+           +bool features_last
+           +bool register
+           +forward() torch.Tensor | list[torch.Tensor]
+           +proj_feat() Tensor
+           +validate_input_shape() tuple
+       }
+       BaseModel <|-- UNetRPP : herits
+       class ViTClassifier {
+           +bool onnx_supported
+           +tuple supported_num_spatial_dims
+           +bool features_last
+           +ModelType model_type
+           +int num_spatial_dims
+           +bool register
+           +forward() Tensor
+       }
+       BaseModel <|-- ViTClassifier : herits
+       class VitEncoder {
+           +bool onnx_supported
+           +tuple supported_num_spatial_dims
+           +bool features_last
+           +ModelType model_type
+           +int num_spatial_dims
+           +bool register
+           +forward() Tensor
+       }
+       BaseModel <|-- VitEncoder : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.base.BaseModel
+
+DeepLabV3
+~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class DeepLabV3 {
+           +bool onnx_supported
+           +bool features_last
+           +ModelType model_type
+           +int num_spatial_dims
+           +bool register
+           +check_input_shape() None
+           +forward() torch.Tensor | tuple[torch.Tensor, torch.Tensor]
+           +get_classification_head() Sequential
+           +get_decoder() DeepLabV3Decoder
+           +get_segmentation_head() Sequential
+           +initialize() None
+           +initialize_decoder() None
+           +initialize_head() None
+           +predict() Tensor
+           +validate_input_shape() tuple
+       }
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- DeepLabV3 : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- DeepLabV3 : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- DeepLabV3 : herits
+       class DeepLabV3Plus {
+       }
+       DeepLabV3 <|-- DeepLabV3Plus : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.deeplabv3.DeepLabV3
+
+DeepLabV3Plus
+~~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class DeepLabV3Plus {
+       }
+       class DeepLabV3 {
+           +bool onnx_supported
+           +bool features_last
+           +ModelType model_type
+           +int num_spatial_dims
+           +bool register
+           +check_input_shape() None
+           +forward() torch.Tensor | tuple[torch.Tensor, torch.Tensor]
+           +get_classification_head() Sequential
+           +get_decoder() DeepLabV3Decoder
+           +get_segmentation_head() Sequential
+           +initialize() None
+           +initialize_decoder() None
+           +initialize_head() None
+           +predict() Tensor
+           +validate_input_shape() tuple
+       }
+       DeepLabV3 <|-- DeepLabV3Plus : herits
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- DeepLabV3Plus : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- DeepLabV3Plus : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- DeepLabV3Plus : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.deeplabv3.DeepLabV3Plus
+
+HalfUNet
+~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class HalfUNet {
+           +bool onnx_supported
+           +tuple supported_num_spatial_dims
+           +int num_spatial_dims
+           +bool features_last
+           +ModelType model_type
+           +bool register
+           #_block() Sequential
+           +forward() Tensor
+           +validate_input_shape() tuple
+       }
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- HalfUNet : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- HalfUNet : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- HalfUNet : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.half_unet.HalfUNet
+
+IdentityModel
+~~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class IdentityModel {
+           +int num_spatial_dims
+           +bool register
+           +forward() Tensor
+       }
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- IdentityModel : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- IdentityModel : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- IdentityModel : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.identity.IdentityModel
+
+BaseGraphModel
+~~~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class BaseGraphModel {
+           +int num_spatial_dims
+           +bool features_last
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +forward() Tensor
+           +get_num_mesh() tuple
+           +load_graph() None
+           +process_step() Tensor
+       }
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- BaseGraphModel : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- BaseGraphModel : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- BaseGraphModel : herits
+       class BaseHiGraphModel {
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +get_num_mesh() tuple
+           +hi_processor_step() tuple
+           +process_step() Tensor
+       }
+       BaseGraphModel <|-- BaseHiGraphModel : herits
+       class GraphLAM {
+           +bool register
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +get_num_mesh() tuple
+           +process_step() Tensor
+       }
+       BaseGraphModel <|-- GraphLAM : herits
+       class HiLAM {
+           +bool register
+           +finalize_graph_model() None
+           +hi_processor_step() tuple
+           +make_down_gnns() ModuleList
+           +make_same_gnns() ModuleList
+           +make_up_gnns() ModuleList
+           +mesh_down_step() tuple
+           +mesh_up_step() tuple
+       }
+       BaseGraphModel <|-- HiLAM : herits
+       class HiLAMParallel {
+           +bool register
+           +finalize_graph_model() None
+           +hi_processor_step() tuple
+       }
+       BaseGraphModel <|-- HiLAMParallel : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.nlam.BaseGraphModel
+
+BaseHiGraphModel
+~~~~~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class BaseHiGraphModel {
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +get_num_mesh() tuple
+           +hi_processor_step() tuple
+           +process_step() Tensor
+       }
+       class BaseGraphModel {
+           +int num_spatial_dims
+           +bool features_last
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +forward() Tensor
+           +get_num_mesh() tuple
+           +load_graph() None
+           +process_step() Tensor
+       }
+       BaseGraphModel <|-- BaseHiGraphModel : herits
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- BaseHiGraphModel : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- BaseHiGraphModel : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- BaseHiGraphModel : herits
+       class HiLAM {
+           +bool register
+           +finalize_graph_model() None
+           +hi_processor_step() tuple
+           +make_down_gnns() ModuleList
+           +make_same_gnns() ModuleList
+           +make_up_gnns() ModuleList
+           +mesh_down_step() tuple
+           +mesh_up_step() tuple
+       }
+       BaseHiGraphModel <|-- HiLAM : herits
+       class HiLAMParallel {
+           +bool register
+           +finalize_graph_model() None
+           +hi_processor_step() tuple
+       }
+       BaseHiGraphModel <|-- HiLAMParallel : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.nlam.BaseHiGraphModel
+
+GraphLAM
+~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class GraphLAM {
+           +bool register
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +get_num_mesh() tuple
+           +process_step() Tensor
+       }
+       class BaseGraphModel {
+           +int num_spatial_dims
+           +bool features_last
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +forward() Tensor
+           +get_num_mesh() tuple
+           +load_graph() None
+           +process_step() Tensor
+       }
+       BaseGraphModel <|-- GraphLAM : herits
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- GraphLAM : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- GraphLAM : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- GraphLAM : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.nlam.GraphLAM
+
+HiLAM
+~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class HiLAM {
+           +bool register
+           +finalize_graph_model() None
+           +hi_processor_step() tuple
+           +make_down_gnns() ModuleList
+           +make_same_gnns() ModuleList
+           +make_up_gnns() ModuleList
+           +mesh_down_step() tuple
+           +mesh_up_step() tuple
+       }
+       class BaseHiGraphModel {
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +get_num_mesh() tuple
+           +hi_processor_step() tuple
+           +process_step() Tensor
+       }
+       BaseHiGraphModel <|-- HiLAM : herits
+       class BaseGraphModel {
+           +int num_spatial_dims
+           +bool features_last
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +forward() Tensor
+           +get_num_mesh() tuple
+           +load_graph() None
+           +process_step() Tensor
+       }
+       BaseGraphModel <|-- HiLAM : herits
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- HiLAM : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- HiLAM : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- HiLAM : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.nlam.HiLAM
+
+HiLAMParallel
+~~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class HiLAMParallel {
+           +bool register
+           +finalize_graph_model() None
+           +hi_processor_step() tuple
+       }
+       class BaseHiGraphModel {
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +get_num_mesh() tuple
+           +hi_processor_step() tuple
+           +process_step() Tensor
+       }
+       BaseHiGraphModel <|-- HiLAMParallel : herits
+       class BaseGraphModel {
+           +int num_spatial_dims
+           +bool features_last
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +forward() Tensor
+           +get_num_mesh() tuple
+           +load_graph() None
+           +process_step() Tensor
+       }
+       BaseGraphModel <|-- HiLAMParallel : herits
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- HiLAMParallel : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- HiLAMParallel : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- HiLAMParallel : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.nlam.HiLAMParallel
+
+PanguWeather
+~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class PanguWeather {
+           +bool onnx_supported
+           +Tuple supported_num_spatial_dims
+           +bool features_last
+           +bool register
+           +forward() Tuple
+       }
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- PanguWeather : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- PanguWeather : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- PanguWeather : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.pangu.PanguWeather
+
+Segformer
+~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class Segformer {
+           +int num_spatial_dims
+           +bool register
+           +forward() Tensor
+           +validate_input_shape() tuple
+       }
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- Segformer : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- Segformer : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- Segformer : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.segformer.Segformer
+
+SwinUNetR
+~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class SwinUNetR {
+           +bool onnx_supported
+           +tuple supported_num_spatial_dims
+           +bool features_last
+           +ModelType model_type
+           +int num_spatial_dims
+           +bool register
+           +forward() Tensor
+           +validate_input_shape() tuple
+       }
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- SwinUNetR : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- SwinUNetR : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.swinunetr.SwinUNetR
+
+CustomUNet
+~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class CustomUNet {
+           +int num_spatial_dims
+           +bool register
+           +forward() Tensor
+           +validate_input_shape() Tuple
+       }
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- CustomUNet : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- CustomUNet : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- CustomUNet : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.unet.CustomUNet
+
+UNet
+~~~~
+
+.. mermaid::
+
+   classDiagram
+       class UNet {
+           +int num_spatial_dims
+           +bool register
+           #_block() Sequential
+           +forward() Tensor
+           +validate_input_shape() tuple
+       }
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- UNet : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- UNet : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- UNet : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.unet.UNet
+
+UNetRPP
+~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class UNetRPP {
+           +bool features_last
+           +bool register
+           +forward() torch.Tensor | list[torch.Tensor]
+           +proj_feat() Tensor
+           +validate_input_shape() tuple
+       }
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- UNetRPP : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- UNetRPP : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- UNetRPP : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.unetrpp.UNetRPP
+
+ViTClassifier
+~~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class ViTClassifier {
+           +bool onnx_supported
+           +tuple supported_num_spatial_dims
+           +bool features_last
+           +ModelType model_type
+           +int num_spatial_dims
+           +bool register
+           +forward() Tensor
+       }
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- ViTClassifier : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- ViTClassifier : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- ViTClassifier : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.vit.ViTClassifier
+
+VitEncoder
+~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class VitEncoder {
+           +bool onnx_supported
+           +tuple supported_num_spatial_dims
+           +bool features_last
+           +ModelType model_type
+           +int num_spatial_dims
+           +bool register
+           +forward() Tensor
+       }
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- VitEncoder : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- VitEncoder : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- VitEncoder : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.vit.VitEncoder

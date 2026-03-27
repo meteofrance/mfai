@@ -1,0 +1,10 @@
+﻿FAR
+===
+
+.. currentmodule:: mfai.pytorch.metrics
+
+.. autoclass:: FAR
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

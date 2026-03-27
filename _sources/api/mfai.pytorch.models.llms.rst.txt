@@ -1,0 +1,25 @@
+mfai.pytorch.models.llms
+========================
+
+.. automodule:: mfai.pytorch.models.llms
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+
+
+.. toctree::
+  :maxdepth: 1
+
+
+  mfai.pytorch.models.llms.cross_attention
+
+  mfai.pytorch.models.llms.fuyu
+
+  mfai.pytorch.models.llms.gpt2
+
+  mfai.pytorch.models.llms.llama2
+
+  mfai.pytorch.models.llms.llama3
+

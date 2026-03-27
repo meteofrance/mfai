@@ -1,0 +1,10 @@
+﻿SwinUNetR
+=========
+
+.. currentmodule:: mfai.pytorch.models.swinunetr
+
+.. autoclass:: SwinUNetR
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

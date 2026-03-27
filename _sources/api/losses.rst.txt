@@ -1,0 +1,16 @@
+Losses
+======
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.losses.gan_dgmr.GridCellLoss
+   ~mfai.pytorch.losses.perceptual.BaseNet
+   ~mfai.pytorch.losses.perceptual.LPIPS
+   ~mfai.pytorch.losses.perceptual.LinLayers
+   ~mfai.pytorch.losses.perceptual.PerceptualLoss
+   ~mfai.pytorch.losses.perceptual.VGG16
+   ~mfai.pytorch.losses.toolbelt.DiceLoss
+   ~mfai.pytorch.losses.toolbelt.SoftBCEWithLogitsLoss
+   ~mfai.pytorch.losses.toolbelt.SoftCrossEntropyLoss

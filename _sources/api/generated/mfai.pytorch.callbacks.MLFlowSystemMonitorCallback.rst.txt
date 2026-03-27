@@ -1,0 +1,10 @@
+﻿MLFlowSystemMonitorCallback
+===========================
+
+.. currentmodule:: mfai.pytorch.callbacks
+
+.. autoclass:: MLFlowSystemMonitorCallback
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

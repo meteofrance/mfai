@@ -1,0 +1,10 @@
+﻿HiLAMParallel
+=============
+
+.. currentmodule:: mfai.pytorch.models.nlam
+
+.. autoclass:: HiLAMParallel
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

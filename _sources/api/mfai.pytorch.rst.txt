@@ -1,0 +1,40 @@
+mfai.pytorch
+============
+
+.. automodule:: mfai.pytorch
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+.. toctree::
+  :maxdepth: 1
+
+
+  mfai.pytorch.lightning_modules
+
+  mfai.pytorch.losses
+
+  mfai.pytorch.models
+
+
+
+
+.. toctree::
+  :maxdepth: 1
+
+
+  mfai.pytorch.callbacks
+
+  mfai.pytorch.dummy_dataset
+
+  mfai.pytorch.lr_scheduler
+
+  mfai.pytorch.metrics
+
+  mfai.pytorch.namedtensor
+
+  mfai.pytorch.padding
+
+  mfai.pytorch.transforms
+

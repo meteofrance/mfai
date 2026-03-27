@@ -1,0 +1,10 @@
+﻿PanguWeather
+============
+
+.. currentmodule:: mfai.pytorch.models.pangu
+
+.. autoclass:: PanguWeather
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

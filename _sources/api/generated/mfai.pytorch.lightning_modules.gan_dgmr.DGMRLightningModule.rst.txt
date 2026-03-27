@@ -1,0 +1,10 @@
+﻿DGMRLightningModule
+===================
+
+.. currentmodule:: mfai.pytorch.lightning_modules.gan_dgmr
+
+.. autoclass:: DGMRLightningModule
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

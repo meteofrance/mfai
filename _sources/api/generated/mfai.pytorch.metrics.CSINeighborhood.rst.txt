@@ -1,0 +1,10 @@
+﻿CSINeighborhood
+===============
+
+.. currentmodule:: mfai.pytorch.metrics
+
+.. autoclass:: CSINeighborhood
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

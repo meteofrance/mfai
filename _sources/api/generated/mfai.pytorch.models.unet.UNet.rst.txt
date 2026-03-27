@@ -1,0 +1,10 @@
+﻿UNet
+====
+
+.. currentmodule:: mfai.pytorch.models.unet
+
+.. autoclass:: UNet
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

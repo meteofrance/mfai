@@ -1,0 +1,10 @@
+﻿HalfUNet
+========
+
+.. currentmodule:: mfai.pytorch.models.half_unet
+
+.. autoclass:: HalfUNet
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

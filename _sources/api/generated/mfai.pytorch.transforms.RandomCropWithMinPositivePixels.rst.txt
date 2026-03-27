@@ -1,0 +1,10 @@
+﻿RandomCropWithMinPositivePixels
+===============================
+
+.. currentmodule:: mfai.pytorch.transforms
+
+.. autoclass:: RandomCropWithMinPositivePixels
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

@@ -1,0 +1,10 @@
+﻿ArchesWeather
+=============
+
+.. currentmodule:: mfai.pytorch.models.archesweather
+
+.. autoclass:: ArchesWeather
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

@@ -1,0 +1,28 @@
+mfai.pytorch.models.gan_dgmr
+============================
+
+.. automodule:: mfai.pytorch.models.gan_dgmr
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+.. toctree::
+  :maxdepth: 1
+
+
+  mfai.pytorch.models.gan_dgmr.layers
+
+
+
+
+.. toctree::
+  :maxdepth: 1
+
+
+  mfai.pytorch.models.gan_dgmr.blocks
+
+  mfai.pytorch.models.gan_dgmr.discriminators
+
+  mfai.pytorch.models.gan_dgmr.generators
+

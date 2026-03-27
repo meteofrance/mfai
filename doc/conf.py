@@ -63,7 +63,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_theme = "furo"
 autodoc_typehints = "description"
 html_static_path = ["_static"]
-html_extra_path = ["imgs"]
+html_extra_path = ["imgs", "model_diagrams"]
 
 html_logo = "imgs/logo.png"
 html_favicon = "imgs/logo.png"

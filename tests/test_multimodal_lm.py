@@ -140,12 +140,12 @@ def test_multimodal_llm(
         model.unfreeze_vision()
 
 
-def test_multimodal_with_pretrained_clip() -> None:
+def test_multimodal_with_pretrained_clip(tmp_path: Path) -> None:
     torch.manual_seed(666)
     embed_dim = 32
     vision_input_shape = (128, 128, 2, 1)
     num_channels: int = vision_input_shape[2] * vision_input_shape[3]
-    path_checkpoint = Path("checkpoint.tar")
+    path_checkpoint = tmp_path / "checkpoint.tar"
 
     # Setup the CLIP model
     resnet_clip = ResNet50(

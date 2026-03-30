@@ -1,3 +1,6 @@
+from pathlib import Path
+
+import yaml
 from lightning.pytorch.cli import ArgsType, LightningArgumentParser, LightningCLI
 
 from mfai.pytorch.dummy_dataset import DummyMultiModalDataModule
@@ -31,10 +34,23 @@ def cli_main(args: ArgsType = None) -> None:
     cli.trainer.fit(cli.model, datamodule=cli.datamodule)
 
 
-def test_clip_training() -> None:
+def test_clip_training(tmp_path: Path) -> None:
+    config = yaml.safe_load(
+        (Path(__file__).parents[1] / "mfai/config/clip.yaml").read_text()
+    )
+    config["trainer"]["default_root_dir"] = str(tmp_path)
+    for callback in config["trainer"].get("callbacks", []):
+        if callback.get("class_path") == "lightning.pytorch.callbacks.ModelCheckpoint":
+            callback.setdefault("init_args", {})["dirpath"] = str(
+                tmp_path / "checkpoints"
+            )
+
+    config_path = tmp_path / "clip.yaml"
+    config_path.write_text(yaml.safe_dump(config, sort_keys=False))
+
     cli_main(
         [
-            "--config=mfai/config/clip.yaml",
+            f"--config={config_path}",
             "--trainer.limit_train_batches=3",
             "--trainer.limit_val_batches=3",
             "--trainer.limit_test_batches=3",

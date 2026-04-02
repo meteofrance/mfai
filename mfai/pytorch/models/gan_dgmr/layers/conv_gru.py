@@ -98,6 +98,7 @@ class ConvGRU(torch.nn.Module):
     ) -> None:
         """Initialize the convolution layer."""
         super().__init__()
+        self.output_channels = output_channels
         self.cell = ConvGRUCell(input_channels, output_channels, kernel_size, sn_eps)
 
     def forward(self, x: Tensor, hidden_state: Tensor = None) -> Tensor:
@@ -107,11 +108,19 @@ class ConvGRU(torch.nn.Module):
             x: tensor from the conditionning stack or from the previous ConvGRU. (timesteps, B, input_channels, H, W)
             hidden_state: tensor from the latent conditionning stack. (B, latent_channels, H, W)
         """
-        output_list = []
-        for step in x:  # Iterate over the timestep dimension
+        timesteps, batch_size, _, height, width = x.shape
+        outputs = torch.empty(
+            timesteps,
+            batch_size,
+            self.output_channels,
+            height,
+            width,
+            device=x.device,
+            dtype=x.dtype,
+            layout=x.layout,
+        )
+        for i, step in enumerate(x):  # Iterate over the timestep dimension
             # Compute current timestep
             hidden_state = self.cell(step, hidden_state)
-            output_list.append(hidden_state)
-        # Stack outputs to return as tensor
-        outputs = torch.stack(output_list, dim=0)
+            outputs[i] = hidden_state
         return outputs

@@ -80,8 +80,10 @@ class AttentionLayer(torch.nn.Module):
         attention_list = []
         for b in range(x.shape[0]):
             # Apply to each in batch
-            attention_list.append(attention_einsum(query[b], key[b], value[b]))
+            att = attention_einsum(query[b], key[b], value[b])
+            attention_list.append(att)
         attention = torch.stack(attention_list, dim=0)
         attention = self.gamma * self.last_conv(attention)
         # Residual connection.
-        return attention + x
+        output = (attention + x).type_as(x)
+        return output

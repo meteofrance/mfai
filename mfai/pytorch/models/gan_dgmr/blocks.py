@@ -526,10 +526,13 @@ class LatentConditioningStack(torch.nn.Module):
                 f"Height and width of input tensor must be divisible by 32. Got {x.shape}."
             )
 
-        # Independent draws from Normal distribution
+        # Independent draws from Normal distribution. Shape: (self.input_channels, height // 32, width // 32, 1)
         z = self.distribution.sample((self.input_channels, height // 32, width // 32))
+        # self.distribution.sample returns a float32 tensor, we change it to match the desired dtype
+        z = z.type_as(x)
+
         # Batch is at end for some reason, reshape
-        z = torch.permute(z, (3, 0, 1, 2)).type_as(x)
+        z = torch.permute(z, (3, 0, 1, 2))
 
         # 3x3 Convolution
         z = self.conv_3x3(z)

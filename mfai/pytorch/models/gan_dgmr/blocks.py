@@ -145,7 +145,7 @@ class UpsampleGBlock(torch.nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         """Apply the forward function."""
-        # Spectrally nsormalized 1x1 convolution
+        # Spectrally normalized 1x1 convolution
         sc = self.upsample(x)
         sc = self.conv_1x1(sc)
 

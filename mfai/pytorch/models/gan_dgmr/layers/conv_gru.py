@@ -101,7 +101,7 @@ class ConvGRU(torch.nn.Module):
         self.output_channels = output_channels
         self.cell = ConvGRUCell(input_channels, output_channels, kernel_size, sn_eps)
 
-    def forward(self, x: Tensor, hidden_state: Tensor = None) -> Tensor:
+    def forward(self, x: Tensor, hidden_state: Tensor) -> Tensor:
         """Apply the forward function on each cell prior to returning it as a stack.
 
         Args:

@@ -150,46 +150,54 @@ class Sampler(torch.nn.Module):
             forecast_steps-length output of images for future timesteps
 
         """
-        # Iterate through each forecast step
-        # Initialize with conditioning state for first one, output for second one
-        init_states = conditioning_states
+        batch_size, _, _, _ = conditioning_states[0].shape
+
         # Expand latent dim to match batch size
         latent_dim = einops.repeat(
-            latent_dim, "b c h w -> (repeat b) c h w", repeat=init_states[0].shape[0]
+            latent_dim,
+            "b c h w -> t (repeat b) c h w",
+            repeat=batch_size,
+            t=self.forecast_steps,
         )
-        hidden_states = [latent_dim] * self.forecast_steps
 
         # Layer 4 (bottom most)
-        hidden_states = self.convGRU1(hidden_states, init_states[3])
-        hidden_states = [self.gru_conv_1x1(h) for h in hidden_states]
-        hidden_states = [self.g1(h) for h in hidden_states]
-        hidden_states = [self.up_g1(h) for h in hidden_states]
+        hidden_states: Tensor = self.convGRU1(latent_dim, conditioning_states[3])
+        hidden_states = einops.rearrange(hidden_states, "t b c h w -> (t b) c h w")
+        hidden_states = self.up_g1(self.g1(self.gru_conv_1x1(hidden_states)))
+        hidden_states = einops.rearrange(
+            hidden_states, "(t b) c h w -> t b c h w", t=self.forecast_steps
+        )
 
         # Layer 3.
-        hidden_states = self.convGRU2(hidden_states, init_states[2])
-        hidden_states = [self.gru_conv_1x1_2(h) for h in hidden_states]
-        hidden_states = [self.g2(h) for h in hidden_states]
-        hidden_states = [self.up_g2(h) for h in hidden_states]
+        hidden_states = self.convGRU2(hidden_states, conditioning_states[2])
+        hidden_states = einops.rearrange(hidden_states, "t b c h w -> (t b) c h w")
+        hidden_states = self.up_g2(self.g2(self.gru_conv_1x1_2(hidden_states)))
+        hidden_states = einops.rearrange(
+            hidden_states, "(t b) c h w -> t b c h w", t=self.forecast_steps
+        )
 
         # Layer 2.
-        hidden_states = self.convGRU3(hidden_states, init_states[1])
-        hidden_states = [self.gru_conv_1x1_3(h) for h in hidden_states]
-        hidden_states = [self.g3(h) for h in hidden_states]
-        hidden_states = [self.up_g3(h) for h in hidden_states]
+        hidden_states = self.convGRU3(hidden_states, conditioning_states[1])
+        hidden_states = einops.rearrange(hidden_states, "t b c h w -> (t b) c h w")
+        hidden_states = self.up_g3(self.g3(self.gru_conv_1x1_3(hidden_states)))
+        hidden_states = einops.rearrange(
+            hidden_states, "(t b) c h w -> t b c h w", t=self.forecast_steps
+        )
 
         # Layer 1 (top-most).
-        hidden_states = self.convGRU4(hidden_states, init_states[0])
-        hidden_states = [self.gru_conv_1x1_4(h) for h in hidden_states]
-        hidden_states = [self.g4(h) for h in hidden_states]
-        hidden_states = [self.up_g4(h) for h in hidden_states]
+        hidden_states = self.convGRU4(hidden_states, conditioning_states[0])
+        hidden_states = einops.rearrange(hidden_states, "t b c h w -> (t b) c h w")
+        hidden_states = self.up_g4(self.g4(self.gru_conv_1x1_4(hidden_states)))
 
         # Output layer.
-        hidden_states = [F.relu(self.bn(h)) for h in hidden_states]
-        hidden_states = [self.conv_1x1(h) for h in hidden_states]
-        hidden_states = [self.depth2space(h) for h in hidden_states]
+        hidden_states = F.relu(self.bn(hidden_states))
+        hidden_states = self.conv_1x1(hidden_states)
+        hidden_states = self.depth2space(hidden_states)
 
         # Convert forecasts to a torch Tensor
-        forecasts = torch.stack(hidden_states, dim=1)
+        forecasts = einops.rearrange(
+            hidden_states, "(t b) c h w -> b t c h w", t=self.forecast_steps
+        ).contiguous()
         return forecasts
 
 

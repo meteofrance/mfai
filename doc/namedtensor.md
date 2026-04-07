@@ -42,7 +42,6 @@ The [**NamedTensor**](mfai/pytorch/namedtensor.py#L28) class is a wrapper around
 | `iter_dim`(dim_name) | Iterates over the specified dimension, yielding `NamedTensor` instances. |
 | `iter_tensor_dim`(dim_name) | Iterates over the specified dimension, yielding Tensor instances. |
 | `pin_memory_`() | In place operation to pin the underlying tensor to memory. |
-
 | `rearrange_`(einops_str) | Rearranges the tensor in place using einops-like syntax. |
 | `select_dim`(dim_name, index) | Returns the `NamedTensor` indexed along the dimension `dim_name` with the desired index. The given dimension is removed from the tensor.This method can not select the feature dimension. |
 | `select_tensor_dim`(dim_name, index) | Return the Tensor indexed along the dimension dim_name with the index index. Allows the selection of the feature dimension. Allows the selection of the feature dimension. |

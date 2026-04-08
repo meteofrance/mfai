@@ -8,19 +8,33 @@ We welcome contributions to this package. Our guidelines are the following:
 - Make sure the code respects our mypy type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
 
 
+## Cloning the project
+
+```
+git clone https://github.com/meteofrance/mfai
+cd mfai
+python3.10 -m venv .venv
+source .venv/bin/activate
+pip install .[dev, llm]
+```
+
 ## Contributing a new model
 
-All models in mfai follow the same contract interface. You model should herit from both `pytorch.nn.Module` and `mfai.pytorch.models.base.ModelABC`. To ease the type checking, use the `mfai.pytorch.models.base.BaseModel` class. A settings class named `ModelNameSettings` should contain all of the models settings and be an instantiation parameter for the model class.
+You model should implement mfai's models contract interface described here.
 
-You can take example on an existing model implementation:
-```py
-# mfai/pytorch/models/half_unet.py
+Except for LLMs and MLLMs, each model we provide is a subclass of [torch.nn.Module](https://pytorch.org/docs/stable/generated/torch.nn.Module.html) and can be used in a PyTorch training loop. It has multiple class attributes to facilitate model usage in a project:
+- **settings_kls**: a class that defines the settings of the model (number of filters, kernel size, ...). It is used to instanciate the model with a specific configuration.
+- **onnx_supported**: a boolean that indicates if the model can be exported to onnx. Our CI validates that the model can be exported to onnx and reloaded for inference.
+- **supported_num_spatial_dims**: a tuple that describes the spatial dimensions of the input tensor supported by the model. A model that supports 2D spatial data will have **(2,)** as value. A model that supports 2d or 3d spatial data will have **(2, 3)** as value.
+- **num_spatial_dims**: an integer that describes the number of spatial dimensions of the input/output tensor expected by the instance of the model, must be a value in **supported_num_spatial_dims**.
+- **settings**: a runtime property returns the settings instance used to instanciate the model.
+- **model_type**: an Enum describing the type of model: CONVOLUTIONAL, VISION_TRANSFORMER, GRAPH, LLM, MLLM.
+- **features_last**: a boolean that indicates if the features dimension is the last dimension of the input/output tensor. If False, the features dimension is the second dimension of the input/output tensor.
+- **register**: a boolean that indicates if the model should be registered in the **MODELS** registry. By default, it is set to False which allows the creation of intermediate subclasses not meant for direct use.
 
-from dataclasses import dataclass
-from dataclasses_json import dataclass_json
-from mfai.pytorch.models.base import AutoPaddingModel, BaseModel, ModelType
+The Python interface contract for our model is enforced using [Python ABC](https://docs.python.org/3/library/abc.html) and in our case [ModelABC](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/models/base.py#L1) class. This class is combined to `torch.nn.Module` in [BaseModel](mfai/pytorch/models/base.py#L1).
 
-
+```python
 @dataclass_json
 @dataclass(slots=True)
 class HalfUNetSettings:
@@ -30,33 +44,15 @@ class HalfUNetSettings:
     use_ghost: bool = False
     last_activation: str = "Identity"
     absolute_pos_embed: bool = False
-    autopad_enabled: bool = False
 
-
-class HalfUNet(BaseModel, AutoPaddingModel):
+class HalfUNet(BaseModel):
     settings_kls = HalfUNetSettings
     onnx_supported: bool = True
-    supported_num_spatial_dims: tuple[int, ...] = (2,)
+    supported_num_spatial_dims = (2,)
     num_spatial_dims: int = 2
     features_last: bool = False
-    model_type: ModelType = ModelType.CONVOLUTIONAL
+    model_type: int = ModelType.CONVOLUTIONAL
     register: bool = True
-
-    def __init__(
-        self,
-        in_channels: int,
-        out_channels: int,
-        input_shape: tuple[int, int],
-        settings: HalfUNetSettings = HalfUNetSettings(),
-        *args: Any,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(*args, **kwargs)
-
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.input_shape = input_shape
-        self._settings = settings
 ```
 
 ## Contributing to the documentation
@@ -73,3 +69,30 @@ You can then open the documentation in your browser by opening `doc/_build/html/
 To get a live preview that automatically refreshes on file changes, you can use the [Live Preview](https://marketplace.visualstudio.com/items?itemName=ms-vscode.live-server) extension for VSCode.
 
 Once installed, open `doc/_build/html/index.html` in VSCode and click **Show Preview** — the browser will automatically refresh every time you rebuild the documentation with `make -C doc html`.
+
+
+## Write a unit test
+
+If you contribute a model, and it correctly implement its contract interface, then it will be already tested. For any other contribution, we expect a unit test to be written in the `tests/` directory.
+
+
+## Testing your contribution
+
+To check that your code will pass the project's CI pipelines, you should run:
+```sh
+ruff format
+ruff check --fix
+mypy
+pytest tests/
+```
+
+If all those commands succeed, you can move onto creating a Pull Request.
+
+## Creating a pull request
+
+We ask you to:
+- Choose an explicit title for your pull request.
+- Write a small paragraph explaining what changes are introduced to the project.
+- Keep your pull request as draft until it passes the CI checks.
+- Assign yourself to the pull request.
+- Assign one or more maintainer as reviewers.

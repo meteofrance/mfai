@@ -780,32 +780,7 @@ docker run -it --rm mfai mypy mfai/
 
 # Publishing
 
-We provide a script **build_and_publish.sh** to build the package and publish it to PyPI (**TestPyPI** by default). For now it uses Docker and our private/internal wrapper runai.
-(See [Semantic Versioning](https://semver.org/) rules to help you choose version when creating a tag)
-
-The full process is as follows (adjust the tag name and message to your needs):
-
-```bash
-git tag -a v0.1.0 -m "First release"
-```
-or
-```bash
-git tag v0.1.0
-```
-
-```bash
-git push origin v0.1.0
-./build_and_publish.sh
-```
-
-If you don't create and push a tag, the script will return an error.
-
-In order to publish to pypi passes the argument **pypi**:
-```bash
-./build_and_publish.sh pypi
-```
-
-See the [Python Packaging User Guide](https://packaging.python.org/en/latest/guides/using-testpypi/) for more information on how to publish a package to PyPI.
+This package is built then published to `pypi.org` by the githhub workflow [release.yml](https://github.com/meteofrance/mfai/blob/main/.github/workflows/release.yml). This workflow is triggered when a tag is pushed to the main branch, and needs to be manualy authorised to run by one of the project's maintainers.
 
 # Citation
 If you use this library in your research project, please cite it as below.

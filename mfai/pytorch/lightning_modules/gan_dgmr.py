@@ -226,8 +226,8 @@ class DGMRLightningModule(LightningModule):
         future_images_nt.rearrange_(
             "batch time height width features -> batch time features height width"
         )
-        images = images_nt["rain"].float()
-        future_images = future_images_nt["rain"].float()
+        images: Tensor = images_nt["rain"]
+        future_images: Tensor = future_images_nt["rain"]
 
         real_sequence = torch.cat([images, future_images], dim=1)
 

@@ -71,7 +71,7 @@ docs = [
 dev = [
   "pytest==8.3.4",
   "pytest-cov==6.0.0",
-  "ruff==0.8.1",
+  "ruff==0.15.9",
   "mypy==1.15.0",
   "types-tabulate>=0.9.0",
   "types-tensorflow==2.18.0.20251008",

@@ -61,11 +61,11 @@ class ConvGRUCell(torch.nn.Module):
         Conv GRU forward, returning the current + new state.
 
         Args:
-            x: input tensor of shape (B, input_channels, H, W).
-            prev_state: Previous state
+            x: Input tensor of shape (B, input_channels, H, W).
+           prev_state: Previous state
 
         Returns:
-            output of the convGRU, tensor of shape (B, output_channels, H, W).
+            Tensor: Output of the convGRU, tensor of shape (B, output_channels, H, W).
 
         """
         # Concatenate the inputs and previous state along the channel axis.

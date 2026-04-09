@@ -58,11 +58,13 @@ class ConvGRUCell(torch.nn.Module):
 
     def forward(self, x: Tensor, prev_state: Tensor) -> Tensor:
         """
-        Conv GRU forward, returning the current + new state.
+        Conv GRU forward, returning the current state.
+        The sum of the 2 channels dimensions shoud be equal to `input_channels`,
+        ie. C1 + C2 = input_channels.
 
         Args:
-            x: Input tensor of shape (B, input_channels, H, W).
-           prev_state: Previous state
+            x: Input tensor of shape (B, C1, H, W).
+            prev_state: Previous state, tensor of shape (B, C2, H, W).
 
         Returns:
             Tensor: Output of the convGRU, tensor of shape (B, output_channels, H, W).

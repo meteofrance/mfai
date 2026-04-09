@@ -105,8 +105,8 @@ class ConvGRU(torch.nn.Module):
         """Apply the forward function on each cell prior to returning it as a stack.
 
         Args:
-            x: tensor from the conditionning stack or from the previous ConvGRU. (timesteps, B, input_channels, H, W)
-            hidden_state: tensor from the latent conditionning stack. (B, latent_channels, H, W)
+            x: Tensor from the conditionning stack or from the previous ConvGRU. (timesteps, B, input_channels, H, W)
+            hidden_state: Tensor from the latent conditionning stack. (B, latent_channels, H, W)
         """
         timesteps, batch_size, _, height, width = x.shape
         outputs = torch.empty(

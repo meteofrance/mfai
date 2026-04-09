@@ -84,4 +84,5 @@ class AttentionLayer(torch.nn.Module):
         attention = torch.stack(attention_list, dim=0)
         attention = self.gamma * self.last_conv(attention)
         # Residual connection.
-        return attention + x
+        output = (attention + x).type_as(x)
+        return output

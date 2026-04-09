@@ -110,7 +110,7 @@ class DimensionSubSampler(nn.Module):
         """
         Args:
             dim_name: name of the name tensor dimension to subsample
-            leadtimes_to_keep: list of indexes to be kept in the given dimension.
+            idx_to_keep: list of indexes to be kept in the given dimension.
         """
         super().__init__()
         self.lead_times_indices = torch.tensor(idx_to_keep)
@@ -172,7 +172,7 @@ class MeanDimensionSubsampler(nn.Module):
         """
         Args:
             dim_name: Name of the dimension to subsample.
-            leadtimes_to_keep: List of list of indexes to meaned in the given dimension.
+            idx_to_be_meaned: List of list of indexes to meaned in the given dimension.
         """
         super().__init__()
         self.dim_name = dim_name

@@ -56,16 +56,18 @@ class ConvGRUCell(torch.nn.Module):
             eps=sn_eps,
         )
 
-    def forward(self, x: Tensor, prev_state: Tensor) -> tuple[Tensor, Tensor]:
+    def forward(self, x: Tensor, prev_state: Tensor) -> Tensor:
         """
-        Conv GRU forward, returning the current + new state.
+        Conv GRU forward, returning the current state.
+        The sum of the 2 channels dimensions shoud be equal to `input_channels`,
+        ie. C1 + C2 = input_channels.
 
         Args:
-            x: Input tensor
-            prev_state: Previous state
+            x: Input tensor of shape (B, C1, H, W).
+            prev_state: Previous state, tensor of shape (B, C2, H, W).
 
         Returns:
-            New tensor plus the new state
+            Tensor: Output of the convGRU, tensor of shape (B, output_channels, H, W).
 
         """
         # Concatenate the inputs and previous state along the channel axis.
@@ -83,9 +85,7 @@ class ConvGRUCell(torch.nn.Module):
         # Gate the cell and state / outputs.
         c = F.relu(self.output_conv(gated_input))
         out = update_gate * prev_state + (1.0 - update_gate) * c
-        new_state = out
-
-        return out, new_state
+        return out
 
 
 class ConvGRU(torch.nn.Module):
@@ -100,15 +100,29 @@ class ConvGRU(torch.nn.Module):
     ) -> None:
         """Initialize the convolution layer."""
         super().__init__()
+        self.output_channels = output_channels
         self.cell = ConvGRUCell(input_channels, output_channels, kernel_size, sn_eps)
 
-    def forward(self, x: list[Tensor], hidden_state: Tensor = None) -> Tensor:
-        """Apply the forward function on each cell prior to returning it as a stack."""
-        output_list = []
-        for step in range(len(x)):
+    def forward(self, x: Tensor, hidden_state: Tensor) -> Tensor:
+        """Apply the forward function on each cell prior to returning it as a stack.
+
+        Args:
+            x: Tensor from the conditionning stack or from the previous ConvGRU. (timesteps, B, input_channels, H, W)
+            hidden_state: Tensor from the latent conditionning stack. (B, latent_channels, H, W)
+        """
+        timesteps, batch_size, _, height, width = x.shape
+        outputs = torch.empty(
+            timesteps,
+            batch_size,
+            self.output_channels,
+            height,
+            width,
+            device=x.device,
+            dtype=x.dtype,
+            layout=x.layout,
+        )
+        for i, step in enumerate(x):  # Iterate over the timestep dimension
             # Compute current timestep
-            output, hidden_state = self.cell(x[step], hidden_state)
-            output_list.append(output)
-        # Stack outputs to return as tensor
-        outputs = torch.stack(output_list, dim=0)
+            hidden_state = self.cell(step, hidden_state)
+            outputs[i] = hidden_state
         return outputs

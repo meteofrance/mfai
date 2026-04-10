@@ -1,8 +1,11 @@
 import random
+from typing import Sequence
 
 import torch
 import torchvision.transforms.functional as TF
-from torch import Tensor
+from torch import Tensor, nn
+
+from mfai.pytorch.namedtensor import NamedTensor
 
 
 class RandomCropWithMinPositivePixels(object):
@@ -61,3 +64,144 @@ class RandomCropWithMinPositivePixels(object):
         cropped_x = TF.crop(x, top, left, self.crop_size[0], self.crop_size[1])
         cropped_y = TF.crop(y, top, left, self.crop_size[0], self.crop_size[1])
         return cropped_x, cropped_y, left, top
+
+
+class DimensionSubSampler(nn.Module):
+    """Subsamples a NamedTensor dimension.
+
+    Exemple:
+    ```
+    import torch
+    from mfai.pytorch.namedtensor import NamedTensor
+
+
+    data = NamedTensor(
+        tensor=torch.rand(10, 512, 512, 3),
+        names=["timesteps", "lat", "lon", "features"],
+        feature_names=["u", "v", "t2m"],
+    )
+
+    sub_sampler = DimensionSubSampler(
+        dim_name="timesteps",
+        idx_to_keep=[0, 3, 6, 9],
+    )
+
+    transformed_data = sub_sampler(data)
+
+    print("data:")
+    print(data)
+    print("transformed_data:")
+    print(transformed_data)
+    ```
+    =>
+    ```
+    data:
+    --- NamedTensor ---
+    Names: ['timesteps', 'lat', 'lon', 'features']
+    Tensor Shape: torch.Size([10, 512, 512, 3]))
+    transformed_data:
+    --- NamedTensor ---
+    Names: ['timesteps', 'lat', 'lon', 'features']
+    Tensor Shape: torch.Size([4, 512, 512, 3]))
+    ```
+    """
+
+    def __init__(self, dim_name: str, idx_to_keep: Sequence[int]) -> None:
+        """
+        Args:
+            dim_name: name of the name tensor dimension to subsample
+            leadtimes_to_keep: list of indexes to be kept in the given dimension.
+        """
+        super().__init__()
+        self.lead_times_indices = torch.tensor(idx_to_keep)
+        self.dim_name = dim_name
+        self.idx_to_keep = idx_to_keep
+
+    def forward(self, named_tensor: NamedTensor) -> NamedTensor:
+        return named_tensor.index_select_dim(self.dim_name, self.idx_to_keep)
+
+
+class MeanDimensionSubsampler(nn.Module):
+    """Subsamples a NamedTensor dimension by averaging the specified indexes.
+
+    Exemple:
+    ```
+    import torch
+    from mfai.pytorch.namedtensor import NamedTensor
+
+
+    data = NamedTensor(
+        tensor=torch.rand(10, 512, 512, 3),
+        names=["timesteps", "lat", "lon", "features"],
+        feature_names=["u", "v", "t2m"],
+    )
+
+    sub_sampler = DimensionSubSampler(
+        dim_name="timesteps",
+        idx_to_be_meaned=[
+            [0, 1, 2],
+            [2, 3, 4],
+            [4, 5, 6],
+            [6, 7, 8],
+        ],
+    )
+
+    transformed_data = sub_sampler(data)
+
+    print("data:")
+    print(data)
+    print("transformed_data:")
+    print(transformed_data)
+    ```
+    =>
+    ```
+    data:
+    --- NamedTensor ---
+    Names: ['timesteps', 'lat', 'lon', 'features']
+    Tensor Shape: torch.Size([10, 512, 512, 3]))
+    transformed_data:
+    --- NamedTensor ---
+    Names: ['timesteps', 'lat', 'lon', 'features']
+    Tensor Shape: torch.Size([4, 512, 512, 3]))
+    ```
+    """
+
+    def __init__(
+        self, dim_name: str, idx_to_be_meaned: Sequence[Sequence[int]]
+    ) -> None:
+        """
+        Args:
+            dim_name: Name of the dimension to subsample.
+            leadtimes_to_keep: List of list of indexes to meaned in the given dimension.
+        """
+        super().__init__()
+        self.dim_name = dim_name
+        self.idx_to_be_meaned = idx_to_be_meaned
+
+    def forward(self, named_tensor: NamedTensor) -> NamedTensor:
+        # The named tensor's dimension names without the target dimension
+        meaned_tensor_dimension_names = (
+            named_tensor.names[: named_tensor.dim_index(self.dim_name)]
+            + named_tensor.names[named_tensor.dim_index(self.dim_name) + 1 :]
+        )
+
+        # List of meaned tensors
+        meaned_tensors = [
+            NamedTensor(
+                tensor=torch.mean(
+                    named_tensor.index_select_tensor_dim(self.dim_name, idxs),
+                    dim=named_tensor.dim_index(self.dim_name),
+                ),
+                names=meaned_tensor_dimension_names,
+                feature_names=named_tensor.feature_names,
+            )
+            for idxs in self.idx_to_be_meaned
+        ]
+
+        # Stack allong the target dimension the list of meaned tensors
+        vision_out = NamedTensor.stack(
+            meaned_tensors,
+            self.dim_name,
+            named_tensor.dim_index(self.dim_name),
+        )
+        return vision_out

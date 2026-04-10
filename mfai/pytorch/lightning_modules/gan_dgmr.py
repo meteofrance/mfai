@@ -18,7 +18,6 @@ from typing import Any, Literal
 import torch
 from lightning import LightningModule
 from torch import Tensor
-from torch.utils.checkpoint import checkpoint
 
 from mfai.pytorch.losses.gan_dgmr import (
     GridCellLoss,
@@ -236,9 +235,7 @@ class DGMRLightningModule(LightningModule):
 
         # Two discriminator steps per generator step
         for _ in range(2):
-            predictions = checkpoint(
-                self.generator.forward, images, use_reentrant=False
-            )  # Use gradient checkpointing to reduce RAM usage during backward pass
+            predictions = self.generator(images)
             discriminator_loss = self.discriminator_step(
                 predictions, images, real_sequence
             )
@@ -247,10 +244,7 @@ class DGMRLightningModule(LightningModule):
             self.manual_backward(discriminator_loss)
             d_opt.step()
 
-        predictions = [
-            checkpoint(self.generator.forward, images, use_reentrant=False)
-            for _ in range(self.generation_steps)
-        ]  # Use gradient checkpointing to reduce RAM usage during backward pass
+        predictions = [self.generator(images) for _ in range(self.generation_steps)]
         generator_loss, grid_cell_reg = self.generator_step(
             predictions, images, future_images, real_sequence
         )

@@ -28,12 +28,7 @@ Packages documentation
    api/transforms
    api/metrics
    api/lightning
-
-.. autosummary::
-    :toctree: api/generated
-    :recursive:
-
-    mfai   
+   api/generated
 
 .. toctree::
    :maxdepth: 1

@@ -1,3 +1,6 @@
+
+
+
 # MFAI: Météo-France's AI Python package
 
 [![Unit Tests](https://github.com/meteofrance/mfai/actions/workflows/tests.yml/badge.svg)](https://github.com/meteofrance/mfai/actions/workflows/tests.yml)
@@ -14,6 +17,7 @@
 - A NamedTensor class to handle multi-dimensional data with named dimensions and named features (a single containing object for a tensor and its metadata)
 - Various losses from the litterature, often tailored to our projects and experimental results
 - Lightning module to speedup recurring tasks: segmentation, regression, DGMR training, ... 
+
 
 # Use Cases
 
@@ -41,9 +45,11 @@ We also have past and ongoing R&D projects:
 
 If you are interested about the technical details of these projects (precise neural network architecture and hyperparameters, source code, ...) feel free to contact us. Most of our projects are proprietary but we can collaborate with other meteorological public institutions.
 
+
 # Package Documentation
 
 The full package documentation is available at [meteofrance.github.io/mfai](https://meteofrance.github.io/mfai).
+
 
 # Table of Content
 
@@ -105,6 +111,7 @@ The full package documentation is available at [meteofrance.github.io/mfai](http
 - [Citation](#citation)
 - [Acknowledgements](#acknowledgements)
 
+
 # Neural Network Architectures
 
 Currently we support the following neural network architectures:
@@ -132,17 +139,20 @@ Currently we support the following neural network architectures:
 | [ArchesWeather](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/models/archesweather.py#L1) | [arxiv link](http://arxiv.org/abs/2405.14527)  | (Batch, features, Height, Width) and (Batch, features, Height, Width, Depth) | Yes | 3D Earth-specific transformer using Pangu code with axial attention, based on [author's repository](https://github.com/gcouairon/ArchesWeather/tree/main) and implemented by Atos Eviden| (LAM) Weather Forecasting |
 | [VIT](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/models/vit.py#L1) | [openreview link](https://openreview.net/pdf?id=YicbFdNTTy)  | (Batch, features, Height, Width) | Yes | VIT implementation slightly adapted from [lucidrain's github](https://github.com/lucidrains/vit-pytorch/blob/main/vit_pytorch/vit.py) | two flavours: Full sample/image classification + Vision encoding for MLMs|
 
+
 ## Generative Adversarial Networks
 
 | Model  | Research Paper  | Input Shape    | ONNX exportable ? | Notes | Use-Cases at MF |
 | :---:   | :---: | :---: | :---: | :---: | :---: |
 | [DGMR](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/models/gan_dgmr.py) | [Nature](https://www.nature.com/articles/s41586-021-03854-z)  | (batch time features height width) | No | Imported and adapted from [OpenClimateFix](https://github.com/openclimatefix/skillful_nowcasting) | [Training DGMR for precipitation nowcasting](https://github.com/meteofrance/dgmr) |
 
+
 ## Graph Neural Networks
 
 | Model  | Research Paper  | Input Shape    | ONNX exportable ? | Notes | Use-Cases at MF |
 | :---:   | :---: | :---: | :---: | :---: | :---: |
 | [HiLAM, GraphLAM](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/models/nlam/__init__.py) | [arxiv link](https://arxiv.org/abs/2309.17370)  | (Batch, graph_node_id, features)   | No | Imported and adapted from [Joel's github](https://github.com/joeloskarsson/neural-lam) |
+
 
 ## Large Language Models
 
@@ -153,12 +163,14 @@ Currently we support the following neural network architectures:
 | [Llama3](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/models/llms/llama3.py) | [arxiv link](https://arxiv.org/abs/2407.21783)  | (Batch, token_id) | No  | Imported and adapted from [Sebastian Raschka's book and github](https://github.com/rasbt/LLMs-from-scratch/) |
 | [Custom GPT-2 with Cross Attention](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/models/llms/__init__.py#L372) | | (Batch, token_id, other) | No  | Inspired from [Sebastian Raschka's blog](https://magazine.sebastianraschka.com/p/understanding-multimodal-llms) |
 
+
 ## Multimodal Language Models
 
 | Model  | Research Paper  | Input Shape    | ONNX exportable ? | Notes | Use-Cases at MF |
 | :---:   | :---: | :---: | :---: | :---: | :---: |
 |[Custom Fuyu Like Model](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/models/llms/fuyu.py#L37)| [arxiv link](https://arxiv.org/abs/2307.09288)  | (Batch, token_id) for text, (Batch, Lat, Lon, Timestep, Features) for weather inputs | No | Inspired from [Adept AI blog post](https://www.adept.ai/blog/fuyu-8b)  and [Sebastian Raschka's blog](https://magazine.sebastianraschka.com/p/understanding-multimodal-llms). We propose 3 different vision encoders: linear, resnet50, vit. Available llm backends: gpt2, llama2, llama3 | Marine text product generation |
 |[Custom Cross Attention weather + text MLM combining a resnet50 and a cross attention GPT-2](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/models/llms/cross_attention.py)|  | (Batch, token_id) for text, (Batch, Lat, Lon, Timestep, Features) for weather inputs | No | Inspired from [Sebastian Raschka's blog](https://magazine.sebastianraschka.com/p/understanding-multimodal-llms) | Marine text product generation |
+
 
 ## Vision Language Models
 
@@ -248,7 +260,9 @@ class MyProjectLightningModule(SegmentationLightningModule):
             tb.add_figure(f"val_plots/test_figure_{batch_idx}", fig, self.current_epoch)
 ```
 
+
 ## Segmentation
+
 We provide [**SegmentationLightningModule**](https://github.com/meteofrance/mfai/blob/main//mfai/pytorch/lightning_modules/segmentation.py#21) a lightning module adapted to supervised Deep Learning projects where the input of the neural network is made of one or multiple images and the target is also one or multiple images.
 
 The module can be instanciated with any of the aforementioned vision neural networks architetures and used in 4 different modes : binary classification, multiclass classification, multilabel classification and regression.
@@ -257,10 +271,13 @@ By default, some metrics are computed in function of the mode of segmentation yo
 - Binary, Multiclass, Multilabel: [`Accuracy`](https://lightning.ai/docs/torchmetrics/stable/classification/accuracy.html), [`F1Score`](https://lightning.ai/docs/torchmetrics/stable/classification/f1_score.html#torchmetrics.F1Score), [`Recall`](https://lightning.ai/docs/torchmetrics/stable/classification/recall.html), [`Precision`](https://lightning.ai/docs/torchmetrics/stable/classification/precision.html),
 - Regression: [`MeanSquaredError`](https://lightning.ai/docs/torchmetrics/stable/regression/mean_squared_error.html), [`MeanAbsoluteError`](https://lightning.ai/docs/torchmetrics/stable/regression/mean_absolute_error.html#torchmetrics.MeanAbsoluteError), [`MeanAbsolutePercentageError`](https://lightning.ai/docs/torchmetrics/stable/regression/mean_absolute_percentage_error.html#torchmetrics.MeanAbsolutePercentageError).
 
+
 ## Clip
+
 We also provide [**CLIPLightningModule**](https://github.com/meteofrance/mfai/blob/main//mfai/pytorch/lightning_modules/clip.py#19), a lightning module dedicated to the training of CLIP models.
 
 This module can be instanciated with a simple [ClipSettings](https://github.com/meteofrance/mfai/blob/main//mfai/pytorch/models/clip.py#19) that informs which image and text encoders to use as well as the embedding size and the initial temperature.
+
 
 ## DGMR
 
@@ -272,11 +289,13 @@ This lightning module is largely inspired by [this work](https://github.com/open
 
 To find an example of how to use it, check out [this repository](https://github.com/meteofrance/dgmr), where we train the DGMR model from scratch on French radar data.
 
+
 # Lightning CLI
 
 [Lightning CLI](https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.html#lightning-cli) is a convenient way to easily configure your DL experiments and reduce the number of lines of code in your project.
 
 We provide an example of usage of the Lightning CLI with our lightning module and an exemple of config file to launch an experiment.
+
 
 # NamedTensors
 
@@ -286,6 +305,7 @@ Our **NamedTensor** class is a wrapper around a PyTorch tensor that adds named d
 
 You can find the documentation of the NamedTensor class **[here](https://github.com/meteofrance/mfai/blob/main/doc/namedtensor.md)**.
 
+
 # Metrics
 
 In addition to metrics available in [**torchmetrics**](https://lightning.ai/docs/torchmetrics/stable/), we implement :
@@ -294,11 +314,13 @@ In addition to metrics available in [**torchmetrics**](https://lightning.ai/docs
 - False Negative Rate (FNR) is given by: FN / (FN + TP).
 - Precision-Recall Area Under the Curve (PR AUC). This metric summarize the overall performance of a model without depending on a threshold. It can be used in place of the Area Under ROC Curve when the dataset is too unbalanced.
 
+
 # Losses
 
 Pytorch already provide some Loss like Mean Squared Error (torch.nn.MSELoss) or Mean Absolute Error (torch.nn.L1Loss). Here we add two loss functions that focus on perceptual similarity of tensors and four loss functions used for nowcasting with GANs (DGMR).
 
 We also provide slightly modified losses (DiceLoss, SoftCrossEntropyLoss, SoftBCEWithLogitsLoss) adapted from [pytorch-toolbet](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/losses/toolbelt.py).
+
 
 ## Perceptual Loss
 
@@ -306,8 +328,11 @@ It was introduced by Johnson et al. - Perceptual losses for real-time style tran
 
 The [**PerceptualLoss**](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/losses/perceptual.py#L28) class is a `torch.nn.Module` that allows to initialize a VGG-16 and compute directly the perceptual loss between a given input and target.
 
+
 ### Multi Scale :
+
 The VGG-16 was originally designed for ImageNet dataset that contains 224x224 images. It can still be used with image dimensionned differently. But in case your tensors are high dimensional (ex:1024x1024) the VGG-16 features might not be able to catch fine-scale details. The *multi_scale* mode allows to compute the Perceptual Loss on different downscale version of your original tensors. For example, if your tensors are 1024x1024, the perceptual loss will be computed both on the original dimension and on its downscaled versions : 512x512 and 256x256.
+
 
 ### Channel handling case :
 
@@ -326,29 +351,45 @@ The original VGG-16 architecture is kept. There will be a single forward of the 
 **(Case 2.2)** : *channel_iterative_mode*=True : \
 The original VGG-16 architecture is kept. There will be N forwards of the network per tensor to compute the features.
 
+
 ### Pre Trained
+
 You can either choose to compute the Perceptual Loss with the ImageNet Pre-trained version of the VGG-16 or use a random version of it.
 
+
 ## Example
+
 An example of PerceptualLoss usage :
 ```python
+
+
 # In case the target and input are different everytime
+
 inputs = torch.rand(25, 5, 128, 128)
 targets = torch.rand(25, 5, 128, 128)
 
+
 # Initialize the perceptual loss class
+
 perceptual_loss_class = PerceptualLoss(channel_iterative_mode=True, in_channels=5)
 
+
 # Computing Perceptual Loss
+
 perceptual_loss = perceptual_loss_class(inputs, targets)
 
 ```
 ```python
+
+
 # In case you need to compare different targets to the same input
+
 inputs = torch.rand(25, 5, 128, 128)
 perceptual_loss_class = PerceptualLoss(channel_iterative_mode=True, in_channels=5)
 
+
 # The features of the inputs are computed and stored in the memory
+
 perceptual_loss_class.compute_perceptual_features(inputs)
 
 for _ in range():
@@ -360,19 +401,26 @@ for _ in range():
 
 ```
 
+
 ## LPIPS
 
 The [**LPIPS**](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/losses/perceptual.py#L28) class is a `torch.nn.Module` that computes the Learned Perceptual Image Patch Similarity metric. It is using the aforementionned PerceptualLoss class so it contains the same modes.
+
 
 ## GANs losses for Nowcasting
 
 We add the Grid Cell Regularizer loss from [Skillful Nowcasting](https://arxiv.org/pdf/2104.00954.pdf), as well as a Nowcating loss, Hinge discriminator loss and Hinge generator loss.
 
+
 # Transforms
 
 We provide a [RandomCropWithMinPositivePixels](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/transforms.py#L7) torch transforms to crop input and output tensor to a desired image size (512, 512) by default with a minimum percentage of positive valued pixels in y (output) or the best we found out of 5 retries otherwise. The goal of this transform is to address class imbalance in binary classification problems where positive labels are rare. 
 
+
 # Installation
+
+
+
 
 ## Cloning the repository
 
@@ -381,6 +429,7 @@ git clone https://github.com/meteofrance/mfai
 cd mfai
 pip install -e .
 ```
+
 
 ## Using pip
 
@@ -406,11 +455,18 @@ After version 7.0.0, mfai comes with optional dependencies for llm models.
 To install them, add `[llm]` behind the pip installation instruction:
 ```bash
 pip install .[dev]
+
+
 # or
+
 pip install mfai[llm]>=7.0.0
 ```
 
+
 # Usage
+
+
+
 
 ## Instanciate a model
 
@@ -459,6 +515,7 @@ model = load_from_settings_file(
 
 **_FEATURE:_**  Use the **load_from_settings_file** to have the strictest validation of the settings.
 
+
 ## Export to onnx
 
 Our tests [illustrate how to export and later reload a model to/from onnx](https://github.com/meteofrance/mfai/blob/main/tests/test_models.py#L91). Here is an example of how to export a model to onnx:
@@ -466,10 +523,14 @@ Our tests [illustrate how to export and later reload a model to/from onnx](https
 ```python
 from mfai.pytorch import export_to_onnx, onnx_load_and_infer
 
+
 # Export the model to onnx assuming we have just trained a 'model'
+
 export_to_onnx(model, "model.onnx")
 
+
 # Load the onnx model and infer
+
 output_tensor = onnx_load_and_infer("model.onnx", input_tensor)
 ```
 
@@ -499,6 +560,7 @@ You can also look at our unit tests in `tests/test_lightning.py` for example of 
 
 See [pytorch lightning documentation](https://lightning.ai/docs/overview/getting-started) for how to configure the Trainer and customize the module to suit your needs.
 
+
 ### Add a new metric
 
 The SegmentationLightningModule uses a MetricCollection to compute (and log) metrics over validation and test datasets. To add a new metric (should be `torchmetrics.Metric`), you just have to add the line below in your `__init__`.
@@ -514,6 +576,7 @@ class MyLightningModule(SegmentationLightningModule):
 
         self.metrics.add_metrics(AUROC(task="binary", thresholds=100))
 ```
+
 
 ## Lightning CLI
 
@@ -747,6 +810,7 @@ csi_metric = CSINeighborhood(task="multiclass", num_classes=2, num_neighbors=0)
 csi = csi_metric(preds, target)
 ```
 
+
 # Running Tests
 
 Our tests are written using [pytest](https://docs.pytest.org). We check that:
@@ -760,58 +824,24 @@ docker build . -f Dockerfile -t mfai
 docker run -it --rm mfai python3 -m pytest tests
 ```
 
+
 # Contributing
 
-We welcome contributions to this package. Our guidelines are the following:
+We welcome contributions to this package. You can find a guide and contributing guidelines in the [Contributing documentation](https://github.com/meteofrance/mfai/blob/main/doc/contributing.md).
 
-- Submit a PR with a clear description of the changes and the motivation behind them.
-- Make sure the current tests pass and add new tests if necessary to cover the new features. Our CI will fail with a **test coverage below 80%**.
-- Make sure the code is formatted with [ruff](https://docs.astral.sh/ruff/) : `ruff format` and `ruff check --select I --fix`
-- Make sure the code respects our mypy type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
-
-## Running mypy
-Mypy is used to check the project type hinting requirements, see [the mypy default checks](https://mypy.readthedocs.io/en/stable/error_code_list.html#error-codes-enabled-by-default) and the [project's mypy configuration](https://github.com/meteofrance/mfai/blob/main/pyproject.toml).
-
-To run mypy:
-```bash
-docker build . -f Dockerfile -t mfai
-docker run -it --rm mfai mypy mfai/
-```
 
 # Publishing
 
-We provide a script **build_and_publish.sh** to build the package and publish it to PyPI (**TestPyPI** by default). For now it uses Docker and our private/internal wrapper runai.
-(See [Semantic Versioning](https://semver.org/) rules to help you choose version when creating a tag)
+This package is built then published to `pypi.org` by the githhub workflow [release.yml](https://github.com/meteofrance/mfai/blob/main/.github/workflows/release.yml). This workflow is triggered when a tag is pushed to the main branch, and needs to be manualy authorised to run by one of the project's maintainers.
 
-The full process is as follows (adjust the tag name and message to your needs):
-
-```bash
-git tag -a v0.1.0 -m "First release"
-```
-or
-```bash
-git tag v0.1.0
-```
-
-```bash
-git push origin v0.1.0
-./build_and_publish.sh
-```
-
-If you don't create and push a tag, the script will return an error.
-
-In order to publish to pypi passes the argument **pypi**:
-```bash
-./build_and_publish.sh pypi
-```
-
-See the [Python Packaging User Guide](https://packaging.python.org/en/latest/guides/using-testpypi/) for more information on how to publish a package to PyPI.
 
 # Citation
+
 If you use this library in your research project, please cite it as below.
 ```
 Météo-France, Berthomier L., Dewasmes O., Guibert F., Pradel B., Tournier T. mfai URL: https://github.com/meteofrance/mfai
 ```
+
 
 # Acknowledgements
 

@@ -446,14 +446,16 @@ def test_model_attributes(model_class: ModelABC) -> None:
     We check that ALL our models have the required attributes
     settings_kls and model_type.
     """
-    assert (
-        hasattr(model_class, "model_type")
-        and isinstance(model_class.model_type, ModelType)
-    ), f"Model implementation {model_class} is missing attribute 'model_type' of type ModelType"
-    assert (
-        hasattr(model_class, "settings_kls")
-        and dataclasses.is_dataclass(model_class.settings_kls)
-    ), f"Model implementation {model_class} is missing dataclass attribute 'settings_kls'"
+    assert hasattr(model_class, "model_type") and isinstance(
+        model_class.model_type, ModelType
+    ), (
+        f"Model implementation {model_class} is missing attribute 'model_type' of type ModelType"
+    )
+    assert hasattr(model_class, "settings_kls") and dataclasses.is_dataclass(
+        model_class.settings_kls
+    ), (
+        f"Model implementation {model_class} is missing dataclass attribute 'settings_kls'"
+    )
 
 
 def test_IdentityModel() -> None:

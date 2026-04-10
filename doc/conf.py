@@ -29,7 +29,6 @@ extensions = [
     "sphinx_autodoc_typehints",
     "myst_parser",
     "sphinxcontrib.mermaid",
-    "sphinx_mdinclude"
 ]
 
 autodoc_mock_imports = [

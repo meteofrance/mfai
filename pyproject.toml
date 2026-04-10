@@ -68,7 +68,6 @@ docs = [
   "myst-parser",
   "ghp-import",
   "sphinxcontrib-mermaid",
-  "sphinx-mdinclude",
 ]
 dev = [
   "pytest==8.3.4",

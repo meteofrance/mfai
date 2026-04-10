@@ -7,7 +7,7 @@
 Packages documentation
 ==================
 
-mdinclude:: ../README.md
+.. mdinclude:: index.md
 
 ==================
 

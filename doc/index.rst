@@ -1,5 +1,6 @@
 
-# Packages documentation
+Packages documentation
+===================
 
 `mfai` is a Python package that provides the following features:
 
@@ -9,6 +10,7 @@
 - Various losses from the litterature, often tailored to our projects and experimental results
 - Lightning module to speedup recurring tasks: segmentation, regression, DGMR training, ...
 
+===================
 
 .. toctree::
    :maxdepth: 1
@@ -34,7 +36,8 @@
    about
    contributing
 
-# Indices and tables
+Indices and tables
+===================
 
 * :ref:`genindex`
 * :ref:`modindex`

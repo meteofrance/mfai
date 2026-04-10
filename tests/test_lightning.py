@@ -15,7 +15,6 @@ from mfai.pytorch.models.gan_dgmr import Discriminator, Generator
 from mfai.pytorch.models.unet import UNet
 from mfai.pytorch.namedtensor import NamedTensor
 
-
 @pytest.mark.parametrize(
     "config",
     [
@@ -125,12 +124,22 @@ def test_dgmr_lightningmodule() -> None:
     assert isinstance(module.discriminator, Discriminator)
 
     nt_input = NamedTensor(
-        torch.randn(2, 4, 128, 128, 2),
+        torch.randn(2, 4, 128, 128, 1),
         ["batch", "time", "height", "width", "features"],
-        ["rain", "mask"],
+        ["rain"],
     )
+    mask = torch.randn(2, 128, 128) > 0.9  # Tensor of boolean
     module.eval()
     with torch.no_grad():
         output = module(nt_input)
+        output_masked = module(nt_input, mask)
+
+    # Testing type and shape of the prediction
     assert isinstance(output, NamedTensor)
-    assert output.tensor.shape == (2, 18, 128, 128, 2)
+    assert output.tensor.shape == (2, 18, 128, 128, 1)
+
+    # Testing type and shape of the masked prediction
+    assert isinstance(output_masked, NamedTensor)
+    assert output_masked.tensor.shape == (2, 18, 128, 128, 1)
+    last_frame: Tensor = output_masked.tensor[0, -1, :, :, 0]
+    assert torch.all(torch.isnan(last_frame) == mask[0])

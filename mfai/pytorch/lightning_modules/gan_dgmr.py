@@ -16,6 +16,7 @@ is modified for multiple satellite channels.
 from typing import Any, Literal
 
 import torch
+from einops import repeat
 from lightning import LightningModule
 from torch import Tensor
 
@@ -138,25 +139,37 @@ class DGMRLightningModule(LightningModule):
         # Important: This property activates manual optimization.
         self.automatic_optimization = False
 
-    def forward(self, x: NamedTensor) -> NamedTensor:
-        """Apply the generator to the tensor."""
+    def forward(self, x: NamedTensor, mask: Tensor = None) -> NamedTensor:
+        """Apply the generator to the tensor.
+
+        Args:
+            x (NamedTensor): The past observations. `NamedTensor` of shape (B T H W C) with a feature 'rain'.
+            mask (Tensor): Whether to put nan on the prediction. `Tensor` of shape (B H W). If True, replace the
+                predicted vaue by `nan`. Default value is None.
+
+        Returns:
+            the NamedTensor that contains the prediction made by the DGMR model.
+                `NamedTensor` of shape (B T H W C) with a feature 'rain'.
+        """
         x_copy = x.clone()  # to avoid modifying the original tensor
         x_copy.rearrange_(
             "batch time height width features -> batch time features height width"
         )
         x_rain = x_copy["rain"].float()
 
-        y_hat_rain = self.generator(x_rain)  # Apply model
+        y_hat: Tensor = self.generator(x_rain)  # Apply model
 
-        # Create future radar mask by repeating last input radar mask:
-        mask = torch.cat(
-            [x_copy["mask"][:, -1:] for _ in range(y_hat_rain.shape[1])], dim=1
-        )
-        y_hat = NamedTensor.new_like(torch.cat([y_hat_rain, mask], dim=2), x_copy)
-        y_hat.rearrange_(
+        # Put nan where mask is equal to 0
+        if mask is not None:
+            # Create future radar mask by repeating last input radar mask:
+            mask = repeat(mask, "b h w -> b t c h w", t=y_hat.shape[1], c=1)
+            y_hat = torch.where(mask, float("nan"), y_hat)
+
+        y_hat_nt = NamedTensor.new_like(y_hat, x_copy)
+        y_hat_nt.rearrange_(
             "batch time features height width -> batch time height width features"
         )
-        return y_hat
+        return y_hat_nt
 
     def discriminator_step(
         self,

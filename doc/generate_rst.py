@@ -439,13 +439,3 @@ if __name__ == "__main__":
         output_path=Path("doc/api/metrics.rst"),
     )
 
-Path("doc/api/reference.rst").write_text(
-    "Reference\n"
-    "=========\n"
-    "\n"
-    ".. autosummary::\n"
-    "   :toctree: generated\n"
-    "   :recursive:\n"
-    "\n"
-    "   mfai\n"
-)

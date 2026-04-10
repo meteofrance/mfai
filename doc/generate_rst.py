@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # Helpers — class discovery
 # ---------------------------------------------------------------------------
 
+
 def is_subclass_of_names(cls: type, base_names: Sequence[str | list[str]]) -> bool:
     """Check if a class inherits from any of the given base class names.
 
@@ -122,9 +123,20 @@ ABSTRACT_ROOTS = {"ModelABC", "BaseModel", "Module", "LightningModule", "ModelSe
 
 # Methods excluded from diagrams
 EXCLUDED_METHODS = {
-    "__init__", "__str__", "__repr__", "__eq__", "__hash__",
-    "__lt__", "__le__", "__gt__", "__ge__", "__ne__",
-    "__class__", "__module__", "__dict__", "__weakref__",
+    "__init__",
+    "__str__",
+    "__repr__",
+    "__eq__",
+    "__hash__",
+    "__lt__",
+    "__le__",
+    "__gt__",
+    "__ge__",
+    "__ne__",
+    "__class__",
+    "__module__",
+    "__dict__",
+    "__weakref__",
 }
 
 
@@ -157,7 +169,7 @@ def _class_block(cls: type) -> list[str]:
         cls: The class object.
     """
     name = cls.__name__
-    if name == 'Module':
+    if name == "Module":
         return [f"    class {name}"]
 
     lines = [f"    class {name} {{"]
@@ -173,7 +185,9 @@ def _class_block(cls: type) -> list[str]:
         lines.append(f"        {vis}{type_prefix}{attr_name}")
 
     # Methods — defined directly on this class (not inherited)
-    for method_name, method_obj in inspect.getmembers(cls, predicate=inspect.isfunction):
+    for method_name, method_obj in inspect.getmembers(
+        cls, predicate=inspect.isfunction
+    ):
         if method_name in EXCLUDED_METHODS:
             continue
         if method_name not in cls.__dict__:
@@ -233,7 +247,9 @@ def diagram_for_class(fqn: str, all_fqns: list[str]) -> str:
             lines.append(f"    {parent_name} <|-- {cls.__name__} : herits")
         else:
             # Show with members if it's a known project class
-            parent_fqn = next((f for f in all_fqns if f.endswith(f".{parent_name}")), None)
+            parent_fqn = next(
+                (f for f in all_fqns if f.endswith(f".{parent_name}")), None
+            )
             if parent_fqn:
                 parent_cls = _resolve_class(parent_fqn)
                 if parent_cls:
@@ -257,6 +273,7 @@ def diagram_for_class(fqn: str, all_fqns: list[str]) -> str:
 # ---------------------------------------------------------------------------
 # RST generation
 # ---------------------------------------------------------------------------
+
 
 def write_rst(
     title: str,

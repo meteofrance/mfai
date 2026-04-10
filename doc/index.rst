@@ -28,7 +28,7 @@ Packages documentation
    api/transforms
    api/metrics
    api/lightning
-   api/generated
+   api/reference
 
 .. toctree::
    :maxdepth: 1

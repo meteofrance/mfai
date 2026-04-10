@@ -47,6 +47,13 @@ intersphinx_mapping = {
     "torchmetrics": ("https://lightning.ai/docs/torchmetrics/stable", None),
 }
 
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'markdown',
+}
+
+root_doc = 'index'
+
 suppress_warnings = ["toc.not_included", "ref.ref"]
 
 autosummary_generate = True

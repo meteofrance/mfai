@@ -20,7 +20,7 @@ import inspect
 import pkgutil
 import sys
 from pathlib import Path
-from typing import Generator, Literal, Sequence
+from typing import Any, Generator, Literal, Sequence
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -149,7 +149,7 @@ def _visibility(name: str) -> str:
     return "+"
 
 
-def _type_hint(annotation) -> str:
+def _type_hint(annotation: Any) -> str:
     """Return a short, readable type hint string."""
     if annotation is inspect.Parameter.empty:
         return ""

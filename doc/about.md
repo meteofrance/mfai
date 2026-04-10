@@ -1,10 +1,10 @@
 # About
 
-Over the years, Météo-France's AILab has gathered reusable code for meteorological machine learning applications in its mfai library. It contains a variety of PyTorch neural network architectures (CNNs, Vision Transformers, small LLMs, small multimodal LMs, etc.), a NamedTensor class, losses, metrics, and PyTorch Lightning training strategies.
+Over the years, Météo-France's AILab has gathered reusable code for meteorological machine learning applications in its `mfai` library. It contains a variety of PyTorch neural network architectures (CNNs, Vision Transformers, small LLMs, small multimodal LMs, etc.), a `NamedTensor` class, losses, metrics, and PyTorch Lightning training strategies.
 
 All the elements of the mfai library are implemented from research papers and have been improved, tested, and proven to work in real-world operational meteorological applications at Météo-France.
 
-MFAI is not a framework, but it provides elements to use in your preferred one.
+`mfai` is not a framework, but it provides elements to use in your preferred one.
 
 
 ## Citation

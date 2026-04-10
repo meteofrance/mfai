@@ -30,7 +30,7 @@ pip install git+https://github.com/meteofrance/mfai@v1.0.1
 ```
 
 After version 7.0.0, mfai comes with optional dependencies for llm models.
-To install them, add `[llm]` behind the pip installation instruction:
+To install them, add `[llm]` or `[dev]` behind the pip installation instruction:
 ```bash
 pip install .[dev]
 # or

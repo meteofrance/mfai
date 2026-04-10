@@ -26,7 +26,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 # ---------------------------------------------------------------------------
-# Helpers — class discovery (unchanged from original)
+# Helpers — class discovery
 # ---------------------------------------------------------------------------
 
 def is_subclass_of_names(cls: type, base_names: Sequence[str | list[str]]) -> bool:
@@ -120,7 +120,7 @@ def get_classes_matching(
 # Base classes shown as <<abstract>> roots in diagrams (no members displayed)
 ABSTRACT_ROOTS = {"ModelABC", "BaseModel", "Module", "LightningModule", "ModelSettings"}
 
-# Methods excluded from diagrams (too noisy)
+# Methods excluded from diagrams
 EXCLUDED_METHODS = {
     "__init__", "__str__", "__repr__", "__eq__", "__hash__",
     "__lt__", "__le__", "__gt__", "__ge__", "__ne__",

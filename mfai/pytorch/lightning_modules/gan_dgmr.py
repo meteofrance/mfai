@@ -144,8 +144,8 @@ class DGMRLightningModule(LightningModule):
 
         Args:
             x (NamedTensor): The past observations. `NamedTensor` of shape (B T H W C) with a feature 'rain'.
-            mask (Tensor): Whether to put nan on the prediction. `Tensor` of shape (B H W). If True, replace the
-                predicted vaue by `nan`. Default value is None.
+            mask (Tensor): Whether to put nan on the prediction, outside of the radar range. 
+               Boolean `Tensor` of shape (B H W). If True, replace the predicted value by `nan`. Default value is None.
 
         Returns:
             the NamedTensor that contains the prediction made by the DGMR model.

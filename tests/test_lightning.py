@@ -7,6 +7,7 @@ import torch
 from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
 from lightning.pytorch.cli import ArgsType, LightningCLI
 from lightning.pytorch.loggers import TensorBoardLogger
+from torch import Tensor
 
 from mfai.pytorch.dummy_dataset import DummyDataModule
 from mfai.pytorch.lightning_modules import SegmentationLightningModule
@@ -14,6 +15,7 @@ from mfai.pytorch.lightning_modules.gan_dgmr import DGMRLightningModule
 from mfai.pytorch.models.gan_dgmr import Discriminator, Generator
 from mfai.pytorch.models.unet import UNet
 from mfai.pytorch.namedtensor import NamedTensor
+
 
 @pytest.mark.parametrize(
     "config",

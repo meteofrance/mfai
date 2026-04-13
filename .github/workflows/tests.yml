@@ -32,7 +32,7 @@ jobs:
     - name: Lint with ruff
       if: steps.changed-py-files.outputs.any_changed == 'true'
       run: |
-        pip install ruff
+        pip install ruff==0.15.9
         ruff format --check ${{ steps.changed-py-files.outputs.all_changed_files }}
         ruff check ${{ steps.changed-py-files.outputs.all_changed_files }}
 

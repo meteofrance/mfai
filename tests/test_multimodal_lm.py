@@ -149,8 +149,8 @@ def test_multimodal_with_pretrained_clip() -> None:
 
     # Setup the CLIP model
     resnet_clip = ResNet50(
-        num_channels=num_channels,
-        num_classes=embed_dim,
+        in_channels=num_channels,
+        out_channels=embed_dim,
         # Optional : encoder pretrained with imagenet
         settings=ResNet50Settings(encoder_weights=True),
     )

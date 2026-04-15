@@ -221,11 +221,9 @@ class ResNet50(BaseModel):
         self._settings = settings
         self.num_channels = num_channels
 
-    
     @property
     def settings(self) -> ResNet50Settings:
         return self._settings
-
 
     def forward(self, x: Tensor) -> Tensor:
         y_hat = self.encoder(x)[-1]

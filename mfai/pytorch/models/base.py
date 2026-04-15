@@ -29,7 +29,7 @@ class ModelType(Enum):
 
 
 class ModelABC(ABC):
-    # concrete subclasses shoudl set register to True
+    # Concrete subclasses should set register to True
     # to be included in the registry of available models.
     register: bool = False
 

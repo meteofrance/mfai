@@ -96,8 +96,8 @@ class Clip(nn.Module):
         """
         ckpt = {
             "model_state_dict": self.image_encoder.state_dict(),
-            "num_channels": self.image_encoder.num_channels,
-            "num_classes": self.image_encoder.num_classes,
+            "num_channels": self.image_encoder.in_channels,
+            "num_classes": self.image_encoder.out_channels,
             "settings": asdict(self.image_encoder.settings),
         }
         torch.save(ckpt, path)

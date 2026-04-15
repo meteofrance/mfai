@@ -220,7 +220,6 @@ class ResNet50(BaseModel):
         self.out_channels = out_channels
         self._settings = settings
         self.in_channels = in_channels
-        self.input_shape = input_shape
 
     @property
     def settings(self) -> ResNet50Settings:

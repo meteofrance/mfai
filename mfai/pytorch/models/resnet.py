@@ -9,6 +9,7 @@ from torch import Tensor
 from torchvision.models.resnet import BasicBlock, Bottleneck, ResNet
 
 from mfai.pytorch.models import utils
+from mfai.pytorch.models.base import BaseModel, ModelType
 
 ########################################################################################
 #############################         Encoders           ###############################
@@ -187,14 +188,19 @@ class ResNet50Settings:
     encoder_stride: int = 32
 
 
-class ResNet50(torch.nn.Module):
+class ResNet50(BaseModel):
     settings_kls = ResNet50Settings
+    onnx_supported: bool = True
+    supported_num_spatial_dims: tuple[int, ...] = (2,)
+    num_spatial_dims: int = 2
+    features_last: bool = False
+    model_type: ModelType = ModelType.CONVOLUTIONAL
+    register: bool = False
 
     def __init__(
         self,
         num_channels: int = 3,
         num_classes: int = 1000,
-        input_shape: tuple[int, int] | None = None,
         settings: ResNet50Settings = ResNet50Settings(),
     ):
         super().__init__()

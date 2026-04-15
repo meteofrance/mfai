@@ -201,6 +201,7 @@ class ResNet50(BaseModel):
         self,
         num_channels: int = 3,
         num_classes: int = 1000,
+        input_shape: tuple[int, int] | None = None,
         settings: ResNet50Settings = ResNet50Settings(),
     ):
         super().__init__()
@@ -217,8 +218,14 @@ class ResNet50(BaseModel):
         self.avgpool = torch.nn.AdaptiveAvgPool2d((1, 1))
         self.fc = torch.nn.Linear(512 * 4, num_classes)
         self.num_classes = num_classes
-        self.settings = settings
+        self._settings = settings
         self.num_channels = num_channels
+
+    
+    @property
+    def settings(self) -> ResNet50Settings:
+        return self._settings
+
 
     def forward(self, x: Tensor) -> Tensor:
         y_hat = self.encoder(x)[-1]

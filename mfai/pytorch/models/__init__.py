@@ -23,9 +23,7 @@ for module_info in pkgutil.walk_packages(package.__path__, package.__name__ + ".
             and kls.register  # type: ignore[truthy-function]
         ):
             if kls.__name__ in registry:
-                raise ValueError(
-                    f"Model {kls.__name__} from plugin {object_name} already exists in the registry."
-                )
+                continue
             registry[kls.__name__] = kls
             setattr(this_module, kls.__name__, kls)
 all_nn_architectures: list[type[ModelABC]] = list(registry.values())

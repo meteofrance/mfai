@@ -195,7 +195,7 @@ class ResNet50(BaseModel):
     num_spatial_dims: int = 2
     features_last: bool = False
     model_type: ModelType = ModelType.CONVOLUTIONAL
-    register: bool = False
+    register: bool = True
 
     def __init__(
         self,

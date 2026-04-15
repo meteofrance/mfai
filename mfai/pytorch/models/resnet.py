@@ -199,8 +199,8 @@ class ResNet50(BaseModel):
 
     def __init__(
         self,
-        num_channels: int = 3,
-        num_classes: int = 1000,
+        in_channels: int = 3,
+        out_channels: int = 1000,
         input_shape: tuple[int, int] | None = None,
         settings: ResNet50Settings = ResNet50Settings(),
     ):
@@ -208,7 +208,7 @@ class ResNet50(BaseModel):
 
         self.encoder = get_resnet_encoder(
             name="resnet50",
-            in_channels=num_channels,
+            in_channels=in_channels,
             depth=settings.encoder_depth,
             weights=settings.encoder_weights,
             output_stride=settings.encoder_stride,
@@ -216,10 +216,11 @@ class ResNet50(BaseModel):
         # For details, see:
         # https://github.com/aladdinpersson/Machine-Learning-Collection/blob/master/ML/Pytorch/CNN_architectures/pytorch_resnet.py
         self.avgpool = torch.nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = torch.nn.Linear(512 * 4, num_classes)
-        self.num_classes = num_classes
+        self.fc = torch.nn.Linear(512 * 4, out_channels)
+        self.out_channels = out_channels
         self._settings = settings
-        self.num_channels = num_channels
+        self.in_channels = in_channels
+        self.input_shape = input_shape
 
     @property
     def settings(self) -> ResNet50Settings:

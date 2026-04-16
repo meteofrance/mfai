@@ -130,7 +130,7 @@ def test_dgmr_lightningmodule() -> None:
         ["batch", "time", "height", "width", "features"],
         ["rain"],
     )
-    mask = torch.randn(2, 128, 128) > 0.9  # Tensor of boolean
+    mask = torch.randn(2, 4, 128, 128) > 0.9  # Tensor of boolean
     module.eval()
     with torch.no_grad():
         output = module(nt_input)

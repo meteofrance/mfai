@@ -28,6 +28,7 @@ extensions = [
     "sphinx.ext.githubpages",
     "sphinx_autodoc_typehints",
     "myst_parser",
+    "sphinxcontrib.mermaid",
 ]
 
 autodoc_mock_imports = [

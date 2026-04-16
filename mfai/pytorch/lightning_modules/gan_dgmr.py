@@ -16,7 +16,6 @@ is modified for multiple satellite channels.
 from typing import Any, Literal
 
 import torch
-from einops import repeat
 from lightning import LightningModule
 from torch import Tensor
 
@@ -145,7 +144,7 @@ class DGMRLightningModule(LightningModule):
         Args:
             x (NamedTensor): The past observations. `NamedTensor` of shape (B T H W C) with a feature 'rain'.
             mask (Tensor): Whether to put nan on the prediction, outside of the radar range.
-               Boolean `Tensor` of shape (B H W). If True, replace the predicted value by `nan`. Default value is None.
+               Boolean `Tensor` of shape (B T H W). If False, replace the predicted value by `nan`. Default value is None.
 
         Returns:
             the NamedTensor that contains the prediction made by the DGMR model.
@@ -159,11 +158,10 @@ class DGMRLightningModule(LightningModule):
 
         y_hat: Tensor = self.generator(x_rain)  # Apply model
 
-        # Put nan where mask is equal to 0
+        # Put nan values where mask is False
         if mask is not None:
-            # Create future radar mask by repeating last input radar mask:
-            mask = repeat(mask, "b h w -> b t c h w", t=y_hat.shape[1], c=1)
-            y_hat = torch.where(mask, float("nan"), y_hat)
+            mask = mask.unsqueeze(dim=2)  # (B T H W) -> (B T 1 H W)
+            y_hat = torch.where(mask, y_hat, float("nan"))
 
         y_hat_nt = NamedTensor.new_like(y_hat, x_copy)
         y_hat_nt.rearrange_(

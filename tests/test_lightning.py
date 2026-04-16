@@ -96,8 +96,10 @@ def test_cli_with_config_file() -> None:
 
 def test_dgmr_lightningmodule() -> None:
     """Test the DGMR Lightning Module initialization."""
+    forecast_steps: int = 18
+
     module = DGMRLightningModule(
-        forecast_steps=18,
+        forecast_steps=forecast_steps,
         input_channels=1,
         gen_lr=5e-5,
         disc_lr=2e-4,
@@ -125,12 +127,13 @@ def test_dgmr_lightningmodule() -> None:
     assert isinstance(module.generator, Generator)
     assert isinstance(module.discriminator, Discriminator)
 
+    batch_size: int = 2
     nt_input = NamedTensor(
-        torch.randn(2, 4, 128, 128, 1),
+        torch.randn(batch_size, 4, 128, 128, 1),
         ["batch", "time", "height", "width", "features"],
         ["rain"],
     )
-    mask = torch.randn(2, 4, 128, 128) > 0.9  # Tensor of boolean
+    mask = torch.randn(batch_size, forecast_steps, 128, 128) > 0.9  # Tensor of boolean
     module.eval()
     with torch.no_grad():
         output = module(nt_input)
@@ -138,10 +141,10 @@ def test_dgmr_lightningmodule() -> None:
 
     # Testing type and shape of the prediction
     assert isinstance(output, NamedTensor)
-    assert output.tensor.shape == (2, 18, 128, 128, 1)
+    assert output.tensor.shape == (batch_size, forecast_steps, 128, 128, 1)
 
     # Testing type and shape of the masked prediction
     assert isinstance(output_masked, NamedTensor)
-    assert output_masked.tensor.shape == (2, 18, 128, 128, 1)
+    assert output_masked.tensor.shape == (batch_size, forecast_steps, 128, 128, 1)
     last_frame: Tensor = output_masked.tensor[0, -1, :, :, 0]
-    assert torch.all(torch.isnan(last_frame) == mask[0])
+    assert torch.all(torch.logical_not(torch.isnan(last_frame)) == mask[0, -1])

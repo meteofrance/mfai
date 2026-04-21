@@ -42,6 +42,7 @@ class Sampler(torch.nn.Module):
             latent_channels: Number of input channels to the lowest ConvGRU layer (int)
             context_channels: Number of context channels (int)
             output_channels: Number of output channels (int)
+            last_relu: whether to apply a ReLu activation over the output. Default is False.
 
         """
         super().__init__()

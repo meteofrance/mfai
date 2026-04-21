@@ -2,6 +2,7 @@
 
 from typing import Literal
 
+import pytest
 import torch
 import torch.nn.functional as F
 
@@ -135,7 +136,8 @@ def test_discriminator() -> None:
     assert not torch.isnan(out).any()
 
 
-def test_sampler() -> None:
+@pytest.mark.parametrize("last_relu", [False, True])
+def test_sampler(last_relu: bool) -> None:
     input_channels = 1
     conv_type: Literal["standard", "coord", "3d"] = "standard"
     context_channels = 384
@@ -154,6 +156,7 @@ def test_sampler() -> None:
         forecast_steps=forecast_steps,
         latent_channels=latent_channels,
         context_channels=context_channels,
+        last_relu=last_relu,
     )
     latent_stack.eval()
     conditioning_stack.eval()
@@ -167,6 +170,8 @@ def test_sampler() -> None:
         out = sampler(conditioning_states, latent_dim)
         assert not torch.isnan(out).any()
         assert out.size() == (2, forecast_steps, 1, 256, 256)
+        if last_relu:
+            assert torch.all(out >= 0)
 
 
 def test_generator() -> None:

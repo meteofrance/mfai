@@ -4,7 +4,6 @@ import logging
 
 import einops
 import torch
-import torch.nn.functional as F
 from torch import Tensor
 from torch.nn.modules.pixelshuffle import PixelShuffle
 from torch.nn.utils.parametrizations import spectral_norm
@@ -30,6 +29,7 @@ class Sampler(torch.nn.Module):
         latent_channels: int = 768,
         context_channels: int = 384,
         output_channels: int = 1,
+        last_relu: bool = False,
     ) -> None:
         """
         Sampler from the Skillful Nowcasting, see https://arxiv.org/pdf/2104.00954.pdf.
@@ -46,6 +46,7 @@ class Sampler(torch.nn.Module):
         """
         super().__init__()
         self.forecast_steps = forecast_steps
+        self.last_relu = last_relu
 
         self.convGRU1 = ConvGRU(
             input_channels=latent_channels + context_channels,
@@ -190,9 +191,11 @@ class Sampler(torch.nn.Module):
         hidden_states = self.up_g4(self.g4(self.gru_conv_1x1_4(hidden_states)))
 
         # Output layer.
-        hidden_states = F.relu(self.bn(hidden_states))
+        hidden_states = self.relu(self.bn(hidden_states))
         hidden_states = self.conv_1x1(hidden_states)
         hidden_states = self.depth2space(hidden_states)
+        if self.last_relu:
+            hidden_states = self.relu(hidden_states)
 
         # Convert forecasts to a torch Tensor
         forecasts = einops.rearrange(

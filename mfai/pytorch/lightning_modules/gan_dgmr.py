@@ -50,7 +50,7 @@ class DGMRLightningModule(LightningModule):
         latent_channels: int = 768,
         context_channels: int = 384,
         generation_steps: int = 6,
-        last_relu: bool = False,
+        apply_last_relu: bool = False,
         precip_weight_cap: float = 24.0,
         use_attention: bool = True,
         temporal_num_layers: int = 3,
@@ -85,7 +85,7 @@ class DGMRLightningModule(LightningModule):
                 in paper is 6 and the best is chosen for the loss this results
                 in huge amounts of GPU memory though, so less might work better
                 for training.
-            last_relu: whether to apply a ReLu activation over the output. Default is False.
+            apply_last_relu: whether to apply a ReLu activation over the output. Default is False.
             precip_weight_cap: Custom ceiling for the weight function to
                 compute the grid cell loss.
             use_attention: Whether to have a self-attention block in the latent
@@ -125,7 +125,7 @@ class DGMRLightningModule(LightningModule):
             forecast_steps=self.forecast_steps,
             latent_channels=latent_channels,
             context_channels=context_channels,
-            last_relu=last_relu,
+            apply_last_relu=apply_last_relu,
         )
         self.generator = Generator(
             self.conditioning_stack, self.latent_stack, self.sampler

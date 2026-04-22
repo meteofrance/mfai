@@ -136,8 +136,8 @@ def test_discriminator() -> None:
     assert not torch.isnan(out).any()
 
 
-@pytest.mark.parametrize("last_relu", [False, True])
-def test_sampler(last_relu: bool) -> None:
+@pytest.mark.parametrize("apply_last_relu", [False, True])
+def test_sampler(apply_last_relu: bool) -> None:
     input_channels = 1
     conv_type: Literal["standard", "coord", "3d"] = "standard"
     context_channels = 384
@@ -156,7 +156,7 @@ def test_sampler(last_relu: bool) -> None:
         forecast_steps=forecast_steps,
         latent_channels=latent_channels,
         context_channels=context_channels,
-        last_relu=last_relu,
+        apply_last_relu=apply_last_relu,
     )
     latent_stack.eval()
     conditioning_stack.eval()

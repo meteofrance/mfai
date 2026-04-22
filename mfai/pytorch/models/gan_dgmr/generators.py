@@ -29,7 +29,7 @@ class Sampler(torch.nn.Module):
         latent_channels: int = 768,
         context_channels: int = 384,
         output_channels: int = 1,
-        last_relu: bool = False,
+        apply_last_relu: bool = False,
     ) -> None:
         """
         Sampler from the Skillful Nowcasting, see https://arxiv.org/pdf/2104.00954.pdf.
@@ -42,12 +42,12 @@ class Sampler(torch.nn.Module):
             latent_channels: Number of input channels to the lowest ConvGRU layer (int)
             context_channels: Number of context channels (int)
             output_channels: Number of output channels (int)
-            last_relu: whether to apply a ReLu activation over the output. Default is False.
+            apply_last_relu: whether to apply a ReLu activation over the output. Default is False.
 
         """
         super().__init__()
         self.forecast_steps = forecast_steps
-        self.last_relu = last_relu
+        self.apply_last_relu = apply_last_relu
 
         self.convGRU1 = ConvGRU(
             input_channels=latent_channels + context_channels,
@@ -195,7 +195,7 @@ class Sampler(torch.nn.Module):
         hidden_states = self.relu(self.bn(hidden_states))
         hidden_states = self.conv_1x1(hidden_states)
         hidden_states = self.depth2space(hidden_states)
-        if self.last_relu:
+        if self.apply_last_relu:
             hidden_states = self.relu(hidden_states)
 
         # Convert forecasts to a torch Tensor

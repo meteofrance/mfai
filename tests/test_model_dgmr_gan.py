@@ -170,7 +170,7 @@ def test_sampler(apply_last_relu: bool) -> None:
         out = sampler(conditioning_states, latent_dim)
         assert not torch.isnan(out).any()
         assert out.size() == (2, forecast_steps, 1, 256, 256)
-        if last_relu:
+        if apply_last_relu:
             assert torch.all(out >= 0)
 
 

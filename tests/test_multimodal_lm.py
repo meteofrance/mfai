@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Literal, Tuple
+from typing import Any, Literal
 
 import pytest
 import torch
@@ -25,31 +25,40 @@ def generate_text_simple(
     idx: Tensor,
     max_new_tokens: int,
     context_size: int,
+    use_cache: bool = False,
     vision_inputs: None | Tensor | list[Tensor] = None,
 ) -> Tensor:
-    # idx is (B, T) array of indices in the current context
-    for _ in range(max_new_tokens):
-        # Crop current context if it exceeds the supported context size
-        # E.g., if LLM supports only 5 tokens, and the context size is 10
-        # then only the last 5 tokens are used as context
-        idx_cond = idx[:, -context_size:]
 
-        # Get the predictions
-        with torch.no_grad():
+    model.eval()
+    with torch.no_grad():
+        if use_cache:
+            # Init cache with full prompt
+            model.reset_kv_cache()
+
+        # idx is (B, T) array of indices in the current context
+        for _ in range(max_new_tokens):
+            # Crop current context if it exceeds the supported context size
+            # E.g., if LLM supports only 5 tokens, and the context size is 10
+            # then only the last 5 tokens are used as context
+            idx_cond = idx[:, -context_size:]
+
+            kwargs: dict[str, Any] = {}
             if vision_inputs is not None:
-                logits = model(idx_cond, vision_inputs)
-            else:
-                logits = model(idx_cond)
+                kwargs["vision_inputs"] = vision_inputs
+            if use_cache:
+                kwargs["use_cache"] = use_cache
 
-        # Focus only on the last time step
-        # (batch, n_token, vocab_size) becomes (batch, vocab_size)
-        logits = logits[:, -1, :]
+            logits = model(idx_cond, **kwargs)
 
-        # Get the idx of the vocab entry with the highest logits value
-        idx_next = torch.argmax(logits, dim=-1, keepdim=True)  # (batch, 1)
+            # Focus only on the last time step
+            # (batch, n_token, vocab_size) becomes (batch, vocab_size)
+            logits = logits[:, -1, :]
 
-        # Append sampled index to the running sequence
-        idx = torch.cat((idx, idx_next), dim=1)  # (batch, n_tokens+1)
+            # Get the idx of the vocab entry with the highest logits value
+            idx_next = torch.argmax(logits, dim=-1, keepdim=True)  # (batch, 1)
+
+            # Append sampled index to the running sequence
+            idx = torch.cat((idx, idx_next), dim=1)  # (batch, n_tokens+1)
 
     return idx
 
@@ -94,7 +103,7 @@ def generate_text_simple(
 def test_multimodal_llm(
     llm_backend: Literal["llama2", "gpt2", "llama3"],
     tokenizer: GPT2Tokenizer | LlamaTokenizer,
-    expected_text: Tuple[str, str],
+    expected_text: tuple[str, str],
 ) -> None:
     torch.manual_seed(999)
     for force_vision in (False, True):

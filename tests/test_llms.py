@@ -1,3 +1,4 @@
+import time
 from functools import partial
 from pathlib import Path
 from typing import Any
@@ -22,7 +23,7 @@ from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, Tokenizer
     [
         (
             partial(GPT2, GPT2Settings()),
-            "Hello, I amisi invincible collided 1500 tenomenotinables thinks republic",
+            "Hello, I am CH commemor scholarly fingerprint oppositethrenClean Bridgewatericidal scalp",
             GPT2Tokenizer(),
         ),
         (
@@ -54,6 +55,44 @@ def test_llms(model_target_tokenizer: tuple[Any, str, Tokenizer]) -> None:
     decoded_text = tokenizer.decode(out.squeeze(0).tolist())
 
     assert decoded_text == target
+
+
+@pytest.mark.parametrize("model_tokenizer", [(GPT2(GPT2Settings()), GPT2Tokenizer())])
+def test_kv_cache(model_tokenizer: tuple[GPT2, GPT2Settings]) -> None:
+    """
+    We check that KV cache implementation is working and a speed-up text generation.
+    """
+    model, tokenizer = model_tokenizer
+    start_context = "Hello, I am"
+    encoded = tokenizer.encode(start_context)
+    encoded_tensor = torch.tensor(encoded).unsqueeze(0)
+
+    start = time.perf_counter()
+    out = generate_text_simple(
+        model=model,
+        idx=encoded_tensor,
+        max_new_tokens=50,
+        context_size=model.context_length,
+        use_cache=False,
+    )
+    end = time.perf_counter()
+    exec_time = end - start
+    decoded_text = tokenizer.decode(out.squeeze(0).tolist())
+
+    start = time.perf_counter()
+    out = generate_text_simple(
+        model=model,
+        idx=encoded_tensor,
+        max_new_tokens=50,
+        context_size=model.context_length,
+        use_cache=True,
+    )
+    end = time.perf_counter()
+    exec_time_with_cache = end - start
+    decoded_text_with_cache = tokenizer.decode(out.squeeze(0).tolist())
+
+    assert exec_time_with_cache < exec_time
+    assert decoded_text == decoded_text_with_cache
 
 
 def test_cross_attention_gpt2() -> None:

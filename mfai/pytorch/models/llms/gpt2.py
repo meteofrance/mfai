@@ -103,18 +103,54 @@ class MultiHeadAttention(nn.Module):
             "mask", torch.triu(torch.ones(context_length, context_length), diagonal=1)
         )
 
-    def forward(self, x: Tensor) -> Tensor:
+        # To use KV cache
+        self.register_buffer("cache_k", None, persistent=False)
+        self.register_buffer("cache_v", None, persistent=False)
+
+    def forward(self, x: Tensor, use_cache: bool) -> Tensor:
+        """Computes the multi-head attention output for the given input tensor.
+
+        This method applies query, key, and value projections, computes scaled
+        dot-product attention with a causal mask, and combines the results across
+        all attention heads. Optionally supports caching of keys and values for
+        efficient autoregressive generation.
+
+        Args:
+            x (Tensor): Input tensor of shape `(batch_size, num_tokens, d_in)`
+                        representing the sequence of tokens to attend over.
+            use_cache (bool): If True, uses cached keys and values for incremental decoding.
+
+        Returns:
+            Tensor: Output tensor of shape `(batch_size, num_tokens, d_out)`
+                    containing the attended representations.
+
+        Note:
+            When `use_cache=True`, the method updates internal caches (`cache_k`, `cache_v`)
+            and should be used in conjunction with `reset_cache()` between independent
+            sequences to avoid cross-sequence contamination.
+
+        """
         b, num_tokens, _ = x.shape
 
-        keys = self.W_key(x)  # Shape: (b, num_tokens, d_out)
+        keys_new = self.W_key(x)  # Shape: (b, num_tokens, d_out)
         queries = self.W_query(x)
-        values = self.W_value(x)
+        values_new = self.W_value(x)
 
         # We implicitly split the matrix by adding a `num_heads` dimension
         # Unroll last dim: (b, num_tokens, d_out) -> (b, num_tokens, num_heads, head_dim)
-        keys = keys.view(b, num_tokens, self.num_heads, self.head_dim)
-        values = values.view(b, num_tokens, self.num_heads, self.head_dim)
+        keys_new = keys_new.view(b, num_tokens, self.num_heads, self.head_dim)
+        values_new = values_new.view(b, num_tokens, self.num_heads, self.head_dim)
         queries = queries.view(b, num_tokens, self.num_heads, self.head_dim)
+
+        if use_cache:
+            if self.cache_k is None:
+                self.cache_k, self.cache_v = keys_new, values_new
+            else:
+                self.cache_k = torch.cat([self.cache_k, keys_new], dim=1)
+                self.cache_v = torch.cat([self.cache_v, values_new], dim=1)
+            keys, values = self.cache_k, self.cache_v
+        else:
+            keys, values = keys_new, values_new
 
         # Transpose: (b, num_tokens, num_heads, head_dim) -> (b, num_heads, num_tokens, head_dim)
         keys = keys.transpose(1, 2)
@@ -333,11 +369,16 @@ class TransformerBlock(nn.Module):
         self.norm2 = LayerNorm(settings.emb_dim)
         self.drop_shortcut = nn.Dropout(settings.drop_rate)
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor, use_cache: bool = False) -> Tensor:
         # Shortcut connection for attention block
         shortcut = x
         x = self.norm1(x)
-        x = self.att(x)  # Shape [batch_size, num_tokens, emb_size]
+        if isinstance(self.att, MultiHeadAttention):
+            x = self.att(
+                x, use_cache=use_cache
+            )  # Shape [batch_size, num_tokens, emb_size]
+        else:
+            x = self.att(x)  # Shape [batch_size, num_tokens, emb_size]
         x = self.drop_shortcut(x)
         x = x + shortcut  # Add the original input back
 
@@ -498,7 +539,10 @@ class GPT2(nn.Module):
         self.load_weights_from_dict(params)
 
     def forward_vectors(
-        self, embeddings: Tensor, first_embedding: Union[None, Tensor] = None
+        self,
+        embeddings: Tensor,
+        use_cache: bool,
+        first_embedding: Union[None, Tensor] = None,
     ) -> Tensor:
         """
         Process a batch of embeddings through the model.
@@ -515,14 +559,15 @@ class GPT2(nn.Module):
                 x = torch.cat(
                     [first_embedding, x[:, first_embedding.shape[1] :, :]], dim=1
                 )
-                x = block(x)
+                x = block(x, use_cache=use_cache)
         else:
-            x = self.trf_blocks(x)
+            for blk in self.trf_blocks:
+                x = blk(x, use_cache=use_cache)
         x = self.final_norm(x)
         logits = self.out_head(x)
         return logits
 
-    def embed_tokens(self, tok_ids: Tensor) -> Tensor:
+    def embed_tokens(self, tok_ids: Tensor, use_cache: bool) -> Tensor:
         """
         Embeds and pos encodes tokens.
         """
@@ -532,15 +577,42 @@ class GPT2(nn.Module):
             )
         _, seq_len = tok_ids.shape
         tok_embeds = self.tok_emb(tok_ids)
-        pos_embeds = self.pos_emb(torch.arange(seq_len, device=tok_ids.device))
+
+        if use_cache:
+            pos_ids = torch.arange(
+                self.current_pos,
+                self.current_pos + seq_len,
+                device=tok_ids.device,
+                dtype=torch.long,
+            )
+            self.current_pos += seq_len
+        else:
+            pos_ids = torch.arange(0, seq_len, device=tok_ids.device, dtype=torch.long)
+        pos_embeds = self.pos_emb(pos_ids).unsqueeze(0)
+
         return tok_embeds + pos_embeds  # Shape [batch_size, num_tokens, emb_size]
 
-    def forward(self, tok_ids: Tensor) -> Tensor:
+    def forward(self, tok_ids: Tensor, use_cache: bool = False) -> Tensor:
         tok_ids = tok_ids[
             :, -self.context_length :
         ]  # Keep only the last context_length tokens
-        x = self.embed_tokens(tok_ids)
-        return self.forward_vectors(x)
+        x = self.embed_tokens(tok_ids, use_cache=use_cache)
+        return self.forward_vectors(x, use_cache=use_cache)
+
+    def reset_kv_cache(self) -> None:
+        """Clear the Key-Value cache used for incremental decoding.
+
+        This method must be called between processing independent sequences to
+        prevent cross-sequence contamination in autoregressive generation. After
+        calling this method, the cache will be reset to None and ready for a new
+        sequence.
+
+        Note:
+            Failure to call this method between independent sequences may result
+            in incorrect attention patterns due to stale cached values.
+        """
+        self.cache_k, self.cache_v = None, None
+        self.current_pos = 0
 
 
 @dataclass_json

@@ -243,7 +243,7 @@ class Fuyu(FreezeMLMMixin, nn.Module):
         if self.settings.inject_vision_each_stage:
             # Inject vision tokens at each stage
             logits = self.backend.forward_vectors(
-                x, vis_txt_embeds[:, : vis_embeds.shape[1]]
+                x, first_embedding=vis_txt_embeds[:, : vis_embeds.shape[1]]
             )
         else:
             logits = self.backend.forward_vectors(x)

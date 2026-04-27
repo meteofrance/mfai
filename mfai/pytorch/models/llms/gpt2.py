@@ -6,7 +6,7 @@ https://github.com/rasbt/LLMs-from-scratch/.
 import typing
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Union
+from typing import Literal, Sequential, Union
 
 import numpy as np
 import torch
@@ -99,11 +99,14 @@ class MultiHeadAttention(nn.Module):
         self.W_value = nn.Linear(d_in, d_out, bias=qkv_bias)
         self.out_proj = nn.Linear(d_out, d_out)  # Linear layer to combine head outputs
         self.dropout = nn.Dropout(dropout)
+        self.mask: Tensor
         self.register_buffer(
             "mask", torch.triu(torch.ones(context_length, context_length), diagonal=1)
         )
 
         # To use KV cache
+        self.cache_k: Tensor | None
+        self.cache_v: Tensor | None
         self.register_buffer("cache_k", None, persistent=False)
         self.register_buffer("cache_v", None, persistent=False)
 
@@ -132,9 +135,9 @@ class MultiHeadAttention(nn.Module):
         """
         b, num_tokens, _ = x.shape
 
-        keys_new = self.W_key(x)  # Shape: (b, num_tokens, d_out)
-        queries = self.W_query(x)
-        values_new = self.W_value(x)
+        keys_new: Tensor = self.W_key(x)  # Shape: (b, num_tokens, d_out)
+        queries: Tensor = self.W_query(x)
+        values_new: Tensor = self.W_value(x)
 
         # We implicitly split the matrix by adding a `num_heads` dimension
         # Unroll last dim: (b, num_tokens, d_out) -> (b, num_tokens, num_heads, head_dim)
@@ -143,8 +146,9 @@ class MultiHeadAttention(nn.Module):
         queries = queries.view(b, num_tokens, self.num_heads, self.head_dim)
 
         if use_cache:
-            if self.cache_k is None:
-                self.cache_k, self.cache_v = keys_new, values_new
+            if self.cache_k is None or self.cache_v is None:
+                self.cache_k = keys_new
+                self.cache_v = values_new
             else:
                 self.cache_k = torch.cat([self.cache_k, keys_new], dim=1)
                 self.cache_v = torch.cat([self.cache_v, values_new], dim=1)
@@ -170,7 +174,7 @@ class MultiHeadAttention(nn.Module):
             self.ptr_current_pos += num_tokens_Q
         else:
             # Original mask truncated to the number of tokens and converted to boolean
-            mask_bool = self.mask.bool()[:num_tokens_Q, :num_tokens_K]  # type: ignore[operator]
+            mask_bool = self.mask.bool()[:num_tokens_Q, :num_tokens_K]
 
         # Use the mask to fill attention scores
         attn_scores.masked_fill_(mask_bool, -torch.inf)
@@ -187,7 +191,7 @@ class MultiHeadAttention(nn.Module):
 
         return context_vec
 
-    def reset_cache(self):
+    def reset_cache(self) -> None:
         self.cache_k, self.cache_v = None, None
         self.ptr_current_pos = 0
 
@@ -423,7 +427,7 @@ class GPT2(nn.Module):
         self.pos_emb = nn.Embedding(settings.context_length, settings.emb_dim)
         self.drop_emb = nn.Dropout(settings.drop_rate)
 
-        self.trf_blocks = nn.ModuleList(
+        self.trf_blocks: Sequential[TransformerBlock] = nn.ModuleList(
             [TransformerBlock(settings) for _ in range(settings.n_layers)]
         )
         self.current_pos = 0  # Used for KV cache
@@ -555,7 +559,7 @@ class GPT2(nn.Module):
     def forward_vectors(
         self,
         embeddings: Tensor,
-        use_cache: bool,
+        use_cache: bool = False,
         first_embedding: Union[None, Tensor] = None,
     ) -> Tensor:
         """
@@ -581,7 +585,7 @@ class GPT2(nn.Module):
         logits = self.out_head(x)
         return logits
 
-    def embed_tokens(self, tok_ids: Tensor, use_cache: bool) -> Tensor:
+    def embed_tokens(self, tok_ids: Tensor, use_cache: bool = False) -> Tensor:
         """
         Embeds and pos encodes tokens.
         """

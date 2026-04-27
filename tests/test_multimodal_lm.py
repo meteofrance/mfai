@@ -38,7 +38,7 @@ def generate_text_simple(
     with torch.no_grad():
         if use_cache:
             # Init cache with full prompt
-            model.reset_kv_cache()
+            model.reset_kv_cache()  # type: ignore[operator]
             logits = model(idx[:, -context_size:], **kwargs)
 
             for _ in range(max_new_tokens):

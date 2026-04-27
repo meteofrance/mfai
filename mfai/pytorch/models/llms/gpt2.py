@@ -160,8 +160,17 @@ class MultiHeadAttention(nn.Module):
         # Compute scaled dot-product attention (aka self-attention) with a causal mask
         attn_scores = queries @ keys.transpose(2, 3)  # Dot product for each head
 
-        # Original mask truncated to the number of tokens and converted to boolean
-        mask_bool = self.mask.bool()[:num_tokens, :num_tokens]  # type: ignore[operator]
+        num_tokens_Q = queries.shape[-2]
+        num_tokens_K = keys.shape[-2]
+        if use_cache:
+            mask_bool = self.mask.bool()[
+                self.ptr_current_pos : self.ptr_current_pos + num_tokens_Q,
+                :num_tokens_K,
+            ]
+            self.ptr_current_pos += num_tokens_Q
+        else:
+            # Original mask truncated to the number of tokens and converted to boolean
+            mask_bool = self.mask.bool()[:num_tokens_Q, :num_tokens_K]  # type: ignore[operator]
 
         # Use the mask to fill attention scores
         attn_scores.masked_fill_(mask_bool, -torch.inf)
@@ -177,6 +186,10 @@ class MultiHeadAttention(nn.Module):
         context_vec = self.out_proj(context_vec)  # optional projection
 
         return context_vec
+
+    def reset_cache(self):
+        self.cache_k, self.cache_v = None, None
+        self.ptr_current_pos = 0
 
 
 class MultiHeadAttentionPySDPA(nn.Module):
@@ -410,9 +423,10 @@ class GPT2(nn.Module):
         self.pos_emb = nn.Embedding(settings.context_length, settings.emb_dim)
         self.drop_emb = nn.Dropout(settings.drop_rate)
 
-        self.trf_blocks = nn.Sequential(
-            *[TransformerBlock(settings) for _ in range(settings.n_layers)]
+        self.trf_blocks = nn.ModuleList(
+            [TransformerBlock(settings) for _ in range(settings.n_layers)]
         )
+        self.current_pos = 0  # Used for KV cache
 
         self.final_norm = LayerNorm(settings.emb_dim)
         self.out_head = nn.Linear(settings.emb_dim, vocab_size, bias=False)
@@ -554,12 +568,12 @@ class GPT2(nn.Module):
         x = self.drop_emb(embeddings)
 
         if first_embedding is not None:
-            for block in self.trf_blocks:
+            for blk in self.trf_blocks:
                 # replace the first token of x by the corresponding first_embedding
                 x = torch.cat(
                     [first_embedding, x[:, first_embedding.shape[1] :, :]], dim=1
                 )
-                x = block(x, use_cache=use_cache)
+                x = blk(x, use_cache=use_cache)
         else:
             for blk in self.trf_blocks:
                 x = blk(x, use_cache=use_cache)
@@ -611,7 +625,8 @@ class GPT2(nn.Module):
             Failure to call this method between independent sequences may result
             in incorrect attention patterns due to stale cached values.
         """
-        self.cache_k, self.cache_v = None, None
+        for blk in self.trf_blocks:
+            blk.att.reset_cache()
         self.current_pos = 0
 
 

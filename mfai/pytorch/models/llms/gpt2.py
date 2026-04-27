@@ -6,7 +6,7 @@ https://github.com/rasbt/LLMs-from-scratch/.
 import typing
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Sequential, Union
+from typing import Literal, Union
 
 import numpy as np
 import torch
@@ -427,8 +427,8 @@ class GPT2(nn.Module):
         self.pos_emb = nn.Embedding(settings.context_length, settings.emb_dim)
         self.drop_emb = nn.Dropout(settings.drop_rate)
 
-        self.trf_blocks: Sequential[TransformerBlock] = nn.ModuleList(
-            [TransformerBlock(settings) for _ in range(settings.n_layers)]
+        self.trf_blocks = nn.Sequential(
+            *[TransformerBlock(settings) for _ in range(settings.n_layers)]
         )
         self.current_pos = 0  # Used for KV cache
 
@@ -630,6 +630,7 @@ class GPT2(nn.Module):
             in incorrect attention patterns due to stale cached values.
         """
         for blk in self.trf_blocks:
+            assert isinstance(blk.att, MultiHeadAttention)
             blk.att.reset_cache()
         self.current_pos = 0
 

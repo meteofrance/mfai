@@ -28,37 +28,45 @@ def generate_text_simple(
     use_cache: bool = False,
     vision_inputs: None | Tensor | list[Tensor] = None,
 ) -> Tensor:
+    kwargs: dict[str, Any] = {}
+    if vision_inputs is not None:
+        kwargs["vision_inputs"] = vision_inputs
+    if use_cache:
+        kwargs["use_cache"] = use_cache
 
     model.eval()
     with torch.no_grad():
         if use_cache:
             # Init cache with full prompt
             model.reset_kv_cache()
+            logits = model(idx[:, -context_size:], **kwargs)
 
-        # idx is (B, T) array of indices in the current context
-        for _ in range(max_new_tokens):
-            # Crop current context if it exceeds the supported context size
-            # E.g., if LLM supports only 5 tokens, and the context size is 10
-            # then only the last 5 tokens are used as context
-            idx_cond = idx[:, -context_size:]
+            for _ in range(max_new_tokens):
+                # a) pick the token with the highest log-probability (greedy sampling)
+                next_idx = logits[:, -1].argmax(dim=-1, keepdim=True)
+                # b) append it to the running sequence
+                idx = torch.cat([idx, next_idx], dim=1)
+                # c) feed model only the new token
+                logits = model(next_idx, **kwargs)
 
-            kwargs: dict[str, Any] = {}
-            if vision_inputs is not None:
-                kwargs["vision_inputs"] = vision_inputs
-            if use_cache:
-                kwargs["use_cache"] = use_cache
+        else:
+            # idx is (B, T) array of indices in the current context
+            for _ in range(max_new_tokens):
+                # Crop current context if it exceeds the supported context size
+                # E.g., if LLM supports only 5 tokens, and the context size is 10
+                # then only the last 5 tokens are used as context
+                idx_cond = idx[:, -context_size:]
+                logits = model(idx_cond, **kwargs)
 
-            logits = model(idx_cond, **kwargs)
+                # Focus only on the last time step
+                # (batch, n_token, vocab_size) becomes (batch, vocab_size)
+                logits = logits[:, -1, :]
 
-            # Focus only on the last time step
-            # (batch, n_token, vocab_size) becomes (batch, vocab_size)
-            logits = logits[:, -1, :]
+                # Get the idx of the vocab entry with the highest logits value
+                idx_next = torch.argmax(logits, dim=-1, keepdim=True)  # (batch, 1)
 
-            # Get the idx of the vocab entry with the highest logits value
-            idx_next = torch.argmax(logits, dim=-1, keepdim=True)  # (batch, 1)
-
-            # Append sampled index to the running sequence
-            idx = torch.cat((idx, idx_next), dim=1)  # (batch, n_tokens+1)
+                # Append sampled index to the running sequence
+                idx = torch.cat((idx, idx_next), dim=1)  # (batch, n_tokens+1)
 
     return idx
 

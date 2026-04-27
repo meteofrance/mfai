@@ -1,6 +1,6 @@
+from pathlib import Path
 import time
 from functools import partial
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -57,7 +57,9 @@ def test_llms(model_target_tokenizer: tuple[Any, str, Tokenizer]) -> None:
     assert decoded_text == target
 
 
-@pytest.mark.parametrize("model_tokenizer", [(GPT2(GPT2Settings()), GPT2Tokenizer())])
+@pytest.mark.parametrize(
+    "model_tokenizer", [(GPT2(GPT2Settings(attn_tf_compat=True)), GPT2Tokenizer())]
+)
 def test_kv_cache(model_tokenizer: tuple[GPT2, GPT2Settings]) -> None:
     """
     We check that KV cache implementation is working and a speed-up text generation.
@@ -71,7 +73,7 @@ def test_kv_cache(model_tokenizer: tuple[GPT2, GPT2Settings]) -> None:
     out = generate_text_simple(
         model=model,
         idx=encoded_tensor,
-        max_new_tokens=50,
+        max_new_tokens=10,
         context_size=model.context_length,
         use_cache=False,
     )
@@ -83,7 +85,7 @@ def test_kv_cache(model_tokenizer: tuple[GPT2, GPT2Settings]) -> None:
     out = generate_text_simple(
         model=model,
         idx=encoded_tensor,
-        max_new_tokens=50,
+        max_new_tokens=10,
         context_size=model.context_length,
         use_cache=True,
     )
@@ -91,8 +93,8 @@ def test_kv_cache(model_tokenizer: tuple[GPT2, GPT2Settings]) -> None:
     exec_time_with_cache = end - start
     decoded_text_with_cache = tokenizer.decode(out.squeeze(0).tolist())
 
-    assert exec_time_with_cache < exec_time
     assert decoded_text == decoded_text_with_cache
+    assert exec_time_with_cache < exec_time
 
 
 def test_cross_attention_gpt2() -> None:

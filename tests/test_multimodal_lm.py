@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Literal, Tuple
+from typing import Any, Literal
 
 import pytest
 import torch
@@ -25,31 +25,48 @@ def generate_text_simple(
     idx: Tensor,
     max_new_tokens: int,
     context_size: int,
+    use_cache: bool = False,
     vision_inputs: None | Tensor | list[Tensor] = None,
 ) -> Tensor:
-    # idx is (B, T) array of indices in the current context
-    for _ in range(max_new_tokens):
-        # Crop current context if it exceeds the supported context size
-        # E.g., if LLM supports only 5 tokens, and the context size is 10
-        # then only the last 5 tokens are used as context
-        idx_cond = idx[:, -context_size:]
+    kwargs: dict[str, Any] = {}
+    if vision_inputs is not None:
+        kwargs["vision_inputs"] = vision_inputs
+    if use_cache:
+        kwargs["use_cache"] = use_cache
 
-        # Get the predictions
-        with torch.no_grad():
-            if vision_inputs is not None:
-                logits = model(idx_cond, vision_inputs)
-            else:
-                logits = model(idx_cond)
+    model.eval()
+    with torch.no_grad():
+        if use_cache:
+            # Init cache with full prompt
+            model.reset_kv_cache()  # type: ignore[operator]
+            logits = model(idx[:, -context_size:], **kwargs)
 
-        # Focus only on the last time step
-        # (batch, n_token, vocab_size) becomes (batch, vocab_size)
-        logits = logits[:, -1, :]
+            for _ in range(max_new_tokens):
+                # a) pick the token with the highest log-probability (greedy sampling)
+                next_idx = logits[:, -1].argmax(dim=-1, keepdim=True)
+                # b) append it to the running sequence
+                idx = torch.cat([idx, next_idx], dim=1)
+                # c) feed model only the new token
+                logits = model(next_idx, **kwargs)
 
-        # Get the idx of the vocab entry with the highest logits value
-        idx_next = torch.argmax(logits, dim=-1, keepdim=True)  # (batch, 1)
+        else:
+            # idx is (B, T) array of indices in the current context
+            for _ in range(max_new_tokens):
+                # Crop current context if it exceeds the supported context size
+                # E.g., if LLM supports only 5 tokens, and the context size is 10
+                # then only the last 5 tokens are used as context
+                idx_cond = idx[:, -context_size:]
+                logits = model(idx_cond, **kwargs)
 
-        # Append sampled index to the running sequence
-        idx = torch.cat((idx, idx_next), dim=1)  # (batch, n_tokens+1)
+                # Focus only on the last time step
+                # (batch, n_token, vocab_size) becomes (batch, vocab_size)
+                logits = logits[:, -1, :]
+
+                # Get the idx of the vocab entry with the highest logits value
+                idx_next = torch.argmax(logits, dim=-1, keepdim=True)  # (batch, 1)
+
+                # Append sampled index to the running sequence
+                idx = torch.cat((idx, idx_next), dim=1)  # (batch, n_tokens+1)
 
     return idx
 
@@ -77,16 +94,16 @@ def generate_text_simple(
             "gpt2",
             GPT2Tokenizer(),
             (
-                "Sustine et abstineinipowerful humiliatinggrowingMarcus Items trolls 2009 homophobic 296",
-                "Sustine et abstine lettucerapeUNCHframelsh Capitalism ended 269 initiate Minneapolis",
+                "Sustine et abstineiniumsy cruc validated Lauderdale Tory filib Storiesebook Minutes",
+                "Sustine et abstine itch Su Preston fpsPRES standing overboard Saganshoot EST",
             ),
         ),
         (
             "gpt2",
             LlamaTokenizer(),
             (
-                "Sustine et abstine współ terrestführt fr выполxmlnsполćлы released",
-                "Sustine et abstine Records RET și taililia осоagoggetInstance characteristicApplication",
+                "Sustine et abstine współ terrestführt closeemente virtố Consider wordpress чтобы",
+                "Sustine et abstine ReleasesetText movie województ Klosterająţ‰ anten stri",
             ),
         ),
     ],
@@ -94,7 +111,7 @@ def generate_text_simple(
 def test_multimodal_llm(
     llm_backend: Literal["llama2", "gpt2", "llama3"],
     tokenizer: GPT2Tokenizer | LlamaTokenizer,
-    expected_text: Tuple[str, str],
+    expected_text: tuple[str, str],
 ) -> None:
     torch.manual_seed(999)
     for force_vision in (False, True):
@@ -179,15 +196,15 @@ def test_multimodal_with_pretrained_clip() -> None:
     [
         (
             "linear",
-            "Sustine et abstine Declitely string slips auJustice interpret skeletalOEengineering",
+            "Sustine et abstine Decl utmost absurdity Aster chemically 147inglyPATHOEengineering",
         ),
         (
             "resnet50",
-            "Sustine et abstine nowherearationsself bell Schedule Pegasus Alm phosphJew cad",
+            "Sustine et abstine Decl Ng Blakeopus guiIcon vaginaitz revolutionsOEHI",
         ),
         (
             "vit",
-            "Sustine et abstine Decl extrem…immigrant Glen fears yogageriesobjSave",
+            "Sustine et abstine Decl utmostisman camping coron DOM settlersPen endemic cortisol",
         ),
     ],
 )
@@ -274,7 +291,7 @@ def test_fuyu_with_mlp_and_pos_embedding() -> None:
     decoded_text = tokenizer.decode(out.squeeze(0).tolist())
     assert (
         decoded_text
-        == "Sustine et abstine Quartz Assistance popped drains scandal restraint arg suhelpHam"
+        == "Sustine et abstine Quartzinternetmulti AdultgreSQL CapAPP induct condom solitude"
     )
     model.freeze_llm()
     model.unfreeze_llm()
@@ -287,15 +304,15 @@ def test_fuyu_with_mlp_and_pos_embedding() -> None:
     [
         (
             "linear",
-            "Sustine et abstine tests scripted inferred Zy StephPowerborn PROGRAM Minute infectious",
+            "Sustine et abstine tests spreeticket insur Mannyigate destroyerinates camel l",
         ),
         (
             "resnet50",
-            "Sustine et abstine intellig Housing NvidiaBind targets constructing BuffyWithinwings nonexistent",
+            "Sustine et abstine intellig spans manoeuv�� 1850PER 1300。 monumental UAE",
         ),
         (
             "vit",
-            "Sustine et abstine bans applianceERGeatured Strawberry purple doorsteploader Jesus Thailand",
+            "Sustine et abstine reality incorrectly673 Cheng Suggest Detailsricsantically Tourism nonexistent",
         ),
     ],
 )

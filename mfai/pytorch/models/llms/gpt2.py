@@ -99,22 +99,62 @@ class MultiHeadAttention(nn.Module):
         self.W_value = nn.Linear(d_in, d_out, bias=qkv_bias)
         self.out_proj = nn.Linear(d_out, d_out)  # Linear layer to combine head outputs
         self.dropout = nn.Dropout(dropout)
+        self.mask: Tensor
         self.register_buffer(
             "mask", torch.triu(torch.ones(context_length, context_length), diagonal=1)
         )
 
-    def forward(self, x: Tensor) -> Tensor:
+        # To use KV cache
+        self.cache_k: Tensor | None
+        self.cache_v: Tensor | None
+        self.register_buffer("cache_k", None, persistent=False)
+        self.register_buffer("cache_v", None, persistent=False)
+
+    def forward(self, x: Tensor, use_cache: bool) -> Tensor:
+        """Computes the multi-head attention output for the given input tensor.
+
+        This method applies query, key, and value projections, computes scaled
+        dot-product attention with a causal mask, and combines the results across
+        all attention heads. Optionally supports caching of keys and values for
+        efficient autoregressive generation.
+
+        Args:
+            x (Tensor): Input tensor of shape `(batch_size, num_tokens, d_in)`
+                        representing the sequence of tokens to attend over.
+            use_cache (bool): If True, uses cached keys and values for incremental decoding.
+
+        Returns:
+            Tensor: Output tensor of shape `(batch_size, num_tokens, d_out)`
+                    containing the attended representations.
+
+        Note:
+            When `use_cache=True`, the method updates internal caches (`cache_k`, `cache_v`)
+            and should be used in conjunction with `reset_cache()` between independent
+            sequences to avoid cross-sequence contamination.
+
+        """
         b, num_tokens, _ = x.shape
 
-        keys = self.W_key(x)  # Shape: (b, num_tokens, d_out)
-        queries = self.W_query(x)
-        values = self.W_value(x)
+        keys_new: Tensor = self.W_key(x)  # Shape: (b, num_tokens, d_out)
+        queries: Tensor = self.W_query(x)
+        values_new: Tensor = self.W_value(x)
 
         # We implicitly split the matrix by adding a `num_heads` dimension
         # Unroll last dim: (b, num_tokens, d_out) -> (b, num_tokens, num_heads, head_dim)
-        keys = keys.view(b, num_tokens, self.num_heads, self.head_dim)
-        values = values.view(b, num_tokens, self.num_heads, self.head_dim)
+        keys_new = keys_new.view(b, num_tokens, self.num_heads, self.head_dim)
+        values_new = values_new.view(b, num_tokens, self.num_heads, self.head_dim)
         queries = queries.view(b, num_tokens, self.num_heads, self.head_dim)
+
+        if use_cache:
+            if self.cache_k is None or self.cache_v is None:
+                self.cache_k = keys_new
+                self.cache_v = values_new
+            else:
+                self.cache_k = torch.cat([self.cache_k, keys_new], dim=1)
+                self.cache_v = torch.cat([self.cache_v, values_new], dim=1)
+            keys, values = self.cache_k, self.cache_v
+        else:
+            keys, values = keys_new, values_new
 
         # Transpose: (b, num_tokens, num_heads, head_dim) -> (b, num_heads, num_tokens, head_dim)
         keys = keys.transpose(1, 2)
@@ -124,8 +164,17 @@ class MultiHeadAttention(nn.Module):
         # Compute scaled dot-product attention (aka self-attention) with a causal mask
         attn_scores = queries @ keys.transpose(2, 3)  # Dot product for each head
 
-        # Original mask truncated to the number of tokens and converted to boolean
-        mask_bool = self.mask.bool()[:num_tokens, :num_tokens]  # type: ignore[operator]
+        num_tokens_Q = queries.shape[-2]
+        num_tokens_K = keys.shape[-2]
+        if use_cache:
+            mask_bool = self.mask.bool()[
+                self.ptr_current_pos : self.ptr_current_pos + num_tokens_Q,
+                :num_tokens_K,
+            ]
+            self.ptr_current_pos += num_tokens_Q
+        else:
+            # Original mask truncated to the number of tokens and converted to boolean
+            mask_bool = self.mask.bool()[:num_tokens_Q, :num_tokens_K]
 
         # Use the mask to fill attention scores
         attn_scores.masked_fill_(mask_bool, -torch.inf)
@@ -141,6 +190,10 @@ class MultiHeadAttention(nn.Module):
         context_vec = self.out_proj(context_vec)  # optional projection
 
         return context_vec
+
+    def reset_cache(self) -> None:
+        self.cache_k, self.cache_v = None, None
+        self.ptr_current_pos = 0
 
 
 class MultiHeadAttentionPySDPA(nn.Module):
@@ -333,11 +386,16 @@ class TransformerBlock(nn.Module):
         self.norm2 = LayerNorm(settings.emb_dim)
         self.drop_shortcut = nn.Dropout(settings.drop_rate)
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor, use_cache: bool = False) -> Tensor:
         # Shortcut connection for attention block
         shortcut = x
         x = self.norm1(x)
-        x = self.att(x)  # Shape [batch_size, num_tokens, emb_size]
+        if isinstance(self.att, MultiHeadAttention):
+            x = self.att(
+                x, use_cache=use_cache
+            )  # Shape [batch_size, num_tokens, emb_size]
+        else:
+            x = self.att(x)  # Shape [batch_size, num_tokens, emb_size]
         x = self.drop_shortcut(x)
         x = x + shortcut  # Add the original input back
 
@@ -372,6 +430,7 @@ class GPT2(nn.Module):
         self.trf_blocks = nn.Sequential(
             *[TransformerBlock(settings) for _ in range(settings.n_layers)]
         )
+        self.current_pos = 0  # Used for KV cache
 
         self.final_norm = LayerNorm(settings.emb_dim)
         self.out_head = nn.Linear(settings.emb_dim, vocab_size, bias=False)
@@ -498,7 +557,10 @@ class GPT2(nn.Module):
         self.load_weights_from_dict(params)
 
     def forward_vectors(
-        self, embeddings: Tensor, first_embedding: Union[None, Tensor] = None
+        self,
+        embeddings: Tensor,
+        use_cache: bool = False,
+        first_embedding: Union[None, Tensor] = None,
     ) -> Tensor:
         """
         Process a batch of embeddings through the model.
@@ -510,19 +572,20 @@ class GPT2(nn.Module):
         x = self.drop_emb(embeddings)
 
         if first_embedding is not None:
-            for block in self.trf_blocks:
+            for blk in self.trf_blocks:
                 # replace the first token of x by the corresponding first_embedding
                 x = torch.cat(
                     [first_embedding, x[:, first_embedding.shape[1] :, :]], dim=1
                 )
-                x = block(x)
+                x = blk(x, use_cache=use_cache)
         else:
-            x = self.trf_blocks(x)
+            for blk in self.trf_blocks:
+                x = blk(x, use_cache=use_cache)
         x = self.final_norm(x)
         logits = self.out_head(x)
         return logits
 
-    def embed_tokens(self, tok_ids: Tensor) -> Tensor:
+    def embed_tokens(self, tok_ids: Tensor, use_cache: bool = False) -> Tensor:
         """
         Embeds and pos encodes tokens.
         """
@@ -532,15 +595,62 @@ class GPT2(nn.Module):
             )
         _, seq_len = tok_ids.shape
         tok_embeds = self.tok_emb(tok_ids)
-        pos_embeds = self.pos_emb(torch.arange(seq_len, device=tok_ids.device))
+
+        if use_cache:
+            pos_ids = torch.arange(
+                self.current_pos,
+                self.current_pos + seq_len,
+                device=tok_ids.device,
+                dtype=torch.long,
+            )
+            self.current_pos += seq_len
+        else:
+            pos_ids = torch.arange(0, seq_len, device=tok_ids.device, dtype=torch.long)
+        pos_embeds = self.pos_emb(pos_ids).unsqueeze(0)
+
         return tok_embeds + pos_embeds  # Shape [batch_size, num_tokens, emb_size]
 
-    def forward(self, tok_ids: Tensor) -> Tensor:
+    def forward(self, tok_ids: Tensor, use_cache: bool = False) -> Tensor:
+        """Performs the forward pass of the GPT-2 model.
+
+        Args:
+            tok_ids (Tensor): Tensor of token IDs input with shape (batch_size, sequence_length).
+            use_cache (bool, optional): If True, uses attention caching for computational
+                optimization. Defaults to False.
+
+        Returns:
+            Tensor: Model output tensor with shape (batch_size, sequence_length, hidden_size) or
+                    (batch_size, context_length, hidden_size) depending on model dimensions.
+
+        Note:
+            This method truncates the input tokens to keep only the last `context_length` tokens,
+            which limits the input length to a maximum value defined by the model.
+
+            The KV cache implementation is largely inspired by S. Rashka. See
+            https://github.com/rasbt/LLMs-from-scratch/tree/main/ch04/03_kv-cache for more details.
+        """
         tok_ids = tok_ids[
             :, -self.context_length :
         ]  # Keep only the last context_length tokens
-        x = self.embed_tokens(tok_ids)
-        return self.forward_vectors(x)
+        x = self.embed_tokens(tok_ids, use_cache=use_cache)
+        return self.forward_vectors(x, use_cache=use_cache)
+
+    def reset_kv_cache(self) -> None:
+        """Clear the Key-Value cache used for incremental decoding.
+
+        This method must be called between processing independent sequences to
+        prevent cross-sequence contamination in autoregressive generation. After
+        calling this method, the cache will be reset to None and ready for a new
+        sequence.
+
+        Note:
+            Failure to call this method between independent sequences may result
+            in incorrect attention patterns due to stale cached values.
+        """
+        for blk in self.trf_blocks:
+            assert isinstance(blk.att, MultiHeadAttention)
+            blk.att.reset_cache()
+        self.current_pos = 0
 
 
 @dataclass_json

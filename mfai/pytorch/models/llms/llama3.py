@@ -315,12 +315,12 @@ class Llama3(nn.Module):
             )
 
         for i, block in enumerate(self.trf_blocks):
-            # if first_embedding is not None:
-            #     # replace the first token of x by the corresponding first_embedding
-            #     embeddings = torch.cat(
-            #         [first_embedding, embeddings[:, first_embedding.shape[1] :, :]],
-            #         dim=1,
-            #     )
+            if first_embedding is not None:
+                # replace the first token of x by the corresponding first_embedding
+                embeddings = torch.cat(
+                    [first_embedding, embeddings[:, first_embedding.shape[1] :, :]],
+                    dim=1,
+                )
             blk_cache: None | tuple[Tensor, Tensor] = self.cache[i]
             x, new_blk_cache = block(
                 embeddings,

@@ -94,16 +94,16 @@ def generate_text_simple(
             "gpt2",
             GPT2Tokenizer(),
             (
-                "Sustine et abstineinipowerful humiliatinggrowingMarcus Items trolls 2009 homophobic 296",
-                "Sustine et abstine lettucerapeUNCHframelsh Capitalism ended 269 initiate Minneapolis",
+                "Sustine et abstineiniumsy cruc validated Lauderdale Tory filib Storiesebook Minutes",
+                "Sustine et abstine itch Su Preston fpsPRES standing overboard Saganshoot EST",
             ),
         ),
         (
             "gpt2",
             LlamaTokenizer(),
             (
-                "Sustine et abstine współ terrestführt fr выполxmlnsполćлы released",
-                "Sustine et abstine Records RET și taililia осоagoggetInstance characteristicApplication",
+                "Sustine et abstine współ terrestführt closeemente virtố Consider wordpress чтобы",
+                "Sustine et abstine ReleasesetText movie województ Klosterająţ‰ anten stri",
             ),
         ),
     ],
@@ -196,15 +196,15 @@ def test_multimodal_with_pretrained_clip() -> None:
     [
         (
             "linear",
-            "Sustine et abstine Declitely string slips auJustice interpret skeletalOEengineering",
+            "Sustine et abstine Decl utmost absurdity Aster chemically 147inglyPATHOEengineering",
         ),
         (
             "resnet50",
-            "Sustine et abstine nowherearationsself bell Schedule Pegasus Alm phosphJew cad",
+            "Sustine et abstine Decl Ng Blakeopus guiIcon vaginaitz revolutionsOEHI",
         ),
         (
             "vit",
-            "Sustine et abstine Decl extrem…immigrant Glen fears yogageriesobjSave",
+            "Sustine et abstine Decl utmostisman camping coron DOM settlersPen endemic cortisol",
         ),
     ],
 )
@@ -291,7 +291,7 @@ def test_fuyu_with_mlp_and_pos_embedding() -> None:
     decoded_text = tokenizer.decode(out.squeeze(0).tolist())
     assert (
         decoded_text
-        == "Sustine et abstine Quartz Assistance popped drains scandal restraint arg suhelpHam"
+        == "Sustine et abstine Quartzinternetmulti AdultgreSQL CapAPP induct condom solitude"
     )
     model.freeze_llm()
     model.unfreeze_llm()
@@ -304,15 +304,15 @@ def test_fuyu_with_mlp_and_pos_embedding() -> None:
     [
         (
             "linear",
-            "Sustine et abstine tests scripted inferred Zy StephPowerborn PROGRAM Minute infectious",
+            "Sustine et abstine tests spreeticket insur Mannyigate destroyerinates camel l",
         ),
         (
             "resnet50",
-            "Sustine et abstine intellig Housing NvidiaBind targets constructing BuffyWithinwings nonexistent",
+            "Sustine et abstine intellig spans manoeuv�� 1850PER 1300。 monumental UAE",
         ),
         (
             "vit",
-            "Sustine et abstine bans applianceERGeatured Strawberry purple doorsteploader Jesus Thailand",
+            "Sustine et abstine reality incorrectly673 Cheng Suggest Detailsricsantically Tourism nonexistent",
         ),
     ],
 )

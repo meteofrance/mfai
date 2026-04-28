@@ -611,6 +611,24 @@ class GPT2(nn.Module):
         return tok_embeds + pos_embeds  # Shape [batch_size, num_tokens, emb_size]
 
     def forward(self, tok_ids: Tensor, use_cache: bool = False) -> Tensor:
+        """Performs the forward pass of the GPT-2 model.
+
+        Args:
+            tok_ids (Tensor): Tensor of token IDs input with shape (batch_size, sequence_length).
+            use_cache (bool, optional): If True, uses attention caching for computational
+                optimization. Defaults to False.
+
+        Returns:
+            Tensor: Model output tensor with shape (batch_size, sequence_length, hidden_size) or
+                    (batch_size, context_length, hidden_size) depending on model dimensions.
+
+        Note:
+            This method truncates the input tokens to keep only the last `context_length` tokens,
+            which limits the input length to a maximum value defined by the model.
+
+            The KV cache implementation is largely inspired by S. Rashka. See
+            https://github.com/rasbt/LLMs-from-scratch/tree/main/ch04/03_kv-cache for more details.
+        """
         tok_ids = tok_ids[
             :, -self.context_length :
         ]  # Keep only the last context_length tokens

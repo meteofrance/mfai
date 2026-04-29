@@ -10,9 +10,7 @@ import lightning as L
 from lightning.fabric.utilities.exceptions import MisconfigurationException
 from lightning.pytorch.cli import SaveConfigCallback
 from lightning.pytorch.loggers.mlflow import MLFlowLogger
-from mlflow.system_metrics.system_metrics_monitor import (  # type: ignore[import-not-found]
-    SystemMetricsMonitor,
-)
+from mlflow.system_metrics.system_metrics_monitor import SystemMetricsMonitor
 from typing_extensions import override
 
 

@@ -58,7 +58,11 @@ def test_llms(model_target_tokenizer: tuple[Any, str, Tokenizer]) -> None:
 
 
 @pytest.mark.parametrize(
-    "model_tokenizer", [(GPT2(GPT2Settings(attn_tf_compat=True)), GPT2Tokenizer())]
+    "model_tokenizer",
+    [
+        (GPT2(GPT2Settings(attn_tf_compat=True)), GPT2Tokenizer()),
+        (Llama3(Llama3Settings()), LlamaTokenizer()),
+    ],
 )
 def test_kv_cache(model_tokenizer: tuple[GPT2, GPT2Settings]) -> None:
     """
@@ -73,7 +77,7 @@ def test_kv_cache(model_tokenizer: tuple[GPT2, GPT2Settings]) -> None:
     out = generate_text_simple(
         model=model,
         idx=encoded_tensor,
-        max_new_tokens=10,
+        max_new_tokens=400,
         context_size=model.context_length,
         use_cache=False,
     )
@@ -85,7 +89,7 @@ def test_kv_cache(model_tokenizer: tuple[GPT2, GPT2Settings]) -> None:
     out = generate_text_simple(
         model=model,
         idx=encoded_tensor,
-        max_new_tokens=10,
+        max_new_tokens=400,
         context_size=model.context_length,
         use_cache=True,
     )

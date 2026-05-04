@@ -43,9 +43,9 @@ def compute_rope_params(
     return cos, sin
 
 
-def apply_rope(x: Tensor, cos: Tensor, sin: Tensor) -> Tensor:
+def apply_rope(x: Tensor, cos: Tensor, sin: Tensor, offset: int = 0) -> Tensor:
     # x: (batch_size, num_heads, seq_len, head_dim)
-    batch_size, num_heads, seq_len, head_dim = x.shape
+    _, _, seq_len, head_dim = x.shape
     assert head_dim % 2 == 0, "Head dimension must be even"
 
     # Split x into first half and second half
@@ -53,8 +53,10 @@ def apply_rope(x: Tensor, cos: Tensor, sin: Tensor) -> Tensor:
     x2 = x[..., head_dim // 2 :]  # Second half
 
     # Adjust sin and cos shapes
-    cos = cos[:seq_len, :].unsqueeze(0).unsqueeze(0)  # Shape: (1, 1, seq_len, head_dim)
-    sin = sin[:seq_len, :].unsqueeze(0).unsqueeze(0)
+    cos = (
+        cos[offset : offset + seq_len, :].unsqueeze(0).unsqueeze(0)
+    )  # Shape: (1, 1, seq_len, head_dim)
+    sin = sin[offset : offset + seq_len, :].unsqueeze(0).unsqueeze(0)
 
     # Apply the rotary transformation
     rotated = torch.cat((-x2, x1), dim=-1)
@@ -68,9 +70,9 @@ class GroupedQueryAttention(nn.Module):
     def __init__(self, d_in: int, d_out: int, num_heads: int, num_kv_groups: int):
         super().__init__()
         assert d_out % num_heads == 0, "d_out must be divisible by num_heads"
-        assert (
-            num_heads % num_kv_groups == 0
-        ), "num_heads must be divisible by num_kv_groups"
+        assert num_heads % num_kv_groups == 0, (
+            "num_heads must be divisible by num_kv_groups"
+        )
 
         self.d_out = d_out
         self.num_heads = num_heads
@@ -84,7 +86,36 @@ class GroupedQueryAttention(nn.Module):
         self.W_query = nn.Linear(d_in, d_out, bias=False)
         self.out_proj = nn.Linear(d_out, d_out, bias=False)
 
-    def forward(self, x: Tensor, mask: Tensor, cos: Tensor, sin: Tensor) -> Tensor:
+    def forward(
+        self,
+        x: Tensor,
+        mask: Tensor,
+        cos: Tensor,
+        sin: Tensor,
+        start_pos: int = 0,
+        cache: tuple[Tensor, Tensor] | None = None,
+    ) -> tuple[Tensor, tuple[Tensor, Tensor]]:
+        """Performs the forward pass of grouped query attention.
+
+        This implements multi-head attention with grouped query heads, where multiple
+        query heads share the same key-value pairs. This reduces memory usage and
+        computation compared to standard multi-head attention while maintaining
+        performance.
+
+        Args:
+            x (Tensor): Input tensor of shape (batch_size, num_tokens, d_in)
+            mask (Tensor): Attention mask of shape (batch_size, 1, num_tokens, num_tokens)
+                Used to prevent attention to future tokens in causal masking
+            cos (Tensor): Cosine values for RoPE positional encoding
+            sin (Tensor): Sine values for RoPE positional encoding
+            start_pos (int, optional): Starting position for RoPE positional encoding. Defaults to 0.
+            cache (tuple[Tensor, Tensor], optional): Cached key-value tensors from previous iterations. Defaults to None.
+
+        Returns:
+            tuple[Tensor, tuple[Tensor, Tensor]]: A tuple containing:
+                - context_vec (Tensor): Output tensor of shape (batch_size, num_tokens, d_out)
+                - next_cache (tuple[Tensor, Tensor]): Updated cache tensors for next iteration (keys_cache, values_cache).
+        """
         b, num_tokens, _ = x.shape
 
         queries = self.W_query(x)  # Shape: (b, num_tokens, d_out)
@@ -104,8 +135,14 @@ class GroupedQueryAttention(nn.Module):
         queries = queries.transpose(1, 2)  # Shape: (b, num_heads, num_tokens, head_dim)
 
         # Apply RoPE
-        keys = apply_rope(keys, cos, sin)
-        queries = apply_rope(queries, cos, sin)
+        keys = apply_rope(keys, cos, sin, offset=start_pos)
+        queries = apply_rope(queries, cos, sin, offset=start_pos)
+
+        if cache is not None:
+            prev_k, prev_v = cache
+            keys = torch.cat([prev_k, keys], dim=2)
+            values = torch.cat([prev_v, values], dim=2)
+        next_cache: tuple[Tensor, Tensor] = (keys, values)
 
         # Expand keys and values to match the number of heads
         # Shape: (b, num_heads, num_tokens, head_dim)
@@ -139,7 +176,7 @@ class GroupedQueryAttention(nn.Module):
         context_vec = context_vec.reshape(b, num_tokens, self.d_out)
         context_vec = self.out_proj(context_vec)  # optional projection
 
-        return context_vec
+        return context_vec, next_cache
 
 
 class TransformerBlock(nn.Module):
@@ -162,11 +199,21 @@ class TransformerBlock(nn.Module):
         self.norm1 = nn.RMSNorm(emb_dim, eps=1e-5, dtype=dtype)
         self.norm2 = nn.RMSNorm(emb_dim, eps=1e-5, dtype=dtype)
 
-    def forward(self, x: Tensor, mask: Tensor, cos: Tensor, sin: Tensor) -> Tensor:
+    def forward(
+        self,
+        x: Tensor,
+        mask: Tensor,
+        cos: Tensor,
+        sin: Tensor,
+        start_pos: int,
+        cache: tuple[Tensor | Tensor],
+    ) -> tuple[Tensor, tuple[Tensor, Tensor]]:
         # Shortcut connection for attention block
         shortcut = x
         x = self.norm1(x)
-        x = self.att(x, mask, cos, sin)  # Shape [batch_size, num_tokens, emb_size]
+        x, next_cache = self.att(
+            x, mask, cos, sin, start_pos=start_pos, cache=cache
+        )  # Shape [batch_size, num_tokens, emb_size]
         x = x + shortcut  # Add the original input back
 
         # Shortcut connection for feed-forward block
@@ -175,7 +222,7 @@ class TransformerBlock(nn.Module):
         x = self.ff(x)
         x = x + shortcut  # Add the original input back
 
-        return x
+        return x, next_cache
 
 
 @dataclass_json
@@ -226,11 +273,18 @@ class Llama3(nn.Module):
         self.settings = settings
         self.context_length = settings.context_length
 
+        # To use KV cache
+        self.current_pos = 0  # Track current position in KV cache
+        self.cache: list[None | tuple[Tensor, Tensor]] = [None] * settings.n_layers
+
     def embed_tokens(self, tok_ids: Tensor) -> Tensor:
         return self.tok_emb(tok_ids)
 
     def forward_vectors(
-        self, embeddings: Tensor, first_embedding: None | Tensor = None
+        self,
+        embeddings: Tensor,
+        first_embedding: None | Tensor = None,
+        use_cache: bool = False,
     ) -> Tensor:
         """
         Process a batch of embeddings through the model.
@@ -239,25 +293,76 @@ class Llama3(nn.Module):
         embeddings at each stage.
         """
 
-        x = embeddings
-        num_tokens = x.shape[1]
-        mask = torch.triu(
-            torch.ones(num_tokens, num_tokens, device=x.device, dtype=torch.bool),
-            diagonal=1,
-        )
-        if first_embedding is not None:
-            for block in self.trf_blocks:
+        _, num_tokens, _ = embeddings.shape
+
+        if use_cache:
+            pos_start = self.current_pos
+            pos_end = pos_start + num_tokens
+            mask = torch.triu(
+                torch.ones(
+                    pos_end, pos_end, device=embeddings.device, dtype=torch.bool
+                ),
+                diagonal=1,
+            )[pos_start:pos_end, :pos_end]
+            self.current_pos = pos_end
+        else:
+            pos_start = 0
+            mask = torch.triu(
+                torch.ones(
+                    num_tokens, num_tokens, device=embeddings.device, dtype=torch.bool
+                ),
+                diagonal=1,
+            )
+
+        for i, block in enumerate(self.trf_blocks):
+            if first_embedding is not None:
                 # replace the first token of x by the corresponding first_embedding
                 embeddings = torch.cat(
-                    [first_embedding, x[:, first_embedding.shape[1] :, :]], dim=1
+                    [first_embedding, embeddings[:, first_embedding.shape[1] :, :]],
+                    dim=1,
                 )
-                x = block(x, mask, self.cos, self.sin)
-        else:
-            for block in self.trf_blocks:
-                x = block(embeddings, mask, self.cos, self.sin)
+            blk_cache: None | tuple[Tensor, Tensor] = self.cache[i]
+            x, new_blk_cache = block(
+                embeddings,
+                mask,
+                self.cos,
+                self.sin,
+                start_pos=pos_start,
+                cache=blk_cache,
+            )
+            if use_cache:
+                self.cache[i] = new_blk_cache
+
         x = self.final_norm(x)
         logits = self.out_head(x)
         return logits
 
-    def forward(self, tok_ids: Tensor) -> Tensor:
-        return self.forward_vectors(self.embed_tokens(tok_ids))
+    def forward(self, tok_ids: Tensor, use_cache: bool = False) -> Tensor:
+        """Performs the forward pass of the LLama3 model.
+
+        Args:
+            tok_ids (Tensor): Tensor of token IDs input with shape (batch_size, sequence_length).
+            use_cache (bool, optional): If True, uses attention caching for computational
+                optimization. Defaults to False.
+
+        Returns:
+            Tensor: Model output tensor with shape (batch_size, sequence_length, hidden_size) or
+                (batch_size, context_length, hidden_size) depending on model dimensions.
+
+        Note:
+            The KV cache implementation is largely inspired by S. Rashka. See
+            https://github.com/rasbt/LLMs-from-scratch/blob/main/pkg/llms_from_scratch/llama3.py for more details.
+
+        """
+        return self.forward_vectors(self.embed_tokens(tok_ids), use_cache=use_cache)
+
+    def reset_kv_cache(self) -> None:
+        """Clear the Key-Value cache used for incremental decoding.
+
+        This method must be called between processing independent sequences to
+        prevent cross-sequence contamination in autoregressive generation. After
+        calling this method, the cache will be reset to None and ready for a new
+        sequence.
+        """
+        self.current_pos = 0
+        self.cache = [None] * self.settings.n_layers

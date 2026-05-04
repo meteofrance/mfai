@@ -351,7 +351,7 @@ class Llama3(nn.Module):
 
         Note:
             The KV cache implementation is largely inspired by S. Rashka. See
-            https://github.com/rasbt/LLMs-from-scratch/tree/main/ch04/03_kv-cache for more details.
+            https://github.com/rasbt/LLMs-from-scratch/blob/main/pkg/llms_from_scratch/llama3.py for more details.
 
         """
         return self.forward_vectors(self.embed_tokens(tok_ids), use_cache=use_cache)

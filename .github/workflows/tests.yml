@@ -48,10 +48,13 @@ jobs:
       run: apt-get update && apt-get install -y git
 
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        path: .
 
     - name: Gather Python changed files
       id: changed-py-files
-      uses: tj-actions/changed-files@ed68ef82c095e0d48ec87eccea555d944a631a4c # v46
+      uses: tj-actions/changed-files@v47
       with:
         files: |
           *.py

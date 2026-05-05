@@ -48,9 +48,6 @@ jobs:
       run: apt-get update && apt-get install -y git
 
     - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        path: .
 
     - name: Gather Python changed files
       if: github.event_name == 'pull_request'

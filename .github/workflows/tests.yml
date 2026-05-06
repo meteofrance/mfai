@@ -50,25 +50,26 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Gather Python changed files
+      if: github.event_name == 'pull_request'
       id: changed-py-files
-      uses: tj-actions/changed-files@ed68ef82c095e0d48ec87eccea555d944a631a4c # v46
+      uses: tj-actions/changed-files@v47
       with:
         files: |
           *.py
           **/*.py
 
     - name: Install dependencies
-      if: steps.changed-py-files.outputs.any_changed == 'true'
+      if: github.event_name != 'pull_request' || steps.changed-py-files.outputs.any_changed == 'true' 
       run: |
         pip install --upgrade pip
         pip install .[llm,dev]
 
     - name: Type hinting with mypy on changed files
-      if: steps.changed-py-files.outputs.any_changed == 'true'
+      if: github.event_name != 'pull_request' || steps.changed-py-files.outputs.any_changed == 'true'
       run: |
         mypy mfai/ tests/
 
     - name: Test with pytest
-      if: steps.changed-py-files.outputs.any_changed == 'true'
+      if: github.event_name != 'pull_request' || steps.changed-py-files.outputs.any_changed == 'true'
       run: |
         pytest --cov=mfai --cov-fail-under=85 tests/

@@ -19,7 +19,7 @@ def test_grid_cell_loss() -> None:
     """Test the grid cell loss function."""
     generated_images = torch.rand(2, 3, 1, 10, 10)
     targets = torch.rand(2, 3, 1, 10, 10)
-    loss_fn = GridCellLoss()
+    loss_fn = GridCellLoss(precip_weight_cap=10)
     loss = loss_fn(generated_images, targets)
     assert isinstance(loss, torch.Tensor)
     assert loss.shape == torch.Size([])

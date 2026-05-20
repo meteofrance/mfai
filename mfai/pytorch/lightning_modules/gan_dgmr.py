@@ -250,9 +250,9 @@ class DGMRLightningModule(LightningModule):
 
         # Two discriminator steps per generator step
         for _ in range(2):
-            predictions = self.generator(images)
+            prediction: Tensor = self.generator(images)
             discriminator_loss = self.discriminator_step(
-                predictions, images, real_sequence
+                prediction, images, real_sequence
             )
             # Backward
             d_opt.zero_grad()

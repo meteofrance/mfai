@@ -208,8 +208,9 @@ class DGMRLightningModule(LightningModule):
         future_images: Tensor,
         real_sequence: Tensor,
     ) -> tuple[Tensor, Tensor]:
-        gen_mean = torch.stack(predictions, dim=0).mean(dim=0)
-        grid_cell_reg = self.grid_regularizer(gen_mean, future_images)
+        grid_cell_reg = self.grid_regularizer(
+            torch.stack(predictions, dim=0), future_images
+        )
 
         # Concat along time dimension
         generated_sequences = [torch.cat([images, x], dim=1) for x in predictions]
@@ -249,16 +250,18 @@ class DGMRLightningModule(LightningModule):
 
         # Two discriminator steps per generator step
         for _ in range(2):
-            predictions = self.generator(images)
+            prediction: Tensor = self.generator(images)
             discriminator_loss = self.discriminator_step(
-                predictions, images, real_sequence
+                prediction, images, real_sequence
             )
             # Backward
             d_opt.zero_grad()
             self.manual_backward(discriminator_loss)
             d_opt.step()
 
-        predictions = [self.generator(images) for _ in range(self.generation_steps)]
+        predictions: list[Tensor] = [
+            self.generator(images) for _ in range(self.generation_steps)
+        ]
         generator_loss, grid_cell_reg = self.generator_step(
             predictions, images, future_images, real_sequence
         )

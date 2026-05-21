@@ -40,7 +40,7 @@ class GridCellLoss(nn.Module):
         Note:
             Instead of apply the formula of the weights describe in the original article (:math:`w(y) = max(y+1, precip\_weight\_cap)`),
             we implement a formula closer to the pseudocode released by Google Deepmind. So our formula is : :math:`w(y) = clip(y, 1, precip\_weight\_cap)`,
-            which mean than weights are between 1 and `precip_weight_cap`.
+            which mean that weights are between 1 and `precip_weight_cap`.
 
         Args:
             generated_images: generated images from the generator. Tensor of shape (N B T C H W), where N is the number of generated images.

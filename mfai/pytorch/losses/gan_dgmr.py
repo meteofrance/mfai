@@ -53,7 +53,7 @@ class GridCellLoss(nn.Module):
         assert len(generated_images.shape) == 6
         gen_mean: Tensor = generated_images.mean(dim=0)  # (B T C H W)
         weights = torch.clip(targets, 1, self.precip_weight_cap)  # (B T C H W)
-        loss = ((gen_mean - targets) * weights).norm(p=1)
+        loss = torch.mean(torch.abs(gen_mean - targets) * weights)
         return loss
 
 

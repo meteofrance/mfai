@@ -1,0 +1,21 @@
+llms
+====
+
+.. automodule:: mfai.pytorch.models.llms
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+
+.. autosummary::
+   :toctree:
+   :recursive:
+
+   
+   ~cross_attention
+   ~fuyu
+   ~gpt2
+   ~llama2
+   ~llama3
+

@@ -1,0 +1,10 @@
+gan\_dgmr
+=========
+
+.. automodule:: mfai.pytorch.losses.gan_dgmr
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

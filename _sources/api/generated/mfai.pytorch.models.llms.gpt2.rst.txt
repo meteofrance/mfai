@@ -1,0 +1,10 @@
+gpt2
+====
+
+.. automodule:: mfai.pytorch.models.llms.gpt2
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

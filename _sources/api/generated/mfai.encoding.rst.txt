@@ -1,0 +1,10 @@
+encoding
+========
+
+.. automodule:: mfai.encoding
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

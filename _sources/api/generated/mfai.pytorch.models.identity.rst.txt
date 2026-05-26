@@ -1,0 +1,10 @@
+identity
+========
+
+.. automodule:: mfai.pytorch.models.identity
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

@@ -1,0 +1,10 @@
+discriminators
+==============
+
+.. automodule:: mfai.pytorch.models.gan_dgmr.discriminators
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

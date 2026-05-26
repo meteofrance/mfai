@@ -1,0 +1,26 @@
+pytorch
+=======
+
+.. automodule:: mfai.pytorch
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+
+.. autosummary::
+   :toctree:
+   :recursive:
+
+   
+   ~callbacks
+   ~dummy_dataset
+   ~lightning_modules
+   ~losses
+   ~lr_scheduler
+   ~metrics
+   ~models
+   ~namedtensor
+   ~padding
+   ~transforms
+

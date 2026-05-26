@@ -1,0 +1,10 @@
+interaction\_net
+================
+
+.. automodule:: mfai.pytorch.models.nlam.interaction_net
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

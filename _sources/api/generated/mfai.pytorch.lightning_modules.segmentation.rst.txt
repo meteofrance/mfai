@@ -1,0 +1,10 @@
+segmentation
+============
+
+.. automodule:: mfai.pytorch.lightning_modules.segmentation
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

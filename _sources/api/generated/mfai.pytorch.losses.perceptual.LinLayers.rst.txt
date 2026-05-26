@@ -1,0 +1,10 @@
+﻿LinLayers
+=========
+
+.. currentmodule:: mfai.pytorch.losses.perceptual
+
+.. autoclass:: LinLayers
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

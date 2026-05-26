@@ -1,0 +1,10 @@
+blocks
+======
+
+.. automodule:: mfai.pytorch.models.gan_dgmr.blocks
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

@@ -1,0 +1,10 @@
+﻿GridCellLoss
+============
+
+.. currentmodule:: mfai.pytorch.losses.gan_dgmr
+
+.. autoclass:: GridCellLoss
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

@@ -1,0 +1,10 @@
+fuyu
+====
+
+.. automodule:: mfai.pytorch.models.llms.fuyu
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

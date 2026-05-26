@@ -1,0 +1,10 @@
+﻿DimensionSubSampler
+===================
+
+.. currentmodule:: mfai.pytorch.transforms
+
+.. autoclass:: DimensionSubSampler
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

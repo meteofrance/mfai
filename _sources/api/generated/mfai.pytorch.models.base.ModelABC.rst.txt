@@ -1,0 +1,10 @@
+﻿ModelABC
+========
+
+.. currentmodule:: mfai.pytorch.models.base
+
+.. autoclass:: ModelABC
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

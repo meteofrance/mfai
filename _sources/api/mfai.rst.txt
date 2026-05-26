@@ -1,0 +1,30 @@
+mfai
+====
+
+.. automodule:: mfai
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+.. toctree::
+  :maxdepth: 1
+
+
+  mfai.pytorch
+
+  mfai.tokenizers
+
+
+
+
+.. toctree::
+  :maxdepth: 1
+
+
+  mfai.encoding
+
+  mfai.http
+
+  mfai.tensorflow
+

@@ -1,0 +1,18 @@
+nlam
+====
+
+.. automodule:: mfai.pytorch.models.nlam
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+
+.. autosummary::
+   :toctree:
+   :recursive:
+
+   
+   ~create_mesh
+   ~interaction_net
+

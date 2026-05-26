@@ -1,0 +1,10 @@
+base
+====
+
+.. automodule:: mfai.pytorch.models.base
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

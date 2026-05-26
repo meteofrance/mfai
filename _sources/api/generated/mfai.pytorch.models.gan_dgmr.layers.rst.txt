@@ -1,0 +1,19 @@
+layers
+======
+
+.. automodule:: mfai.pytorch.models.gan_dgmr.layers
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+
+.. autosummary::
+   :toctree:
+   :recursive:
+
+   
+   ~attention
+   ~conv_gru
+   ~coord_conv
+

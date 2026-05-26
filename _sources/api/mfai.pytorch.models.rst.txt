@@ -1,0 +1,56 @@
+mfai.pytorch.models
+===================
+
+.. automodule:: mfai.pytorch.models
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+.. toctree::
+  :maxdepth: 1
+
+
+  mfai.pytorch.models.gan_dgmr
+
+  mfai.pytorch.models.llms
+
+  mfai.pytorch.models.nlam
+
+
+
+
+.. toctree::
+  :maxdepth: 1
+
+
+  mfai.pytorch.models.archesweather
+
+  mfai.pytorch.models.base
+
+  mfai.pytorch.models.clip
+
+  mfai.pytorch.models.deeplabv3
+
+  mfai.pytorch.models.half_unet
+
+  mfai.pytorch.models.identity
+
+  mfai.pytorch.models.pangu
+
+  mfai.pytorch.models.resnet
+
+  mfai.pytorch.models.segformer
+
+  mfai.pytorch.models.swinunetr
+
+  mfai.pytorch.models.unet
+
+  mfai.pytorch.models.unetrpp
+
+  mfai.pytorch.models.utils
+
+  mfai.pytorch.models.vit
+
+  mfai.pytorch.models.weather_projector
+

@@ -1,0 +1,10 @@
+weather\_projector
+==================
+
+.. automodule:: mfai.pytorch.models.weather_projector
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

@@ -1,0 +1,10 @@
+generators
+==========
+
+.. automodule:: mfai.pytorch.models.gan_dgmr.generators
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

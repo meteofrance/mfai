@@ -1,0 +1,10 @@
+coord\_conv
+===========
+
+.. automodule:: mfai.pytorch.models.gan_dgmr.layers.coord_conv
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

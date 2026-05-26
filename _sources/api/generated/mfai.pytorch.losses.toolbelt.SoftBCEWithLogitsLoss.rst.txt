@@ -1,0 +1,10 @@
+﻿SoftBCEWithLogitsLoss
+=====================
+
+.. currentmodule:: mfai.pytorch.losses.toolbelt
+
+.. autoclass:: SoftBCEWithLogitsLoss
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

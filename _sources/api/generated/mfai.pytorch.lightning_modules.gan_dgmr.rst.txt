@@ -1,0 +1,10 @@
+gan\_dgmr
+=========
+
+.. automodule:: mfai.pytorch.lightning_modules.gan_dgmr
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

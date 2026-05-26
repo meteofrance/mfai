@@ -1,0 +1,10 @@
+﻿FNR
+===
+
+.. currentmodule:: mfai.pytorch.metrics
+
+.. autoclass:: FNR
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

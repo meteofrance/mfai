@@ -8,43 +8,39 @@ https://github.com/huggingface/transformers/blob/main/src/transformers/models/qw
 """
 
 import re
+from typing import Generator
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from tokenizers import Tokenizer
-
-
-# Placeholder types for copied annotations
-class Qwen3_5Config:
-    pass
-
-
-class Qwen3_5DynamicCache:
-    pass
+from torch import Tensor
 
 
 class Qwen3_5RMSNormGated(nn.Module):
-    def __init__(self, hidden_size, eps=1e-6, **kwargs):
+    def __init__(self, hidden_size: int, eps: float = 1e-6) -> None:
         super().__init__()
         self.weight = nn.Parameter(torch.ones(hidden_size))
         self.variance_epsilon = eps
 
-    def forward(self, hidden_states, gate=None):
+    def forward(self, hidden_states: Tensor, gate: Tensor | None = None) -> Tensor:
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(torch.float32)
         variance = hidden_states.pow(2).mean(-1, keepdim=True)
         # Norm before gate
         hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
         hidden_states = self.weight * hidden_states.to(input_dtype)
-        hidden_states = hidden_states * F.silu(gate.to(torch.float32))
-
+        if gate is not None:
+            hidden_states = hidden_states * F.silu(gate.to(torch.float32))
         return hidden_states.to(input_dtype)
 
 
-def apply_mask_to_padding_states(hidden_states, attention_mask):
+def apply_mask_to_padding_states(
+    hidden_states: Tensor, attention_mask: Tensor
+) -> Tensor:
     """
-    Tunes out the hidden states for padding tokens, see https://github.com/state-spaces/mamba/issues/66
+    Tunes out the hidden states for padding tokens,
+    see https://github.com/state-spaces/mamba/issues/66
     """
     # NOTE: attention mask is a 2D boolean tensor
     if (
@@ -59,12 +55,11 @@ def apply_mask_to_padding_states(hidden_states, attention_mask):
 
 
 def torch_causal_conv1d_update(
-    hidden_states,
-    conv_state,
-    weight,
-    bias=None,
-    activation=None,
-):
+    hidden_states: Tensor,
+    conv_state: Tensor,
+    weight: Tensor,
+    bias: Tensor | None = None,
+) -> Tensor:
     _, hidden_size, seq_len = hidden_states.shape
     state_len = conv_state.shape[-1]
 
@@ -78,30 +73,30 @@ def torch_causal_conv1d_update(
     return out
 
 
-def l2norm(x, dim=-1, eps=1e-6):
+def l2norm(x: Tensor, dim: int = -1, eps: float = 1e-6) -> Tensor:
     """This function is intended to align with the l2norm implementation in the FLA library."""
     inv_norm = torch.rsqrt((x * x).sum(dim=dim, keepdim=True) + eps)
     return x * inv_norm
 
 
 def torch_chunk_gated_delta_rule(
-    query,
-    key,
-    value,
-    g,
-    beta,
-    chunk_size=64,
-    initial_state=None,
-    output_final_state=False,
-    use_qk_l2norm_in_kernel=False,
-):
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    gate: Tensor,
+    beta: Tensor,
+    chunk_size: int = 64,
+    initial_state: Tensor | None = None,
+    output_final_state: bool = False,
+    use_qk_l2norm_in_kernel: bool = False,
+) -> tuple[Tensor, Tensor | None]:
     initial_dtype = query.dtype
     if use_qk_l2norm_in_kernel:
         query = l2norm(query, dim=-1, eps=1e-6)
         key = l2norm(key, dim=-1, eps=1e-6)
-    query, key, value, beta, g = [
+    query, key, value, beta, gate = [
         x.transpose(1, 2).contiguous().to(torch.float32)
-        for x in (query, key, value, beta, g)
+        for x in (query, key, value, beta, gate)
     ]
 
     batch_size, num_heads, sequence_length, k_head_dim = key.shape
@@ -111,7 +106,7 @@ def torch_chunk_gated_delta_rule(
     key = F.pad(key, (0, 0, 0, pad_size))
     value = F.pad(value, (0, 0, 0, pad_size))
     beta = F.pad(beta, (0, pad_size))
-    g = F.pad(g, (0, pad_size))
+    gate = F.pad(gate, (0, pad_size))
     total_sequence_length = sequence_length + pad_size
     scale = 1 / (query.shape[-1] ** 0.5)
     query = query * scale
@@ -123,15 +118,15 @@ def torch_chunk_gated_delta_rule(
         x.reshape(x.shape[0], x.shape[1], -1, chunk_size, x.shape[-1])
         for x in (query, key, value, k_beta, v_beta)
     ]
-    g = g.reshape(g.shape[0], g.shape[1], -1, chunk_size)
+    gate = gate.reshape(gate.shape[0], gate.shape[1], -1, chunk_size)
     mask = torch.triu(
         torch.ones(chunk_size, chunk_size, dtype=torch.bool, device=query.device),
         diagonal=0,
     )
 
     # chunk decay
-    g = g.cumsum(dim=-1)
-    decay_mask = ((g.unsqueeze(-1) - g.unsqueeze(-2)).tril().exp().float()).tril()
+    gate = gate.cumsum(dim=-1)
+    decay_mask = ((gate.unsqueeze(-1) - gate.unsqueeze(-2)).tril().exp().float()).tril()
     attn = -((k_beta @ key.transpose(-1, -2)) * decay_mask).masked_fill(mask, 0)
     for i in range(1, chunk_size):
         row = attn[..., i, :i].clone()
@@ -139,7 +134,7 @@ def torch_chunk_gated_delta_rule(
         attn[..., i, :i] = row + (row.unsqueeze(-1) * sub).sum(-2)
     attn = attn + torch.eye(chunk_size, dtype=attn.dtype, device=attn.device)
     value = attn @ v_beta
-    k_cumdecay = attn @ (k_beta * g.exp().unsqueeze(-1))
+    k_cumdecay = attn @ (k_beta * gate.exp().unsqueeze(-1))
     last_recurrent_state = (
         torch.zeros(batch_size, num_heads, k_head_dim, v_head_dim).to(value)
         if initial_state is None
@@ -157,13 +152,13 @@ def torch_chunk_gated_delta_rule(
         attn = (q_i @ k_i.transpose(-1, -2) * decay_mask[:, :, i]).masked_fill_(mask, 0)
         v_prime = (k_cumdecay[:, :, i]) @ last_recurrent_state
         v_new = v_i - v_prime
-        attn_inter = (q_i * g[:, :, i, :, None].exp()) @ last_recurrent_state
+        attn_inter = (q_i * gate[:, :, i, :, None].exp()) @ last_recurrent_state
         core_attn_out[:, :, i] = attn_inter + attn @ v_new
         last_recurrent_state = (
-            last_recurrent_state * g[:, :, i, -1, None, None].exp()
-            + (k_i * (g[:, :, i, -1, None] - g[:, :, i]).exp()[..., None]).transpose(
-                -1, -2
-            )
+            last_recurrent_state * gate[:, :, i, -1, None, None].exp()
+            + (
+                k_i * (gate[:, :, i, -1, None] - gate[:, :, i]).exp()[..., None]
+            ).transpose(-1, -2)
             @ v_new
         )
 
@@ -178,22 +173,22 @@ def torch_chunk_gated_delta_rule(
 
 
 def torch_recurrent_gated_delta_rule(
-    query,
-    key,
-    value,
-    g,
-    beta,
-    initial_state,
-    output_final_state,
-    use_qk_l2norm_in_kernel=False,
-):
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    gate: Tensor,
+    beta: Tensor,
+    initial_state: Tensor,
+    output_final_state: Tensor,
+    use_qk_l2norm_in_kernel: bool = False,
+) -> tuple[Tensor, Tensor | None]:
     initial_dtype = query.dtype
     if use_qk_l2norm_in_kernel:
         query = l2norm(query, dim=-1, eps=1e-6)
         key = l2norm(key, dim=-1, eps=1e-6)
-    query, key, value, beta, g = [
+    query, key, value, beta, gate = [
         x.transpose(1, 2).contiguous().to(torch.float32)
-        for x in (query, key, value, beta, g)
+        for x in (query, key, value, beta, gate)
     ]
 
     batch_size, num_heads, sequence_length, k_head_dim = key.shape
@@ -214,7 +209,7 @@ def torch_recurrent_gated_delta_rule(
         q_t = query[:, :, i]
         k_t = key[:, :, i]
         v_t = value[:, :, i]
-        g_t = g[:, :, i].exp().unsqueeze(-1).unsqueeze(-1)
+        g_t = gate[:, :, i].exp().unsqueeze(-1).unsqueeze(-1)
         beta_t = beta[:, :, i].unsqueeze(-1)
 
         last_recurrent_state = last_recurrent_state * g_t
@@ -234,7 +229,7 @@ def torch_recurrent_gated_delta_rule(
 # Minimal change: enforce config dtype at the end to avoid bf16/fp32 matmul mismatch
 # in a mixed notebook implementation
 class Qwen3_5GatedDeltaNet(nn.Module):
-    def __init__(self, config, layer_idx):
+    def __init__(self, config, layer_idx: int):
         super().__init__()
         self.hidden_size = config.hidden_size
         self.num_v_heads = config.linear_num_value_heads
@@ -295,8 +290,9 @@ class Qwen3_5GatedDeltaNet(nn.Module):
 
         if not is_fast_path_available:
             print(
-                "The fast path is not available because one of the required library is not installed. Falling back to "
-                "torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and"
+                "The fast path is not available because one of the required library "
+                "is not installed. Falling back to torch implementation. "
+                "To install follow https://github.com/fla-org/flash-linear-attention#installation and"
                 " https://github.com/Dao-AILab/causal-conv1d"
             )
 
@@ -313,11 +309,11 @@ class Qwen3_5GatedDeltaNet(nn.Module):
 
     def forward(
         self,
-        hidden_states,
+        hidden_states: Tensor,
         cache_params=None,
         cache_position=None,
-        attention_mask=None,
-    ):
+        attention_mask: Tensor | None = None,
+    ) -> Tensor:
         hidden_states = apply_mask_to_padding_states(hidden_states, attention_mask)
 
         # Set up dimensions for reshapes later
@@ -398,7 +394,7 @@ class Qwen3_5GatedDeltaNet(nn.Module):
                 query,
                 key,
                 value,
-                g=g,
+                gate=g,
                 beta=beta,
                 initial_state=None,
                 output_final_state=cache_params is not None,
@@ -410,7 +406,7 @@ class Qwen3_5GatedDeltaNet(nn.Module):
                 query,
                 key,
                 value,
-                g=g,
+                gate=g,
                 beta=beta,
                 initial_state=recurrent_state,
                 output_final_state=cache_params is not None,
@@ -432,7 +428,7 @@ class Qwen3_5GatedDeltaNet(nn.Module):
 
 
 class FeedForward(nn.Module):
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__()
         self.fc1 = nn.Linear(
             cfg["emb_dim"], cfg["hidden_dim"], dtype=cfg["dtype"], bias=False
@@ -444,7 +440,7 @@ class FeedForward(nn.Module):
             cfg["hidden_dim"], cfg["emb_dim"], dtype=cfg["dtype"], bias=False
         )
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         x_fc1 = self.fc1(x)
         x_fc2 = self.fc2(x)
         x = nn.functional.silu(x_fc1) * x_fc2
@@ -452,28 +448,28 @@ class FeedForward(nn.Module):
 
 
 class RMSNorm(nn.Module):
-    def __init__(self, emb_dim, eps=1e-6):
+    def __init__(self, emb_dim: int, eps: float = 1e-6) -> None:
         super().__init__()
         self.eps = eps
         # Qwen3.5 uses (1 + weight) scaling with zero init
         self.weight = nn.Parameter(torch.zeros(emb_dim))
 
-    def _norm(self, x):
+    def _norm(self, x: Tensor) -> Tensor:
         return x * torch.rsqrt(x.pow(2).mean(dim=-1, keepdim=True) + self.eps)
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         x_norm = self._norm(x.float())
         x_norm = x_norm * (1.0 + self.weight.float())
         return x_norm.to(dtype=x.dtype)
 
 
 def compute_rope_params(
-    head_dim,
-    theta_base=10_000,
-    context_length=4096,
-    partial_rotary_factor=1.0,
-    dtype=torch.float32,
-):
+    head_dim: int,
+    theta_base: int = 10_000,
+    context_length: int = 4096,
+    partial_rotary_factor: float = 1.0,
+    dtype: torch.dtype = torch.float32,
+) -> tuple[Tensor, Tensor]:
     assert head_dim % 2 == 0, "Embedding dimension must be even"
 
     rotary_dim = int(head_dim * partial_rotary_factor)
@@ -497,7 +493,7 @@ def compute_rope_params(
     return cos, sin
 
 
-def apply_rope(x, cos, sin):
+def apply_rope(x: Tensor, cos: Tensor, sin: Tensor) -> Tensor:
     _, _, seq_len, head_dim = x.shape
     assert head_dim % 2 == 0, "Head dimension must be even"
 
@@ -523,7 +519,13 @@ def apply_rope(x, cos, sin):
 
 class GroupedQueryAttention(nn.Module):
     def __init__(
-        self, d_in, num_heads, num_kv_groups, head_dim=None, qk_norm=False, dtype=None
+        self,
+        d_in: int,
+        num_heads: int,
+        num_kv_groups: int,
+        head_dim: int | None = None,
+        qk_norm: bool = False,
+        dtype: torch.dtype | None = None,
     ):
         super().__init__()
         assert (
@@ -552,13 +554,15 @@ class GroupedQueryAttention(nn.Module):
 
         self.out_proj = nn.Linear(self.d_out, d_in, bias=False, dtype=dtype)
 
+        self.q_norm: RMSNorm | None
+        self.k_norm: RMSNorm | None
         if qk_norm:
             self.q_norm = RMSNorm(head_dim, eps=1e-6)
             self.k_norm = RMSNorm(head_dim, eps=1e-6)
         else:
             self.q_norm = self.k_norm = None
 
-    def forward(self, x, mask, cos, sin):
+    def forward(self, x: Tensor, mask: Tensor, cos: Tensor, sin: Tensor) -> Tensor:
         b, num_tokens, _ = x.shape
 
         q_and_gate = self.W_query(x)
@@ -620,7 +624,7 @@ class _Qwen3_5ConfigAdapter:
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, cfg, layer_type, layer_idx):
+    def __init__(self, cfg, layer_type: str, layer_idx: int) -> None:
         super().__init__()
         self.layer_type = layer_type
 
@@ -644,7 +648,7 @@ class TransformerBlock(nn.Module):
         self.norm1 = RMSNorm(cfg["emb_dim"], eps=cfg.get("rms_norm_eps", 1e-6))
         self.norm2 = RMSNorm(cfg["emb_dim"], eps=cfg.get("rms_norm_eps", 1e-6))
 
-    def forward(self, x, mask, cos, sin):
+    def forward(self, x: Tensor, mask: Tensor, cos: Tensor, sin: Tensor) -> Tensor:
         shortcut = x
         x = self.norm1(x)
 
@@ -664,7 +668,7 @@ class TransformerBlock(nn.Module):
 
 
 class Qwen3_5Model(nn.Module):
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__()
 
         self.tok_emb = nn.Embedding(
@@ -703,7 +707,7 @@ class Qwen3_5Model(nn.Module):
         self.register_buffer("sin", sin, persistent=False)
         self.cfg = cfg
 
-    def forward(self, in_idx):
+    def forward(self, in_idx: Tensor) -> Tensor:
         x = self.tok_emb(in_idx)
 
         num_tokens = x.shape[1]
@@ -778,7 +782,9 @@ FusedRMSNormGated = None
 ACT2FN = {"silu": F.silu}
 
 
-def calc_model_memory_size(model, input_dtype=torch.float32):
+def calc_model_memory_size(
+    model: Qwen3_5Model, input_dtype: torch.dtype = torch.float32
+) -> float:
     total_params = 0
     total_grads = 0
     for param in model.parameters():
@@ -803,8 +809,8 @@ def calc_model_memory_size(model, input_dtype=torch.float32):
     return total_memory_gb
 
 
-def load_weights_into_qwen3_5(model, param_config, params):
-    def assign(left, right, tensor_name="unknown"):
+def load_weights_into_qwen3_5(model: Qwen3_5Model, param_config, params) -> None:
+    def assign(left: Tensor, right: Tensor, tensor_name: str = "unknown") -> Tensor:
         if left.shape != right.shape:
             raise ValueError(
                 f"Shape mismatch in tensor '{tensor_name}'. Left: {left.shape}, Right: {right.shape}"
@@ -825,7 +831,7 @@ def load_weights_into_qwen3_5(model, param_config, params):
     else:
         raise KeyError("Could not find embed token weights in checkpoint.")
 
-    def pkey(suffix):
+    def pkey(suffix: str) -> str:
         return f"{model_prefix}.{suffix}"
 
     model.tok_emb.weight = assign(
@@ -838,11 +844,11 @@ def load_weights_into_qwen3_5(model, param_config, params):
     layer_types = param_config.get("layer_types", ["full_attention"] * n_layers)
 
     for id_layer in range(n_layers):
-        block = model.trf_blocks[id_layer]
+        block: TransformerBlock = model.trf_blocks[id_layer]  # type: ignore[reportAssignementType]
         layer_type = layer_types[id_layer]
 
         if layer_type == "full_attention":
-            att = block.token_mixer
+            att: GroupedQueryAttention = block.token_mixer  # type: ignore[reportAssignementType]
             att.W_query.weight = assign(
                 att.W_query.weight,
                 params[pkey(f"layers.{id_layer}.self_attn.q_proj.weight")],
@@ -877,7 +883,7 @@ def load_weights_into_qwen3_5(model, param_config, params):
                 )
 
         elif layer_type == "linear_attention":
-            lat = block.token_mixer
+            lat: Qwen3_5GatedDeltaNet = block.token_mixer  # type: ignore[reportAssignementType]
             lat.dt_bias = assign(
                 lat.dt_bias,
                 params[pkey(f"layers.{id_layer}.linear_attn.dt_bias")],
@@ -998,12 +1004,12 @@ class Qwen3_5Tokenizer:
 
     def __init__(
         self,
-        tokenizer_file_path="tokenizer.json",
-        repo_id=None,
-        apply_chat_template=True,
-        add_generation_prompt=False,
-        add_thinking=False,
-    ):
+        tokenizer_file_path: str = "tokenizer.json",
+        repo_id: str | None = None,
+        apply_chat_template: bool = True,
+        add_generation_prompt: bool = False,
+        add_thinking: bool = False,
+    ) -> None:
         self.apply_chat_template = apply_chat_template
         self.add_generation_prompt = add_generation_prompt
         self.add_thinking = add_thinking
@@ -1026,7 +1032,7 @@ class Qwen3_5Tokenizer:
         if eos_token in self._special_to_id:
             self.eos_token_id = self._special_to_id[eos_token]
 
-    def encode(self, text, chat_wrapped=None):
+    def encode(self, text: str, chat_wrapped: bool | None = None) -> list[int]:
         if chat_wrapped is None:
             chat_wrapped = self.apply_chat_template
 
@@ -1045,10 +1051,10 @@ class Qwen3_5Tokenizer:
                 ids.extend(self._tok.encode(part).ids)
         return ids
 
-    def decode(self, ids):
+    def decode(self, ids: list[int]) -> str:
         return self._tok.decode(ids, skip_special_tokens=False)
 
-    def _wrap_chat(self, user_msg):
+    def _wrap_chat(self, user_msg: str) -> str:
         # Mirrors Qwen3.5 chat_template behavior:
         # add_generation_prompt + thinking => "<think>\n"
         # add_generation_prompt + no thinking => empty think scaffold
@@ -1062,7 +1068,12 @@ class Qwen3_5Tokenizer:
         return s
 
 
-def generate_text_basic_stream(model, token_ids, max_new_tokens, eos_token_id=None):
+def generate_text_basic_stream(
+    model: Qwen3_5Model,
+    token_ids: list[int],
+    max_new_tokens: int,
+    eos_token_id: int | None = None,
+) -> Generator[Tensor]:
     model.eval()
     with torch.no_grad():
         for _ in range(max_new_tokens):
@@ -1141,7 +1152,7 @@ if __name__ == "__main__":
     )
 
     tokenizer = Qwen3_5Tokenizer(
-        tokenizer_file_path=tokenizer_file_path,
+        tokenizer_file_path=str(tokenizer_file_path),
         repo_id=repo_id,
         apply_chat_template=True,
         add_generation_prompt=True,
@@ -1181,13 +1192,18 @@ if __name__ == "__main__":
 
     if torch.cuda.is_available():
 
-        def calc_gpu_gb(x):
+        def calc_gpu_gb(x: int) -> str:
             return f"{x / 1024 / 1024 / 1024:.2f} GB"
 
         print(f"GPU memory used: {calc_gpu_gb(torch.cuda.max_memory_allocated())}")
 
 # TODO :
 # - check that it works on GPU
-# - Type hint
+# - Type hint -> mypy
 # - wtf fast attention
 # - kv cache ?
+# - utiliser les dataclass de config mfai style
+# - replace les assert par des raise
+# - tests unitaires
+# - fonctions torch ou import, vérifier que toutes les fonctions sont utilisées
+# - mettre la fonction load weight dans la classe du model

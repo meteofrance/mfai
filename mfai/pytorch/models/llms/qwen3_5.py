@@ -7,12 +7,11 @@ Source file:
 https://github.com/huggingface/transformers/blob/main/src/transformers/models/qwen3_5/modeling_qwen3_5.py
 """
 
+import re
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-
-import re
 from tokenizers import Tokenizer
 
 
@@ -48,7 +47,11 @@ def apply_mask_to_padding_states(hidden_states, attention_mask):
     Tunes out the hidden states for padding tokens, see https://github.com/state-spaces/mamba/issues/66
     """
     # NOTE: attention mask is a 2D boolean tensor
-    if attention_mask is not None and attention_mask.shape[1] > 1 and attention_mask.shape[0] > 1:
+    if (
+        attention_mask is not None
+        and attention_mask.shape[1] > 1
+        and attention_mask.shape[0] > 1
+    ):
         dtype = hidden_states.dtype
         hidden_states = (hidden_states * attention_mask[:, :, None]).to(dtype)
 
@@ -67,7 +70,9 @@ def torch_causal_conv1d_update(
 
     hidden_states_new = torch.cat([conv_state, hidden_states], dim=-1).to(weight.dtype)
     conv_state.copy_(hidden_states_new[:, :, -state_len:])
-    out = F.conv1d(hidden_states_new, weight.unsqueeze(1), bias, padding=0, groups=hidden_size)
+    out = F.conv1d(
+        hidden_states_new, weight.unsqueeze(1), bias, padding=0, groups=hidden_size
+    )
     out = F.silu(out[:, :, -seq_len:])
     out = out.to(hidden_states.dtype)
     return out
@@ -95,7 +100,8 @@ def torch_chunk_gated_delta_rule(
         query = l2norm(query, dim=-1, eps=1e-6)
         key = l2norm(key, dim=-1, eps=1e-6)
     query, key, value, beta, g = [
-        x.transpose(1, 2).contiguous().to(torch.float32) for x in (query, key, value, beta, g)
+        x.transpose(1, 2).contiguous().to(torch.float32)
+        for x in (query, key, value, beta, g)
     ]
 
     batch_size, num_heads, sequence_length, k_head_dim = key.shape
@@ -114,10 +120,14 @@ def torch_chunk_gated_delta_rule(
     k_beta = key * beta.unsqueeze(-1)
     # reshape to chunks
     query, key, value, k_beta, v_beta = [
-        x.reshape(x.shape[0], x.shape[1], -1, chunk_size, x.shape[-1]) for x in (query, key, value, k_beta, v_beta)
+        x.reshape(x.shape[0], x.shape[1], -1, chunk_size, x.shape[-1])
+        for x in (query, key, value, k_beta, v_beta)
     ]
     g = g.reshape(g.shape[0], g.shape[1], -1, chunk_size)
-    mask = torch.triu(torch.ones(chunk_size, chunk_size, dtype=torch.bool, device=query.device), diagonal=0)
+    mask = torch.triu(
+        torch.ones(chunk_size, chunk_size, dtype=torch.bool, device=query.device),
+        diagonal=0,
+    )
 
     # chunk decay
     g = g.cumsum(dim=-1)
@@ -136,7 +146,10 @@ def torch_chunk_gated_delta_rule(
         else initial_state.to(value)
     )
     core_attn_out = torch.zeros_like(value)
-    mask = torch.triu(torch.ones(chunk_size, chunk_size, dtype=torch.bool, device=query.device), diagonal=1)
+    mask = torch.triu(
+        torch.ones(chunk_size, chunk_size, dtype=torch.bool, device=query.device),
+        diagonal=1,
+    )
 
     # for each chunk
     for i in range(0, total_sequence_length // chunk_size):
@@ -148,26 +161,39 @@ def torch_chunk_gated_delta_rule(
         core_attn_out[:, :, i] = attn_inter + attn @ v_new
         last_recurrent_state = (
             last_recurrent_state * g[:, :, i, -1, None, None].exp()
-            + (k_i * (g[:, :, i, -1, None] - g[:, :, i]).exp()[..., None]).transpose(-1, -2) @ v_new
+            + (k_i * (g[:, :, i, -1, None] - g[:, :, i]).exp()[..., None]).transpose(
+                -1, -2
+            )
+            @ v_new
         )
 
     if not output_final_state:
         last_recurrent_state = None
-    core_attn_out = core_attn_out.reshape(core_attn_out.shape[0], core_attn_out.shape[1], -1, core_attn_out.shape[-1])
+    core_attn_out = core_attn_out.reshape(
+        core_attn_out.shape[0], core_attn_out.shape[1], -1, core_attn_out.shape[-1]
+    )
     core_attn_out = core_attn_out[:, :, :sequence_length]
     core_attn_out = core_attn_out.transpose(1, 2).contiguous().to(initial_dtype)
     return core_attn_out, last_recurrent_state
 
 
 def torch_recurrent_gated_delta_rule(
-    query, key, value, g, beta, initial_state, output_final_state, use_qk_l2norm_in_kernel=False
+    query,
+    key,
+    value,
+    g,
+    beta,
+    initial_state,
+    output_final_state,
+    use_qk_l2norm_in_kernel=False,
 ):
     initial_dtype = query.dtype
     if use_qk_l2norm_in_kernel:
         query = l2norm(query, dim=-1, eps=1e-6)
         key = l2norm(key, dim=-1, eps=1e-6)
     query, key, value, beta, g = [
-        x.transpose(1, 2).contiguous().to(torch.float32) for x in (query, key, value, beta, g)
+        x.transpose(1, 2).contiguous().to(torch.float32)
+        for x in (query, key, value, beta, g)
     ]
 
     batch_size, num_heads, sequence_length, k_head_dim = key.shape
@@ -175,7 +201,9 @@ def torch_recurrent_gated_delta_rule(
     scale = 1 / (query.shape[-1] ** 0.5)
     query = query * scale
 
-    core_attn_out = torch.zeros(batch_size, num_heads, sequence_length, v_head_dim).to(value)
+    core_attn_out = torch.zeros(batch_size, num_heads, sequence_length, v_head_dim).to(
+        value
+    )
     last_recurrent_state = (
         torch.zeros(batch_size, num_heads, k_head_dim, v_head_dim).to(value)
         if initial_state is None
@@ -192,7 +220,9 @@ def torch_recurrent_gated_delta_rule(
         last_recurrent_state = last_recurrent_state * g_t
         kv_mem = (last_recurrent_state * k_t.unsqueeze(-1)).sum(dim=-2)
         delta = (v_t - kv_mem) * beta_t
-        last_recurrent_state = last_recurrent_state + k_t.unsqueeze(-1) * delta.unsqueeze(-2)
+        last_recurrent_state = last_recurrent_state + k_t.unsqueeze(
+            -1
+        ) * delta.unsqueeze(-2)
         core_attn_out[:, :, i] = (last_recurrent_state * q_t.unsqueeze(-1)).sum(dim=-2)
 
     if not output_final_state:
@@ -246,7 +276,9 @@ class Qwen3_5GatedDeltaNet(nn.Module):
                 eps=self.layer_norm_epsilon,
                 activation=self.activation,
                 device=torch.cuda.current_device(),
-                dtype=config.dtype if config.dtype is not None else torch.get_default_dtype(),
+                dtype=config.dtype
+                if config.dtype is not None
+                else torch.get_default_dtype(),
             )
         )
 
@@ -254,8 +286,12 @@ class Qwen3_5GatedDeltaNet(nn.Module):
 
         self.causal_conv1d_fn = causal_conv1d_fn
         self.causal_conv1d_update = causal_conv1d_update or torch_causal_conv1d_update
-        self.chunk_gated_delta_rule = chunk_gated_delta_rule or torch_chunk_gated_delta_rule
-        self.recurrent_gated_delta_rule = fused_recurrent_gated_delta_rule or torch_recurrent_gated_delta_rule
+        self.chunk_gated_delta_rule = (
+            chunk_gated_delta_rule or torch_chunk_gated_delta_rule
+        )
+        self.recurrent_gated_delta_rule = (
+            fused_recurrent_gated_delta_rule or torch_recurrent_gated_delta_rule
+        )
 
         if not is_fast_path_available:
             print(
@@ -264,7 +300,9 @@ class Qwen3_5GatedDeltaNet(nn.Module):
                 " https://github.com/Dao-AILab/causal-conv1d"
             )
 
-        self.in_proj_qkv = nn.Linear(self.hidden_size, self.key_dim * 2 + self.value_dim, bias=False)
+        self.in_proj_qkv = nn.Linear(
+            self.hidden_size, self.key_dim * 2 + self.value_dim, bias=False
+        )
         self.in_proj_z = nn.Linear(self.hidden_size, self.value_dim, bias=False)
         self.in_proj_b = nn.Linear(self.hidden_size, self.num_v_heads, bias=False)
         self.in_proj_a = nn.Linear(self.hidden_size, self.num_v_heads, bias=False)
@@ -318,7 +356,9 @@ class Qwen3_5GatedDeltaNet(nn.Module):
             )
         else:
             if cache_params is not None:
-                conv_state = F.pad(mixed_qkv, (self.conv_kernel_size - mixed_qkv.shape[-1], 0))
+                conv_state = F.pad(
+                    mixed_qkv, (self.conv_kernel_size - mixed_qkv.shape[-1], 0)
+                )
                 cache_params.conv_states[self.layer_idx] = conv_state
             if self.causal_conv1d_fn is not None:
                 mixed_qkv = self.causal_conv1d_fn(
@@ -394,9 +434,15 @@ class Qwen3_5GatedDeltaNet(nn.Module):
 class FeedForward(nn.Module):
     def __init__(self, cfg):
         super().__init__()
-        self.fc1 = nn.Linear(cfg["emb_dim"], cfg["hidden_dim"], dtype=cfg["dtype"], bias=False)
-        self.fc2 = nn.Linear(cfg["emb_dim"], cfg["hidden_dim"], dtype=cfg["dtype"], bias=False)
-        self.fc3 = nn.Linear(cfg["hidden_dim"], cfg["emb_dim"], dtype=cfg["dtype"], bias=False)
+        self.fc1 = nn.Linear(
+            cfg["emb_dim"], cfg["hidden_dim"], dtype=cfg["dtype"], bias=False
+        )
+        self.fc2 = nn.Linear(
+            cfg["emb_dim"], cfg["hidden_dim"], dtype=cfg["dtype"], bias=False
+        )
+        self.fc3 = nn.Linear(
+            cfg["hidden_dim"], cfg["emb_dim"], dtype=cfg["dtype"], bias=False
+        )
 
     def forward(self, x):
         x_fc1 = self.fc1(x)
@@ -420,6 +466,7 @@ class RMSNorm(nn.Module):
         x_norm = x_norm * (1.0 + self.weight.float())
         return x_norm.to(dtype=x.dtype)
 
+
 def compute_rope_params(
     head_dim,
     theta_base=10_000,
@@ -433,8 +480,10 @@ def compute_rope_params(
     rotary_dim = max(2, rotary_dim - (rotary_dim % 2))
 
     inv_freq = 1.0 / (
-        theta_base ** (
-            torch.arange(0, rotary_dim, 2, dtype=dtype)[: (rotary_dim // 2)].float() / rotary_dim
+        theta_base
+        ** (
+            torch.arange(0, rotary_dim, 2, dtype=dtype)[: (rotary_dim // 2)].float()
+            / rotary_dim
         )
     )
 
@@ -471,19 +520,24 @@ def apply_rope(x, cos, sin):
     x_out = torch.cat([x_rotated, x_pass], dim=-1)
     return x_out.to(dtype=x.dtype)
 
+
 class GroupedQueryAttention(nn.Module):
     def __init__(
         self, d_in, num_heads, num_kv_groups, head_dim=None, qk_norm=False, dtype=None
     ):
         super().__init__()
-        assert num_heads % num_kv_groups == 0, "num_heads must be divisible by num_kv_groups"
+        assert (
+            num_heads % num_kv_groups == 0
+        ), "num_heads must be divisible by num_kv_groups"
 
         self.num_heads = num_heads
         self.num_kv_groups = num_kv_groups
         self.group_size = num_heads // num_kv_groups
 
         if head_dim is None:
-            assert d_in % num_heads == 0, "`d_in` must be divisible by `num_heads` if `head_dim` is not set"
+            assert (
+                d_in % num_heads == 0
+            ), "`d_in` must be divisible by `num_heads` if `head_dim` is not set"
             head_dim = d_in // num_heads
 
         self.head_dim = head_dim
@@ -492,7 +546,9 @@ class GroupedQueryAttention(nn.Module):
         # Qwen3.5 full-attention uses a gated Q projection (2x output dim)
         self.W_query = nn.Linear(d_in, self.d_out * 2, bias=False, dtype=dtype)
         self.W_key = nn.Linear(d_in, num_kv_groups * head_dim, bias=False, dtype=dtype)
-        self.W_value = nn.Linear(d_in, num_kv_groups * head_dim, bias=False, dtype=dtype)
+        self.W_value = nn.Linear(
+            d_in, num_kv_groups * head_dim, bias=False, dtype=dtype
+        )
 
         self.out_proj = nn.Linear(self.d_out, d_in, bias=False, dtype=dtype)
 
@@ -514,8 +570,12 @@ class GroupedQueryAttention(nn.Module):
         values = self.W_value(x)
 
         queries = queries.transpose(1, 2)
-        keys = keys.view(b, num_tokens, self.num_kv_groups, self.head_dim).transpose(1, 2)
-        values = values.view(b, num_tokens, self.num_kv_groups, self.head_dim).transpose(1, 2)
+        keys = keys.view(b, num_tokens, self.num_kv_groups, self.head_dim).transpose(
+            1, 2
+        )
+        values = values.view(
+            b, num_tokens, self.num_kv_groups, self.head_dim
+        ).transpose(1, 2)
 
         if self.q_norm:
             queries = self.q_norm(queries)
@@ -531,12 +591,14 @@ class GroupedQueryAttention(nn.Module):
         attn_scores = queries @ keys.transpose(2, 3)
         attn_scores = attn_scores.masked_fill(mask, -torch.inf)
         attn_weights = torch.softmax(
-            attn_scores * (self.head_dim ** -0.5),
+            attn_scores * (self.head_dim**-0.5),
             dim=-1,
             dtype=torch.float32,
         ).to(queries.dtype)
 
-        context = (attn_weights @ values).transpose(1, 2).reshape(b, num_tokens, self.d_out)
+        context = (
+            (attn_weights @ values).transpose(1, 2).reshape(b, num_tokens, self.d_out)
+        )
 
         # Qwen3.5 full-attention uses a gated Q projection
         context = context * torch.sigmoid(gate)
@@ -572,7 +634,9 @@ class TransformerBlock(nn.Module):
                 dtype=cfg["dtype"],
             )
         elif layer_type == "linear_attention":
-            self.token_mixer = Qwen3_5GatedDeltaNet(_Qwen3_5ConfigAdapter(cfg), layer_idx)
+            self.token_mixer = Qwen3_5GatedDeltaNet(
+                _Qwen3_5ConfigAdapter(cfg), layer_idx
+            )
         else:
             raise ValueError(f"Unsupported layer type: {layer_type}")
 
@@ -603,20 +667,31 @@ class Qwen3_5Model(nn.Module):
     def __init__(self, cfg):
         super().__init__()
 
-        self.tok_emb = nn.Embedding(cfg["vocab_size"], cfg["emb_dim"], dtype=cfg["dtype"])
+        self.tok_emb = nn.Embedding(
+            cfg["vocab_size"], cfg["emb_dim"], dtype=cfg["dtype"]
+        )
 
         layer_types = cfg.get("layer_types", ["full_attention"] * cfg["n_layers"])
         if len(layer_types) != cfg["n_layers"]:
             raise ValueError("len(layer_types) must equal n_layers")
 
         self.trf_blocks = nn.ModuleList(
-            [TransformerBlock(cfg, layer_type, idx) for idx, layer_type in enumerate(layer_types)]
+            [
+                TransformerBlock(cfg, layer_type, idx)
+                for idx, layer_type in enumerate(layer_types)
+            ]
         )
 
         self.final_norm = RMSNorm(cfg["emb_dim"], eps=cfg.get("rms_norm_eps", 1e-6))
-        self.out_head = nn.Linear(cfg["emb_dim"], cfg["vocab_size"], bias=False, dtype=cfg["dtype"])
+        self.out_head = nn.Linear(
+            cfg["emb_dim"], cfg["vocab_size"], bias=False, dtype=cfg["dtype"]
+        )
 
-        head_dim = cfg["emb_dim"] // cfg["n_heads"] if cfg["head_dim"] is None else cfg["head_dim"]
+        head_dim = (
+            cfg["emb_dim"] // cfg["n_heads"]
+            if cfg["head_dim"] is None
+            else cfg["head_dim"]
+        )
         cos, sin = compute_rope_params(
             head_dim=head_dim,
             theta_base=cfg["rope_base"],
@@ -644,6 +719,7 @@ class Qwen3_5Model(nn.Module):
         logits = self.out_head(x.to(self.cfg["dtype"]))
         return logits
 
+
 # Qwen3.5-0.8B text configuration
 QWEN3_5_CONFIG = {
     "vocab_size": 248_320,
@@ -665,12 +741,30 @@ QWEN3_5_CONFIG = {
     "linear_num_value_heads": 16,
     "dtype": torch.bfloat16,
     "layer_types": [
-        "linear_attention", "linear_attention", "linear_attention", "full_attention",
-        "linear_attention", "linear_attention", "linear_attention", "full_attention",
-        "linear_attention", "linear_attention", "linear_attention", "full_attention",
-        "linear_attention", "linear_attention", "linear_attention", "full_attention",
-        "linear_attention", "linear_attention", "linear_attention", "full_attention",
-        "linear_attention", "linear_attention", "linear_attention", "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
     ],
 }
 
@@ -682,6 +776,7 @@ fused_recurrent_gated_delta_rule = None
 is_fast_path_available = False
 FusedRMSNormGated = None
 ACT2FN = {"silu": F.silu}
+
 
 def calc_model_memory_size(model, input_dtype=torch.float32):
     total_params = 0
@@ -706,6 +801,7 @@ def calc_model_memory_size(model, input_dtype=torch.float32):
     total_memory_gb = total_memory_bytes / (1024**3)
 
     return total_memory_gb
+
 
 def load_weights_into_qwen3_5(model, param_config, params):
     def assign(left, right, tensor_name="unknown"):
@@ -741,91 +837,91 @@ def load_weights_into_qwen3_5(model, param_config, params):
     n_layers = param_config["n_layers"]
     layer_types = param_config.get("layer_types", ["full_attention"] * n_layers)
 
-    for l in range(n_layers):
-        block = model.trf_blocks[l]
-        layer_type = layer_types[l]
+    for id_layer in range(n_layers):
+        block = model.trf_blocks[id_layer]
+        layer_type = layer_types[id_layer]
 
         if layer_type == "full_attention":
             att = block.token_mixer
             att.W_query.weight = assign(
                 att.W_query.weight,
-                params[pkey(f"layers.{l}.self_attn.q_proj.weight")],
-                pkey(f"layers.{l}.self_attn.q_proj.weight"),
+                params[pkey(f"layers.{id_layer}.self_attn.q_proj.weight")],
+                pkey(f"layers.{id_layer}.self_attn.q_proj.weight"),
             )
             att.W_key.weight = assign(
                 att.W_key.weight,
-                params[pkey(f"layers.{l}.self_attn.k_proj.weight")],
-                pkey(f"layers.{l}.self_attn.k_proj.weight"),
+                params[pkey(f"layers.{id_layer}.self_attn.k_proj.weight")],
+                pkey(f"layers.{id_layer}.self_attn.k_proj.weight"),
             )
             att.W_value.weight = assign(
                 att.W_value.weight,
-                params[pkey(f"layers.{l}.self_attn.v_proj.weight")],
-                pkey(f"layers.{l}.self_attn.v_proj.weight"),
+                params[pkey(f"layers.{id_layer}.self_attn.v_proj.weight")],
+                pkey(f"layers.{id_layer}.self_attn.v_proj.weight"),
             )
             att.out_proj.weight = assign(
                 att.out_proj.weight,
-                params[pkey(f"layers.{l}.self_attn.o_proj.weight")],
-                pkey(f"layers.{l}.self_attn.o_proj.weight"),
+                params[pkey(f"layers.{id_layer}.self_attn.o_proj.weight")],
+                pkey(f"layers.{id_layer}.self_attn.o_proj.weight"),
             )
             if hasattr(att, "q_norm") and att.q_norm is not None:
                 att.q_norm.weight = assign(
                     att.q_norm.weight,
-                    params[pkey(f"layers.{l}.self_attn.q_norm.weight")],
-                    pkey(f"layers.{l}.self_attn.q_norm.weight"),
+                    params[pkey(f"layers.{id_layer}.self_attn.q_norm.weight")],
+                    pkey(f"layers.{id_layer}.self_attn.q_norm.weight"),
                 )
             if hasattr(att, "k_norm") and att.k_norm is not None:
                 att.k_norm.weight = assign(
                     att.k_norm.weight,
-                    params[pkey(f"layers.{l}.self_attn.k_norm.weight")],
-                    pkey(f"layers.{l}.self_attn.k_norm.weight"),
+                    params[pkey(f"layers.{id_layer}.self_attn.k_norm.weight")],
+                    pkey(f"layers.{id_layer}.self_attn.k_norm.weight"),
                 )
 
         elif layer_type == "linear_attention":
             lat = block.token_mixer
             lat.dt_bias = assign(
                 lat.dt_bias,
-                params[pkey(f"layers.{l}.linear_attn.dt_bias")],
-                pkey(f"layers.{l}.linear_attn.dt_bias"),
+                params[pkey(f"layers.{id_layer}.linear_attn.dt_bias")],
+                pkey(f"layers.{id_layer}.linear_attn.dt_bias"),
             )
             lat.A_log = assign(
                 lat.A_log,
-                params[pkey(f"layers.{l}.linear_attn.A_log")],
-                pkey(f"layers.{l}.linear_attn.A_log"),
+                params[pkey(f"layers.{id_layer}.linear_attn.A_log")],
+                pkey(f"layers.{id_layer}.linear_attn.A_log"),
             )
             lat.conv1d.weight = assign(
                 lat.conv1d.weight,
-                params[pkey(f"layers.{l}.linear_attn.conv1d.weight")],
-                pkey(f"layers.{l}.linear_attn.conv1d.weight"),
+                params[pkey(f"layers.{id_layer}.linear_attn.conv1d.weight")],
+                pkey(f"layers.{id_layer}.linear_attn.conv1d.weight"),
             )
             lat.norm.weight = assign(
                 lat.norm.weight,
-                params[pkey(f"layers.{l}.linear_attn.norm.weight")],
-                pkey(f"layers.{l}.linear_attn.norm.weight"),
+                params[pkey(f"layers.{id_layer}.linear_attn.norm.weight")],
+                pkey(f"layers.{id_layer}.linear_attn.norm.weight"),
             )
             lat.out_proj.weight = assign(
                 lat.out_proj.weight,
-                params[pkey(f"layers.{l}.linear_attn.out_proj.weight")],
-                pkey(f"layers.{l}.linear_attn.out_proj.weight"),
+                params[pkey(f"layers.{id_layer}.linear_attn.out_proj.weight")],
+                pkey(f"layers.{id_layer}.linear_attn.out_proj.weight"),
             )
             lat.in_proj_qkv.weight = assign(
                 lat.in_proj_qkv.weight,
-                params[pkey(f"layers.{l}.linear_attn.in_proj_qkv.weight")],
-                pkey(f"layers.{l}.linear_attn.in_proj_qkv.weight"),
+                params[pkey(f"layers.{id_layer}.linear_attn.in_proj_qkv.weight")],
+                pkey(f"layers.{id_layer}.linear_attn.in_proj_qkv.weight"),
             )
             lat.in_proj_z.weight = assign(
                 lat.in_proj_z.weight,
-                params[pkey(f"layers.{l}.linear_attn.in_proj_z.weight")],
-                pkey(f"layers.{l}.linear_attn.in_proj_z.weight"),
+                params[pkey(f"layers.{id_layer}.linear_attn.in_proj_z.weight")],
+                pkey(f"layers.{id_layer}.linear_attn.in_proj_z.weight"),
             )
             lat.in_proj_b.weight = assign(
                 lat.in_proj_b.weight,
-                params[pkey(f"layers.{l}.linear_attn.in_proj_b.weight")],
-                pkey(f"layers.{l}.linear_attn.in_proj_b.weight"),
+                params[pkey(f"layers.{id_layer}.linear_attn.in_proj_b.weight")],
+                pkey(f"layers.{id_layer}.linear_attn.in_proj_b.weight"),
             )
             lat.in_proj_a.weight = assign(
                 lat.in_proj_a.weight,
-                params[pkey(f"layers.{l}.linear_attn.in_proj_a.weight")],
-                pkey(f"layers.{l}.linear_attn.in_proj_a.weight"),
+                params[pkey(f"layers.{id_layer}.linear_attn.in_proj_a.weight")],
+                pkey(f"layers.{id_layer}.linear_attn.in_proj_a.weight"),
             )
 
         else:
@@ -833,29 +929,29 @@ def load_weights_into_qwen3_5(model, param_config, params):
 
         block.norm1.weight = assign(
             block.norm1.weight,
-            params[pkey(f"layers.{l}.input_layernorm.weight")],
-            pkey(f"layers.{l}.input_layernorm.weight"),
+            params[pkey(f"layers.{id_layer}.input_layernorm.weight")],
+            pkey(f"layers.{id_layer}.input_layernorm.weight"),
         )
 
         block.ff.fc1.weight = assign(
             block.ff.fc1.weight,
-            params[pkey(f"layers.{l}.mlp.gate_proj.weight")],
-            pkey(f"layers.{l}.mlp.gate_proj.weight"),
+            params[pkey(f"layers.{id_layer}.mlp.gate_proj.weight")],
+            pkey(f"layers.{id_layer}.mlp.gate_proj.weight"),
         )
         block.ff.fc2.weight = assign(
             block.ff.fc2.weight,
-            params[pkey(f"layers.{l}.mlp.up_proj.weight")],
-            pkey(f"layers.{l}.mlp.up_proj.weight"),
+            params[pkey(f"layers.{id_layer}.mlp.up_proj.weight")],
+            pkey(f"layers.{id_layer}.mlp.up_proj.weight"),
         )
         block.ff.fc3.weight = assign(
             block.ff.fc3.weight,
-            params[pkey(f"layers.{l}.mlp.down_proj.weight")],
-            pkey(f"layers.{l}.mlp.down_proj.weight"),
+            params[pkey(f"layers.{id_layer}.mlp.down_proj.weight")],
+            pkey(f"layers.{id_layer}.mlp.down_proj.weight"),
         )
         block.norm2.weight = assign(
             block.norm2.weight,
-            params[pkey(f"layers.{l}.post_attention_layernorm.weight")],
-            pkey(f"layers.{l}.post_attention_layernorm.weight"),
+            params[pkey(f"layers.{id_layer}.post_attention_layernorm.weight")],
+            pkey(f"layers.{id_layer}.post_attention_layernorm.weight"),
         )
 
     model.final_norm.weight = assign(
@@ -865,23 +961,38 @@ def load_weights_into_qwen3_5(model, param_config, params):
     )
 
     if "lm_head.weight" in params:
-        model.out_head.weight = assign(model.out_head.weight, params["lm_head.weight"], "lm_head.weight")
+        model.out_head.weight = assign(
+            model.out_head.weight, params["lm_head.weight"], "lm_head.weight"
+        )
     elif pkey("lm_head.weight") in params:
-        model.out_head.weight = assign(model.out_head.weight, params[pkey("lm_head.weight")], pkey("lm_head.weight"))
+        model.out_head.weight = assign(
+            model.out_head.weight,
+            params[pkey("lm_head.weight")],
+            pkey("lm_head.weight"),
+        )
     else:
         model.out_head.weight = model.tok_emb.weight
         print("Model uses weight tying.")
 
+
 class Qwen3_5Tokenizer:
     _SPECIALS = [
         "<|endoftext|>",
-        "<|im_start|>", "<|im_end|>",
-        "<|object_ref_start|>", "<|object_ref_end|>",
-        "<|box_start|>", "<|box_end|>",
-        "<|quad_start|>", "<|quad_end|>",
-        "<|vision_start|>", "<|vision_end|>",
-        "<|vision_pad|>", "<|image_pad|>", "<|video_pad|>",
-        "<think>", "</think>",
+        "<|im_start|>",
+        "<|im_end|>",
+        "<|object_ref_start|>",
+        "<|object_ref_end|>",
+        "<|box_start|>",
+        "<|box_end|>",
+        "<|quad_start|>",
+        "<|quad_end|>",
+        "<|vision_start|>",
+        "<|vision_end|>",
+        "<|vision_pad|>",
+        "<|image_pad|>",
+        "<|video_pad|>",
+        "<think>",
+        "</think>",
     ]
     _SPLIT_RE = re.compile(r"(<\|[^>]+?\|>|<think>|</think>)")
 
@@ -950,34 +1061,30 @@ class Qwen3_5Tokenizer:
                 s += "<think>\n\n</think>\n\n"
         return s
 
-def generate_text_basic_stream(model, token_ids, max_new_tokens, eos_token_id=None):
 
+def generate_text_basic_stream(model, token_ids, max_new_tokens, eos_token_id=None):
     model.eval()
     with torch.no_grad():
         for _ in range(max_new_tokens):
             out = model(token_ids)[:, -1]
             next_token = torch.argmax(out, dim=-1, keepdim=True)
 
-            if (eos_token_id is not None
-                   and torch.all(next_token == eos_token_id)):
-               break
+            if eos_token_id is not None and torch.all(next_token == eos_token_id):
+                break
 
             yield next_token
 
             token_ids = torch.cat([token_ids, next_token], dim=1)
 
 
-if __name__=="__main__":
-
+if __name__ == "__main__":
     import json
     import os
-
-
     import time
-
     from pathlib import Path
-    from safetensors.torch import load_file
+
     from huggingface_hub import hf_hub_download, snapshot_download
+    from safetensors.torch import load_file
 
     torch.manual_seed(123)
     model = Qwen3_5Model(QWEN3_5_CONFIG)
@@ -991,8 +1098,12 @@ if __name__=="__main__":
     total_params_normalized = total_params - model.tok_emb.weight.numel()
     print(f"\nTotal number of unique parameters: {total_params_normalized:,}")
 
-    print(f"float32 (PyTorch default): {calc_model_memory_size(model, input_dtype=torch.float32):.2f} GB")
-    print(f"bfloat16: {calc_model_memory_size(model, input_dtype=torch.bfloat16):.2f} GB")
+    print(
+        f"float32 (PyTorch default): {calc_model_memory_size(model, input_dtype=torch.float32):.2f} GB"
+    )
+    print(
+        f"bfloat16: {calc_model_memory_size(model, input_dtype=torch.bfloat16):.2f} GB"
+    )
 
     if torch.cuda.is_available():
         device = torch.device("cuda")
@@ -1000,7 +1111,7 @@ if __name__=="__main__":
         device = torch.device("mps")
     else:
         device = torch.device("cpu")
-    print('--> device : ', device)
+    print("--> device : ", device)
     model.to(device)
 
     repo_id = "Qwen/Qwen3.5-0.8B"
@@ -1021,7 +1132,6 @@ if __name__=="__main__":
     model.to(device)
     del weights_dict
 
-
     tokenizer_file_path = local_dir / "tokenizer.json"
 
     hf_hub_download(
@@ -1037,8 +1147,6 @@ if __name__=="__main__":
         add_generation_prompt=True,
         add_thinking=True,
     )
-
-
 
     prompt = "Give me a short introduction to large language models."
 
@@ -1061,21 +1169,18 @@ if __name__=="__main__":
         model=model,
         token_ids=input_token_ids_tensor,
         max_new_tokens=500,
-        eos_token_id=tokenizer.eos_token_id
+        eos_token_id=tokenizer.eos_token_id,
     ):
         generated_tokens += 1
         token_id = token.squeeze(0).tolist()
-        print(
-            tokenizer.decode(token_id),
-            end="",
-            flush=True
-        )
+        print(tokenizer.decode(token_id), end="", flush=True)
 
     elapsed = time.perf_counter() - start_time
     tokens_per_sec = generated_tokens / elapsed if elapsed > 0 else 0.0
     print(f"\n\nGeneration speed: {tokens_per_sec:.2f} tokens/sec")
 
     if torch.cuda.is_available():
+
         def calc_gpu_gb(x):
             return f"{x / 1024 / 1024 / 1024:.2f} GB"
 
@@ -1085,3 +1190,4 @@ if __name__=="__main__":
 # - check that it works on GPU
 # - Type hint
 # - wtf fast attention
+# - kv cache ?

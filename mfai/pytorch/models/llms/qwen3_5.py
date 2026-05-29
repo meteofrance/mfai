@@ -963,7 +963,7 @@ def generate_text_basic_stream(model, token_ids, max_new_tokens, eos_token_id=No
                break
 
             yield next_token
-            
+
             token_ids = torch.cat([token_ids, next_token], dim=1)
 
 
@@ -1000,7 +1000,7 @@ if __name__=="__main__":
         device = torch.device("mps")
     else:
         device = torch.device("cpu")
-
+    print('--> device : ', device)
     model.to(device)
 
     repo_id = "Qwen/Qwen3.5-0.8B"
@@ -1022,7 +1022,7 @@ if __name__=="__main__":
     del weights_dict
 
 
-    tokenizer_file_path = "Qwen3.5-0.8B/tokenizer.json"
+    tokenizer_file_path = local_dir / "tokenizer.json"
 
     hf_hub_download(
         repo_id=repo_id,
@@ -1081,3 +1081,7 @@ if __name__=="__main__":
 
         print(f"GPU memory used: {calc_gpu_gb(torch.cuda.max_memory_allocated())}")
 
+# TODO :
+# - check that it works on GPU
+# - Type hint
+# - wtf fast attention

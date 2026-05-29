@@ -8,13 +8,45 @@ https://github.com/huggingface/transformers/blob/main/src/transformers/models/qw
 """
 
 import re
-from typing import Generator
+from dataclasses import dataclass
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from dataclasses_json import dataclass_json
 from tokenizers import Tokenizer
 from torch import Tensor
+
+from mfai.pytorch.models.base import ModelType
+
+
+@dataclass_json
+@dataclass(slots=True)
+class Qwen3_5Settings:
+    """Qwen3.5-0.8B text configuration"""
+
+    vocab_size: int = 248_320
+    context_length: int = 262_144
+    emb_dim: int = 1_024
+    n_heads: int = 8
+    n_layers: int = 24
+    hidden_dim: int = 3_584
+    head_dim: int = 256
+    qk_norm: bool = True
+    n_kv_groups: int = 2
+    rope_base: int = 10_000_000
+    partial_rotary_factor: float = 0.25
+    rms_norm_eps: float = 1e-6
+    linear_conv_kernel_dim: int = 4
+    linear_key_head_dim: int = 128
+    linear_value_head_dim: int = 128
+    linear_num_key_heads: int = 16
+    linear_num_value_heads: int = 16
+    dtype: torch.dtype = torch.bfloat16
+    layer_types: tuple[str, ...] = tuple(
+        (["linear_attention"] * 3 + ["full_attention"]) * 6
+    )
+    hidden_activation: str = "silu"
 
 
 class Qwen3_5RMSNormGated(nn.Module):
@@ -135,7 +167,7 @@ def torch_chunk_gated_delta_rule(
     attn = attn + torch.eye(chunk_size, dtype=attn.dtype, device=attn.device)
     value = attn @ v_beta
     k_cumdecay = attn @ (k_beta * gate.exp().unsqueeze(-1))
-    last_recurrent_state = (
+    last_recurrent_state: Tensor | None = (
         torch.zeros(batch_size, num_heads, k_head_dim, v_head_dim).to(value)
         if initial_state is None
         else initial_state.to(value)
@@ -199,7 +231,7 @@ def torch_recurrent_gated_delta_rule(
     core_attn_out = torch.zeros(batch_size, num_heads, sequence_length, v_head_dim).to(
         value
     )
-    last_recurrent_state = (
+    last_recurrent_state: Tensor | None = (
         torch.zeros(batch_size, num_heads, k_head_dim, v_head_dim).to(value)
         if initial_state is None
         else initial_state.to(value)
@@ -229,21 +261,21 @@ def torch_recurrent_gated_delta_rule(
 # Minimal change: enforce config dtype at the end to avoid bf16/fp32 matmul mismatch
 # in a mixed notebook implementation
 class Qwen3_5GatedDeltaNet(nn.Module):
-    def __init__(self, config, layer_idx: int):
+    def __init__(self, settings: Qwen3_5Settings, layer_idx: int):
         super().__init__()
-        self.hidden_size = config.hidden_size
-        self.num_v_heads = config.linear_num_value_heads
-        self.num_k_heads = config.linear_num_key_heads
-        self.head_k_dim = config.linear_key_head_dim
-        self.head_v_dim = config.linear_value_head_dim
+        self.hidden_size = settings.emb_dim
+        self.num_v_heads = settings.linear_num_value_heads
+        self.num_k_heads = settings.linear_num_key_heads
+        self.head_k_dim = settings.linear_key_head_dim
+        self.head_v_dim = settings.linear_value_head_dim
         self.key_dim = self.head_k_dim * self.num_k_heads
         self.value_dim = self.head_v_dim * self.num_v_heads
 
-        self.conv_kernel_size = config.linear_conv_kernel_dim
+        self.conv_kernel_size = settings.linear_conv_kernel_dim
         self.layer_idx = layer_idx
-        self.activation = config.hidden_act
-        self.act = ACT2FN[config.hidden_act]
-        self.layer_norm_epsilon = config.rms_norm_eps
+        self.activation = settings.hidden_activation
+        self.act = ACT2FN[settings.hidden_activation]
+        self.layer_norm_epsilon = settings.rms_norm_eps
 
         # QKV
         self.conv_dim = self.key_dim * 2 + self.value_dim
@@ -271,8 +303,8 @@ class Qwen3_5GatedDeltaNet(nn.Module):
                 eps=self.layer_norm_epsilon,
                 activation=self.activation,
                 device=torch.cuda.current_device(),
-                dtype=config.dtype
-                if config.dtype is not None
+                dtype=settings.dtype
+                if settings.dtype is not None
                 else torch.get_default_dtype(),
             )
         )
@@ -304,8 +336,8 @@ class Qwen3_5GatedDeltaNet(nn.Module):
         self.in_proj_a = nn.Linear(self.hidden_size, self.num_v_heads, bias=False)
 
         # Notebook adaptation for dtype consistency.
-        if config.dtype is not None:
-            self.to(dtype=config.dtype)
+        if settings.dtype is not None:
+            self.to(dtype=settings.dtype)
 
     def forward(
         self,
@@ -425,26 +457,6 @@ class Qwen3_5GatedDeltaNet(nn.Module):
 
         output = self.out_proj(core_attn_out)
         return output
-
-
-class FeedForward(nn.Module):
-    def __init__(self, cfg) -> None:
-        super().__init__()
-        self.fc1 = nn.Linear(
-            cfg["emb_dim"], cfg["hidden_dim"], dtype=cfg["dtype"], bias=False
-        )
-        self.fc2 = nn.Linear(
-            cfg["emb_dim"], cfg["hidden_dim"], dtype=cfg["dtype"], bias=False
-        )
-        self.fc3 = nn.Linear(
-            cfg["hidden_dim"], cfg["emb_dim"], dtype=cfg["dtype"], bias=False
-        )
-
-    def forward(self, x: Tensor) -> Tensor:
-        x_fc1 = self.fc1(x)
-        x_fc2 = self.fc2(x)
-        x = nn.functional.silu(x_fc1) * x_fc2
-        return self.fc3(x)
 
 
 class RMSNorm(nn.Module):
@@ -609,44 +621,50 @@ class GroupedQueryAttention(nn.Module):
         return self.out_proj(context)
 
 
-# Just a mapping for the different naming convention in Hugging Face transformers
-class _Qwen3_5ConfigAdapter:
-    def __init__(self, cfg):
-        self.hidden_size = cfg["emb_dim"]
-        self.linear_num_value_heads = cfg["linear_num_value_heads"]
-        self.linear_num_key_heads = cfg["linear_num_key_heads"]
-        self.linear_key_head_dim = cfg["linear_key_head_dim"]
-        self.linear_value_head_dim = cfg["linear_value_head_dim"]
-        self.linear_conv_kernel_dim = cfg["linear_conv_kernel_dim"]
-        self.hidden_act = "silu"
-        self.rms_norm_eps = cfg.get("rms_norm_eps", 1e-6)
-        self.dtype = cfg.get("dtype", None)
+class FeedForward(nn.Module):
+    def __init__(self, settings: Qwen3_5Settings) -> None:
+        super().__init__()
+        self.fc1 = nn.Linear(
+            settings.emb_dim, settings.hidden_dim, dtype=settings.dtype, bias=False
+        )
+        self.fc2 = nn.Linear(
+            settings.emb_dim, settings.hidden_dim, dtype=settings.dtype, bias=False
+        )
+        self.fc3 = nn.Linear(
+            settings.hidden_dim, settings.emb_dim, dtype=settings.dtype, bias=False
+        )
+
+    def forward(self, x: Tensor) -> Tensor:
+        x_fc1 = self.fc1(x)
+        x_fc2 = self.fc2(x)
+        x = nn.functional.silu(x_fc1) * x_fc2
+        return self.fc3(x)
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, cfg, layer_type: str, layer_idx: int) -> None:
+    def __init__(
+        self, settings: Qwen3_5Settings, layer_type: str, layer_idx: int
+    ) -> None:
         super().__init__()
         self.layer_type = layer_type
 
         if layer_type == "full_attention":
             self.token_mixer = GroupedQueryAttention(
-                d_in=cfg["emb_dim"],
-                num_heads=cfg["n_heads"],
-                head_dim=cfg["head_dim"],
-                num_kv_groups=cfg["n_kv_groups"],
-                qk_norm=cfg["qk_norm"],
-                dtype=cfg["dtype"],
+                d_in=settings.emb_dim,
+                num_heads=settings.n_heads,
+                head_dim=settings.head_dim,
+                num_kv_groups=settings.n_kv_groups,
+                qk_norm=settings.qk_norm,
+                dtype=settings.dtype,
             )
         elif layer_type == "linear_attention":
-            self.token_mixer = Qwen3_5GatedDeltaNet(
-                _Qwen3_5ConfigAdapter(cfg), layer_idx
-            )
+            self.token_mixer = Qwen3_5GatedDeltaNet(Qwen3_5Settings(), layer_idx)
         else:
             raise ValueError(f"Unsupported layer type: {layer_type}")
 
-        self.ff = FeedForward(cfg)
-        self.norm1 = RMSNorm(cfg["emb_dim"], eps=cfg.get("rms_norm_eps", 1e-6))
-        self.norm2 = RMSNorm(cfg["emb_dim"], eps=cfg.get("rms_norm_eps", 1e-6))
+        self.ff = FeedForward(settings)
+        self.norm1 = RMSNorm(settings.emb_dim, eps=settings.rms_norm_eps)
+        self.norm2 = RMSNorm(settings.emb_dim, eps=settings.rms_norm_eps)
 
     def forward(self, x: Tensor, mask: Tensor, cos: Tensor, sin: Tensor) -> Tensor:
         shortcut = x
@@ -668,44 +686,50 @@ class TransformerBlock(nn.Module):
 
 
 class Qwen3_5Model(nn.Module):
-    def __init__(self, cfg) -> None:
+    settings_kls = Qwen3_5Settings
+    model_type = ModelType.LLM
+
+    def __init__(self, settings: Qwen3_5Settings) -> None:
         super().__init__()
 
         self.tok_emb = nn.Embedding(
-            cfg["vocab_size"], cfg["emb_dim"], dtype=cfg["dtype"]
+            settings.vocab_size, settings.emb_dim, dtype=settings.dtype
         )
 
-        layer_types = cfg.get("layer_types", ["full_attention"] * cfg["n_layers"])
-        if len(layer_types) != cfg["n_layers"]:
-            raise ValueError("len(layer_types) must equal n_layers")
+        layer_types = settings.layer_types
+        if len(layer_types) != settings.n_layers:
+            raise ValueError(
+                f"len(layer_types) must be equal to n_layers, got "
+                f"len(layer_types)={len(layer_types)} and n_layers={settings.n_layers}"
+            )
 
         self.trf_blocks = nn.ModuleList(
             [
-                TransformerBlock(cfg, layer_type, idx)
+                TransformerBlock(settings, layer_type, idx)
                 for idx, layer_type in enumerate(layer_types)
             ]
         )
 
-        self.final_norm = RMSNorm(cfg["emb_dim"], eps=cfg.get("rms_norm_eps", 1e-6))
+        self.final_norm = RMSNorm(settings.emb_dim, eps=settings.rms_norm_eps)
         self.out_head = nn.Linear(
-            cfg["emb_dim"], cfg["vocab_size"], bias=False, dtype=cfg["dtype"]
+            settings.emb_dim, settings.vocab_size, bias=False, dtype=settings.dtype
         )
 
         head_dim = (
-            cfg["emb_dim"] // cfg["n_heads"]
-            if cfg["head_dim"] is None
-            else cfg["head_dim"]
+            settings.emb_dim // settings.n_heads
+            if settings.head_dim is None
+            else settings.head_dim
         )
         cos, sin = compute_rope_params(
             head_dim=head_dim,
-            theta_base=cfg["rope_base"],
-            context_length=cfg["context_length"],
-            partial_rotary_factor=cfg.get("partial_rotary_factor", 1.0),
+            theta_base=settings.rope_base,
+            context_length=settings.context_length,
+            partial_rotary_factor=settings.partial_rotary_factor,
             dtype=torch.float32,
         )
         self.register_buffer("cos", cos, persistent=False)
         self.register_buffer("sin", sin, persistent=False)
-        self.cfg = cfg
+        self.settings = settings
 
     def forward(self, in_idx: Tensor) -> Tensor:
         x = self.tok_emb(in_idx)
@@ -720,57 +744,9 @@ class Qwen3_5Model(nn.Module):
             x = block(x, mask, self.cos, self.sin)
 
         x = self.final_norm(x)
-        logits = self.out_head(x.to(self.cfg["dtype"]))
+        logits = self.out_head(x.to(self.settings.dtype))
         return logits
 
-
-# Qwen3.5-0.8B text configuration
-QWEN3_5_CONFIG = {
-    "vocab_size": 248_320,
-    "context_length": 262_144,
-    "emb_dim": 1_024,
-    "n_heads": 8,
-    "n_layers": 24,
-    "hidden_dim": 3_584,
-    "head_dim": 256,
-    "qk_norm": True,
-    "n_kv_groups": 2,
-    "rope_base": 10_000_000.0,
-    "partial_rotary_factor": 0.25,
-    "rms_norm_eps": 1e-6,
-    "linear_conv_kernel_dim": 4,
-    "linear_key_head_dim": 128,
-    "linear_value_head_dim": 128,
-    "linear_num_key_heads": 16,
-    "linear_num_value_heads": 16,
-    "dtype": torch.bfloat16,
-    "layer_types": [
-        "linear_attention",
-        "linear_attention",
-        "linear_attention",
-        "full_attention",
-        "linear_attention",
-        "linear_attention",
-        "linear_attention",
-        "full_attention",
-        "linear_attention",
-        "linear_attention",
-        "linear_attention",
-        "full_attention",
-        "linear_attention",
-        "linear_attention",
-        "linear_attention",
-        "full_attention",
-        "linear_attention",
-        "linear_attention",
-        "linear_attention",
-        "full_attention",
-        "linear_attention",
-        "linear_attention",
-        "linear_attention",
-        "full_attention",
-    ],
-}
 
 # Notebook shims for optional fast kernels in transformers
 causal_conv1d_fn = None
@@ -809,7 +785,9 @@ def calc_model_memory_size(
     return total_memory_gb
 
 
-def load_weights_into_qwen3_5(model: Qwen3_5Model, param_config, params) -> None:
+def load_weights_into_qwen3_5(
+    model: Qwen3_5Model, settings: Qwen3_5Settings, params
+) -> None:
     def assign(left: Tensor, right: Tensor, tensor_name: str = "unknown") -> Tensor:
         if left.shape != right.shape:
             raise ValueError(
@@ -840,8 +818,8 @@ def load_weights_into_qwen3_5(model: Qwen3_5Model, param_config, params) -> None
         pkey("embed_tokens.weight"),
     )
 
-    n_layers = param_config["n_layers"]
-    layer_types = param_config.get("layer_types", ["full_attention"] * n_layers)
+    n_layers = settings.n_layers
+    layer_types = settings.layer_types
 
     for id_layer in range(n_layers):
         block: TransformerBlock = model.trf_blocks[id_layer]  # type: ignore[reportAssignementType]
@@ -1070,10 +1048,10 @@ class Qwen3_5Tokenizer:
 
 def generate_text_basic_stream(
     model: Qwen3_5Model,
-    token_ids: list[int],
+    token_ids: Tensor,
     max_new_tokens: int,
     eos_token_id: int | None = None,
-) -> Generator[Tensor]:
+):
     model.eval()
     with torch.no_grad():
         for _ in range(max_new_tokens):
@@ -1098,7 +1076,7 @@ if __name__ == "__main__":
     from safetensors.torch import load_file
 
     torch.manual_seed(123)
-    model = Qwen3_5Model(QWEN3_5_CONFIG)
+    model = Qwen3_5Model(Qwen3_5Settings())
     print(model)
     print(model(torch.tensor([1, 2, 3]).unsqueeze(0)))
 
@@ -1139,7 +1117,7 @@ if __name__ == "__main__":
         shard = load_file(shard_path)
         weights_dict.update(shard)
 
-    load_weights_into_qwen3_5(model, QWEN3_5_CONFIG, weights_dict)
+    load_weights_into_qwen3_5(model, Qwen3_5Settings(), weights_dict)
     model.to(device)
     del weights_dict
 
@@ -1202,7 +1180,6 @@ if __name__ == "__main__":
 # - Type hint -> mypy
 # - wtf fast attention
 # - kv cache ?
-# - utiliser les dataclass de config mfai style
 # - replace les assert par des raise
 # - tests unitaires
 # - fonctions torch ou import, vérifier que toutes les fonctions sont utilisées

@@ -16,6 +16,8 @@ import torch.nn.functional as F
 from dataclasses_json import dataclass_json
 from tokenizers import Tokenizer
 from torch import Tensor
+from collections.abc import Iterator
+from typing import cast
 
 from mfai.pytorch.models.base import ModelType
 
@@ -68,7 +70,7 @@ class Qwen3_5RMSNormGated(nn.Module):
 
 
 def apply_mask_to_padding_states(
-    hidden_states: Tensor, attention_mask: Tensor
+    hidden_states: Tensor, attention_mask: Tensor | None
 ) -> Tensor:
     """
     Tunes out the hidden states for padding tokens,
@@ -167,7 +169,7 @@ def torch_chunk_gated_delta_rule(
     attn = attn + torch.eye(chunk_size, dtype=attn.dtype, device=attn.device)
     value = attn @ v_beta
     k_cumdecay = attn @ (k_beta * gate.exp().unsqueeze(-1))
-    last_recurrent_state: Tensor | None = (
+    last_recurrent_state: Tensor = (
         torch.zeros(batch_size, num_heads, k_head_dim, v_head_dim).to(value)
         if initial_state is None
         else initial_state.to(value)
@@ -194,14 +196,13 @@ def torch_chunk_gated_delta_rule(
             @ v_new
         )
 
-    if not output_final_state:
-        last_recurrent_state = None
+    last_recurrent_state_out = None if not output_final_state else last_recurrent_state
     core_attn_out = core_attn_out.reshape(
         core_attn_out.shape[0], core_attn_out.shape[1], -1, core_attn_out.shape[-1]
     )
     core_attn_out = core_attn_out[:, :, :sequence_length]
     core_attn_out = core_attn_out.transpose(1, 2).contiguous().to(initial_dtype)
-    return core_attn_out, last_recurrent_state
+    return core_attn_out, last_recurrent_state_out
 
 
 def torch_recurrent_gated_delta_rule(
@@ -231,7 +232,7 @@ def torch_recurrent_gated_delta_rule(
     core_attn_out = torch.zeros(batch_size, num_heads, sequence_length, v_head_dim).to(
         value
     )
-    last_recurrent_state: Tensor | None = (
+    last_recurrent_state: Tensor = (
         torch.zeros(batch_size, num_heads, k_head_dim, v_head_dim).to(value)
         if initial_state is None
         else initial_state.to(value)
@@ -252,10 +253,9 @@ def torch_recurrent_gated_delta_rule(
         ) * delta.unsqueeze(-2)
         core_attn_out[:, :, i] = (last_recurrent_state * q_t.unsqueeze(-1)).sum(dim=-2)
 
-    if not output_final_state:
-        last_recurrent_state = None
+    last_recurrent_state_out = None if not output_final_state else last_recurrent_state
     core_attn_out = core_attn_out.transpose(1, 2).contiguous().to(initial_dtype)
-    return core_attn_out, last_recurrent_state
+    return core_attn_out, last_recurrent_state_out
 
 
 # Minimal change: enforce config dtype at the end to avoid bf16/fp32 matmul mismatch
@@ -342,8 +342,8 @@ class Qwen3_5GatedDeltaNet(nn.Module):
     def forward(
         self,
         hidden_states: Tensor,
-        cache_params=None,
-        cache_position=None,
+        cache_params: None=None,  # TODO : used for kv cache ?
+        cache_position: None=None,
         attention_mask: Tensor | None = None,
     ) -> Tensor:
         hidden_states = apply_mask_to_padding_states(hidden_states, attention_mask)
@@ -351,17 +351,18 @@ class Qwen3_5GatedDeltaNet(nn.Module):
         # Set up dimensions for reshapes later
         batch_size, seq_len, _ = hidden_states.shape
 
-        use_precomputed_states = (
-            cache_params is not None
-            and cache_params.has_previous_state
-            and seq_len == 1
-            and cache_position is not None
-        )
+        # TODO :  WTF ?
+        # use_precomputed_states = (
+        #     cache_params is not None
+        #     and cache_params.has_previous_state
+        #     and seq_len == 1
+        #     and cache_position is not None
+        # )
 
         # getting projected states from cache if it exists
-        if cache_params is not None:
-            conv_state = cache_params.conv_states[self.layer_idx]
-            recurrent_state = cache_params.recurrent_states[self.layer_idx]
+        # if cache_params is not None:
+        #     conv_state = cache_params.conv_states[self.layer_idx]
+        #     recurrent_state = cache_params.recurrent_states[self.layer_idx]
 
         mixed_qkv = self.in_proj_qkv(hidden_states)
         mixed_qkv = mixed_qkv.transpose(1, 2)
@@ -372,32 +373,32 @@ class Qwen3_5GatedDeltaNet(nn.Module):
         b = self.in_proj_b(hidden_states)
         a = self.in_proj_a(hidden_states)
 
-        if use_precomputed_states:
-            # 2. Convolution sequence transformation
-            # NOTE: the conv state is updated in `causal_conv1d_update`
-            mixed_qkv = self.causal_conv1d_update(
-                mixed_qkv,
-                conv_state,
-                self.conv1d.weight.squeeze(1),
-                self.conv1d.bias,
-                self.activation,
-            )
-        else:
-            if cache_params is not None:
-                conv_state = F.pad(
-                    mixed_qkv, (self.conv_kernel_size - mixed_qkv.shape[-1], 0)
-                )
-                cache_params.conv_states[self.layer_idx] = conv_state
-            if self.causal_conv1d_fn is not None:
-                mixed_qkv = self.causal_conv1d_fn(
-                    x=mixed_qkv,
-                    weight=self.conv1d.weight.squeeze(1),
-                    bias=self.conv1d.bias,
-                    activation=self.activation,
-                    seq_idx=None,
-                )
-            else:
-                mixed_qkv = F.silu(self.conv1d(mixed_qkv)[:, :, :seq_len])
+        # if use_precomputed_states:
+        #     # 2. Convolution sequence transformation
+        #     # NOTE: the conv state is updated in `causal_conv1d_update`
+        #     mixed_qkv = self.causal_conv1d_update(
+        #         mixed_qkv,
+        #         conv_state,
+        #         self.conv1d.weight.squeeze(1),
+        #         self.conv1d.bias,
+        #         self.activation,
+        #     )
+        # else:
+            # if cache_params is not None:
+            #     conv_state = F.pad(
+            #         mixed_qkv, (self.conv_kernel_size - mixed_qkv.shape[-1], 0)
+            #     )
+            #     cache_params.conv_states[self.layer_idx] = conv_state
+        # if self.causal_conv1d_fn is not None:
+        #     mixed_qkv = self.causal_conv1d_fn(
+        #         x=mixed_qkv,
+        #         weight=self.conv1d.weight.squeeze(1),
+        #         bias=self.conv1d.bias,
+        #         activation=self.activation,
+        #         seq_idx=None,
+        #     )
+        # else:
+        mixed_qkv = F.silu(self.conv1d(mixed_qkv)[:, :, :seq_len])
 
         mixed_qkv = mixed_qkv.transpose(1, 2)
         query, key, value = torch.split(
@@ -421,33 +422,33 @@ class Qwen3_5GatedDeltaNet(nn.Module):
             query = query.repeat_interleave(self.num_v_heads // self.num_k_heads, dim=2)
             key = key.repeat_interleave(self.num_v_heads // self.num_k_heads, dim=2)
 
-        if not use_precomputed_states:
-            core_attn_out, last_recurrent_state = self.chunk_gated_delta_rule(
-                query,
-                key,
-                value,
-                gate=g,
-                beta=beta,
-                initial_state=None,
-                output_final_state=cache_params is not None,
-                use_qk_l2norm_in_kernel=True,
-            )
+        # if not use_precomputed_states:
+        core_attn_out, last_recurrent_state = self.chunk_gated_delta_rule(
+            query,
+            key,
+            value,
+            gate=g,
+            beta=beta,
+            initial_state=None,
+            output_final_state=cache_params is not None,
+            use_qk_l2norm_in_kernel=True,
+        )
 
-        else:
-            core_attn_out, last_recurrent_state = self.recurrent_gated_delta_rule(
-                query,
-                key,
-                value,
-                gate=g,
-                beta=beta,
-                initial_state=recurrent_state,
-                output_final_state=cache_params is not None,
-                use_qk_l2norm_in_kernel=True,
-            )
+        # else:
+        #     core_attn_out, last_recurrent_state = self.recurrent_gated_delta_rule(
+        #         query,
+        #         key,
+        #         value,
+        #         gate=g,
+        #         beta=beta,
+        #         initial_state=recurrent_state,
+        #         output_final_state=cache_params is not None,
+        #         use_qk_l2norm_in_kernel=True,
+        #     )
 
         # Update cache
-        if cache_params is not None:
-            cache_params.recurrent_states[self.layer_idx] = last_recurrent_state
+        # if cache_params is not None:
+        #     cache_params.recurrent_states[self.layer_idx] = last_recurrent_state
 
         # reshape input data into 2D tensor
         core_attn_out = core_attn_out.reshape(-1, self.head_v_dim)
@@ -647,7 +648,7 @@ class TransformerBlock(nn.Module):
     ) -> None:
         super().__init__()
         self.layer_type = layer_type
-
+        self.token_mixer: GroupedQueryAttention | Qwen3_5GatedDeltaNet
         if layer_type == "full_attention":
             self.token_mixer = GroupedQueryAttention(
                 d_in=settings.emb_dim,
@@ -786,21 +787,22 @@ def calc_model_memory_size(
 
 
 def load_weights_into_qwen3_5(
-    model: Qwen3_5Model, settings: Qwen3_5Settings, params
+    model: Qwen3_5Model, settings: Qwen3_5Settings, params: dict
 ) -> None:
-    def assign(left: Tensor, right: Tensor, tensor_name: str = "unknown") -> Tensor:
+    def assign(left: Tensor, right: Tensor, tensor_name: str = "unknown") -> nn.Parameter:
         if left.shape != right.shape:
             raise ValueError(
                 f"Shape mismatch in tensor '{tensor_name}'. Left: {left.shape}, Right: {right.shape}"
             )
 
         with torch.no_grad():
-            if isinstance(right, torch.Tensor):
-                left.copy_(right)
-            else:
-                left.copy_(torch.as_tensor(right, dtype=left.dtype, device=left.device))
+            # print('type(right) : ', type(right))
+            # if isinstance(right, torch.Tensor):
+            left.copy_(right)
+            # else:
+            #     left.copy_(torch.as_tensor(right, dtype=left.dtype, device=left.device))
 
-        return left
+        return nn.Parameter(left)
 
     if "model.embed_tokens.weight" in params:
         model_prefix = "model"
@@ -822,11 +824,12 @@ def load_weights_into_qwen3_5(
     layer_types = settings.layer_types
 
     for id_layer in range(n_layers):
-        block: TransformerBlock = model.trf_blocks[id_layer]  # type: ignore[reportAssignementType]
+        block = cast(TransformerBlock, model.trf_blocks[id_layer])
+        token_mixer: GroupedQueryAttention | Qwen3_5GatedDeltaNet = block.token_mixer
         layer_type = layer_types[id_layer]
 
         if layer_type == "full_attention":
-            att: GroupedQueryAttention = block.token_mixer  # type: ignore[reportAssignementType]
+            att = cast(GroupedQueryAttention, token_mixer)
             att.W_query.weight = assign(
                 att.W_query.weight,
                 params[pkey(f"layers.{id_layer}.self_attn.q_proj.weight")],
@@ -861,7 +864,7 @@ def load_weights_into_qwen3_5(
                 )
 
         elif layer_type == "linear_attention":
-            lat: Qwen3_5GatedDeltaNet = block.token_mixer  # type: ignore[reportAssignementType]
+            lat = cast(Qwen3_5GatedDeltaNet, token_mixer)
             lat.dt_bias = assign(
                 lat.dt_bias,
                 params[pkey(f"layers.{id_layer}.linear_attn.dt_bias")],
@@ -1051,7 +1054,7 @@ def generate_text_basic_stream(
     token_ids: Tensor,
     max_new_tokens: int,
     eos_token_id: int | None = None,
-):
+)-> Iterator[Tensor]:
     model.eval()
     with torch.no_grad():
         for _ in range(max_new_tokens):
@@ -1177,10 +1180,11 @@ if __name__ == "__main__":
 
 # TODO :
 # - check that it works on GPU
-# - Type hint -> mypy
 # - wtf fast attention
-# - kv cache ?
+# - kv cache ? see TODOs ?
+# - WTF notebook shims ?
 # - replace les assert par des raise
 # - tests unitaires
 # - fonctions torch ou import, vérifier que toutes les fonctions sont utilisées
 # - mettre la fonction load weight dans la classe du model
+# - function to get output but not stream ?

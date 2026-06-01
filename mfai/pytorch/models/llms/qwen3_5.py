@@ -490,7 +490,8 @@ def compute_rope_params(
     partial_rotary_factor: float = 1.0,
     dtype: torch.dtype = torch.float32,
 ) -> tuple[Tensor, Tensor]:
-    assert head_dim % 2 == 0, "Embedding dimension must be even"
+    if head_dim % 2 != 0:
+        raise ValueError(f"Embedding dimension must be even, got {head_dim}.")
 
     rotary_dim = int(head_dim * partial_rotary_factor)
     rotary_dim = max(2, rotary_dim - (rotary_dim % 2))
@@ -548,18 +549,22 @@ class GroupedQueryAttention(nn.Module):
         dtype: torch.dtype | None = None,
     ):
         super().__init__()
-        assert (
-            num_heads % num_kv_groups == 0
-        ), "num_heads must be divisible by num_kv_groups"
+        if num_heads % num_kv_groups != 0:
+            raise ValueError(
+                "`num_heads` must be divisible by `num_kv_groups`, got"
+                f"num_heads={num_heads} and num_kv_groups={num_kv_groups}."
+            )
 
         self.num_heads = num_heads
         self.num_kv_groups = num_kv_groups
         self.group_size = num_heads // num_kv_groups
 
         if head_dim is None:
-            assert (
-                d_in % num_heads == 0
-            ), "`d_in` must be divisible by `num_heads` if `head_dim` is not set"
+            if d_in % num_heads != 0:
+                raise ValueError(
+                    "`d_in` must be divisible by `num_heads` if `head_dim` is not set, "
+                    f"got num_heads={num_heads} and d_in={d_in}."
+                )
             head_dim = d_in // num_heads
 
         self.head_dim = head_dim
@@ -1179,10 +1184,8 @@ if __name__ == "__main__":
 
 # TODO :
 # - check that it works on GPU
-# - check that it works with fast attention, replace with with warning
+# - check that it works with fast attention, replace print with warning
 # - kv cache ? see TODOs ?
-# - replace les assert par des raise
 # - tests unitaires
-# - fonctions torch ou import, vérifier que toutes les fonctions sont utilisées
 # - mettre la fonction load weight dans la classe du model
 # - function to get output but not stream ?

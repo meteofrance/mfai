@@ -15,6 +15,7 @@ from mfai.pytorch.models.llms.gpt2 import (
 )
 from mfai.pytorch.models.llms.llama2 import Llama2, Llama2Settings
 from mfai.pytorch.models.llms.llama3 import Llama3, Llama3Settings
+from mfai.pytorch.models.llms.qwen3_5 import Qwen3_5, Qwen3_5Settings, Qwen3_5Tokenizer
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, Tokenizer
 
 
@@ -35,6 +36,16 @@ from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, Tokenizer
             partial(Llama3, Llama3Settings()),
             "Hello, I am voicessource Cris fjär pltheimer spectral проис mentreinental",
             LlamaTokenizer(),
+        ),
+        (
+            partial(Qwen3_5, Qwen3_5Settings()),
+            "Hello, I am键千千万 хоче ని металлуasted项手感预告ত্ত",
+            Qwen3_5Tokenizer(
+                tokenizer_file_path=str(
+                    Path("/scratch/shared/qwen3.5/") / "tokenizer.json"
+                ),
+                apply_chat_template=False,
+            ),
         ),
     ],
 )

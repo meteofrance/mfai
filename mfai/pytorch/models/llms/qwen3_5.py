@@ -11,6 +11,7 @@ import re
 import warnings
 from collections.abc import Iterator
 from dataclasses import dataclass
+from pathlib import Path
 from typing import cast
 
 import torch
@@ -756,15 +757,12 @@ class Qwen3_5Tokenizer:
         if eos_token in self._special_to_id:
             self.eos_token_id = self._special_to_id[eos_token]
 
-    def encode(self, text: str, chat_wrapped: bool | None = None) -> list[int]:
-        if chat_wrapped is None:
-            chat_wrapped = self.apply_chat_template
-
+    def encode(self, text: str) -> list[int]:
         stripped = text.strip()
         if stripped in self._special_to_id and "\n" not in stripped:
             return [self._special_to_id[stripped]]
 
-        if chat_wrapped:
+        if self.apply_chat_template:
             text = self._wrap_chat(text)
 
         ids = []
@@ -792,13 +790,13 @@ class Qwen3_5Tokenizer:
         return s
 
 
-class Qwen3_5Model(nn.Module):
+class Qwen3_5(nn.Module):
     settings_kls = Qwen3_5Settings
     model_type = ModelType.LLM
 
     def __init__(self, settings: Qwen3_5Settings) -> None:
         super().__init__()
-
+        self.context_length = settings.context_length
         self.tok_emb = nn.Embedding(
             settings.vocab_size, settings.emb_dim, dtype=settings.dtype
         )
@@ -830,7 +828,7 @@ class Qwen3_5Model(nn.Module):
         cos, sin = compute_rope_params(
             head_dim=head_dim,
             theta_base=settings.rope_base,
-            context_length=settings.context_length,
+            context_length=self.context_length,
             partial_rotary_factor=settings.partial_rotary_factor,
             dtype=torch.float32,
         )
@@ -1100,7 +1098,7 @@ if __name__ == "__main__":
     from safetensors.torch import load_file
 
     torch.manual_seed(123)
-    model = Qwen3_5Model(Qwen3_5Settings())
+    model = Qwen3_5(Qwen3_5Settings())
     print(model)
     print(model(torch.tensor([1, 2, 3]).unsqueeze(0)))
 
@@ -1200,5 +1198,7 @@ if __name__ == "__main__":
 # - check that it works on GPU
 # - check that it works with fast attention
 # - kv cache ? see TODOs ?
-# - tests unitaires
-# - même interface que les autres LLMs
+# - tests unitaires -> quid du fichier du tokenizer ?
+# - même interface que GPT2 : load_weights_from_dict, dowload_weights_from_tf_ckpt, forward, reset_kv_cache
+# check that forward does the same thing
+# - Qwen base or instruct, which template for tokenizer

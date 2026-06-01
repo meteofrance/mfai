@@ -61,6 +61,8 @@ llm = [
   "tensorflow==2.20",
   "tiktoken~=0.8",
   "tokenizers",
+  "causal-conv1d",
+  "flash-linear-attention",
 ]
 docs = [
   "sphinx>=7.0.0",

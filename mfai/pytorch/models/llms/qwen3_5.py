@@ -21,6 +21,20 @@ from typing import cast
 
 from mfai.pytorch.models.base import ModelType
 
+try:
+    from fla.modules import FusedRMSNormGated
+    from fla.ops.gated_delta_rule import fused_recurrent_gated_delta_rule, chunk_gated_delta_rule
+    from causal_conv1d import causal_conv1d_fn, causal_conv1d_update
+    use_fast_implem = True
+except:
+    print(
+        "The fast implementation is not available because one of the required library "
+        "is not installed. Falling back to torch implementation. "
+        "To install follow https://github.com/fla-org/flash-linear-attention#installation and"
+        " https://github.com/Dao-AILab/causal-conv1d"
+    )
+    use_fast_implem = False
+
 
 @dataclass_json
 @dataclass(slots=True)
@@ -274,7 +288,6 @@ class Qwen3_5GatedDeltaNet(nn.Module):
         self.conv_kernel_size = settings.linear_conv_kernel_dim
         self.layer_idx = layer_idx
         self.activation = settings.hidden_activation
-        self.act = ACT2FN[settings.hidden_activation]
         self.layer_norm_epsilon = settings.rms_norm_eps
 
         # QKV
@@ -296,9 +309,7 @@ class Qwen3_5GatedDeltaNet(nn.Module):
         self.A_log = nn.Parameter(torch.log(A))
 
         self.norm = (
-            Qwen3_5RMSNormGated(self.head_v_dim, eps=self.layer_norm_epsilon)
-            if FusedRMSNormGated is None
-            else FusedRMSNormGated(
+            FusedRMSNormGated(
                 self.head_v_dim,
                 eps=self.layer_norm_epsilon,
                 activation=self.activation,
@@ -307,26 +318,22 @@ class Qwen3_5GatedDeltaNet(nn.Module):
                 if settings.dtype is not None
                 else torch.get_default_dtype(),
             )
+            if use_fast_implem
+            else Qwen3_5RMSNormGated(self.head_v_dim, eps=self.layer_norm_epsilon)
         )
 
         self.out_proj = nn.Linear(self.value_dim, self.hidden_size, bias=False)
 
-        self.causal_conv1d_fn = causal_conv1d_fn
-        self.causal_conv1d_update = causal_conv1d_update or torch_causal_conv1d_update
+        # self.causal_conv1d_fn = causal_conv1d_fn if use_fast_implem else None
+        self.causal_conv1d_update = causal_conv1d_update if use_fast_implem else torch_causal_conv1d_update
         self.chunk_gated_delta_rule = (
-            chunk_gated_delta_rule or torch_chunk_gated_delta_rule
+            chunk_gated_delta_rule if use_fast_implem else torch_chunk_gated_delta_rule
         )
         self.recurrent_gated_delta_rule = (
-            fused_recurrent_gated_delta_rule or torch_recurrent_gated_delta_rule
+            fused_recurrent_gated_delta_rule if use_fast_implem else torch_recurrent_gated_delta_rule
         )
 
-        if not is_fast_path_available:
-            print(
-                "The fast path is not available because one of the required library "
-                "is not installed. Falling back to torch implementation. "
-                "To install follow https://github.com/fla-org/flash-linear-attention#installation and"
-                " https://github.com/Dao-AILab/causal-conv1d"
-            )
+
 
         self.in_proj_qkv = nn.Linear(
             self.hidden_size, self.key_dim * 2 + self.value_dim, bias=False
@@ -389,16 +396,16 @@ class Qwen3_5GatedDeltaNet(nn.Module):
             #         mixed_qkv, (self.conv_kernel_size - mixed_qkv.shape[-1], 0)
             #     )
             #     cache_params.conv_states[self.layer_idx] = conv_state
-        # if self.causal_conv1d_fn is not None:
-        #     mixed_qkv = self.causal_conv1d_fn(
-        #         x=mixed_qkv,
-        #         weight=self.conv1d.weight.squeeze(1),
-        #         bias=self.conv1d.bias,
-        #         activation=self.activation,
-        #         seq_idx=None,
-        #     )
-        # else:
-        mixed_qkv = F.silu(self.conv1d(mixed_qkv)[:, :, :seq_len])
+        if use_fast_implem:
+            mixed_qkv = causal_conv1d_fn(
+                x=mixed_qkv,
+                weight=self.conv1d.weight.squeeze(1),
+                bias=self.conv1d.bias,
+                activation=self.activation,
+                seq_idx=None,
+            )
+        else:
+            mixed_qkv = F.silu(self.conv1d(mixed_qkv)[:, :, :seq_len])
 
         mixed_qkv = mixed_qkv.transpose(1, 2)
         query, key, value = torch.split(
@@ -749,14 +756,6 @@ class Qwen3_5Model(nn.Module):
         return logits
 
 
-# Notebook shims for optional fast kernels in transformers
-causal_conv1d_fn = None
-causal_conv1d_update = None
-chunk_gated_delta_rule = None
-fused_recurrent_gated_delta_rule = None
-is_fast_path_available = False
-FusedRMSNormGated = None
-ACT2FN = {"silu": F.silu}
 
 
 def calc_model_memory_size(
@@ -1180,9 +1179,8 @@ if __name__ == "__main__":
 
 # TODO :
 # - check that it works on GPU
-# - wtf fast attention
+# - check that it works with fast attention, replace with with warning
 # - kv cache ? see TODOs ?
-# - WTF notebook shims ?
 # - replace les assert par des raise
 # - tests unitaires
 # - fonctions torch ou import, vérifier que toutes les fonctions sont utilisées

@@ -8,7 +8,9 @@ https://github.com/huggingface/transformers/blob/main/src/transformers/models/qw
 """
 
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
+from typing import cast
 
 import torch
 import torch.nn as nn
@@ -16,17 +18,19 @@ import torch.nn.functional as F
 from dataclasses_json import dataclass_json
 from tokenizers import Tokenizer
 from torch import Tensor
-from collections.abc import Iterator
-from typing import cast
 
 from mfai.pytorch.models.base import ModelType
 
 try:
-    from fla.modules import FusedRMSNormGated
-    from fla.ops.gated_delta_rule import fused_recurrent_gated_delta_rule, chunk_gated_delta_rule
     from causal_conv1d import causal_conv1d_fn, causal_conv1d_update
+    from fla.modules import FusedRMSNormGated
+    from fla.ops.gated_delta_rule import (
+        chunk_gated_delta_rule,
+        fused_recurrent_gated_delta_rule,
+    )
+
     use_fast_implem = True
-except:
+except ImportError:
     print(
         "The fast implementation is not available because one of the required library "
         "is not installed. Falling back to torch implementation. "
@@ -325,15 +329,17 @@ class Qwen3_5GatedDeltaNet(nn.Module):
         self.out_proj = nn.Linear(self.value_dim, self.hidden_size, bias=False)
 
         # self.causal_conv1d_fn = causal_conv1d_fn if use_fast_implem else None
-        self.causal_conv1d_update = causal_conv1d_update if use_fast_implem else torch_causal_conv1d_update
+        self.causal_conv1d_update = (
+            causal_conv1d_update if use_fast_implem else torch_causal_conv1d_update
+        )
         self.chunk_gated_delta_rule = (
             chunk_gated_delta_rule if use_fast_implem else torch_chunk_gated_delta_rule
         )
         self.recurrent_gated_delta_rule = (
-            fused_recurrent_gated_delta_rule if use_fast_implem else torch_recurrent_gated_delta_rule
+            fused_recurrent_gated_delta_rule
+            if use_fast_implem
+            else torch_recurrent_gated_delta_rule
         )
-
-
 
         self.in_proj_qkv = nn.Linear(
             self.hidden_size, self.key_dim * 2 + self.value_dim, bias=False
@@ -349,8 +355,8 @@ class Qwen3_5GatedDeltaNet(nn.Module):
     def forward(
         self,
         hidden_states: Tensor,
-        cache_params: None=None,  # TODO : used for kv cache ?
-        cache_position: None=None,
+        cache_params: None = None,  # TODO : used for kv cache ?
+        cache_position: None = None,
         attention_mask: Tensor | None = None,
     ) -> Tensor:
         hidden_states = apply_mask_to_padding_states(hidden_states, attention_mask)
@@ -391,11 +397,11 @@ class Qwen3_5GatedDeltaNet(nn.Module):
         #         self.activation,
         #     )
         # else:
-            # if cache_params is not None:
-            #     conv_state = F.pad(
-            #         mixed_qkv, (self.conv_kernel_size - mixed_qkv.shape[-1], 0)
-            #     )
-            #     cache_params.conv_states[self.layer_idx] = conv_state
+        # if cache_params is not None:
+        #     conv_state = F.pad(
+        #         mixed_qkv, (self.conv_kernel_size - mixed_qkv.shape[-1], 0)
+        #     )
+        #     cache_params.conv_states[self.layer_idx] = conv_state
         if use_fast_implem:
             mixed_qkv = causal_conv1d_fn(
                 x=mixed_qkv,
@@ -760,210 +766,199 @@ class Qwen3_5Model(nn.Module):
         logits = self.out_head(x.to(self.settings.dtype))
         return logits
 
+    def compute_memory_size(self, input_dtype: torch.dtype = torch.float32) -> float:
+        total_params = 0
+        total_grads = 0
+        for param in self.parameters():
+            # Calculate total number of elements per parameter
+            param_size = param.numel()
+            total_params += param_size
+            # Check if gradients are stored for this parameter
+            if param.requires_grad:
+                total_grads += param_size
 
+        # Calculate buffer size (non-parameters that require memory)
+        total_buffers = sum(buf.numel() for buf in self.buffers())
 
+        # Size in bytes = (Number of elements) * (Size of each element in bytes)
+        # We assume parameters and gradients are stored in the same type as input dtype
+        element_size = torch.tensor(0, dtype=input_dtype).element_size()
+        total_memory_bytes = (total_params + total_grads + total_buffers) * element_size
 
-def calc_model_memory_size(
-    model: Qwen3_5Model, input_dtype: torch.dtype = torch.float32
-) -> float:
-    total_params = 0
-    total_grads = 0
-    for param in model.parameters():
-        # Calculate total number of elements per parameter
-        param_size = param.numel()
-        total_params += param_size
-        # Check if gradients are stored for this parameter
-        if param.requires_grad:
-            total_grads += param_size
+        # Convert bytes to gigabytes
+        total_memory_gb = total_memory_bytes / (1024**3)
 
-    # Calculate buffer size (non-parameters that require memory)
-    total_buffers = sum(buf.numel() for buf in model.buffers())
+        return total_memory_gb
 
-    # Size in bytes = (Number of elements) * (Size of each element in bytes)
-    # We assume parameters and gradients are stored in the same type as input dtype
-    element_size = torch.tensor(0, dtype=input_dtype).element_size()
-    total_memory_bytes = (total_params + total_grads + total_buffers) * element_size
-
-    # Convert bytes to gigabytes
-    total_memory_gb = total_memory_bytes / (1024**3)
-
-    return total_memory_gb
-
-
-def load_weights_into_qwen3_5(
-    model: Qwen3_5Model, settings: Qwen3_5Settings, params: dict
-) -> None:
-    def assign(left: Tensor, right: Tensor, tensor_name: str = "unknown") -> nn.Parameter:
-        if left.shape != right.shape:
-            raise ValueError(
-                f"Shape mismatch in tensor '{tensor_name}'. Left: {left.shape}, Right: {right.shape}"
-            )
-
-        with torch.no_grad():
-            # print('type(right) : ', type(right))
-            # if isinstance(right, torch.Tensor):
-            left.copy_(right)
-            # else:
-            #     left.copy_(torch.as_tensor(right, dtype=left.dtype, device=left.device))
-
-        return nn.Parameter(left)
-
-    if "model.embed_tokens.weight" in params:
-        model_prefix = "model"
-    elif "model.language_model.embed_tokens.weight" in params:
-        model_prefix = "model.language_model"
-    else:
-        raise KeyError("Could not find embed token weights in checkpoint.")
-
-    def pkey(suffix: str) -> str:
-        return f"{model_prefix}.{suffix}"
-
-    model.tok_emb.weight = assign(
-        model.tok_emb.weight,
-        params[pkey("embed_tokens.weight")],
-        pkey("embed_tokens.weight"),
-    )
-
-    n_layers = settings.n_layers
-    layer_types = settings.layer_types
-
-    for id_layer in range(n_layers):
-        block = cast(TransformerBlock, model.trf_blocks[id_layer])
-        token_mixer: GroupedQueryAttention | Qwen3_5GatedDeltaNet = block.token_mixer
-        layer_type = layer_types[id_layer]
-
-        if layer_type == "full_attention":
-            att = cast(GroupedQueryAttention, token_mixer)
-            att.W_query.weight = assign(
-                att.W_query.weight,
-                params[pkey(f"layers.{id_layer}.self_attn.q_proj.weight")],
-                pkey(f"layers.{id_layer}.self_attn.q_proj.weight"),
-            )
-            att.W_key.weight = assign(
-                att.W_key.weight,
-                params[pkey(f"layers.{id_layer}.self_attn.k_proj.weight")],
-                pkey(f"layers.{id_layer}.self_attn.k_proj.weight"),
-            )
-            att.W_value.weight = assign(
-                att.W_value.weight,
-                params[pkey(f"layers.{id_layer}.self_attn.v_proj.weight")],
-                pkey(f"layers.{id_layer}.self_attn.v_proj.weight"),
-            )
-            att.out_proj.weight = assign(
-                att.out_proj.weight,
-                params[pkey(f"layers.{id_layer}.self_attn.o_proj.weight")],
-                pkey(f"layers.{id_layer}.self_attn.o_proj.weight"),
-            )
-            if hasattr(att, "q_norm") and att.q_norm is not None:
-                att.q_norm.weight = assign(
-                    att.q_norm.weight,
-                    params[pkey(f"layers.{id_layer}.self_attn.q_norm.weight")],
-                    pkey(f"layers.{id_layer}.self_attn.q_norm.weight"),
+    def load_weights(self, settings: Qwen3_5Settings, params: dict) -> None:
+        def assign(
+            left: Tensor, right: Tensor, tensor_name: str = "unknown"
+        ) -> nn.Parameter:
+            if left.shape != right.shape:
+                raise ValueError(
+                    f"Shape mismatch in tensor '{tensor_name}'. Left: {left.shape}, Right: {right.shape}"
                 )
-            if hasattr(att, "k_norm") and att.k_norm is not None:
-                att.k_norm.weight = assign(
-                    att.k_norm.weight,
-                    params[pkey(f"layers.{id_layer}.self_attn.k_norm.weight")],
-                    pkey(f"layers.{id_layer}.self_attn.k_norm.weight"),
-                )
+            with torch.no_grad():
+                left.copy_(right)
+            return nn.Parameter(left)
 
-        elif layer_type == "linear_attention":
-            lat = cast(Qwen3_5GatedDeltaNet, token_mixer)
-            lat.dt_bias = assign(
-                lat.dt_bias,
-                params[pkey(f"layers.{id_layer}.linear_attn.dt_bias")],
-                pkey(f"layers.{id_layer}.linear_attn.dt_bias"),
-            )
-            lat.A_log = assign(
-                lat.A_log,
-                params[pkey(f"layers.{id_layer}.linear_attn.A_log")],
-                pkey(f"layers.{id_layer}.linear_attn.A_log"),
-            )
-            lat.conv1d.weight = assign(
-                lat.conv1d.weight,
-                params[pkey(f"layers.{id_layer}.linear_attn.conv1d.weight")],
-                pkey(f"layers.{id_layer}.linear_attn.conv1d.weight"),
-            )
-            lat.norm.weight = assign(
-                lat.norm.weight,
-                params[pkey(f"layers.{id_layer}.linear_attn.norm.weight")],
-                pkey(f"layers.{id_layer}.linear_attn.norm.weight"),
-            )
-            lat.out_proj.weight = assign(
-                lat.out_proj.weight,
-                params[pkey(f"layers.{id_layer}.linear_attn.out_proj.weight")],
-                pkey(f"layers.{id_layer}.linear_attn.out_proj.weight"),
-            )
-            lat.in_proj_qkv.weight = assign(
-                lat.in_proj_qkv.weight,
-                params[pkey(f"layers.{id_layer}.linear_attn.in_proj_qkv.weight")],
-                pkey(f"layers.{id_layer}.linear_attn.in_proj_qkv.weight"),
-            )
-            lat.in_proj_z.weight = assign(
-                lat.in_proj_z.weight,
-                params[pkey(f"layers.{id_layer}.linear_attn.in_proj_z.weight")],
-                pkey(f"layers.{id_layer}.linear_attn.in_proj_z.weight"),
-            )
-            lat.in_proj_b.weight = assign(
-                lat.in_proj_b.weight,
-                params[pkey(f"layers.{id_layer}.linear_attn.in_proj_b.weight")],
-                pkey(f"layers.{id_layer}.linear_attn.in_proj_b.weight"),
-            )
-            lat.in_proj_a.weight = assign(
-                lat.in_proj_a.weight,
-                params[pkey(f"layers.{id_layer}.linear_attn.in_proj_a.weight")],
-                pkey(f"layers.{id_layer}.linear_attn.in_proj_a.weight"),
-            )
-
+        if "model.embed_tokens.weight" in params:
+            model_prefix = "model"
+        elif "model.language_model.embed_tokens.weight" in params:
+            model_prefix = "model.language_model"
         else:
-            raise ValueError(f"Unsupported layer type: {layer_type}")
+            raise KeyError("Could not find embed token weights in checkpoint.")
 
-        block.norm1.weight = assign(
-            block.norm1.weight,
-            params[pkey(f"layers.{id_layer}.input_layernorm.weight")],
-            pkey(f"layers.{id_layer}.input_layernorm.weight"),
-        )
+        def pkey(suffix: str) -> str:
+            return f"{model_prefix}.{suffix}"
 
-        block.ff.fc1.weight = assign(
-            block.ff.fc1.weight,
-            params[pkey(f"layers.{id_layer}.mlp.gate_proj.weight")],
-            pkey(f"layers.{id_layer}.mlp.gate_proj.weight"),
-        )
-        block.ff.fc2.weight = assign(
-            block.ff.fc2.weight,
-            params[pkey(f"layers.{id_layer}.mlp.up_proj.weight")],
-            pkey(f"layers.{id_layer}.mlp.up_proj.weight"),
-        )
-        block.ff.fc3.weight = assign(
-            block.ff.fc3.weight,
-            params[pkey(f"layers.{id_layer}.mlp.down_proj.weight")],
-            pkey(f"layers.{id_layer}.mlp.down_proj.weight"),
-        )
-        block.norm2.weight = assign(
-            block.norm2.weight,
-            params[pkey(f"layers.{id_layer}.post_attention_layernorm.weight")],
-            pkey(f"layers.{id_layer}.post_attention_layernorm.weight"),
+        self.tok_emb.weight = assign(
+            self.tok_emb.weight,
+            params[pkey("embed_tokens.weight")],
+            pkey("embed_tokens.weight"),
         )
 
-    model.final_norm.weight = assign(
-        model.final_norm.weight,
-        params[pkey("norm.weight")],
-        pkey("norm.weight"),
-    )
+        n_layers = settings.n_layers
+        layer_types = settings.layer_types
 
-    if "lm_head.weight" in params:
-        model.out_head.weight = assign(
-            model.out_head.weight, params["lm_head.weight"], "lm_head.weight"
+        for id_layer in range(n_layers):
+            block = cast(TransformerBlock, self.trf_blocks[id_layer])
+            token_mixer: GroupedQueryAttention | Qwen3_5GatedDeltaNet = (
+                block.token_mixer
+            )
+            layer_type = layer_types[id_layer]
+
+            if layer_type == "full_attention":
+                att = cast(GroupedQueryAttention, token_mixer)
+                att.W_query.weight = assign(
+                    att.W_query.weight,
+                    params[pkey(f"layers.{id_layer}.self_attn.q_proj.weight")],
+                    pkey(f"layers.{id_layer}.self_attn.q_proj.weight"),
+                )
+                att.W_key.weight = assign(
+                    att.W_key.weight,
+                    params[pkey(f"layers.{id_layer}.self_attn.k_proj.weight")],
+                    pkey(f"layers.{id_layer}.self_attn.k_proj.weight"),
+                )
+                att.W_value.weight = assign(
+                    att.W_value.weight,
+                    params[pkey(f"layers.{id_layer}.self_attn.v_proj.weight")],
+                    pkey(f"layers.{id_layer}.self_attn.v_proj.weight"),
+                )
+                att.out_proj.weight = assign(
+                    att.out_proj.weight,
+                    params[pkey(f"layers.{id_layer}.self_attn.o_proj.weight")],
+                    pkey(f"layers.{id_layer}.self_attn.o_proj.weight"),
+                )
+                if hasattr(att, "q_norm") and att.q_norm is not None:
+                    att.q_norm.weight = assign(
+                        att.q_norm.weight,
+                        params[pkey(f"layers.{id_layer}.self_attn.q_norm.weight")],
+                        pkey(f"layers.{id_layer}.self_attn.q_norm.weight"),
+                    )
+                if hasattr(att, "k_norm") and att.k_norm is not None:
+                    att.k_norm.weight = assign(
+                        att.k_norm.weight,
+                        params[pkey(f"layers.{id_layer}.self_attn.k_norm.weight")],
+                        pkey(f"layers.{id_layer}.self_attn.k_norm.weight"),
+                    )
+
+            elif layer_type == "linear_attention":
+                lat = cast(Qwen3_5GatedDeltaNet, token_mixer)
+                lat.dt_bias = assign(
+                    lat.dt_bias,
+                    params[pkey(f"layers.{id_layer}.linear_attn.dt_bias")],
+                    pkey(f"layers.{id_layer}.linear_attn.dt_bias"),
+                )
+                lat.A_log = assign(
+                    lat.A_log,
+                    params[pkey(f"layers.{id_layer}.linear_attn.A_log")],
+                    pkey(f"layers.{id_layer}.linear_attn.A_log"),
+                )
+                lat.conv1d.weight = assign(
+                    lat.conv1d.weight,
+                    params[pkey(f"layers.{id_layer}.linear_attn.conv1d.weight")],
+                    pkey(f"layers.{id_layer}.linear_attn.conv1d.weight"),
+                )
+                lat.norm.weight = assign(
+                    lat.norm.weight,
+                    params[pkey(f"layers.{id_layer}.linear_attn.norm.weight")],
+                    pkey(f"layers.{id_layer}.linear_attn.norm.weight"),
+                )
+                lat.out_proj.weight = assign(
+                    lat.out_proj.weight,
+                    params[pkey(f"layers.{id_layer}.linear_attn.out_proj.weight")],
+                    pkey(f"layers.{id_layer}.linear_attn.out_proj.weight"),
+                )
+                lat.in_proj_qkv.weight = assign(
+                    lat.in_proj_qkv.weight,
+                    params[pkey(f"layers.{id_layer}.linear_attn.in_proj_qkv.weight")],
+                    pkey(f"layers.{id_layer}.linear_attn.in_proj_qkv.weight"),
+                )
+                lat.in_proj_z.weight = assign(
+                    lat.in_proj_z.weight,
+                    params[pkey(f"layers.{id_layer}.linear_attn.in_proj_z.weight")],
+                    pkey(f"layers.{id_layer}.linear_attn.in_proj_z.weight"),
+                )
+                lat.in_proj_b.weight = assign(
+                    lat.in_proj_b.weight,
+                    params[pkey(f"layers.{id_layer}.linear_attn.in_proj_b.weight")],
+                    pkey(f"layers.{id_layer}.linear_attn.in_proj_b.weight"),
+                )
+                lat.in_proj_a.weight = assign(
+                    lat.in_proj_a.weight,
+                    params[pkey(f"layers.{id_layer}.linear_attn.in_proj_a.weight")],
+                    pkey(f"layers.{id_layer}.linear_attn.in_proj_a.weight"),
+                )
+
+            else:
+                raise ValueError(f"Unsupported layer type: {layer_type}")
+
+            block.norm1.weight = assign(
+                block.norm1.weight,
+                params[pkey(f"layers.{id_layer}.input_layernorm.weight")],
+                pkey(f"layers.{id_layer}.input_layernorm.weight"),
+            )
+
+            block.ff.fc1.weight = assign(
+                block.ff.fc1.weight,
+                params[pkey(f"layers.{id_layer}.mlp.gate_proj.weight")],
+                pkey(f"layers.{id_layer}.mlp.gate_proj.weight"),
+            )
+            block.ff.fc2.weight = assign(
+                block.ff.fc2.weight,
+                params[pkey(f"layers.{id_layer}.mlp.up_proj.weight")],
+                pkey(f"layers.{id_layer}.mlp.up_proj.weight"),
+            )
+            block.ff.fc3.weight = assign(
+                block.ff.fc3.weight,
+                params[pkey(f"layers.{id_layer}.mlp.down_proj.weight")],
+                pkey(f"layers.{id_layer}.mlp.down_proj.weight"),
+            )
+            block.norm2.weight = assign(
+                block.norm2.weight,
+                params[pkey(f"layers.{id_layer}.post_attention_layernorm.weight")],
+                pkey(f"layers.{id_layer}.post_attention_layernorm.weight"),
+            )
+
+        self.final_norm.weight = assign(
+            self.final_norm.weight,
+            params[pkey("norm.weight")],
+            pkey("norm.weight"),
         )
-    elif pkey("lm_head.weight") in params:
-        model.out_head.weight = assign(
-            model.out_head.weight,
-            params[pkey("lm_head.weight")],
-            pkey("lm_head.weight"),
-        )
-    else:
-        model.out_head.weight = model.tok_emb.weight
-        print("Model uses weight tying.")
+
+        if "lm_head.weight" in params:
+            self.out_head.weight = assign(
+                self.out_head.weight, params["lm_head.weight"], "lm_head.weight"
+            )
+        elif pkey("lm_head.weight") in params:
+            self.out_head.weight = assign(
+                self.out_head.weight,
+                params[pkey("lm_head.weight")],
+                pkey("lm_head.weight"),
+            )
+        else:
+            self.out_head.weight = self.tok_emb.weight
 
 
 class Qwen3_5Tokenizer:
@@ -1058,7 +1053,7 @@ def generate_text_basic_stream(
     token_ids: Tensor,
     max_new_tokens: int,
     eos_token_id: int | None = None,
-)-> Iterator[Tensor]:
+) -> Iterator[Tensor]:
     model.eval()
     with torch.no_grad():
         for _ in range(max_new_tokens):
@@ -1095,11 +1090,9 @@ if __name__ == "__main__":
     print(f"\nTotal number of unique parameters: {total_params_normalized:,}")
 
     print(
-        f"float32 (PyTorch default): {calc_model_memory_size(model, input_dtype=torch.float32):.2f} GB"
+        f"float32 (PyTorch default): {model.compute_memory_size(torch.float32):.2f} GB"
     )
-    print(
-        f"bfloat16: {calc_model_memory_size(model, input_dtype=torch.bfloat16):.2f} GB"
-    )
+    print(f"bfloat16: {model.compute_memory_size(torch.bfloat16):.2f} GB")
 
     if torch.cuda.is_available():
         device = torch.device("cuda")
@@ -1124,7 +1117,7 @@ if __name__ == "__main__":
         shard = load_file(shard_path)
         weights_dict.update(shard)
 
-    load_weights_into_qwen3_5(model, Qwen3_5Settings(), weights_dict)
+    model.load_weights(Qwen3_5Settings(), weights_dict)
     model.to(device)
     del weights_dict
 
@@ -1187,5 +1180,4 @@ if __name__ == "__main__":
 # - check that it works with fast attention, replace print with warning
 # - kv cache ? see TODOs ?
 # - tests unitaires
-# - mettre la fonction load weight dans la classe du model
-# - function to get output but not stream ?
+# - function to get output but not stream ? et mettre dans la classe

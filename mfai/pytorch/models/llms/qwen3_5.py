@@ -8,6 +8,7 @@ https://github.com/huggingface/transformers/blob/main/src/transformers/models/qw
 """
 
 import re
+import warnings
 from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import cast
@@ -31,7 +32,7 @@ try:
 
     use_fast_implem = True
 except ImportError:
-    print(
+    warnings.warn(
         "The fast implementation is not available because one of the required library "
         "is not installed. Falling back to torch implementation. "
         "To install follow https://github.com/fla-org/flash-linear-attention#installation and"
@@ -704,6 +705,93 @@ class TransformerBlock(nn.Module):
         return x
 
 
+class Qwen3_5Tokenizer:
+    _SPECIALS = [
+        "<|endoftext|>",
+        "<|im_start|>",
+        "<|im_end|>",
+        "<|object_ref_start|>",
+        "<|object_ref_end|>",
+        "<|box_start|>",
+        "<|box_end|>",
+        "<|quad_start|>",
+        "<|quad_end|>",
+        "<|vision_start|>",
+        "<|vision_end|>",
+        "<|vision_pad|>",
+        "<|image_pad|>",
+        "<|video_pad|>",
+        "<think>",
+        "</think>",
+    ]
+    _SPLIT_RE = re.compile(r"(<\|[^>]+?\|>|<think>|</think>)")
+
+    def __init__(
+        self,
+        tokenizer_file_path: str = "tokenizer.json",
+        repo_id: str | None = None,
+        apply_chat_template: bool = True,
+        add_generation_prompt: bool = False,
+        add_thinking: bool = False,
+    ) -> None:
+        self.apply_chat_template = apply_chat_template
+        self.add_generation_prompt = add_generation_prompt
+        self.add_thinking = add_thinking
+
+        tok_file = Path(tokenizer_file_path)
+        self._tok = Tokenizer.from_file(str(tok_file))
+        self._special_to_id = {}
+        for t in self._SPECIALS:
+            tid = self._tok.token_to_id(t)
+            if tid is not None:
+                self._special_to_id[t] = tid
+
+        self.pad_token_id = self._special_to_id["<|endoftext|>"]
+        self.eos_token_id = self.pad_token_id
+
+        if repo_id and "Base" not in repo_id:
+            eos_token = "<|im_end|>"
+        else:
+            eos_token = "<|endoftext|>"
+        if eos_token in self._special_to_id:
+            self.eos_token_id = self._special_to_id[eos_token]
+
+    def encode(self, text: str, chat_wrapped: bool | None = None) -> list[int]:
+        if chat_wrapped is None:
+            chat_wrapped = self.apply_chat_template
+
+        stripped = text.strip()
+        if stripped in self._special_to_id and "\n" not in stripped:
+            return [self._special_to_id[stripped]]
+
+        if chat_wrapped:
+            text = self._wrap_chat(text)
+
+        ids = []
+        for part in filter(None, self._SPLIT_RE.split(text)):
+            if part in self._special_to_id:
+                ids.append(self._special_to_id[part])
+            else:
+                ids.extend(self._tok.encode(part).ids)
+        return ids
+
+    def decode(self, ids: list[int]) -> str:
+        return self._tok.decode(ids, skip_special_tokens=False)
+
+    def _wrap_chat(self, user_msg: str) -> str:
+        # Mirrors Qwen3.5 chat_template behavior:
+        # add_generation_prompt + thinking => "<think>\n"
+        # add_generation_prompt + no thinking => empty think scaffold
+        s = f"<|im_start|>user\n{user_msg}<|im_end|>\n"
+        if self.add_generation_prompt:
+            s += "<|im_start|>assistant\n"
+            if self.add_thinking:
+                s += "<think>\n"
+            else:
+                s += "<think>\n\n</think>\n\n"
+        return s
+
+
 class Qwen3_5Model(nn.Module):
     settings_kls = Qwen3_5Settings
     model_type = ModelType.LLM
@@ -960,112 +1048,46 @@ class Qwen3_5Model(nn.Module):
         else:
             self.out_head.weight = self.tok_emb.weight
 
-
-class Qwen3_5Tokenizer:
-    _SPECIALS = [
-        "<|endoftext|>",
-        "<|im_start|>",
-        "<|im_end|>",
-        "<|object_ref_start|>",
-        "<|object_ref_end|>",
-        "<|box_start|>",
-        "<|box_end|>",
-        "<|quad_start|>",
-        "<|quad_end|>",
-        "<|vision_start|>",
-        "<|vision_end|>",
-        "<|vision_pad|>",
-        "<|image_pad|>",
-        "<|video_pad|>",
-        "<think>",
-        "</think>",
-    ]
-    _SPLIT_RE = re.compile(r"(<\|[^>]+?\|>|<think>|</think>)")
-
-    def __init__(
+    def generate_output_stream(
         self,
-        tokenizer_file_path: str = "tokenizer.json",
-        repo_id: str | None = None,
-        apply_chat_template: bool = True,
-        add_generation_prompt: bool = False,
-        add_thinking: bool = False,
-    ) -> None:
-        self.apply_chat_template = apply_chat_template
-        self.add_generation_prompt = add_generation_prompt
-        self.add_thinking = add_thinking
+        token_ids: Tensor,
+        max_new_tokens: int,
+        eos_token_id: int | None = None,
+    ) -> Iterator[Tensor]:
+        self.eval()
+        with torch.no_grad():
+            for _ in range(max_new_tokens):
+                out = self(token_ids)[:, -1]
+                next_token = torch.argmax(out, dim=-1, keepdim=True)
 
-        tok_file = Path(tokenizer_file_path)
-        self._tok = Tokenizer.from_file(str(tok_file))
-        self._special_to_id = {}
-        for t in self._SPECIALS:
-            tid = self._tok.token_to_id(t)
-            if tid is not None:
-                self._special_to_id[t] = tid
+                if eos_token_id is not None and torch.all(next_token == eos_token_id):
+                    break
 
-        self.pad_token_id = self._special_to_id["<|endoftext|>"]
-        self.eos_token_id = self.pad_token_id
+                yield next_token
 
-        if repo_id and "Base" not in repo_id:
-            eos_token = "<|im_end|>"
-        else:
-            eos_token = "<|endoftext|>"
-        if eos_token in self._special_to_id:
-            self.eos_token_id = self._special_to_id[eos_token]
+                token_ids = torch.cat([token_ids, next_token], dim=1)
 
-    def encode(self, text: str, chat_wrapped: bool | None = None) -> list[int]:
-        if chat_wrapped is None:
-            chat_wrapped = self.apply_chat_template
+    def generate_text(
+        self,
+        prompt: str,
+        tokenizer: Qwen3_5Tokenizer,
+        max_new_tokens: int,
+    ) -> str:
+        input_token_ids = tokenizer.encode(prompt)
+        device = next(self.parameters()).device
+        input_token_ids_tensor = torch.tensor(input_token_ids, device=device).unsqueeze(
+            0
+        )
 
-        stripped = text.strip()
-        if stripped in self._special_to_id and "\n" not in stripped:
-            return [self._special_to_id[stripped]]
-
-        if chat_wrapped:
-            text = self._wrap_chat(text)
-
-        ids = []
-        for part in filter(None, self._SPLIT_RE.split(text)):
-            if part in self._special_to_id:
-                ids.append(self._special_to_id[part])
-            else:
-                ids.extend(self._tok.encode(part).ids)
-        return ids
-
-    def decode(self, ids: list[int]) -> str:
-        return self._tok.decode(ids, skip_special_tokens=False)
-
-    def _wrap_chat(self, user_msg: str) -> str:
-        # Mirrors Qwen3.5 chat_template behavior:
-        # add_generation_prompt + thinking => "<think>\n"
-        # add_generation_prompt + no thinking => empty think scaffold
-        s = f"<|im_start|>user\n{user_msg}<|im_end|>\n"
-        if self.add_generation_prompt:
-            s += "<|im_start|>assistant\n"
-            if self.add_thinking:
-                s += "<think>\n"
-            else:
-                s += "<think>\n\n</think>\n\n"
-        return s
-
-
-def generate_text_basic_stream(
-    model: Qwen3_5Model,
-    token_ids: Tensor,
-    max_new_tokens: int,
-    eos_token_id: int | None = None,
-) -> Iterator[Tensor]:
-    model.eval()
-    with torch.no_grad():
-        for _ in range(max_new_tokens):
-            out = model(token_ids)[:, -1]
-            next_token = torch.argmax(out, dim=-1, keepdim=True)
-
-            if eos_token_id is not None and torch.all(next_token == eos_token_id):
-                break
-
-            yield next_token
-
-            token_ids = torch.cat([token_ids, next_token], dim=1)
+        text = prompt
+        for token in self.generate_output_stream(
+            token_ids=input_token_ids_tensor,
+            max_new_tokens=max_new_tokens,
+            eos_token_id=tokenizer.eos_token_id,
+        ):
+            token_id = token.squeeze(0).tolist()
+            text += tokenizer.decode(token_id)
+        return text
 
 
 if __name__ == "__main__":
@@ -1154,8 +1176,7 @@ if __name__ == "__main__":
     start_time = time.perf_counter()
     generated_tokens = 0
 
-    for token in generate_text_basic_stream(
-        model=model,
+    for token in model.generate_output_stream(
         token_ids=input_token_ids_tensor,
         max_new_tokens=500,
         eos_token_id=tokenizer.eos_token_id,
@@ -1177,7 +1198,7 @@ if __name__ == "__main__":
 
 # TODO :
 # - check that it works on GPU
-# - check that it works with fast attention, replace print with warning
+# - check that it works with fast attention
 # - kv cache ? see TODOs ?
 # - tests unitaires
-# - function to get output but not stream ? et mettre dans la classe
+# - même interface que les autres LLMs

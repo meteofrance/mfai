@@ -70,9 +70,10 @@ class GBlock(torch.nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         """Apply the forward function.
-        
+
         Args:
-            x: the Tensor to apply the GBlock on."""
+        x: the Tensor to apply the GBlock on.
+        """
         # Optionally spectrally normalized 1x1 convolution
         if x.shape[1] != self.output_channels:
             sc = self.conv_1x1(x)
@@ -516,13 +517,13 @@ class LatentConditioningStack(torch.nn.Module):
         """Apply convolution, L blocks, and spatial attention module to the input tensor.
 
         Args:
-            x (Tensor): Input tensor with shape (batch_size, channels, height, width) 
-                where height and width must be divisible by 32. The tensor must 
+            x (Tensor): Input tensor with shape (batch_size, channels, height, width)
+                where height and width must be divisible by 32. The tensor must
                 be on the correct device and will be moved to the latent distribution.
 
         Returns:
-            Tensor: Output tensor after processing through convolution, L blocks, and 
-                optional attention module. The output shape depends on the specific 
+            Tensor: Output tensor after processing through convolution, L blocks, and
+                optional attention module. The output shape depends on the specific
                 implementation of the layers but maintains the batch dimension.
 
         Raises:

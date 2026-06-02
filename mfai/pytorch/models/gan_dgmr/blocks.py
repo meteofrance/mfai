@@ -30,7 +30,7 @@ class GBlock(torch.nn.Module):
             input_channels: Number of input channels
             output_channels: Number of output channels
             conv_type: Type of convolution desired, see satflow/models/utils.py for options
-            spectral_normalized_eps: epsilon for numerical stability in calculating norms. Default is 1e-4.
+            spectral_normalized_eps: Epsilon for numerical stability in calculating norms. Default is 1e-4.
 
         """
         super().__init__()
@@ -72,7 +72,7 @@ class GBlock(torch.nn.Module):
         """Apply the forward function.
 
         Args:
-        x: the Tensor to apply the GBlock on.
+            x: The Tensor to apply the GBlock on.
         """
         # Optionally spectrally normalized 1x1 convolution
         if x.shape[1] != self.output_channels:
@@ -108,7 +108,7 @@ class UpsampleGBlock(torch.nn.Module):
             input_channels: Number of input channels.
             output_channels: Number of output channels.
             conv_type: Type of the convolution. Default is 'standard'.
-            spectral_normalized_eps: epsilon for numerical stability in calculating norms. Default is 1e-4.
+            spectral_normalized_eps: Epsilon for numerical stability in calculating norms. Default is 1e-4.
 
         """
         super().__init__()
@@ -517,7 +517,7 @@ class LatentConditioningStack(torch.nn.Module):
         """Apply convolution, L blocks, and spatial attention module to the input tensor.
 
         Args:
-            x (Tensor): Input tensor with shape (batch_size, channels, height, width)
+            x: Input tensor with shape (batch_size, channels, height, width)
                 where height and width must be divisible by 32. The tensor must
                 be on the correct device and will be moved to the latent distribution.
 

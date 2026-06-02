@@ -30,7 +30,7 @@ class GBlock(torch.nn.Module):
             input_channels: Number of input channels
             output_channels: Number of output channels
             conv_type: Type of convolution desired, see satflow/models/utils.py for options
-            spectral_normalized_eps: constrains the spectral norm of the weights.
+            spectral_normalized_eps: epsilon for numerical stability in calculating norms. Default is 1e-4.
 
         """
         super().__init__()
@@ -69,7 +69,10 @@ class GBlock(torch.nn.Module):
         )
 
     def forward(self, x: Tensor) -> Tensor:
-        """Apply the forward function."""
+        """Apply the forward function.
+        
+        Args:
+            x: the Tensor to apply the GBlock on."""
         # Optionally spectrally normalized 1x1 convolution
         if x.shape[1] != self.output_channels:
             sc = self.conv_1x1(x)
@@ -92,8 +95,8 @@ class UpsampleGBlock(torch.nn.Module):
 
     def __init__(
         self,
-        input_channels: int = 12,
-        output_channels: int = 12,
+        input_channels: int,
+        output_channels: int,
         conv_type: Literal["standard", "coord", "3d"] = "standard",
         spectral_normalized_eps: float = 0.0001,
     ) -> None:
@@ -103,8 +106,8 @@ class UpsampleGBlock(torch.nn.Module):
         Args:
             input_channels: Number of input channels.
             output_channels: Number of output channels.
-            conv_type: Type of convolution desired, see satflow/models/utils.py for options.
-            spectral_normalized_eps: constrains the spectral norm of the weights.
+            conv_type: Type of the convolution. Default is 'standard'.
+            spectral_normalized_eps: epsilon for numerical stability in calculating norms. Default is 1e-4.
 
         """
         super().__init__()
@@ -167,8 +170,8 @@ class DBlock(torch.nn.Module):
 
     def __init__(
         self,
-        input_channels: int = 12,
-        output_channels: int = 12,
+        input_channels: int,
+        output_channels: int,
         conv_type: Literal["standard", "coord", "3d"] = "standard",
         first_relu: bool = True,
         keep_same_output: bool = False,
@@ -179,8 +182,8 @@ class DBlock(torch.nn.Module):
         Args:
             input_channels: Number of input channels
             output_channels: Number of output channels
-            conv_type: Convolution type, see satflow/models/utils.py for options
-            first_relu: Whether to have an ReLU before the first 3x3 convolution
+            conv_type: Type of the convolution. Default is 'standard'.
+            first_relu: Whether to have an ReLU before the first 3x3 convolution. Default is 'True'.
             keep_same_output: Whether the output should have the same spatial dimensions
             as input, if False, downscales by 2
 
@@ -510,15 +513,22 @@ class LatentConditioningStack(torch.nn.Module):
         )
 
     def forward(self, x: Tensor) -> Tensor:
-        """
-        Apply convolution, l blocks and spatial attention module to the tensor.
+        """Apply convolution, L blocks, and spatial attention module to the input tensor.
 
         Args:
-            x: tensor on the correct device, to move over the latent distribution
+            x (Tensor): Input tensor with shape (batch_size, channels, height, width) 
+                where height and width must be divisible by 32. The tensor must 
+                be on the correct device and will be moved to the latent distribution.
 
         Returns:
-               tensor
+            Tensor: Output tensor after processing through convolution, L blocks, and 
+                optional attention module. The output shape depends on the specific 
+                implementation of the layers but maintains the batch dimension.
 
+        Raises:
+            ValueError: If the height or width of the input tensor is not divisible by 32.
+                This constraint is required for proper processing through the network's
+                downsampling operations.
         """
         height, width = x.shape[-2], x.shape[-1]
         if (height % 32 != 0) or (width % 32 != 0):

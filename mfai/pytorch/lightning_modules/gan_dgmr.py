@@ -19,12 +19,12 @@ import torch
 from lightning import LightningModule
 from torch import Tensor
 
-from mfai.pytorch.losses.gan_dgmr import (
+from mfai.pytorch.losses.dgmr import (
     GridCellLoss,
     loss_hinge_disc,
     loss_hinge_gen,
 )
-from mfai.pytorch.models.gan_dgmr import (
+from mfai.pytorch.models.dgmr import (
     ContextConditioningStack,
     Discriminator,
     Generator,
@@ -81,10 +81,9 @@ class DGMRLightningModule(LightningModule):
                 reshaped to, input dimension into ConvGRU, also affects the
                 number of channels for other linked inputs/outputs.
             context_channels: Number of context channels (int)
-            samples_per_input: Number of generation steps to use in forward pass,
-                in paper is 6 and the best is chosen for the loss this results
-                in huge amounts of GPU memory though, so less might work better
-                for training.
+            samples_per_input: Number of samples to generate per input before computing
+                grid cell loss. According to the authors, generating multiple predictions
+                would allow the average of the forecasts to be close to the ground truth.
             apply_last_relu: whether to apply a ReLu activation over the output. Default is False.
             precip_weight_cap: Custom ceiling for the weight function to
                 compute the grid cell loss.

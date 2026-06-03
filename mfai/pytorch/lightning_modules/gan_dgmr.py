@@ -81,7 +81,7 @@ class DGMRLightningModule(LightningModule):
                 reshaped to, input dimension into ConvGRU, also affects the
                 number of channels for other linked inputs/outputs.
             context_channels: Number of context channels (int)
-            samples_per_input: Number of samples to generate per sample before computing
+            samples_per_input: Number of samples to generate per input before computing
                 grid cell loss. According to the authors, generating multiple predictions
                 would allow the average of the forecasts to be close to the ground truth.
             apply_last_relu: whether to apply a ReLu activation over the output. Default is False.

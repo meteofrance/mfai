@@ -9,17 +9,17 @@ ARG CURL_CA_BUNDLE
 
 ENV MY_APT='apt-get -o "Acquire::https::Verify-Peer=false" -o "Acquire::AllowInsecureRepositories=true" -o "Acquire::AllowDowngradeToInsecureRepositories=true" -o "Acquire::https::Verify-Host=false"'
 
-RUN $MY_APT update && $MY_APT install -y curl nano sudo git openssh-server
+RUN $MY_APT update && $MY_APT install -y curl nano sudo git openssh-server make
 
-RUN mkdir -p /run/sshd
-RUN curl -fsSL https://code-server.dev/install.sh | sh
+# RUN mkdir -p /run/sshd
+# RUN curl -fsSL https://code-server.dev/install.sh | sh
 
 # Install project dependencies
 RUN apt -y update && apt -y install git
 WORKDIR /app
 COPY pyproject.toml pyproject.toml
 RUN pip install --upgrade build twine setuptools
-RUN pip install .[llm,dev]
+RUN pip install .[llm,dev,docs]
 
 ARG USERNAME
 ARG GROUPNAME

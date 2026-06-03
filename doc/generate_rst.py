@@ -82,7 +82,9 @@ def iter_all_modules(package_path: str) -> Generator[str, None, None]:
 
 
 def get_classes_matching(
-    package_path: str, base_names: Sequence[str | list[str]]
+    package_path: str,
+    base_names: Sequence[str | list[str]] = None,
+    attribute: str = None,
 ) -> list[str]:
     """Find all classes in a package that match the given inheritance conditions.
 
@@ -97,6 +99,9 @@ def get_classes_matching(
     Returns:
         A list of fully qualified class names (e.g. 'mfai.pytorch.losses.dice.DiceLoss').
     """
+    if not base_names and not attribute:
+        raise ValueError("Please set 'base_names' or 'attribute' argument.")
+
     matches = []
     for module_name in iter_all_modules(package_path):
         try:
@@ -108,8 +113,15 @@ def get_classes_matching(
                 continue
             if getattr(obj, "__module__", None) != module_name:
                 continue
-            if is_subclass_of_names(obj, base_names):
-                matches.append(f"{module_name}.{name}")
+            if base_names and attribute:
+                if is_subclass_of_names(obj, base_names) or hasattr(obj, attribute):
+                    matches.append(f"{module_name}.{name}")
+            elif base_names:
+                if is_subclass_of_names(obj, base_names):
+                    matches.append(f"{module_name}.{name}")
+            else:
+                if hasattr(obj, attribute):
+                    matches.append(f"{module_name}.{name}")
 
     return matches
 
@@ -360,18 +372,13 @@ def write_rst(
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
+    model_classes: list[str] = sorted(
+        ["mfai.pytorch.models.base.ModelABC"]
+        + get_classes_matching("mfai.pytorch.models", attribute="model_type")
+    )
     write_rst(
         title="Models",
-        sections=[
-            {"title": "Models", "classes": ["mfai.pytorch.models.base.ModelABC"]},
-            {
-                "title": "Models",
-                "classes": get_classes_matching(
-                    "mfai.pytorch.models",
-                    [["ModelABC", "Module"], "BaseModel"],
-                ),
-            },
-        ],
+        sections=[{"title": "Models", "classes": model_classes}],
         output_path=Path("doc/api/models.rst"),
         with_diagrams=True,
     )
@@ -381,9 +388,11 @@ if __name__ == "__main__":
         sections=[
             {
                 "title": "Losses",
-                "classes": get_classes_matching(
-                    "mfai.pytorch.losses",
-                    ["Module"],
+                "classes": sorted(
+                    get_classes_matching(
+                        "mfai.pytorch.losses",
+                        ["Module"],
+                    )
                 ),
             }
         ],

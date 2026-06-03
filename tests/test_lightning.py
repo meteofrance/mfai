@@ -109,7 +109,7 @@ def test_dgmr_lightningmodule() -> None:
         beta2=0.999,
         latent_channels=768,
         context_channels=384,
-        generation_steps=6,
+        samples_per_input=6,
         precip_weight_cap=24.0,
         use_attention=True,
         temporal_num_layers=3,
@@ -123,7 +123,7 @@ def test_dgmr_lightningmodule() -> None:
     assert module.grid_lambda == 20.0
     assert module.beta1 == 0.0
     assert module.beta2 == 0.999
-    assert module.generation_steps == 6
+    assert module.samples_per_input == 6
     assert isinstance(module.generator, Generator)
     assert isinstance(module.discriminator, Discriminator)
 

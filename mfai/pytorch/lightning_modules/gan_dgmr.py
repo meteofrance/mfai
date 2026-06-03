@@ -49,7 +49,7 @@ class DGMRLightningModule(LightningModule):
         beta2: float = 0.999,
         latent_channels: int = 768,
         context_channels: int = 384,
-        generation_steps: int = 6,
+        samples_per_input: int = 6,
         apply_last_relu: bool = False,
         precip_weight_cap: float = 24.0,
         use_attention: bool = True,
@@ -81,7 +81,7 @@ class DGMRLightningModule(LightningModule):
                 reshaped to, input dimension into ConvGRU, also affects the
                 number of channels for other linked inputs/outputs.
             context_channels: Number of context channels (int)
-            generation_steps: Number of generation steps to use in forward pass,
+            samples_per_input: Number of generation steps to use in forward pass,
                 in paper is 6 and the best is chosen for the loss this results
                 in huge amounts of GPU memory though, so less might work better
                 for training.
@@ -105,7 +105,7 @@ class DGMRLightningModule(LightningModule):
         self.beta1 = beta1
         self.beta2 = beta2
         self.grid_lambda = grid_lambda
-        self.generation_steps = generation_steps
+        self.samples_per_input = samples_per_input
 
         # Definition of Loss
         self.grid_regularizer = GridCellLoss(precip_weight_cap=precip_weight_cap)
@@ -260,7 +260,7 @@ class DGMRLightningModule(LightningModule):
             d_opt.step()
 
         predictions: list[Tensor] = [
-            self.generator(images) for _ in range(self.generation_steps)
+            self.generator(images) for _ in range(self.samples_per_input)
         ]
         generator_loss, grid_cell_reg = self.generator_step(
             predictions, images, future_images, real_sequence

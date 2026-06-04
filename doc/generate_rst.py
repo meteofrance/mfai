@@ -15,6 +15,7 @@ Requires sphinxcontrib-mermaid in conf.py extensions.
 This script is meant to be run before the Sphinx build step, either locally or in CI.
 """
 
+from enum import Enum
 import importlib
 import inspect
 import pkgutil
@@ -59,6 +60,13 @@ def is_subclass_of_names(cls: type, base_names: Sequence[str | list[str]]) -> bo
     return False
 
 
+def is_attribute_of_name(cls: type, attr: str, value: Any) -> bool:
+    if hasattr(cls, attr):
+        if getattr(cls, attr) == value:
+            return True
+    return False
+
+
 def iter_all_modules(package_path: str) -> Generator[str, None, None]:
     """Recursively yield all module names within a given package.
 
@@ -83,7 +91,7 @@ def iter_all_modules(package_path: str) -> Generator[str, None, None]:
 
 def get_classes_matching(
     package_path: str,
-    check_fn: Callable[[Any, Any], bool],
+    check_fn: Callable,
     check_fn_args: Any,
 ) -> list[str]:
     """Find all classes in a package that match the given inheritance conditions.
@@ -358,23 +366,48 @@ def write_rst(
     print(f"Written {output_path} ({len(all_fqns)} classes)")
 
 
+def write_model_rst(model_types: Enum, output_path: Path) -> None:
+    # Write header
+    lines: list[str] = []
+    title = "Models"
+    lines.append(title)
+    lines.append("=" * len(title))
+    lines.append("")
+
+    # Write tree of content
+    lines.append(".. toctree::")
+    lines.append("   :maxdepth: 1")
+    lines.append("")
+    for model_type in model_types:
+        lines.append(f"   models_{model_type.name.lower()}")
+    lines.append("")
+
+    output_path.write_text("\n".join(lines))
+
+
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    model_classes: list[str] = sorted(
-        ["mfai.pytorch.models.base.ModelABC"]
-        + get_classes_matching(
-            "mfai.pytorch.models", check_fn=hasattr, check_fn_args=["model_type"]
+    from mfai.pytorch.models import ModelType
+
+    for model_type in ModelType:
+        model_classes: list[str] = sorted(
+            get_classes_matching(
+                "mfai.pytorch.models",
+                check_fn=is_attribute_of_name,
+                check_fn_args=["model_type", model_type],
+            )
         )
-    )
-    write_rst(
-        title="Models",
-        sections=[{"title": "Models", "classes": model_classes}],
-        output_path=Path("doc/api/models.rst"),
-        with_diagrams=True,
-    )
+        write_rst(
+            title=model_type.name.title(),
+            sections=[{"title": model_type.name, "classes": model_classes}],
+            output_path=Path(f"doc/api/models_{model_type.name.lower()}.rst"),
+            with_diagrams=True,
+        )
+
+    write_model_rst(ModelType, output_path=Path("doc/api/models.rst"))
 
     write_rst(
         title="Losses",

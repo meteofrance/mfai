@@ -20,7 +20,7 @@ import inspect
 import pkgutil
 import sys
 from pathlib import Path
-from typing import Any, Generator, Literal, Sequence
+from typing import Any, Callable, Generator, Literal, Sequence
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -83,8 +83,8 @@ def iter_all_modules(package_path: str) -> Generator[str, None, None]:
 
 def get_classes_matching(
     package_path: str,
-    base_names: Sequence[str | list[str]] = None,
-    attribute: str = None,
+    check_fn: Callable[[Any, Any], bool],
+    check_fn_args: Any,
 ) -> list[str]:
     """Find all classes in a package that match the given inheritance conditions.
 
@@ -94,14 +94,12 @@ def get_classes_matching(
     Args:
         package_path: The dotted path of the package to search
             (e.g. 'mfai.pytorch.losses').
-        base_names: Inheritance conditions passed to `is_subclass_of_names`.
+        check_fn: the function used to check if the class is valid.
+        check_fn_args: arguments to pass to the 'check_fn'.
 
     Returns:
         A list of fully qualified class names (e.g. 'mfai.pytorch.losses.dice.DiceLoss').
     """
-    if not base_names and not attribute:
-        raise ValueError("Please set 'base_names' or 'attribute' argument.")
-
     matches = []
     for module_name in iter_all_modules(package_path):
         try:
@@ -113,15 +111,8 @@ def get_classes_matching(
                 continue
             if getattr(obj, "__module__", None) != module_name:
                 continue
-            if base_names and attribute:
-                if is_subclass_of_names(obj, base_names) or hasattr(obj, attribute):
-                    matches.append(f"{module_name}.{name}")
-            elif base_names:
-                if is_subclass_of_names(obj, base_names):
-                    matches.append(f"{module_name}.{name}")
-            else:
-                if hasattr(obj, attribute):
-                    matches.append(f"{module_name}.{name}")
+            if check_fn(obj, *check_fn_args):
+                matches.append(f"{module_name}.{name}")
 
     return matches
 
@@ -374,7 +365,9 @@ def write_rst(
 if __name__ == "__main__":
     model_classes: list[str] = sorted(
         ["mfai.pytorch.models.base.ModelABC"]
-        + get_classes_matching("mfai.pytorch.models", attribute="model_type")
+        + get_classes_matching(
+            "mfai.pytorch.models", check_fn=hasattr, check_fn_args=["model_type"]
+        )
     )
     write_rst(
         title="Models",
@@ -391,7 +384,8 @@ if __name__ == "__main__":
                 "classes": sorted(
                     get_classes_matching(
                         "mfai.pytorch.losses",
-                        ["Module"],
+                        check_fn=is_subclass_of_names,
+                        check_fn_args=[["Module"]],
                     )
                 ),
             }
@@ -406,14 +400,16 @@ if __name__ == "__main__":
                 "title": "Lightning Modules",
                 "classes": get_classes_matching(
                     "mfai.pytorch.lightning_modules",
-                    ["LightningModule"],
+                    check_fn=is_subclass_of_names,
+                    check_fn_args=[["LightningModule"]],
                 ),
             },
             {
                 "title": "Callbacks",
                 "classes": get_classes_matching(
                     "mfai.pytorch",
-                    ["Callback"],
+                    check_fn=is_subclass_of_names,
+                    check_fn_args=[["Callback"]],
                 ),
             },
         ],
@@ -427,7 +423,8 @@ if __name__ == "__main__":
                 "title": "Transforms",
                 "classes": get_classes_matching(
                     "mfai.pytorch.transforms",
-                    ["object"],
+                    check_fn=is_subclass_of_names,
+                    check_fn_args=[["object"]],
                 ),
             }
         ],
@@ -441,7 +438,8 @@ if __name__ == "__main__":
                 "title": "Metrics",
                 "classes": get_classes_matching(
                     "mfai.pytorch.metrics",
-                    ["Metric"],
+                    check_fn=is_subclass_of_names,
+                    check_fn_args=[["Metric"]],
                 ),
             }
         ],

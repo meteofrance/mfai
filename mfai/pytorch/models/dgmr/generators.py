@@ -15,6 +15,7 @@ from .blocks import (
     UpsampleGBlock,
 )
 from .layers import ConvGRU
+from ..base import ModelType
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARN)
@@ -22,6 +23,8 @@ logger.setLevel(logging.WARN)
 
 class Sampler(torch.nn.Module):
     """Sampler class."""
+
+    model_type: ModelType = ModelType.DGMR
 
     def __init__(
         self,
@@ -207,6 +210,8 @@ class Sampler(torch.nn.Module):
 
 class Generator(torch.nn.Module):
     """Generator class."""
+
+    model_type: ModelType = ModelType.DGMR
 
     def __init__(
         self,

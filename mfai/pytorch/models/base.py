@@ -26,6 +26,7 @@ class ModelType(Enum):
     MULTIMODAL_LLM = 5
     PANGU = 6
     IDENTITY = 7
+    DGMR = 8
 
 
 class ModelABC(ABC):

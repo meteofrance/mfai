@@ -10,6 +10,7 @@ from torch.distributions import normal
 from torch.nn.modules.pixelshuffle import PixelUnshuffle
 from torch.nn.utils.parametrizations import spectral_norm
 
+from ..base import ModelType
 from .layers import AttentionLayer, get_conv_layer
 
 
@@ -330,6 +331,8 @@ class LBlock(torch.nn.Module):
 class ContextConditioningStack(torch.nn.Module):
     """Context conditioning stack."""
 
+    model_type: ModelType = ModelType.DGMR
+
     def __init__(
         self,
         input_channels: int = 1,
@@ -463,6 +466,8 @@ class ContextConditioningStack(torch.nn.Module):
 
 class LatentConditioningStack(torch.nn.Module):
     """Latent conditioning stack class."""
+
+    model_type: ModelType = ModelType.DGMR
 
     def __init__(
         self,

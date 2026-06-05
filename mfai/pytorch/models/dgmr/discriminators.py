@@ -10,8 +10,8 @@ from torch.nn.modules.pixelshuffle import PixelUnshuffle
 from torch.nn.utils.parametrizations import spectral_norm
 from torchvision.transforms import RandomCrop
 
-from .blocks import DBlock
 from ..base import ModelType
+from .blocks import DBlock
 
 
 class Discriminator(torch.nn.Module):

@@ -15,11 +15,11 @@ Requires sphinxcontrib-mermaid in conf.py extensions.
 This script is meant to be run before the Sphinx build step, either locally or in CI.
 """
 
-from enum import Enum
 import importlib
 import inspect
 import pkgutil
 import sys
+from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Generator, Literal, Sequence
 

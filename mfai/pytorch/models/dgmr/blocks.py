@@ -10,8 +10,8 @@ from torch.distributions import normal
 from torch.nn.modules.pixelshuffle import PixelUnshuffle
 from torch.nn.utils.parametrizations import spectral_norm
 
-from .layers import AttentionLayer, get_conv_layer
 from ..base import ModelType
+from .layers import AttentionLayer, get_conv_layer
 
 
 class GBlock(torch.nn.Module):

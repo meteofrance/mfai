@@ -8,6 +8,7 @@ from torch import Tensor
 from torch.nn.modules.pixelshuffle import PixelShuffle
 from torch.nn.utils.parametrizations import spectral_norm
 
+from ..base import ModelType
 from .blocks import (
     ContextConditioningStack,
     GBlock,
@@ -15,7 +16,6 @@ from .blocks import (
     UpsampleGBlock,
 )
 from .layers import ConvGRU
-from ..base import ModelType
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARN)

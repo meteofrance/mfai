@@ -13,6 +13,7 @@ from torch.nn.utils.parametrizations import spectral_norm
 from .layers import AttentionLayer, get_conv_layer
 from ..base import ModelType
 
+
 class GBlock(torch.nn.Module):
     """Residual generator block without upsampling."""
 

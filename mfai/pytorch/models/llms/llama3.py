@@ -70,9 +70,9 @@ class GroupedQueryAttention(nn.Module):
     def __init__(self, d_in: int, d_out: int, num_heads: int, num_kv_groups: int):
         super().__init__()
         assert d_out % num_heads == 0, "d_out must be divisible by num_heads"
-        assert num_heads % num_kv_groups == 0, (
-            "num_heads must be divisible by num_kv_groups"
-        )
+        assert (
+            num_heads % num_kv_groups == 0
+        ), "num_heads must be divisible by num_kv_groups"
 
         self.d_out = d_out
         self.num_heads = num_heads

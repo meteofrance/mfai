@@ -133,12 +133,12 @@ def test_cross_attention_gpt2() -> None:
 
 def test_download_gpt2_weights(tmp_path: Path) -> None:
     model = GPT2(GPT2Settings(attn_tf_compat=True))
-    model.dowload_weights_from_tf_ckpt(tmp_path)
+    model.download_weights_from_tf_ckpt(tmp_path)
 
     # test with extra tokens
     model = GPT2(GPT2Settings(attn_tf_compat=True), vocab_size=50400)
-    model.dowload_weights_from_tf_ckpt(tmp_path)
+    model.download_weights_from_tf_ckpt(tmp_path)
 
     # test with longer context len - default is 1024 for gpt2 small
     model = GPT2(GPT2Settings(attn_tf_compat=True, context_length=1032))
-    model.dowload_weights_from_tf_ckpt(tmp_path)
+    model.download_weights_from_tf_ckpt(tmp_path)

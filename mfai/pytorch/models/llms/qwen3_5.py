@@ -7,7 +7,6 @@ Source file:
 https://github.com/huggingface/transformers/blob/main/src/transformers/models/qwen3_5/modeling_qwen3_5.py
 """
 
-import re
 import warnings
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -18,10 +17,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from dataclasses_json import dataclass_json
-from tokenizers import Tokenizer
 from torch import Tensor
 
 from mfai.pytorch.models.base import ModelType
+from mfai.tokenizers import Qwen3_5Tokenizer
 
 try:
     from causal_conv1d import causal_conv1d_fn, causal_conv1d_update
@@ -706,90 +705,6 @@ class TransformerBlock(nn.Module):
         return x
 
 
-class Qwen3_5Tokenizer:
-    _SPECIALS = [
-        "<|endoftext|>",
-        "<|im_start|>",
-        "<|im_end|>",
-        "<|object_ref_start|>",
-        "<|object_ref_end|>",
-        "<|box_start|>",
-        "<|box_end|>",
-        "<|quad_start|>",
-        "<|quad_end|>",
-        "<|vision_start|>",
-        "<|vision_end|>",
-        "<|vision_pad|>",
-        "<|image_pad|>",
-        "<|video_pad|>",
-        "<think>",
-        "</think>",
-    ]
-    _SPLIT_RE = re.compile(r"(<\|[^>]+?\|>|<think>|</think>)")
-
-    def __init__(
-        self,
-        tokenizer_file_path: str = "tokenizer.json",
-        repo_id: str | None = None,
-        apply_chat_template: bool = True,
-        add_generation_prompt: bool = False,
-        add_thinking: bool = False,
-    ) -> None:
-        self.apply_chat_template = apply_chat_template
-        self.add_generation_prompt = add_generation_prompt
-        self.add_thinking = add_thinking
-
-        tok_file = Path(tokenizer_file_path)
-        self._tok = Tokenizer.from_file(str(tok_file))
-        self._special_to_id = {}
-        for t in self._SPECIALS:
-            tid = self._tok.token_to_id(t)
-            if tid is not None:
-                self._special_to_id[t] = tid
-
-        self.pad_token_id = self._special_to_id["<|endoftext|>"]
-        self.eos_token_id = self.pad_token_id
-
-        if repo_id and "Base" not in repo_id:
-            eos_token = "<|im_end|>"
-        else:
-            eos_token = "<|endoftext|>"
-        if eos_token in self._special_to_id:
-            self.eos_token_id = self._special_to_id[eos_token]
-
-    def encode(self, text: str) -> list[int]:
-        stripped = text.strip()
-        if stripped in self._special_to_id and "\n" not in stripped:
-            return [self._special_to_id[stripped]]
-
-        if self.apply_chat_template:
-            text = self._wrap_chat(text)
-
-        ids = []
-        for part in filter(None, self._SPLIT_RE.split(text)):
-            if part in self._special_to_id:
-                ids.append(self._special_to_id[part])
-            else:
-                ids.extend(self._tok.encode(part).ids)
-        return ids
-
-    def decode(self, ids: list[int]) -> str:
-        return self._tok.decode(ids, skip_special_tokens=False)
-
-    def _wrap_chat(self, user_msg: str) -> str:
-        # Mirrors Qwen3.5 chat_template behavior:
-        # add_generation_prompt + thinking => "<think>\n"
-        # add_generation_prompt + no thinking => empty think scaffold
-        s = f"<|im_start|>user\n{user_msg}<|im_end|>\n"
-        if self.add_generation_prompt:
-            s += "<|im_start|>assistant\n"
-            if self.add_thinking:
-                s += "<think>\n"
-            else:
-                s += "<think>\n\n</think>\n\n"
-        return s
-
-
 class Qwen3_5(nn.Module):
     settings_kls = Qwen3_5Settings
     model_type = ModelType.LLM
@@ -1081,7 +996,7 @@ class Qwen3_5(nn.Module):
         for token in self.generate_output_stream(
             token_ids=input_token_ids_tensor,
             max_new_tokens=max_new_tokens,
-            eos_token_id=tokenizer.eos_token_id,
+            eos_token_id=tokenizer.eot_token,
         ):
             token_id = token.squeeze(0).tolist()
             text += tokenizer.decode(token_id)
@@ -1150,8 +1065,6 @@ if __name__ == "__main__":
     )
 
     tokenizer = Qwen3_5Tokenizer(
-        tokenizer_file_path=str(tokenizer_file_path),
-        repo_id=repo_id,
         apply_chat_template=True,
         add_generation_prompt=True,
         add_thinking=True,
@@ -1177,7 +1090,7 @@ if __name__ == "__main__":
     for token in model.generate_output_stream(
         token_ids=input_token_ids_tensor,
         max_new_tokens=500,
-        eos_token_id=tokenizer.eos_token_id,
+        eos_token_id=tokenizer.eot_token,
     ):
         generated_tokens += 1
         token_id = token.squeeze(0).tolist()
@@ -1198,7 +1111,5 @@ if __name__ == "__main__":
 # - check that it works on GPU
 # - check that it works with fast attention
 # - kv cache ? see TODOs ?
-# - tests unitaires -> quid du fichier du tokenizer ?
 # - même interface que GPT2 : load_weights_from_dict, dowload_weights_from_tf_ckpt, forward, reset_kv_cache
 # check that forward does the same thing
-# - Qwen base or instruct, which template for tokenizer

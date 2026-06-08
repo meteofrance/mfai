@@ -791,7 +791,7 @@ class Qwen3_5(nn.Module):
 
         return total_memory_gb
 
-    def load_weights(self, settings: Qwen3_5Settings, params: dict) -> None:
+    def load_weights_from_dict(self, params: dict) -> None:
         def assign(
             left: Tensor, right: Tensor, tensor_name: str = "unknown"
         ) -> nn.Parameter:
@@ -819,8 +819,8 @@ class Qwen3_5(nn.Module):
             pkey("embed_tokens.weight"),
         )
 
-        n_layers = settings.n_layers
-        layer_types = settings.layer_types
+        n_layers = self.settings.n_layers
+        layer_types = self.settings.layer_types
 
         for id_layer in range(n_layers):
             block = cast(TransformerBlock, self.trf_blocks[id_layer])
@@ -961,6 +961,21 @@ class Qwen3_5(nn.Module):
         else:
             self.out_head.weight = self.tok_emb.weight
 
+    def download_weights_from_hf(self, model_dir: Path) -> None:
+        repo_id = "Qwen/Qwen3.5-0.8B"
+        repo_dir = snapshot_download(repo_id=repo_id, local_dir=model_dir)
+        index_path = os.path.join(repo_dir, "model.safetensors.index.json")
+        with open(index_path, "r") as f:
+            index = json.load(f)
+
+        weights_dict = {}
+        for filename in sorted(set(index["weight_map"].values())):
+            shard_path = os.path.join(repo_dir, filename)
+            shard = load_file(shard_path)
+            weights_dict.update(shard)
+
+        self.load_weights_from_dict(weights_dict)
+
     def generate_output_stream(
         self,
         token_ids: Tensor,
@@ -1009,7 +1024,7 @@ if __name__ == "__main__":
     import time
     from pathlib import Path
 
-    from huggingface_hub import hf_hub_download, snapshot_download
+    from huggingface_hub import snapshot_download
     from safetensors.torch import load_file
 
     torch.manual_seed(123)
@@ -1038,31 +1053,10 @@ if __name__ == "__main__":
     print("--> device : ", device)
     model.to(device)
 
-    repo_id = "Qwen/Qwen3.5-0.8B"
     local_dir = Path("/scratch/shared/qwen3.5/")
 
-    repo_dir = snapshot_download(repo_id=repo_id, local_dir=local_dir)
-    index_path = os.path.join(repo_dir, "model.safetensors.index.json")
-    with open(index_path, "r") as f:
-        index = json.load(f)
-
-    weights_dict = {}
-    for filename in sorted(set(index["weight_map"].values())):
-        shard_path = os.path.join(repo_dir, filename)
-        shard = load_file(shard_path)
-        weights_dict.update(shard)
-
-    model.load_weights(Qwen3_5Settings(), weights_dict)
+    model.download_weights_from_hf(local_dir)
     model.to(device)
-    del weights_dict
-
-    tokenizer_file_path = local_dir / "tokenizer.json"
-
-    hf_hub_download(
-        repo_id=repo_id,
-        filename="tokenizer.json",
-        local_dir=local_dir,
-    )
 
     tokenizer = Qwen3_5Tokenizer(
         apply_chat_template=True,
@@ -1071,14 +1065,9 @@ if __name__ == "__main__":
     )
 
     prompt = "Give me a short introduction to large language models."
-
     input_token_ids = tokenizer.encode(prompt)
     text = tokenizer.decode(input_token_ids)
     print(text)
-
-    prompt = "Give me a short introduction to large language models."
-
-    input_token_ids = tokenizer.encode(prompt)
     input_token_ids_tensor = torch.tensor(input_token_ids, device=device).unsqueeze(0)
 
     if torch.cuda.is_available():
@@ -1111,5 +1100,3 @@ if __name__ == "__main__":
 # - check that it works on GPU
 # - check that it works with fast attention
 # - kv cache ? see TODOs ?
-# - même interface que GPT2 : load_weights_from_dict, dowload_weights_from_tf_ckpt, forward, reset_kv_cache
-# check that forward does the same thing

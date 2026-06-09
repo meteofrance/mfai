@@ -3,7 +3,7 @@
 import pytest
 import torch
 
-from mfai.pytorch.losses.gan_dgmr import (
+from mfai.pytorch.losses.dgmr import (
     GridCellLoss,
     loss_hinge_disc,
     loss_hinge_gen,

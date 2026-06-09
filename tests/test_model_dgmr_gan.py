@@ -6,7 +6,7 @@ import pytest
 import torch
 import torch.nn.functional as F
 
-from mfai.pytorch.models.gan_dgmr import (
+from mfai.pytorch.models.dgmr import (
     ContextConditioningStack,
     Discriminator,
     Generator,
@@ -15,12 +15,12 @@ from mfai.pytorch.models.gan_dgmr import (
     SpatialDiscriminator,
     TemporalDiscriminator,
 )
-from mfai.pytorch.models.gan_dgmr.blocks import DBlock, GBlock
-from mfai.pytorch.models.gan_dgmr.layers.conv_gru import ConvGRU, ConvGRUCell
+from mfai.pytorch.models.dgmr.blocks import DBlock, GBlock
+from mfai.pytorch.models.dgmr.layers.conv_gru import ConvGRU, ConvGRUCell
 
 
 def test_dblock() -> None:
-    model = DBlock(keep_same_output=True)
+    model = DBlock(12, 12, keep_same_output=True)
     x = torch.rand((2, 12, 128, 128))
     out = model(x)
     y = torch.rand((2, 12, 128, 128))

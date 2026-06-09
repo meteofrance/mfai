@@ -27,7 +27,10 @@ from mfai.pytorch.models.base import ModelType
 from mfai.tokenizers import Qwen3_5Tokenizer
 
 try:
-    from causal_conv1d import causal_conv1d_fn, causal_conv1d_update
+    from causal_conv1d import (  # type: ignore[import-not-found]
+        causal_conv1d_fn,
+        causal_conv1d_update,
+    )
 
     use_fast_conv1d = True
 except ImportError:
@@ -36,11 +39,11 @@ except ImportError:
         "installed. Falling back to torch implementation. "
         "To install follow https://github.com/Dao-AILab/causal-conv1d."
     )
-    use_fast_conv1d = False
+use_fast_conv1d = False
 
 try:
-    from fla.modules import FusedRMSNormGated
-    from fla.ops.gated_delta_rule import (
+    from fla.modules import FusedRMSNormGated  # type: ignore[import-not-found]
+    from fla.ops.gated_delta_rule import (  # type: ignore[import-not-found]
         chunk_gated_delta_rule,
         fused_recurrent_gated_delta_rule,
     )
@@ -52,7 +55,7 @@ except ImportError:
         "is not installed. Falling back to torch implementation. To install follow "
         "https://github.com/fla-org/flash-linear-attention#installation."
     )
-    use_flash_att = False
+use_flash_att = False
 
 
 @dataclass_json
@@ -126,7 +129,6 @@ def torch_causal_conv1d_update(
     conv_state: Tensor,
     weight: Tensor,
     bias: Tensor | None = None,
-    activation=None,
 ) -> Tensor:
     _, hidden_size, seq_len = hidden_states.shape
     state_len = conv_state.shape[-1]
@@ -246,7 +248,7 @@ def torch_recurrent_gated_delta_rule(
     gate: Tensor,
     beta: Tensor,
     initial_state: Tensor,
-    output_final_state: Tensor,
+    output_final_state: bool,
     use_qk_l2norm_in_kernel: bool = False,
 ) -> tuple[Tensor, Tensor | None]:
     initial_dtype = query.dtype
@@ -290,6 +292,39 @@ def torch_recurrent_gated_delta_rule(
     last_recurrent_state_out = None if not output_final_state else last_recurrent_state
     core_attn_out = core_attn_out.transpose(1, 2).contiguous().to(initial_dtype)
     return core_attn_out, last_recurrent_state_out
+
+
+class Qwen3_5LinearAttentionCache:
+    def __init__(self, n_layers: int) -> None:
+        self.conv_states: list[None | Tensor] = [None] * n_layers
+        self.recurrent_states: list[None | Tensor] = [None] * n_layers
+        self.has_previous_state = False
+
+    def reset(self) -> None:
+        for i in range(len(self.conv_states)):
+            self.conv_states[i] = None
+            self.recurrent_states[i] = None
+        self.has_previous_state = False
+
+
+class KVCache:
+    def __init__(self, n_layers: int) -> None:
+        self.cache: list[None | tuple[Tensor, Tensor]] = [None] * n_layers
+        self.linear_cache = Qwen3_5LinearAttentionCache(n_layers)
+
+    def get(self, layer_idx: int) -> tuple[Tensor, Tensor] | None:
+        return self.cache[layer_idx]
+
+    def update(self, layer_idx: int, value: tuple[Tensor, Tensor]) -> None:
+        self.cache[layer_idx] = value
+
+    def get_all(self) -> list[None | tuple[Tensor, Tensor]]:
+        return self.cache
+
+    def reset(self) -> None:
+        for i in range(len(self.cache)):
+            self.cache[i] = None
+        self.linear_cache.reset()
 
 
 # Minimal change: enforce config dtype at the end to avoid bf16/fp32 matmul mismatch
@@ -371,8 +406,8 @@ class Qwen3_5GatedDeltaNet(nn.Module):
     def forward(
         self,
         hidden_states: Tensor,
-        cache_params: None = None,  # TODO : used for kv cache ?
-        cache_position: None = None,
+        cache_params: Qwen3_5LinearAttentionCache | None = None,
+        cache_position: Tensor | None = None,
         attention_mask: Tensor | None = None,
     ) -> Tensor:
         hidden_states = apply_mask_to_padding_states(hidden_states, attention_mask)
@@ -380,7 +415,6 @@ class Qwen3_5GatedDeltaNet(nn.Module):
         # Set up dimensions for reshapes later
         batch_size, seq_len, _ = hidden_states.shape
 
-        # TODO :  WTF ?
         use_precomputed_states = (
             cache_params is not None
             and cache_params.has_previous_state
@@ -407,10 +441,9 @@ class Qwen3_5GatedDeltaNet(nn.Module):
             # NOTE: the conv state is updated in `causal_conv1d_update`
             mixed_qkv = self.causal_conv1d_update(
                 mixed_qkv,
-                conv_state,
+                conv_state,  # type: ignore[arg-type]
                 self.conv1d.weight.squeeze(1),
                 self.conv1d.bias,
-                # self.activation,
             )
         else:
             if cache_params is not None:
@@ -470,7 +503,7 @@ class Qwen3_5GatedDeltaNet(nn.Module):
                 value,
                 gate=g,
                 beta=beta,
-                initial_state=recurrent_state,
+                initial_state=recurrent_state,  # type: ignore[arg-type]
                 output_final_state=cache_params is not None,
                 use_qk_l2norm_in_kernel=True,
             )
@@ -536,7 +569,7 @@ def compute_rope_params(
     return cos, sin
 
 
-def apply_rope(x: Tensor, cos: Tensor, sin: Tensor, offset=0) -> Tensor:
+def apply_rope(x: Tensor, cos: Tensor, sin: Tensor, offset: int = 0) -> Tensor:
     _, _, seq_len, head_dim = x.shape
     if head_dim % 2 != 0:
         raise ValueError(f"Head dimension must be even, got {head_dim}.")
@@ -611,8 +644,14 @@ class GroupedQueryAttention(nn.Module):
             self.q_norm = self.k_norm = None
 
     def forward(
-        self, x: Tensor, mask: Tensor, cos: Tensor, sin: Tensor, start_pos=0, cache=None
-    ) -> Tensor:
+        self,
+        x: Tensor,
+        mask: Tensor,
+        cos: Tensor,
+        sin: Tensor,
+        start_pos: int = 0,
+        cache: tuple[Tensor, Tensor] | None = None,
+    ) -> tuple[Tensor, tuple[Tensor, Tensor]]:
         b, num_tokens, _ = x.shape
 
         q_and_gate = self.W_query(x)
@@ -639,13 +678,9 @@ class GroupedQueryAttention(nn.Module):
         prev_len = 0
         if cache is not None:
             prev_k, prev_v = cache
-            if prev_k is not None:
-                prev_len = prev_k.size(2)
-                keys_cat_raw = torch.cat([prev_k, keys_new], dim=2)
-                values_cat_raw = torch.cat([prev_v, values_new], dim=2)
-            else:
-                keys_cat_raw = keys_new
-                values_cat_raw = values_new
+            prev_len = prev_k.size(2)
+            keys_cat_raw = torch.cat([prev_k, keys_new], dim=2)
+            values_cat_raw = torch.cat([prev_v, values_new], dim=2)
         else:
             keys_cat_raw = keys_new
             values_cat_raw = values_new
@@ -733,16 +768,17 @@ class TransformerBlock(nn.Module):
         mask: Tensor,
         cos: Tensor,
         sin: Tensor,
-        start_pos=0,
-        cache=None,
-        linear_cache=None,
-        cache_position=None,
-    ) -> Tensor:
+        start_pos: int = 0,
+        cache: tuple[Tensor, Tensor] | None = None,
+        linear_cache: Qwen3_5LinearAttentionCache | None = None,
+        cache_position: Tensor | None = None,
+    ) -> tuple[Tensor, tuple[Tensor, Tensor] | None]:
         shortcut = x
         x = self.norm1(x)
 
         if self.layer_type == "full_attention":
-            x, next_cache = self.token_mixer(
+            att = cast(GroupedQueryAttention, self.token_mixer)
+            x, next_cache = att(
                 x,
                 mask,
                 cos,
@@ -751,7 +787,8 @@ class TransformerBlock(nn.Module):
                 cache=cache,
             )
         else:
-            x = self.token_mixer(
+            lat = cast(Qwen3_5GatedDeltaNet, self.token_mixer)
+            x = lat(
                 x,
                 cache_params=linear_cache,
                 cache_position=cache_position,
@@ -815,7 +852,13 @@ class Qwen3_5(nn.Module):
         self.settings = settings
         self.current_pos = 0
 
-    def create_mask(self, cur_len, device, pos_start=0, pos_end=None):
+    def create_mask(
+        self,
+        cur_len: int,
+        device: torch.device,
+        pos_start: int = 0,
+        pos_end: int | None = None,
+    ) -> Tensor:
         if pos_end is None:
             pos_end = cur_len
 
@@ -825,7 +868,7 @@ class Qwen3_5(nn.Module):
         mask = mask_full[row_slice, :pos_end][None, None, :, :]
         return mask
 
-    def forward(self, in_idx, cache=None):
+    def forward(self, in_idx: Tensor, cache: KVCache | None = None) -> Tensor:
         x = self.tok_emb(in_idx)
 
         num_tokens = x.shape[1]
@@ -874,7 +917,7 @@ class Qwen3_5(nn.Module):
         logits = self.out_head(x.to(self.settings.dtype))
         return logits
 
-    def reset_kv_cache(self):
+    def reset_kv_cache(self) -> None:
         self.current_pos = 0
 
     def compute_memory_size(self, input_dtype: torch.dtype = torch.float32) -> float:
@@ -1135,39 +1178,6 @@ class Qwen3_5(nn.Module):
         return text
 
 
-class Qwen3_5LinearAttentionCache:
-    def __init__(self, n_layers):
-        self.conv_states = [None] * n_layers
-        self.recurrent_states = [None] * n_layers
-        self.has_previous_state = False
-
-    def reset(self):
-        for i in range(len(self.conv_states)):
-            self.conv_states[i] = None
-            self.recurrent_states[i] = None
-        self.has_previous_state = False
-
-
-class KVCache:
-    def __init__(self, n_layers):
-        self.cache = [None] * n_layers
-        self.linear_cache = Qwen3_5LinearAttentionCache(n_layers)
-
-    def get(self, layer_idx):
-        return self.cache[layer_idx]
-
-    def update(self, layer_idx, value):
-        self.cache[layer_idx] = value
-
-    def get_all(self):
-        return self.cache
-
-    def reset(self):
-        for i in range(len(self.cache)):
-            self.cache[i] = None
-        self.linear_cache.reset()
-
-
 if __name__ == "__main__":
     # Exemple of basic usage
 
@@ -1231,6 +1241,4 @@ if __name__ == "__main__":
     if torch.cuda.is_available():
 
         def calc_gpu_gb(x: int) -> str:
-            return f"{x / 1024 / 1024 / 1024:.2f} GB"
-
-        print(f"GPU memory used: {calc_gpu_gb(torch.cuda.max_memory_allocated())}")
+     

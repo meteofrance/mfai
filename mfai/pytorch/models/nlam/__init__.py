@@ -373,7 +373,7 @@ class BaseHiGraphModel(BaseGraphModel):
                 up_edges = self.mesh_up_features[lvl].shape[0]
                 down_edges = self.mesh_down_features[lvl].shape[0]
                 print(
-                    f"  {lvl}<->{lvl+1} - {up_edges} up edges, {down_edges} down edges"
+                    f"  {lvl}<->{lvl + 1} - {up_edges} up edges, {down_edges} down edges"
                 )
 
         # Embedders

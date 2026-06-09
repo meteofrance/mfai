@@ -266,8 +266,8 @@ class Qwen3_5Tokenizer(Tokenizer):
                 ids.extend(self._tok.encode(part).ids)
         return ids
 
-    def decode(self, ids: list[int]) -> str:
-        return self._tok.decode(ids, skip_special_tokens=False)
+    def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
+        return self._tok.decode(tokens, skip_special_tokens=False)
 
     def _wrap_chat(self, user_msg: str) -> str:
         # Mirrors Qwen3.5 chat_template behavior:

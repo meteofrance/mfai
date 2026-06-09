@@ -60,9 +60,7 @@ llm = [
   "sentencepiece~=0.2",
   "tensorflow==2.20",
   "tiktoken~=0.8",
-  "tokenizers",
-  "causal-conv1d",
-  "flash-linear-attention",
+  "tokenizers~=0.23.1",
 ]
 docs = [
   "sphinx>=7.0.0",

@@ -24,22 +24,29 @@ from mfai.tokenizers import Qwen3_5Tokenizer
 
 try:
     from causal_conv1d import causal_conv1d_fn, causal_conv1d_update
+    use_fast_conv1d = True
+except ImportError:
+    warnings.warn(
+        "The fast conv1d is not available because the required library is not "
+        "installed. Falling back to torch implementation. "
+        "To install follow https://github.com/Dao-AILab/causal-conv1d."
+    )
+    use_fast_conv1d = False
+
+try:
     from fla.modules import FusedRMSNormGated
     from fla.ops.gated_delta_rule import (
         chunk_gated_delta_rule,
         fused_recurrent_gated_delta_rule,
     )
-
-    use_fast_implem = True
+    use_flash_att = True
 except ImportError:
     warnings.warn(
-        "The fast implementation is not available because one of the required library "
-        "is not installed. Falling back to torch implementation. "
-        "To install follow https://github.com/fla-org/flash-linear-attention#installation and"
-        " https://github.com/Dao-AILab/causal-conv1d"
+        "The flash attention is not available because the required library "
+        "is not installed. Falling back to torch implementation. To install follow "
+        "https://github.com/fla-org/flash-linear-attention#installation."
     )
-    use_fast_implem = False
-
+    use_flash_att = False
 
 @dataclass_json
 @dataclass(slots=True)
@@ -323,7 +330,7 @@ class Qwen3_5GatedDeltaNet(nn.Module):
                 if settings.dtype is not None
                 else torch.get_default_dtype(),
             )
-            if use_fast_implem
+            if use_flash_att
             else Qwen3_5RMSNormGated(self.head_v_dim, eps=self.layer_norm_epsilon)
         )
 
@@ -331,14 +338,14 @@ class Qwen3_5GatedDeltaNet(nn.Module):
 
         # self.causal_conv1d_fn = causal_conv1d_fn if use_fast_implem else None
         self.causal_conv1d_update = (
-            causal_conv1d_update if use_fast_implem else torch_causal_conv1d_update
+            causal_conv1d_update if use_fast_conv1d else torch_causal_conv1d_update
         )
         self.chunk_gated_delta_rule = (
-            chunk_gated_delta_rule if use_fast_implem else torch_chunk_gated_delta_rule
+            chunk_gated_delta_rule if use_flash_att else torch_chunk_gated_delta_rule
         )
         self.recurrent_gated_delta_rule = (
             fused_recurrent_gated_delta_rule
-            if use_fast_implem
+            if use_flash_att
             else torch_recurrent_gated_delta_rule
         )
 
@@ -403,7 +410,7 @@ class Qwen3_5GatedDeltaNet(nn.Module):
         #         mixed_qkv, (self.conv_kernel_size - mixed_qkv.shape[-1], 0)
         #     )
         #     cache_params.conv_states[self.layer_idx] = conv_state
-        if use_fast_implem:
+        if use_fast_conv1d:
             mixed_qkv = causal_conv1d_fn(
                 x=mixed_qkv,
                 weight=self.conv1d.weight.squeeze(1),
@@ -441,7 +448,7 @@ class Qwen3_5GatedDeltaNet(nn.Module):
             query,
             key,
             value,
-            gate=g,
+            g,
             beta=beta,
             initial_state=None,
             output_final_state=cache_params is not None,
@@ -1019,6 +1026,8 @@ class Qwen3_5(nn.Module):
 
 
 if __name__ == "__main__":
+    # Exemple of basic usage
+
     import json
     import os
     import time
@@ -1027,43 +1036,38 @@ if __name__ == "__main__":
     from huggingface_hub import snapshot_download
     from safetensors.torch import load_file
 
-    torch.manual_seed(123)
-    model = Qwen3_5(Qwen3_5Settings())
-    print(model)
-    print(model(torch.tensor([1, 2, 3]).unsqueeze(0)))
 
+    # Create model Qwen 3.5
+    torch.manual_seed(123)
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+    print("--> device : ", device)
+    model = Qwen3_5(Qwen3_5Settings())
+    model.to(device)
+
+    # Print some information about the model
+    print(model)
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Total number of parameters: {total_params:,}")
-
-    # Account for weight tying
     total_params_normalized = total_params - model.tok_emb.weight.numel()
     print(f"\nTotal number of unique parameters: {total_params_normalized:,}")
-
     print(
         f"float32 (PyTorch default): {model.compute_memory_size(torch.float32):.2f} GB"
     )
     print(f"bfloat16: {model.compute_memory_size(torch.bfloat16):.2f} GB")
 
-    if torch.cuda.is_available():
-        device = torch.device("cuda")
-    elif torch.backends.mps.is_available():
-        device = torch.device("mps")
-    else:
-        device = torch.device("cpu")
-    print("--> device : ", device)
-    model.to(device)
-
+    # Load pre-trained weights and tokenizer
     local_dir = Path("/scratch/shared/qwen3.5/")
-
     model.download_weights_from_hf(local_dir)
-    model.to(device)
-
     tokenizer = Qwen3_5Tokenizer(
         apply_chat_template=True,
         add_generation_prompt=True,
         add_thinking=True,
     )
 
+    # Generate some output and measure performance
     prompt = "Give me a short introduction to large language models."
     input_token_ids = tokenizer.encode(prompt)
     text = tokenizer.decode(input_token_ids)
@@ -1072,13 +1076,12 @@ if __name__ == "__main__":
 
     if torch.cuda.is_available():
         torch.cuda.reset_peak_memory_stats()
-
     start_time = time.perf_counter()
     generated_tokens = 0
 
     for token in model.generate_output_stream(
         token_ids=input_token_ids_tensor,
-        max_new_tokens=500,
+        max_new_tokens=50,
         eos_token_id=tokenizer.eot_token,
     ):
         generated_tokens += 1
@@ -1090,13 +1093,9 @@ if __name__ == "__main__":
     print(f"\n\nGeneration speed: {tokens_per_sec:.2f} tokens/sec")
 
     if torch.cuda.is_available():
-
         def calc_gpu_gb(x: int) -> str:
             return f"{x / 1024 / 1024 / 1024:.2f} GB"
-
         print(f"GPU memory used: {calc_gpu_gb(torch.cuda.max_memory_allocated())}")
 
 # TODO :
-# - check that it works on GPU
-# - check that it works with fast attention
 # - kv cache ? see TODOs ?

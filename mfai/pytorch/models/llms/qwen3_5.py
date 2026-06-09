@@ -1241,4 +1241,6 @@ if __name__ == "__main__":
     if torch.cuda.is_available():
 
         def calc_gpu_gb(x: int) -> str:
-     
+            return f"{x / 1024 / 1024 / 1024:.2f} GB"
+
+        print(f"GPU memory used: {calc_gpu_gb(torch.cuda.max_memory_allocated())}")

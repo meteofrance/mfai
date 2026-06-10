@@ -2,6 +2,7 @@
 Module with various LLM tokenizers wrapped in a common interface.
 """
 
+import re
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, List
@@ -9,6 +10,7 @@ from typing import Any, List
 import sentencepiece as spm
 import tiktoken  # noqa
 from huggingface_hub import hf_hub_download, login
+from tokenizers import Tokenizer as HFTokenizer
 
 from mfai.encoding import get_tiktoken_encoding
 
@@ -201,3 +203,93 @@ class MiniGPT2Tokenizer(Tokenizer, ABC):
     @property
     def vocab_size(self) -> int:
         return len(self.token_to_id)
+
+
+class Qwen3_5Tokenizer(Tokenizer):
+    _SPECIALS = [
+        "<|endoftext|>",
+        "<|im_start|>",
+        "<|im_end|>",
+        "<|object_ref_start|>",
+        "<|object_ref_end|>",
+        "<|box_start|>",
+        "<|box_end|>",
+        "<|quad_start|>",
+        "<|quad_end|>",
+        "<|vision_start|>",
+        "<|vision_end|>",
+        "<|vision_pad|>",
+        "<|image_pad|>",
+        "<|video_pad|>",
+        "<think>",
+        "</think>",
+    ]
+    _SPLIT_RE = re.compile(r"(<\|[^>]+?\|>|<think>|</think>)")
+    _REPO_ID = "Qwen/Qwen3.5-0.8B"
+
+    def __init__(
+        self,
+        apply_chat_template: bool = True,
+        add_generation_prompt: bool = False,
+        add_thinking: bool = False,
+    ) -> None:
+        self.apply_chat_template = apply_chat_template
+        self.add_generation_prompt = add_generation_prompt
+        self.add_thinking = add_thinking
+
+        tokenizer_file = Path(__file__).parent / "qwen3.5/tokenizer.json"
+        self._tok = HFTokenizer.from_file(str(tokenizer_file))
+        self._special_to_id: dict[str, int] = {}
+        for t in self._SPECIALS:
+            tid = self._tok.token_to_id(t)
+            if tid is not None:
+                self._special_to_id[t] = tid
+
+        self.pad_token_id = self._special_to_id["<|endoftext|>"]
+
+    def name(self) -> str:
+        return "Qwen3.5"
+
+    def encode(self, text: str) -> list[int]:
+        stripped = text.strip()
+        if stripped in self._special_to_id and "\n" not in stripped:
+            return [self._special_to_id[stripped]]
+
+        if self.apply_chat_template:
+            text = self._wrap_chat(text)
+
+        ids = []
+        for part in filter(None, self._SPLIT_RE.split(text)):
+            if part in self._special_to_id:
+                ids.append(self._special_to_id[part])
+            else:
+                ids.extend(self._tok.encode(part).ids)
+        return ids
+
+    def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
+        return self._tok.decode(tokens, skip_special_tokens=False)
+
+    def _wrap_chat(self, user_msg: str) -> str:
+        # Mirrors Qwen3.5 chat_template behavior:
+        # add_generation_prompt + thinking => "<think>\n"
+        # add_generation_prompt + no thinking => empty think scaffold
+        s = f"<|im_start|>user\n{user_msg}<|im_end|>\n"
+        if self.add_generation_prompt:
+            s += "<|im_start|>assistant\n"
+            if self.add_thinking:
+                s += "<think>\n"
+            else:
+                s += "<think>\n\n</think>\n\n"
+        return s
+
+    @property
+    def eot_token(self) -> int:
+        if "Base" not in self._REPO_ID:
+            eos_token = "<|im_end|>"  # For classic or "Instruct" Qwen model
+        else:
+            eos_token = "<|endoftext|>"  # For "Base" Qwen model
+        return self._special_to_id[eos_token]
+
+    @property
+    def vocab_size(self) -> int:
+        return self._tok.get_vocab_size()

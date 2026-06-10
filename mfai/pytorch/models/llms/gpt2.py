@@ -198,7 +198,7 @@ class MultiHeadAttention(nn.Module):
 
 class MultiHeadAttentionPySDPA(nn.Module):
     """
-    Mutli Head Attention using Pytorch's scaled_dot_product_attention.
+    Multi Head Attention using Pytorch's scaled_dot_product_attention.
     """
 
     def __init__(
@@ -549,7 +549,7 @@ class GPT2(nn.Module):
         else:
             self.out_head.weight = assign(self.out_head.weight, params["wte"])
 
-    def dowload_weights_from_tf_ckpt(self, model_dir: str | Path) -> None:
+    def download_weights_from_tf_ckpt(self, model_dir: str | Path) -> None:
         """
         Downloads a tensorflow checkpoint into model_dir and sets the weights of self.
         """

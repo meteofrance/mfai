@@ -15,7 +15,8 @@ from mfai.pytorch.models.llms.gpt2 import (
 )
 from mfai.pytorch.models.llms.llama2 import Llama2, Llama2Settings
 from mfai.pytorch.models.llms.llama3 import Llama3, Llama3Settings
-from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, Tokenizer
+from mfai.pytorch.models.llms.qwen3_5 import Qwen3_5, Qwen3_5Settings
+from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, Qwen3_5Tokenizer, Tokenizer
 
 
 @pytest.mark.parametrize(
@@ -35,6 +36,11 @@ from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, Tokenizer
             partial(Llama3, Llama3Settings()),
             "Hello, I am voicessource Cris fjär pltheimer spectral проис mentreinental",
             LlamaTokenizer(),
+        ),
+        (
+            partial(Qwen3_5, Qwen3_5Settings()),
+            "Hello, I am键千千万 хоче ని металлуasted项手感预告ত্ত",
+            Qwen3_5Tokenizer(apply_chat_template=False),
         ),
     ],
 )
@@ -127,12 +133,12 @@ def test_cross_attention_gpt2() -> None:
 
 def test_download_gpt2_weights(tmp_path: Path) -> None:
     model = GPT2(GPT2Settings(attn_tf_compat=True))
-    model.dowload_weights_from_tf_ckpt(tmp_path)
+    model.download_weights_from_tf_ckpt(tmp_path)
 
     # test with extra tokens
     model = GPT2(GPT2Settings(attn_tf_compat=True), vocab_size=50400)
-    model.dowload_weights_from_tf_ckpt(tmp_path)
+    model.download_weights_from_tf_ckpt(tmp_path)
 
     # test with longer context len - default is 1024 for gpt2 small
     model = GPT2(GPT2Settings(attn_tf_compat=True, context_length=1032))
-    model.dowload_weights_from_tf_ckpt(tmp_path)
+    model.download_weights_from_tf_ckpt(tmp_path)

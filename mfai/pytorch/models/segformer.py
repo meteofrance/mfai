@@ -291,7 +291,9 @@ class Segformer(BaseModel, AutoPaddingModel):
                 lambda t: len(t) == 4,
                 (dims, heads, ff_expansion, kernel_and_stride, num_layers),
             )
-        ), "only four stages are allowed, all keyword arguments must be either a single value or a tuple of 4 values"
+        ), (
+            "only four stages are allowed, all keyword arguments must be either a single value or a tuple of 4 values"
+        )
 
         # reduce image size by a factor 2
         # and spread over num_downsampling_chans channels

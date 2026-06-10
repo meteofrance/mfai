@@ -71,7 +71,7 @@ docs = [
   "sphinxcontrib-mermaid",
 ]
 dev = [
-  "pytest==8.3.4",
+  "pytest==9.0.3",
   "pytest-cov==6.0.0",
   "ruff==0.15.9",
   "mypy==1.15.0",

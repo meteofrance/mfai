@@ -80,7 +80,7 @@ class Qwen3_5Settings:
     linear_value_head_dim: int = 128
     linear_num_key_heads: int = 16
     linear_num_value_heads: int = 16
-    dtype: torch.dtype = torch.bfloat16
+    dtype: torch.dtype = torch.float32  # torch.bfloat16: default in Raschka's code
     layer_types: tuple[str, ...] = tuple(
         (["linear_attention"] * 3 + ["full_attention"]) * 6
     )

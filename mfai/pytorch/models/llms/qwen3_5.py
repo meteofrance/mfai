@@ -26,6 +26,7 @@ from torch import Tensor
 from mfai.pytorch.models.base import ModelType
 from mfai.tokenizers import Qwen3_5Tokenizer
 
+use_fast_conv1d = False
 try:
     from causal_conv1d import (  # type: ignore[import-not-found]
         causal_conv1d_fn,
@@ -39,8 +40,8 @@ except ImportError:
         "installed. Falling back to torch implementation. "
         "To install follow https://github.com/Dao-AILab/causal-conv1d."
     )
-use_fast_conv1d = False
 
+use_flash_att = False
 try:
     from fla.modules import FusedRMSNormGated  # type: ignore[import-not-found]
     from fla.ops.gated_delta_rule import (  # type: ignore[import-not-found]
@@ -55,7 +56,6 @@ except ImportError:
         "is not installed. Falling back to torch implementation. To install follow "
         "https://github.com/fla-org/flash-linear-attention#installation."
     )
-use_flash_att = False
 
 
 @dataclass_json

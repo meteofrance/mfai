@@ -9,8 +9,8 @@ from typing import Any, List
 
 import sentencepiece as spm
 import tiktoken  # noqa
-import tokenizers
 from huggingface_hub import hf_hub_download, login
+from tokenizers import Tokenizer as HFTokenizer
 
 from mfai.encoding import get_tiktoken_encoding
 
@@ -238,8 +238,8 @@ class Qwen3_5Tokenizer(Tokenizer):
         self.add_thinking = add_thinking
 
         tokenizer_file = Path(__file__).parent / "qwen3.5/tokenizer.json"
-        self._tok = tokenizers.Tokenizer.from_file(str(tokenizer_file))
-        self._special_to_id = {}
+        self._tok = HFTokenizer.from_file(str(tokenizer_file))
+        self._special_to_id: dict[str, int] = {}
         for t in self._SPECIALS:
             tid = self._tok.token_to_id(t)
             if tid is not None:

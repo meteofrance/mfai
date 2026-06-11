@@ -245,7 +245,7 @@ def torch_recurrent_gated_delta_rule(
     query: Tensor,
     key: Tensor,
     value: Tensor,
-    gate: Tensor,
+    g: Tensor,
     beta: Tensor,
     initial_state: Tensor,
     output_final_state: bool,
@@ -257,7 +257,7 @@ def torch_recurrent_gated_delta_rule(
         key = l2norm(key, dim=-1, eps=1e-6)
     query, key, value, beta, gate = [
         x.transpose(1, 2).contiguous().to(torch.float32)
-        for x in (query, key, value, beta, gate)
+        for x in (query, key, value, beta, g)
     ]
 
     batch_size, num_heads, sequence_length, k_head_dim = key.shape
@@ -383,8 +383,9 @@ class Qwen3_5GatedDeltaNet(nn.Module):
         self.causal_conv1d_update = (
             causal_conv1d_update if use_fast_conv1d else torch_causal_conv1d_update
         )
+        # FIXME: on Hopper architecture (H100) Triton produces wrong results #640
         self.chunk_gated_delta_rule = (
-            chunk_gated_delta_rule if use_flash_att else torch_chunk_gated_delta_rule
+            chunk_gated_delta_rule if False else torch_chunk_gated_delta_rule
         )
         self.recurrent_gated_delta_rule = (
             fused_recurrent_gated_delta_rule
@@ -501,7 +502,7 @@ class Qwen3_5GatedDeltaNet(nn.Module):
                 query,
                 key,
                 value,
-                gate=g,
+                g=g,
                 beta=beta,
                 initial_state=recurrent_state,  # type: ignore[arg-type]
                 output_final_state=cache_params is not None,
@@ -1141,7 +1142,7 @@ class Qwen3_5(nn.Module):
             self.reset_kv_cache()
 
             # Prime the cache with the initial context
-            logits = model(token_ids, cache=cache)
+            logits = self(token_ids, cache=cache)
 
             for _ in range(max_new_tokens):
                 next_token = torch.argmax(logits[:, -1], dim=-1, keepdim=True)
@@ -1153,7 +1154,7 @@ class Qwen3_5(nn.Module):
 
                 token_ids = torch.cat([token_ids, next_token], dim=1)
                 # Feed only the new token to the model; cache handles history
-                logits = model(next_token, cache=cache)
+                logits = self(next_token, cache=cache)
 
     def generate_text(
         self,

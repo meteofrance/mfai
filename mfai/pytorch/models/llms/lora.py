@@ -55,6 +55,9 @@ def setup_model_for_lora(model: torch.nn.Module, rank: int, alpha: float) -> Non
     """
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"Total trainable parameters before LORA: {total_params:,}")
+    
+    for param in model.parameters():
+            param.requires_grad = False
 
     replace_linear_with_lora(model, rank, alpha)
 

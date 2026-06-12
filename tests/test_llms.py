@@ -153,5 +153,5 @@ def test_lora() -> None:
     num_trainable_before = sum(p.numel() for p in model.parameters() if p.requires_grad)
     setup_model_for_lora(model, 16, 16)
     num_trainable_after = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    assert num_trainable_before == 163009536 
+    assert num_trainable_before == 163009536
     assert num_trainable_after == 3175696

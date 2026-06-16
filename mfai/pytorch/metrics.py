@@ -149,7 +149,7 @@ class CSINeighborhood(Metric):
 
     def update(self, preds: Tensor, targets: Tensor) -> None:
         """
-        preds and targets are Tensors of shape (H, w) or (B,C,H,W).
+        Preds and targets are Tensors of shape (H, w) or (B,C,H,W).
         If multiclass, takes int value in [0, nb_output_channels] interval.
         """
 

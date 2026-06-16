@@ -15,6 +15,7 @@ from mfai.pytorch.models.llms.gpt2 import (
 )
 from mfai.pytorch.models.llms.llama2 import Llama2, Llama2Settings
 from mfai.pytorch.models.llms.llama3 import Llama3, Llama3Settings
+from mfai.pytorch.models.llms.lora import setup_model_for_lora
 from mfai.pytorch.models.llms.qwen3_5 import Qwen3_5, Qwen3_5Settings
 from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, Qwen3_5Tokenizer, Tokenizer
 
@@ -142,3 +143,15 @@ def test_download_gpt2_weights(tmp_path: Path) -> None:
     # test with longer context len - default is 1024 for gpt2 small
     model = GPT2(GPT2Settings(attn_tf_compat=True, context_length=1032))
     model.download_weights_from_tf_ckpt(tmp_path)
+
+
+def test_lora() -> None:
+    """
+    Test that lora reduces the number of params
+    """
+    model = GPT2(GPT2Settings())
+    num_trainable_before = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    setup_model_for_lora(model, 16, 16)
+    num_trainable_after = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    assert num_trainable_before == 163009536
+    assert num_trainable_after == 3175696

@@ -40,7 +40,7 @@ from mfai.tokenizers import GPT2Tokenizer, LlamaTokenizer, Qwen3_5Tokenizer, Tok
         ),
         (
             partial(Qwen3_5, Qwen3_5Settings()),
-            "Hello, I am键千千万 хоче ని металлуasted项 сомненияPosX Romeo",
+            "Hello, I am键千千万 хоче ని металлуasted项手感预告ত্ত",
             Qwen3_5Tokenizer(apply_chat_template=False),
         ),
     ],

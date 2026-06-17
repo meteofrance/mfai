@@ -60,7 +60,7 @@ llm = [
   "sentencepiece>=0.2",
   "tensorflow>=2.20",
   "tiktoken>=0.8",
-  "tokenizers>=0.23.1",
+  "tokenizers>=0.22",
 ]
 docs = [
   "sphinx>=7.0.0",

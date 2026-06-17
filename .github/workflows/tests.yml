@@ -28,6 +28,7 @@ jobs:
         files: |
           *.py
           **/*.py
+          pyproject.toml
 
     - name: Lint with ruff
       if: steps.changed-py-files.outputs.any_changed == 'true'
@@ -57,6 +58,7 @@ jobs:
         files: |
           *.py
           **/*.py
+          pyproject.toml
 
     - name: Install dependencies
       if: github.event_name != 'pull_request' || steps.changed-py-files.outputs.any_changed == 'true' 

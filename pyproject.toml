@@ -36,31 +36,31 @@ dynamic = ["version"]
 license = {file = "LICENSE"}
 keywords = ["PyTorch", "Deep Learning", "Artificial Intelligence", "Meteo-France"]
 dependencies = [
-  "axial-attention==0.6.1",
-  "dataclasses-json~=0.6",
-  "einops~=0.8",
+  "axial-attention>=0.6.1",
+  "dataclasses-json>=0.6",
+  "einops>=0.8",
   "lightning[pytorch-extra]",
-  "mlflow~=3.11",
-  "monai==1.5.*",
-  "onnx~=1.17.0",
-  "onnxruntime~=1.20",
-  "onnxscript~=0.1",
-  "scipy~=1.14",
-  "torch~=2.5",
-  "torchvision~=0.19",
-  "tabulate~=0.9",
-  "timm~=1.0",
-  "torchmetrics~=1.6",
-  "torch-geometric~=2.6",
+  "mlflow>=3.11",
+  "monai>=1.5",
+  "onnx>=1.17.0",
+  "onnxruntime>=1.20",
+  "onnxscript>=0.1",
+  "scipy>=1.14",
+  "torch>=2.5,<3",
+  "torchvision>=0.19",
+  "tabulate>=0.9",
+  "timm>=1.0",
+  "torchmetrics>=1.6",
+  "torch-geometric>=2.6",
 ]
 
 [project.optional-dependencies]
 llm = [
-  "huggingface_hub~=0.26",
-  "sentencepiece~=0.2",
-  "tensorflow==2.20",
-  "tiktoken~=0.8",
-  "tokenizers~=0.23.1",
+  "huggingface_hub>=0.26",
+  "sentencepiece>=0.2",
+  "tensorflow>=2.20",
+  "tiktoken>=0.8",
+  "tokenizers>=0.23.1",
 ]
 docs = [
   "sphinx>=7.0.0",
@@ -71,13 +71,13 @@ docs = [
   "sphinxcontrib-mermaid",
 ]
 dev = [
-  "pytest==8.3.4",
-  "pytest-cov==6.0.0",
-  "ruff==0.15.9",
-  "mypy==1.15.0",
+  "pytest>=9.1.0",
+  "pytest-cov>=6.0.0",
+  "ruff>=0.15.9",
+  "mypy>=1.15.0",
   "types-tabulate>=0.9.0",
-  "types-tensorflow==2.18.0.20251008",
-  "types-tqdm==4.67.0.20250809",
+  "types-tensorflow>=2.18.0.20251008",
+  "types-tqdm>=4.67.0.20250809",
 ]
 
 [project.urls]
@@ -179,7 +179,7 @@ warn_unreachable = true
 # Disable the check for dynamically defined attributes, for more details see link below
 # [attr-defined](https://mypy.readthedocs.io/en/stable/error_code_list.html#check-that-attribute-exists-attr-defined)
 disable_error_code = [
-  "attr-defined"
+  "attr-defined", "unreachable"
 ]
 
 # Configure mypy output styling

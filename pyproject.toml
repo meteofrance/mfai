@@ -13,6 +13,9 @@ mfai = [
 
 # Include marker file `py.typed` to respect PEP561 and declare this package as type hinted
   "py.typed",
+
+# include Qwen3.5 tokenizer file
+  "tokenizers/qwen3.5/tokenizer.json",
 ]
 
 [project]

@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # ---------------------------------------------------------------------------
 
 
-def is_subclass_of_names(cls: type, base_names: Sequence[str | list[str]]) -> bool:
+def has_attribute_value(cls: type, base_names: Sequence[str | list[str]]) -> bool:
     """Check if a class inherits from any of the given base class names.
 
     Supports both OR and AND conditions:
@@ -60,7 +60,7 @@ def is_subclass_of_names(cls: type, base_names: Sequence[str | list[str]]) -> bo
     return False
 
 
-def is_attribute_of_name(cls: type, attr: str, value: Any) -> bool:
+def has_attribute_of_name(cls: type, attr: str, value: Any) -> bool:
     if hasattr(cls, attr):
         if getattr(cls, attr) == value:
             return True
@@ -396,7 +396,7 @@ if __name__ == "__main__":
         model_classes: list[str] = sorted(
             get_classes_matching(
                 "mfai.pytorch.models",
-                check_fn=is_attribute_of_name,
+                check_fn=has_attribute_of_name,
                 check_fn_args=["model_type", model_type],
             )
         )
@@ -417,7 +417,7 @@ if __name__ == "__main__":
                 "classes": sorted(
                     get_classes_matching(
                         "mfai.pytorch.losses",
-                        check_fn=is_subclass_of_names,
+                        check_fn=has_attribute_value,
                         check_fn_args=[["Module"]],
                     )
                 ),
@@ -433,7 +433,7 @@ if __name__ == "__main__":
                 "title": "Lightning Modules",
                 "classes": get_classes_matching(
                     "mfai.pytorch.lightning_modules",
-                    check_fn=is_subclass_of_names,
+                    check_fn=has_attribute_value,
                     check_fn_args=[["LightningModule"]],
                 ),
             },
@@ -441,7 +441,7 @@ if __name__ == "__main__":
                 "title": "Callbacks",
                 "classes": get_classes_matching(
                     "mfai.pytorch",
-                    check_fn=is_subclass_of_names,
+                    check_fn=has_attribute_value,
                     check_fn_args=[["Callback"]],
                 ),
             },
@@ -456,7 +456,7 @@ if __name__ == "__main__":
                 "title": "Transforms",
                 "classes": get_classes_matching(
                     "mfai.pytorch.transforms",
-                    check_fn=is_subclass_of_names,
+                    check_fn=has_attribute_value,
                     check_fn_args=[["object"]],
                 ),
             }
@@ -471,7 +471,7 @@ if __name__ == "__main__":
                 "title": "Metrics",
                 "classes": get_classes_matching(
                     "mfai.pytorch.metrics",
-                    check_fn=is_subclass_of_names,
+                    check_fn=has_attribute_value,
                     check_fn_args=[["Metric"]],
                 ),
             }

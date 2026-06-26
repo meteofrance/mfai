@@ -8,6 +8,7 @@ from torch import Tensor
 from torch.nn.modules.pixelshuffle import PixelShuffle
 from torch.nn.utils.parametrizations import spectral_norm
 
+from ..base import ModelType
 from .blocks import (
     ContextConditioningStack,
     GBlock,
@@ -22,6 +23,8 @@ logger.setLevel(logging.WARN)
 
 class Sampler(torch.nn.Module):
     """Sampler class."""
+
+    model_type: ModelType = ModelType.DGMR
 
     def __init__(
         self,
@@ -207,6 +210,8 @@ class Sampler(torch.nn.Module):
 
 class Generator(torch.nn.Module):
     """Generator class."""
+
+    model_type: ModelType = ModelType.DGMR
 
     def __init__(
         self,

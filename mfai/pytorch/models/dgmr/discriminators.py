@@ -10,11 +10,14 @@ from torch.nn.modules.pixelshuffle import PixelUnshuffle
 from torch.nn.utils.parametrizations import spectral_norm
 from torchvision.transforms import RandomCrop
 
+from ..base import ModelType
 from .blocks import DBlock
 
 
 class Discriminator(torch.nn.Module):
     """Discriminators class."""
+
+    model_type: ModelType = ModelType.DGMR
 
     def __init__(
         self,
@@ -63,6 +66,8 @@ class Discriminator(torch.nn.Module):
 
 class TemporalDiscriminator(torch.nn.Module):
     """Temporal Discriminator class."""
+
+    model_type: ModelType = ModelType.DGMR
 
     def __init__(
         self,
@@ -167,6 +172,8 @@ class TemporalDiscriminator(torch.nn.Module):
 
 class SpatialDiscriminator(torch.nn.Module):
     """Spatial Discriminator class."""
+
+    model_type: ModelType = ModelType.DGMR
 
     def __init__(
         self,

@@ -19,8 +19,11 @@ import importlib
 import inspect
 import pkgutil
 import sys
+from enum import Enum
 from pathlib import Path
-from typing import Any, Generator, Literal, Sequence
+from typing import Any, Callable, Generator, Literal, Sequence
+
+from mfai.pytorch.models import ModelType
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -30,7 +33,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # ---------------------------------------------------------------------------
 
 
-def is_subclass_of_names(cls: type, base_names: Sequence[str | list[str]]) -> bool:
+def has_attribute_value(cls: type, base_names: Sequence[str | list[str]]) -> bool:
     """Check if a class inherits from any of the given base class names.
 
     Supports both OR and AND conditions:
@@ -59,6 +62,13 @@ def is_subclass_of_names(cls: type, base_names: Sequence[str | list[str]]) -> bo
     return False
 
 
+def has_attribute_of_name(cls: type, attr: str, value: Any) -> bool:
+    if hasattr(cls, attr):
+        if getattr(cls, attr) == value:
+            return True
+    return False
+
+
 def iter_all_modules(package_path: str) -> Generator[str, None, None]:
     """Recursively yield all module names within a given package.
 
@@ -82,7 +92,9 @@ def iter_all_modules(package_path: str) -> Generator[str, None, None]:
 
 
 def get_classes_matching(
-    package_path: str, base_names: Sequence[str | list[str]]
+    package_path: str,
+    check_fn: Callable,
+    check_fn_args: Any,
 ) -> list[str]:
     """Find all classes in a package that match the given inheritance conditions.
 
@@ -92,7 +104,8 @@ def get_classes_matching(
     Args:
         package_path: The dotted path of the package to search
             (e.g. 'mfai.pytorch.losses').
-        base_names: Inheritance conditions passed to `is_subclass_of_names`.
+        check_fn: the function used to check if the class is valid.
+        check_fn_args: arguments to pass to the 'check_fn'.
 
     Returns:
         A list of fully qualified class names (e.g. 'mfai.pytorch.losses.dice.DiceLoss').
@@ -108,7 +121,7 @@ def get_classes_matching(
                 continue
             if getattr(obj, "__module__", None) != module_name:
                 continue
-            if is_subclass_of_names(obj, base_names):
+            if check_fn(obj, *check_fn_args):
                 matches.append(f"{module_name}.{name}")
 
     return matches
@@ -355,35 +368,58 @@ def write_rst(
     print(f"Written {output_path} ({len(all_fqns)} classes)")
 
 
+def write_model_rst(model_types: Enum, output_path: Path) -> None:
+    # Write header
+    lines: list[str] = []
+    title = "Models"
+    lines.append(title)
+    lines.append("=" * len(title))
+    lines.append("")
+
+    # Write tree of content
+    lines.append(".. toctree::")
+    lines.append("   :maxdepth: 1")
+    lines.append("")
+    for model_type in model_types:
+        lines.append(f"   models_{model_type.name.lower()}")
+    lines.append("")
+
+    output_path.write_text("\n".join(lines))
+
+
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    write_rst(
-        title="Models",
-        sections=[
-            {"title": "Models", "classes": ["mfai.pytorch.models.base.ModelABC"]},
-            {
-                "title": "Models",
-                "classes": get_classes_matching(
-                    "mfai.pytorch.models",
-                    [["ModelABC", "Module"], "BaseModel"],
-                ),
-            },
-        ],
-        output_path=Path("doc/api/models.rst"),
-        with_diagrams=True,
-    )
+    for model_type in ModelType:
+        model_classes: list[str] = sorted(
+            get_classes_matching(
+                "mfai.pytorch.models",
+                check_fn=has_attribute_of_name,
+                check_fn_args=["model_type", model_type],
+            )
+        )
+        write_rst(
+            title=model_type.name.title(),
+            sections=[{"title": model_type.name, "classes": model_classes}],
+            output_path=Path(f"doc/api/models_{model_type.name.lower()}.rst"),
+            with_diagrams=True,
+        )
+
+    write_model_rst(ModelType, output_path=Path("doc/api/models.rst"))
 
     write_rst(
         title="Losses",
         sections=[
             {
                 "title": "Losses",
-                "classes": get_classes_matching(
-                    "mfai.pytorch.losses",
-                    ["Module"],
+                "classes": sorted(
+                    get_classes_matching(
+                        "mfai.pytorch.losses",
+                        check_fn=has_attribute_value,
+                        check_fn_args=[["Module"]],
+                    )
                 ),
             }
         ],
@@ -397,14 +433,16 @@ if __name__ == "__main__":
                 "title": "Lightning Modules",
                 "classes": get_classes_matching(
                     "mfai.pytorch.lightning_modules",
-                    ["LightningModule"],
+                    check_fn=has_attribute_value,
+                    check_fn_args=[["LightningModule"]],
                 ),
             },
             {
                 "title": "Callbacks",
                 "classes": get_classes_matching(
                     "mfai.pytorch",
-                    ["Callback"],
+                    check_fn=has_attribute_value,
+                    check_fn_args=[["Callback"]],
                 ),
             },
         ],
@@ -418,7 +456,8 @@ if __name__ == "__main__":
                 "title": "Transforms",
                 "classes": get_classes_matching(
                     "mfai.pytorch.transforms",
-                    ["object"],
+                    check_fn=has_attribute_value,
+                    check_fn_args=[["object"]],
                 ),
             }
         ],
@@ -432,7 +471,8 @@ if __name__ == "__main__":
                 "title": "Metrics",
                 "classes": get_classes_matching(
                     "mfai.pytorch.metrics",
-                    ["Metric"],
+                    check_fn=has_attribute_value,
+                    check_fn_args=[["Metric"]],
                 ),
             }
         ],

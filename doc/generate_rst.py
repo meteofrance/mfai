@@ -23,6 +23,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Generator, Literal, Sequence
 
+from mfai.pytorch.models import ModelType
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
@@ -390,8 +392,6 @@ def write_model_rst(model_types: Enum, output_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    from mfai.pytorch.models import ModelType
-
     for model_type in ModelType:
         model_classes: list[str] = sorted(
             get_classes_matching(

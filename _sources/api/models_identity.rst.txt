@@ -1,0 +1,39 @@
+Identity
+========
+
+IDENTITY
+--------
+
+IdentityModel
+~~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class IdentityModel {
+           +int num_spatial_dims
+           +bool register
+           +forward() Tensor
+       }
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- IdentityModel : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- IdentityModel : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- IdentityModel : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.identity.IdentityModel

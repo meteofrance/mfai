@@ -1,0 +1,10 @@
+﻿ContextConditioningStack
+========================
+
+.. currentmodule:: mfai.pytorch.models.dgmr.blocks
+
+.. autoclass:: ContextConditioningStack
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

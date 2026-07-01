@@ -1,0 +1,10 @@
+namedtensor
+===========
+
+.. automodule:: mfai.pytorch.namedtensor
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

@@ -1,0 +1,10 @@
+attention
+=========
+
+.. automodule:: mfai.pytorch.models.dgmr.layers.attention
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

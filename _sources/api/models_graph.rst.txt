@@ -1,0 +1,299 @@
+Graph
+=====
+
+GRAPH
+-----
+
+BaseGraphModel
+~~~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class BaseGraphModel {
+           +int num_spatial_dims
+           +bool features_last
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +forward() Tensor
+           +get_num_mesh() tuple
+           +load_graph() None
+           +process_step() Tensor
+       }
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- BaseGraphModel : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- BaseGraphModel : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- BaseGraphModel : herits
+       class BaseHiGraphModel {
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +get_num_mesh() tuple
+           +hi_processor_step() tuple
+           +process_step() Tensor
+       }
+       BaseGraphModel <|-- BaseHiGraphModel : herits
+       class GraphLAM {
+           +bool register
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +get_num_mesh() tuple
+           +process_step() Tensor
+       }
+       BaseGraphModel <|-- GraphLAM : herits
+       class HiLAM {
+           +bool register
+           +finalize_graph_model() None
+           +hi_processor_step() tuple
+           +make_down_gnns() ModuleList
+           +make_same_gnns() ModuleList
+           +make_up_gnns() ModuleList
+           +mesh_down_step() tuple
+           +mesh_up_step() tuple
+       }
+       BaseGraphModel <|-- HiLAM : herits
+       class HiLAMParallel {
+           +bool register
+           +finalize_graph_model() None
+           +hi_processor_step() tuple
+       }
+       BaseGraphModel <|-- HiLAMParallel : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.nlam.BaseGraphModel
+
+BaseHiGraphModel
+~~~~~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class BaseHiGraphModel {
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +get_num_mesh() tuple
+           +hi_processor_step() tuple
+           +process_step() Tensor
+       }
+       class BaseGraphModel {
+           +int num_spatial_dims
+           +bool features_last
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +forward() Tensor
+           +get_num_mesh() tuple
+           +load_graph() None
+           +process_step() Tensor
+       }
+       BaseGraphModel <|-- BaseHiGraphModel : herits
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- BaseHiGraphModel : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- BaseHiGraphModel : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- BaseHiGraphModel : herits
+       class HiLAM {
+           +bool register
+           +finalize_graph_model() None
+           +hi_processor_step() tuple
+           +make_down_gnns() ModuleList
+           +make_same_gnns() ModuleList
+           +make_up_gnns() ModuleList
+           +mesh_down_step() tuple
+           +mesh_up_step() tuple
+       }
+       BaseHiGraphModel <|-- HiLAM : herits
+       class HiLAMParallel {
+           +bool register
+           +finalize_graph_model() None
+           +hi_processor_step() tuple
+       }
+       BaseHiGraphModel <|-- HiLAMParallel : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.nlam.BaseHiGraphModel
+
+GraphLAM
+~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class GraphLAM {
+           +bool register
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +get_num_mesh() tuple
+           +process_step() Tensor
+       }
+       class BaseGraphModel {
+           +int num_spatial_dims
+           +bool features_last
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +forward() Tensor
+           +get_num_mesh() tuple
+           +load_graph() None
+           +process_step() Tensor
+       }
+       BaseGraphModel <|-- GraphLAM : herits
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- GraphLAM : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- GraphLAM : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- GraphLAM : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.nlam.GraphLAM
+
+HiLAM
+~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class HiLAM {
+           +bool register
+           +finalize_graph_model() None
+           +hi_processor_step() tuple
+           +make_down_gnns() ModuleList
+           +make_same_gnns() ModuleList
+           +make_up_gnns() ModuleList
+           +mesh_down_step() tuple
+           +mesh_up_step() tuple
+       }
+       class BaseHiGraphModel {
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +get_num_mesh() tuple
+           +hi_processor_step() tuple
+           +process_step() Tensor
+       }
+       BaseHiGraphModel <|-- HiLAM : herits
+       class BaseGraphModel {
+           +int num_spatial_dims
+           +bool features_last
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +forward() Tensor
+           +get_num_mesh() tuple
+           +load_graph() None
+           +process_step() Tensor
+       }
+       BaseGraphModel <|-- HiLAM : herits
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- HiLAM : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- HiLAM : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- HiLAM : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.nlam.HiLAM
+
+HiLAMParallel
+~~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class HiLAMParallel {
+           +bool register
+           +finalize_graph_model() None
+           +hi_processor_step() tuple
+       }
+       class BaseHiGraphModel {
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +get_num_mesh() tuple
+           +hi_processor_step() tuple
+           +process_step() Tensor
+       }
+       BaseHiGraphModel <|-- HiLAMParallel : herits
+       class BaseGraphModel {
+           +int num_spatial_dims
+           +bool features_last
+           +embedd_mesh_nodes() Tensor
+           +finalize_graph_model() None
+           +forward() Tensor
+           +get_num_mesh() tuple
+           +load_graph() None
+           +process_step() Tensor
+       }
+       BaseGraphModel <|-- HiLAMParallel : herits
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- HiLAMParallel : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- HiLAMParallel : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- HiLAMParallel : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.nlam.HiLAMParallel

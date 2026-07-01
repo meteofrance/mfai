@@ -1,0 +1,10 @@
+﻿Sampler
+=======
+
+.. currentmodule:: mfai.pytorch.models.dgmr.generators
+
+.. autoclass:: Sampler
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

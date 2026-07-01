@@ -1,0 +1,34 @@
+models
+======
+
+.. automodule:: mfai.pytorch.models
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+
+.. autosummary::
+   :toctree:
+   :recursive:
+
+   
+   ~archesweather
+   ~base
+   ~clip
+   ~deeplabv3
+   ~dgmr
+   ~half_unet
+   ~identity
+   ~llms
+   ~nlam
+   ~pangu
+   ~resnet
+   ~segformer
+   ~swinunetr
+   ~unet
+   ~unetrpp
+   ~utils
+   ~vit
+   ~weather_projector
+

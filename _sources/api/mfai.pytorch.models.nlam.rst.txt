@@ -1,0 +1,19 @@
+mfai.pytorch.models.nlam
+========================
+
+.. automodule:: mfai.pytorch.models.nlam
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+
+
+.. toctree::
+  :maxdepth: 1
+
+
+  mfai.pytorch.models.nlam.create_mesh
+
+  mfai.pytorch.models.nlam.interaction_net
+

@@ -1,0 +1,20 @@
+dgmr
+====
+
+.. automodule:: mfai.pytorch.models.dgmr
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+
+.. autosummary::
+   :toctree:
+   :recursive:
+
+   
+   ~blocks
+   ~discriminators
+   ~generators
+   ~layers
+

@@ -1,0 +1,10 @@
+deeplabv3
+=========
+
+.. automodule:: mfai.pytorch.models.deeplabv3
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

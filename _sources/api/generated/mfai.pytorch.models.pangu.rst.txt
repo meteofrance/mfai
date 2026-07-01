@@ -1,0 +1,10 @@
+pangu
+=====
+
+.. automodule:: mfai.pytorch.models.pangu
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

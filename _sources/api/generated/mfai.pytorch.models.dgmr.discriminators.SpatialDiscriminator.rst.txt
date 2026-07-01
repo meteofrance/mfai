@@ -1,0 +1,10 @@
+﻿SpatialDiscriminator
+====================
+
+.. currentmodule:: mfai.pytorch.models.dgmr.discriminators
+
+.. autoclass:: SpatialDiscriminator
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

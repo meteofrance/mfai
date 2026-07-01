@@ -1,0 +1,21 @@
+﻿mfai
+====
+
+.. automodule:: mfai
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+
+.. autosummary::
+   :toctree:
+   :recursive:
+
+   
+   ~encoding
+   ~http
+   ~pytorch
+   ~tensorflow
+   ~tokenizers
+

@@ -1,0 +1,10 @@
+﻿CLIPLightningModule
+===================
+
+.. currentmodule:: mfai.pytorch.lightning_modules.clip
+
+.. autoclass:: CLIPLightningModule
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

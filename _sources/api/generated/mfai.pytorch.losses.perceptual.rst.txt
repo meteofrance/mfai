@@ -1,0 +1,10 @@
+perceptual
+==========
+
+.. automodule:: mfai.pytorch.losses.perceptual
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

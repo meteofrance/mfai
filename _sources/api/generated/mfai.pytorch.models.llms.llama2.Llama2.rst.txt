@@ -1,0 +1,10 @@
+﻿Llama2
+======
+
+.. currentmodule:: mfai.pytorch.models.llms.llama2
+
+.. autoclass:: Llama2
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

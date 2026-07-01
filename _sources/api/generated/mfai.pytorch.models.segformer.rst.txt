@@ -1,0 +1,10 @@
+segformer
+=========
+
+.. automodule:: mfai.pytorch.models.segformer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

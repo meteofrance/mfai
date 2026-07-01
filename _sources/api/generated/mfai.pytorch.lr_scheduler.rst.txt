@@ -1,0 +1,10 @@
+lr\_scheduler
+=============
+
+.. automodule:: mfai.pytorch.lr_scheduler
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

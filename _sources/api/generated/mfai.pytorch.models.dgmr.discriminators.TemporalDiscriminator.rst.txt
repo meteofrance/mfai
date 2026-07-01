@@ -1,0 +1,10 @@
+﻿TemporalDiscriminator
+=====================
+
+.. currentmodule:: mfai.pytorch.models.dgmr.discriminators
+
+.. autoclass:: TemporalDiscriminator
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

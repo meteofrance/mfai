@@ -1,0 +1,10 @@
+﻿ViTClassifier
+=============
+
+.. currentmodule:: mfai.pytorch.models.vit
+
+.. autoclass:: ViTClassifier
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

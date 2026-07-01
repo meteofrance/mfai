@@ -1,0 +1,10 @@
+﻿Llama3
+======
+
+.. currentmodule:: mfai.pytorch.models.llms.llama3
+
+.. autoclass:: Llama3
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

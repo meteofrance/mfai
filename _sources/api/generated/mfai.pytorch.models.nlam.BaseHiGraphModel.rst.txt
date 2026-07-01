@@ -1,0 +1,10 @@
+﻿BaseHiGraphModel
+================
+
+.. currentmodule:: mfai.pytorch.models.nlam
+
+.. autoclass:: BaseHiGraphModel
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

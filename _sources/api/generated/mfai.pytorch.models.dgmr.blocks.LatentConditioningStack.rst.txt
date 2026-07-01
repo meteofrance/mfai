@@ -1,0 +1,10 @@
+﻿LatentConditioningStack
+=======================
+
+.. currentmodule:: mfai.pytorch.models.dgmr.blocks
+
+.. autoclass:: LatentConditioningStack
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

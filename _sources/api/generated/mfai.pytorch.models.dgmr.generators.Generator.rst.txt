@@ -1,0 +1,10 @@
+﻿Generator
+=========
+
+.. currentmodule:: mfai.pytorch.models.dgmr.generators
+
+.. autoclass:: Generator
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

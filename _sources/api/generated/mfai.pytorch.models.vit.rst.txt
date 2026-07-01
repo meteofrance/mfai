@@ -1,0 +1,10 @@
+vit
+===
+
+.. automodule:: mfai.pytorch.models.vit
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

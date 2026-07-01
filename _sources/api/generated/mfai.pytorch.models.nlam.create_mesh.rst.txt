@@ -1,0 +1,10 @@
+create\_mesh
+============
+
+.. automodule:: mfai.pytorch.models.nlam.create_mesh
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

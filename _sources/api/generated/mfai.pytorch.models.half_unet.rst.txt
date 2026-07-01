@@ -1,0 +1,10 @@
+half\_unet
+==========
+
+.. automodule:: mfai.pytorch.models.half_unet
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

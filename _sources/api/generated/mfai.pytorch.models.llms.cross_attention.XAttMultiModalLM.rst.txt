@@ -1,0 +1,10 @@
+﻿XAttMultiModalLM
+================
+
+.. currentmodule:: mfai.pytorch.models.llms.cross_attention
+
+.. autoclass:: XAttMultiModalLM
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

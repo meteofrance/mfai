@@ -1,0 +1,10 @@
+﻿VitEncoder
+==========
+
+.. currentmodule:: mfai.pytorch.models.vit
+
+.. autoclass:: VitEncoder
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

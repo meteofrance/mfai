@@ -1,0 +1,10 @@
+﻿IdentityModel
+=============
+
+.. currentmodule:: mfai.pytorch.models.identity
+
+.. autoclass:: IdentityModel
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

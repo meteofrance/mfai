@@ -1,0 +1,10 @@
+Transforms
+==========
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.transforms.DimensionSubSampler
+   ~mfai.pytorch.transforms.MeanDimensionSubsampler
+   ~mfai.pytorch.transforms.RandomCropWithMinPositivePixels

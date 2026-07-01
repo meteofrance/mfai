@@ -1,0 +1,43 @@
+Multimodal_Llm
+==============
+
+MULTIMODAL_LLM
+--------------
+
+XAttMultiModalLM
+~~~~~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class XAttMultiModalLM {
+           +forward() Tensor
+       }
+       class Module
+       <<abstract>> Module
+       Module <|-- XAttMultiModalLM : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.llms.cross_attention.XAttMultiModalLM
+
+Fuyu
+~~~~
+
+.. mermaid::
+
+   classDiagram
+       class Fuyu {
+           +forward() Tensor
+       }
+       class Module
+       <<abstract>> Module
+       Module <|-- Fuyu : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.llms.fuyu.Fuyu

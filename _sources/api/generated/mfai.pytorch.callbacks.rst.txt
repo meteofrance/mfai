@@ -1,0 +1,10 @@
+callbacks
+=========
+
+.. automodule:: mfai.pytorch.callbacks
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

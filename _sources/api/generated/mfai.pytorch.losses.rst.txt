@@ -1,0 +1,19 @@
+losses
+======
+
+.. automodule:: mfai.pytorch.losses
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+
+.. autosummary::
+   :toctree:
+   :recursive:
+
+   
+   ~dgmr
+   ~perceptual
+   ~toolbelt
+

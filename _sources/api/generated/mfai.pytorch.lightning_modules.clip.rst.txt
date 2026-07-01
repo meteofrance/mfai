@@ -1,0 +1,10 @@
+clip
+====
+
+.. automodule:: mfai.pytorch.lightning_modules.clip
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

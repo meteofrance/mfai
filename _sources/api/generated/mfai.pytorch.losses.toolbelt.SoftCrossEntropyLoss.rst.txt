@@ -1,0 +1,10 @@
+﻿SoftCrossEntropyLoss
+====================
+
+.. currentmodule:: mfai.pytorch.losses.toolbelt
+
+.. autoclass:: SoftCrossEntropyLoss
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :inherited-members:

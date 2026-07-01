@@ -1,0 +1,10 @@
+qwen3\_5
+========
+
+.. automodule:: mfai.pytorch.models.llms.qwen3_5
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

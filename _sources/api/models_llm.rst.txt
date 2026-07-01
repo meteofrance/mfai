@@ -1,0 +1,118 @@
+Llm
+===
+
+LLM
+---
+
+CrossAttentionGPT2
+~~~~~~~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class CrossAttentionGPT2 {
+           +embed_tokens() Tensor
+           +forward() Tensor
+       }
+       class Module
+       <<abstract>> Module
+       Module <|-- CrossAttentionGPT2 : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.llms.gpt2.CrossAttentionGPT2
+
+GPT2
+~~~~
+
+.. mermaid::
+
+   classDiagram
+       class GPT2 {
+           +download_weights_from_tf_ckpt() None
+           +embed_tokens() Tensor
+           +forward() Tensor
+           +forward_vectors() Tensor
+           +load_weights_from_dict()
+           +reset_kv_cache() None
+       }
+       class Module
+       <<abstract>> Module
+       Module <|-- GPT2 : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.llms.gpt2.GPT2
+
+Llama2
+~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class Llama2 {
+           +embed_tokens() Tensor
+           +forward() Tensor
+           +forward_vectors() Tensor
+       }
+       class Module
+       <<abstract>> Module
+       Module <|-- Llama2 : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.llms.llama2.Llama2
+
+Llama3
+~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class Llama3 {
+           +embed_tokens() Tensor
+           +forward() Tensor
+           +forward_vectors() Tensor
+           +reset_kv_cache() None
+       }
+       class Module
+       <<abstract>> Module
+       Module <|-- Llama3 : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.llms.llama3.Llama3
+
+Qwen3_5
+~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class Qwen3_5 {
+           +compute_memory_size() float
+           +create_mask() Tensor
+           +download_weights_from_hf() None
+           +forward() Tensor
+           +generate_output_stream() Iterator
+           +generate_text() str
+           +load_weights_from_dict() None
+           +reset_kv_cache() None
+       }
+       class Module
+       <<abstract>> Module
+       Module <|-- Qwen3_5 : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.llms.qwen3_5.Qwen3_5

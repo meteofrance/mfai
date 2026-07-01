@@ -1,0 +1,10 @@
+resnet
+======
+
+.. automodule:: mfai.pytorch.models.resnet
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

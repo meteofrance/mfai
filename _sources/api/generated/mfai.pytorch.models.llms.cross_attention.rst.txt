@@ -1,0 +1,10 @@
+cross\_attention
+================
+
+.. automodule:: mfai.pytorch.models.llms.cross_attention
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

@@ -1,0 +1,10 @@
+conv\_gru
+=========
+
+.. automodule:: mfai.pytorch.models.dgmr.layers.conv_gru
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+

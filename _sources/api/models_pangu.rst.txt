@@ -1,0 +1,77 @@
+Pangu
+=====
+
+PANGU
+-----
+
+ArchesWeather
+~~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class ArchesWeather {
+           +bool onnx_supported
+           +tuple supported_num_spatial_dims
+           +bool features_last
+           +bool register
+           +forward() tuple
+       }
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- ArchesWeather : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- ArchesWeather : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- ArchesWeather : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.archesweather.ArchesWeather
+
+PanguWeather
+~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class PanguWeather {
+           +bool onnx_supported
+           +Tuple supported_num_spatial_dims
+           +bool features_last
+           +bool register
+           +forward() Tuple
+       }
+       class BaseModel {
+       }
+       <<abstract>> BaseModel
+       BaseModel <|-- PanguWeather : herits
+       class ModelABC {
+           +bool register
+           +int in_channels
+           +int out_channels
+           +tuple input_shape
+           +check_required_attributes() None
+       }
+       <<abstract>> ModelABC
+       ModelABC <|-- PanguWeather : herits
+       class Module
+       <<abstract>> Module
+       Module <|-- PanguWeather : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.pangu.PanguWeather

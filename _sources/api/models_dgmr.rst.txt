@@ -1,0 +1,146 @@
+Dgmr
+====
+
+DGMR
+----
+
+ContextConditioningStack
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class ContextConditioningStack {
+           +ModelType model_type
+           #_mixing_layer() Tensor
+           +forward() tuple
+       }
+       class Module
+       <<abstract>> Module
+       Module <|-- ContextConditioningStack : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.dgmr.blocks.ContextConditioningStack
+
+LatentConditioningStack
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class LatentConditioningStack {
+           +ModelType model_type
+           +forward() Tensor
+       }
+       class Module
+       <<abstract>> Module
+       Module <|-- LatentConditioningStack : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.dgmr.blocks.LatentConditioningStack
+
+Discriminator
+~~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class Discriminator {
+           +ModelType model_type
+           +forward() Tensor
+       }
+       class Module
+       <<abstract>> Module
+       Module <|-- Discriminator : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.dgmr.discriminators.Discriminator
+
+SpatialDiscriminator
+~~~~~~~~~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class SpatialDiscriminator {
+           +ModelType model_type
+           +forward() Tensor
+       }
+       class Module
+       <<abstract>> Module
+       Module <|-- SpatialDiscriminator : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.dgmr.discriminators.SpatialDiscriminator
+
+TemporalDiscriminator
+~~~~~~~~~~~~~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class TemporalDiscriminator {
+           +ModelType model_type
+           +forward() Tensor
+       }
+       class Module
+       <<abstract>> Module
+       Module <|-- TemporalDiscriminator : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.dgmr.discriminators.TemporalDiscriminator
+
+Generator
+~~~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class Generator {
+           +ModelType model_type
+           +forward() Tensor
+       }
+       class Module
+       <<abstract>> Module
+       Module <|-- Generator : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.dgmr.generators.Generator
+
+Sampler
+~~~~~~~
+
+.. mermaid::
+
+   classDiagram
+       class Sampler {
+           +ModelType model_type
+           +forward() Tensor
+       }
+       class Module
+       <<abstract>> Module
+       Module <|-- Sampler : herits
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   ~mfai.pytorch.models.dgmr.generators.Sampler

@@ -1,0 +1,14 @@
+Models
+======
+
+.. toctree::
+   :maxdepth: 1
+
+   models_graph
+   models_convolutional
+   models_vision_transformer
+   models_llm
+   models_multimodal_llm
+   models_pangu
+   models_identity
+   models_dgmr

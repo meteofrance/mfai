@@ -1,0 +1,8 @@
+Reference
+=========
+
+.. autosummary::
+   :toctree: generated
+   :recursive:
+
+   mfai

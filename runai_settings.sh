@@ -1,1 +1,1 @@
-RUNAI_DOCKER_FILENAME=Dockerfile.mf
+export RUNAI_DOCKER_FILENAME=Dockerfile.mf

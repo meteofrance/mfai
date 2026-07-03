@@ -24,7 +24,6 @@ from safetensors.torch import load_file
 from torch import Tensor
 
 from mfai.pytorch.models.base import ModelType
-from mfai.tokenizers import Qwen3_5Tokenizer
 
 use_fast_conv1d = False
 try:
@@ -1156,10 +1155,10 @@ class Qwen3_5(nn.Module):
                 # Feed only the new token to the model; cache handles history
                 logits = self(next_token, cache=cache)
 
-    def generate_text(
+    def generate_text(  # type: ignore[no-untyped-def]
         self,
         prompt: str,
-        tokenizer: Qwen3_5Tokenizer,
+        tokenizer,
         max_new_tokens: int,
     ) -> str:
         input_token_ids = tokenizer.encode(prompt)
@@ -1181,8 +1180,9 @@ class Qwen3_5(nn.Module):
 
 if __name__ == "__main__":
     # Exemple of basic usage
-
     import time
+
+    from mfai.tokenizers import Qwen3_5Tokenizer
 
     # Create model Qwen 3.5
     torch.manual_seed(123)

@@ -281,9 +281,7 @@ This module can be instanciated with a simple [ClipSettings](https://github.com/
 
 ## DGMR
 
-[DGMRLightningModule](https://github.com/meteofrance/mfai/blob/main//mfai/pytorch/lightning_modules/gan_dgmr.py) is a Pytorch Lightning Module dedicated to training the [DGMR](https://www.nature.com/articles/s41586-021-03854-z) model for precipitation nowcasting.
-
-Code for the GAN architecture is [here](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/models/gan_dgmr).
+Code for the DGMR model is [here](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/models/dgmr).
 
 This lightning module is largely inspired by [this work](https://github.com/openclimatefix/skillful_nowcasting) from OpenClimateFix.
 

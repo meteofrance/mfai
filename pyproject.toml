@@ -1,6 +1,9 @@
 [build-system]
-requires = ["setuptools", "wheel", "setuptools-git-versioning"]
+requires = ["setuptools==83.0.0", "wheel==0.47.0", "setuptools-git-versioning==3.1.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-dir]
+mfai = "mfai"
 
 [tool.setuptools-git-versioning]
 enabled = true
@@ -36,7 +39,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dynamic = ["version"]
-license = {file = "LICENSE"}
+license-files = ["LICENSE"]
 keywords = ["PyTorch", "Deep Learning", "Artificial Intelligence", "Meteo-France"]
 dependencies = [
   "axial-attention>=0.6.1",

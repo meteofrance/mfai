@@ -64,94 +64,94 @@ def test_llms(model_target_tokenizer: tuple[Any, str, Tokenizer]) -> None:
     assert decoded_text == target
 
 
-# @pytest.mark.parametrize(
-#     "model_tokenizer",
-#     [
-#         (GPT2(GPT2Settings(attn_tf_compat=True)), GPT2Tokenizer()),
-#         (Llama3(Llama3Settings()), LlamaTokenizer()),
-#     ],
-# )
-# def test_kv_cache(model_tokenizer: tuple[GPT2, GPT2Settings]) -> None:
-#     """
-#     We check that KV cache implementation is working and a speed-up text generation.
-#     """
-#     model, tokenizer = model_tokenizer
-#     start_context = "Hello, I am"
-#     encoded = tokenizer.encode(start_context)
-#     encoded_tensor = torch.tensor(encoded).unsqueeze(0)
+@pytest.mark.parametrize(
+    "model_tokenizer",
+    [
+        (GPT2(GPT2Settings(attn_tf_compat=True)), GPT2Tokenizer()),
+        (Llama3(Llama3Settings()), LlamaTokenizer()),
+    ],
+)
+def test_kv_cache(model_tokenizer: tuple[GPT2, GPT2Settings]) -> None:
+    """
+    We check that KV cache implementation is working and a speed-up text generation.
+    """
+    model, tokenizer = model_tokenizer
+    start_context = "Hello, I am"
+    encoded = tokenizer.encode(start_context)
+    encoded_tensor = torch.tensor(encoded).unsqueeze(0)
 
-#     start = time.perf_counter()
-#     out = generate_text_simple(
-#         model=model,
-#         idx=encoded_tensor,
-#         max_new_tokens=400,
-#         context_size=model.context_length,
-#         use_cache=False,
-#     )
-#     end = time.perf_counter()
-#     exec_time = end - start
-#     decoded_text = tokenizer.decode(out.squeeze(0).tolist())
+    start = time.perf_counter()
+    out = generate_text_simple(
+        model=model,
+        idx=encoded_tensor,
+        max_new_tokens=400,
+        context_size=model.context_length,
+        use_cache=False,
+    )
+    end = time.perf_counter()
+    exec_time = end - start
+    decoded_text = tokenizer.decode(out.squeeze(0).tolist())
 
-#     start = time.perf_counter()
-#     out = generate_text_simple(
-#         model=model,
-#         idx=encoded_tensor,
-#         max_new_tokens=400,
-#         context_size=model.context_length,
-#         use_cache=True,
-#     )
-#     end = time.perf_counter()
-#     exec_time_with_cache = end - start
-#     decoded_text_with_cache = tokenizer.decode(out.squeeze(0).tolist())
+    start = time.perf_counter()
+    out = generate_text_simple(
+        model=model,
+        idx=encoded_tensor,
+        max_new_tokens=400,
+        context_size=model.context_length,
+        use_cache=True,
+    )
+    end = time.perf_counter()
+    exec_time_with_cache = end - start
+    decoded_text_with_cache = tokenizer.decode(out.squeeze(0).tolist())
 
-#     assert decoded_text == decoded_text_with_cache
-#     assert exec_time_with_cache < exec_time
-
-
-# def test_cross_attention_gpt2() -> None:
-#     """
-#     Here we only test that the model is mathematically correct (matmul compat, shapes, attention, ...).
-#     """
-#     torch.manual_seed(999)
-#     settings = CrossAttentionGPT2Settings(
-#         context_length=32,
-#         n_heads=1,
-#         n_layers=4,
-#         emb_dim=32,
-#         x_att_ratio=2,
-#     )
-#     model = CrossAttentionGPT2(settings)
-#     token_ids = torch.rand(1, 16).long()
-
-#     generate_text_simple(
-#         model=model,
-#         idx=token_ids,
-#         max_new_tokens=10,
-#         context_size=model.context_length,
-#         vision_inputs=torch.randn(1, 8, settings.emb_dim),
-#     )
+    assert decoded_text == decoded_text_with_cache
+    assert exec_time_with_cache < exec_time
 
 
-# def test_download_gpt2_weights(tmp_path: Path) -> None:
-#     model = GPT2(GPT2Settings(attn_tf_compat=True))
-#     model.download_weights_from_tf_ckpt(tmp_path)
+def test_cross_attention_gpt2() -> None:
+    """
+    Here we only test that the model is mathematically correct (matmul compat, shapes, attention, ...).
+    """
+    torch.manual_seed(999)
+    settings = CrossAttentionGPT2Settings(
+        context_length=32,
+        n_heads=1,
+        n_layers=4,
+        emb_dim=32,
+        x_att_ratio=2,
+    )
+    model = CrossAttentionGPT2(settings)
+    token_ids = torch.rand(1, 16).long()
 
-#     # test with extra tokens
-#     model = GPT2(GPT2Settings(attn_tf_compat=True), vocab_size=50400)
-#     model.download_weights_from_tf_ckpt(tmp_path)
+    generate_text_simple(
+        model=model,
+        idx=token_ids,
+        max_new_tokens=10,
+        context_size=model.context_length,
+        vision_inputs=torch.randn(1, 8, settings.emb_dim),
+    )
 
-#     # test with longer context len - default is 1024 for gpt2 small
-#     model = GPT2(GPT2Settings(attn_tf_compat=True, context_length=1032))
-#     model.download_weights_from_tf_ckpt(tmp_path)
+
+def test_download_gpt2_weights(tmp_path: Path) -> None:
+    model = GPT2(GPT2Settings(attn_tf_compat=True))
+    model.download_weights_from_tf_ckpt(tmp_path)
+
+    # test with extra tokens
+    model = GPT2(GPT2Settings(attn_tf_compat=True), vocab_size=50400)
+    model.download_weights_from_tf_ckpt(tmp_path)
+
+    # test with longer context len - default is 1024 for gpt2 small
+    model = GPT2(GPT2Settings(attn_tf_compat=True, context_length=1032))
+    model.download_weights_from_tf_ckpt(tmp_path)
 
 
-# def test_lora() -> None:
-#     """
-#     Test that lora reduces the number of params
-#     """
-#     model = GPT2(GPT2Settings())
-#     num_trainable_before = sum(p.numel() for p in model.parameters() if p.requires_grad)
-#     setup_model_for_lora(model, 16, 16)
-#     num_trainable_after = sum(p.numel() for p in model.parameters() if p.requires_grad)
-#     assert num_trainable_before == 163009536
-#     assert num_trainable_after == 3175696
+def test_lora() -> None:
+    """
+    Test that lora reduces the number of params
+    """
+    model = GPT2(GPT2Settings())
+    num_trainable_before = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    setup_model_for_lora(model, 16, 16)
+    num_trainable_after = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    assert num_trainable_before == 163009536
+    assert num_trainable_after == 3175696

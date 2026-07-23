@@ -3,7 +3,9 @@ Usage: instanciate the callback and add it to the lightning Trainer's arguments,
 or add the class path to your lightning yaml config file.
 """
 
+import importlib
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 import lightning as L
@@ -22,14 +24,12 @@ class MLFlowSystemMonitorCallback(L.Callback):
 
     def __init__(self, *args: Any, **kwargs: dict[str, Any]) -> None:
         super().__init__(*args, **kwargs)
-        try:
-            from mlflow.system_metrics.system_metrics_monitor import (
-                SystemMetricsMonitor,
-            )
-        except ModuleNotFoundError as e:
+        mlflow_found: None | ModuleType = importlib.import_module("mlflow")
+
+        if mlflow_found is None:
             raise ModuleNotFoundError(
                 "To use mfai's MLFLowSystemMonitorCallback, you need to install "
-                f"mlflow>=3.11 allong side mfai in your project.\n\n{e}"
+                "mlflow>=3.11 allong side mfai in your project."
             )
 
     @override
@@ -39,7 +39,9 @@ class MLFlowSystemMonitorCallback(L.Callback):
                 "MLFlowSystemMonitorCallback requires MLFlowLogger"
             )
 
-        self.system_monitor = SystemMetricsMonitor(  # type: ignore[name-defined]
+        from mlflow.system_metrics.system_metrics_monitor import SystemMetricsMonitor
+
+        self.system_monitor = SystemMetricsMonitor(
             run_id=trainer.logger.run_id,
         )
         self.system_monitor.start()

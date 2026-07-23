@@ -10,8 +10,8 @@ import lightning as L
 from lightning.fabric.utilities.exceptions import MisconfigurationException
 from lightning.pytorch.cli import SaveConfigCallback
 from lightning.pytorch.loggers.mlflow import MLFlowLogger
-from mlflow.system_metrics.system_metrics_monitor import SystemMetricsMonitor
 from typing_extensions import override
+from lightning.pytorch.loggers.mlflow import MLFlowLogger
 
 
 class MLFlowSystemMonitorCallback(L.Callback):
@@ -20,6 +20,17 @@ class MLFlowSystemMonitorCallback(L.Callback):
     option from mlflow doesn't work with lightning.
     See this issue: https://github.com/Lightning-AI/pytorch-lightning/issues/20563.
     """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        try:
+            from mlflow.system_metrics.system_metrics_monitor import SystemMetricsMonitor
+        except ModuleNotFoundError as e:
+            print(
+                "To use mfai's MLFLowSystemMonitorCallback, you need to install "
+                f"mlflow>=3.11 allong side mfai in your project.\n\n{e}"
+            )
+        
 
     @override
     def on_fit_start(self, trainer: L.Trainer, pl_module: L.LightningModule) -> None:

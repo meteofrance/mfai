@@ -27,11 +27,6 @@ from mfai.pytorch.models.base import AutoPaddingModel, ModelABC, ModelType
 from mfai.pytorch.models.deeplabv3 import DeepLabV3Plus
 from mfai.pytorch.models.half_unet import HalfUNet
 from mfai.pytorch.models.identity import IdentityModel
-from mfai.pytorch.models.llms.cross_attention import XAttMultiModalLM
-from mfai.pytorch.models.llms.fuyu import Fuyu
-from mfai.pytorch.models.llms.gpt2 import GPT2, CrossAttentionGPT2
-from mfai.pytorch.models.llms.llama2 import Llama2
-from mfai.pytorch.models.vit import ViTClassifier
 
 # Compose nn classes
 model_registry = load_model_registry()
@@ -359,7 +354,7 @@ def test_extra_models(model_and_settings: Any) -> None:
         train_model(model, (NUM_INPUTS, *INPUT_SHAPE[:spatial_dims]))
 
 
-@pytest.mark.parametrize("model_kls", [ViTClassifier])
+@pytest.mark.parametrize("model_kls", nn_classes[ModelType.ENCODER])
 def test_full_sample_classifiers(model_kls: torch.nn.Module) -> None:
     """
     Testing the models classifying the full input/sample/image (and not per pixel).
@@ -414,13 +409,19 @@ def test_input_shape_validation(model_class: Any) -> None:
     B, C, W, H = 8, 3, 61, 65
 
     input_data = torch.randn(B, C, W, H)
-    net = model_class(in_channels=C, out_channels=1, input_shape=input_data.shape)
+    input_shape = input_data.shape[-2:]
+    if model_class.model_type == ModelType.ENCODER:
+        kwargs = {"settings": model_class.settings_kls(**{"patch_size": 32})}
+    else:
+        kwargs = {}
+
+    net = model_class(in_channels=C, out_channels=1, input_shape=input_shape, **kwargs)
 
     # assert it fails before padding
     with pytest.raises((RuntimeError, ValueError)):
         net(input_data)
 
-    valid_shape, new_shape = net.validate_input_shape(input_data.shape[-2:])
+    valid_shape, new_shape = net.validate_input_shape(input_shape)
 
     assert not valid_shape
 
@@ -451,11 +452,7 @@ def test_autopad_models(model_class: Any) -> None:
     net(input_data)  # assert it does not fail
 
 
-@pytest.mark.parametrize(
-    "model_class",
-    list(nn_classes.values())
-    + [Fuyu, XAttMultiModalLM, CrossAttentionGPT2, Llama2, GPT2],
-)
+@pytest.mark.parametrize("model_class", model_registry.values())
 def test_model_attributes(model_class: ModelABC) -> None:
     """
     We check that ALL our models have the required attributes
@@ -466,6 +463,9 @@ def test_model_attributes(model_class: ModelABC) -> None:
     ), (
         f"Model implementation {model_class} is missing attribute 'model_type' of type ModelType"
     )
+    if model_class.model_type == ModelType.DGMR:
+        return
+
     assert hasattr(model_class, "settings_kls") and dataclasses.is_dataclass(
         model_class.settings_kls
     ), (

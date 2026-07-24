@@ -720,7 +720,6 @@ class UNetRPP(BaseModel, AutoPaddingModel):
     settings_kls = UNetRPPSettings
     model_type = ModelType.VISION_TRANSFORMER
     features_last: bool = False
-    register: bool = True
 
     def __init__(
         self,

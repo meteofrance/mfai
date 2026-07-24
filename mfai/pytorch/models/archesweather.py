@@ -604,7 +604,6 @@ class ArchesWeather(BaseModel):
     settings_kls = ArchesWeatherSettings
     model_type = ModelType.PANGU
     features_last: bool = False
-    register: bool = True
 
     def __init__(
         self,

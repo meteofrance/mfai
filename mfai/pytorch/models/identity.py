@@ -27,7 +27,6 @@ class IdentityModel(BaseModel):
     features_last = False
     model_type = ModelType.IDENTITY
     num_spatial_dims: int = 2
-    register: bool = True
 
     def __init__(self, *args: Any, **kwargs: Any):
         """

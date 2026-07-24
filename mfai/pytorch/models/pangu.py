@@ -201,7 +201,6 @@ class PanguWeather(BaseModel):
     settings_kls = PanguWeatherSettings
     model_type = ModelType.PANGU
     features_last: bool = False
-    register: bool = True
 
     def __init__(
         self,

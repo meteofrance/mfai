@@ -16,7 +16,7 @@ import numpy as np
 import pytest
 import torch
 from marshmallow.exceptions import ValidationError
-from torch import Tensor
+from torch import Tensor, nn
 
 from mfai.pytorch import export_to_onnx, onnx_load_and_infer, padding
 from mfai.pytorch.models import (
@@ -30,7 +30,7 @@ from mfai.pytorch.models.identity import IdentityModel
 
 # Compose nn classes
 model_registry = load_model_registry()
-nn_classes: dict[ModelType, list[type[ModelABC]]] = {
+nn_classes: dict[ModelType, list[type[nn.Module]]] = {
     model_type: [
         architecture
         for architecture in list(model_registry.values())

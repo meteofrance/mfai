@@ -9,15 +9,15 @@ from torch import nn
 from .base import BaseModel, ModelABC
 
 
-def load_model_registry() -> dict[str, type[ModelABC]]:
+def load_model_registry() -> dict[str, type[nn.Module]]:
     # Load all models from the torch.models package
     # which are ModelABC subclasses and have a `model_type` attribute
-    registry: dict[str, type[ModelABC]] = dict()
+    registry: dict[str, type[nn.Module]] = dict()
     package: ModuleType = importlib.import_module("mfai.pytorch.models")
     this_module = sys.modules[__name__]
     for module_info in pkgutil.walk_packages(package.__path__, package.__name__ + "."):
         module: ModuleType = importlib.import_module(module_info.name)
-        for object_name, kls in module.__dict__.items():
+        for kls in module.__dict__.values():
             if (
                 isinstance(kls, type)
                 and issubclass(kls, nn.Module)
@@ -43,7 +43,7 @@ def load_from_settings_file(
     """
 
     # Pick the class matching the supplied name
-    registry: dict[str, type[ModelABC]] = load_model_registry()
+    registry: dict[str, type[nn.Module]] = load_model_registry()
     model_kls = registry.get(model_name, None)
 
     if model_kls is None:

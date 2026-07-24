@@ -27,13 +27,10 @@ class ModelType(Enum):
     PANGU = 6
     IDENTITY = 7
     DGMR = 8
+    ENCODER = 9
 
 
 class ModelABC(ABC):
-    # concrete subclasses shoudl set register to True
-    # to be included in the registry of available models.
-    register: bool = False
-
     in_channels: int
     out_channels: int
     input_shape: tuple[int, ...]

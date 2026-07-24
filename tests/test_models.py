@@ -20,8 +20,8 @@ from torch import Tensor
 
 from mfai.pytorch import export_to_onnx, onnx_load_and_infer, padding
 from mfai.pytorch.models import (
-    load_model_registry,
     load_from_settings_file,
+    load_model_registry,
 )
 from mfai.pytorch.models.base import AutoPaddingModel, ModelABC, ModelType
 from mfai.pytorch.models.deeplabv3 import DeepLabV3Plus
@@ -33,15 +33,23 @@ from mfai.pytorch.models.llms.gpt2 import GPT2, CrossAttentionGPT2
 from mfai.pytorch.models.llms.llama2 import Llama2
 from mfai.pytorch.models.vit import ViTClassifier
 
-
 # Compose nn classes
-nn_classes: dict[ModelType, list[type[ModelABC]]] = load_model_registry()
+model_registry = load_model_registry()
+nn_classes: dict[ModelType, list[type[ModelABC]]] = {
+    model_type: [
+        architecture
+        for architecture in list(model_registry.values())
+        if architecture.model_type == model_type
+    ]
+    for model_type in ModelType
+}
 autopad_nn_classes: set[type[AutoPaddingModel]] = {
     obj
     for nn_type in nn_classes.values()
     for obj in nn_type
     if issubclass(obj, AutoPaddingModel)
 }
+
 
 def to_numpy(tensor: Tensor) -> Any:
     return (
@@ -177,8 +185,7 @@ def test_torch_graph_training_loop(model_kls: Any) -> None:
 
 @pytest.mark.parametrize(
     "model_kls",
-    nn_classes[ModelType.CONVOLUTIONAL]
-    + nn_classes[ModelType.VISION_TRANSFORMER],
+    nn_classes[ModelType.CONVOLUTIONAL] + nn_classes[ModelType.VISION_TRANSFORMER],
 )
 def test_torch_convolutional_and_vision_transformer_training_loop(
     model_kls: Any,
@@ -446,7 +453,8 @@ def test_autopad_models(model_class: Any) -> None:
 
 @pytest.mark.parametrize(
     "model_class",
-    list(nn_classes.values()) + [Fuyu, XAttMultiModalLM, CrossAttentionGPT2, Llama2, GPT2],
+    list(nn_classes.values())
+    + [Fuyu, XAttMultiModalLM, CrossAttentionGPT2, Llama2, GPT2],
 )
 def test_model_attributes(model_class: ModelABC) -> None:
     """

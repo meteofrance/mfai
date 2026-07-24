@@ -6,9 +6,10 @@ from types import ModuleType
 
 from torch import nn
 
-from .base import AutoPaddingModel, ModelABC, ModelType
+from .base import ModelABC
 
-def load_model_registry() -> dict[ModelType, list[type[ModelABC]]]:
+
+def load_model_registry() -> dict[str, type[ModelABC]]:
     # Load all models from the torch.models package
     # which are ModelABC subclasses and have the register attribute set to True
     registry: dict[str, type[ModelABC]] = dict()
@@ -29,16 +30,7 @@ def load_model_registry() -> dict[ModelType, list[type[ModelABC]]]:
                     )
                 registry[kls.__name__] = kls
                 setattr(this_module, kls.__name__, kls)
-    nn_classes = list(registry.values())
-
-    return {
-        model_type: [
-            architecture
-            for architecture in nn_classes
-            if architecture.model_type == model_type
-        ]
-        for model_type in ModelType
-    }
+    return registry
 
 
 def load_from_settings_file(
@@ -53,6 +45,7 @@ def load_from_settings_file(
     """
 
     # Pick the class matching the supplied name
+    registry: dict[str, type[ModelABC]] = load_model_registry()
     model_kls = registry.get(model_name, None)
 
     if model_kls is None:

@@ -29,7 +29,7 @@ class MLFlowSystemMonitorCallback(L.Callback):
         if mlflow_found is None:
             raise ModuleNotFoundError(
                 "To use mfai's MLFLowSystemMonitorCallback, you need to install "
-                "mlflow>=3.11 allong side mfai in your project."
+                "mlflow>=3.11 alongside mfai in your project."
             )
 
     @override

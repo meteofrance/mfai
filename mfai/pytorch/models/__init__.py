@@ -6,12 +6,12 @@ from types import ModuleType
 
 from torch import nn
 
-from .base import ModelABC
+from .base import BaseModel, ModelABC
 
 
 def load_model_registry() -> dict[str, type[ModelABC]]:
     # Load all models from the torch.models package
-    # which are ModelABC subclasses and have the register attribute set to True
+    # which are ModelABC subclasses and have a `model_type` attribute
     registry: dict[str, type[ModelABC]] = dict()
     package: ModuleType = importlib.import_module("mfai.pytorch.models")
     this_module = sys.modules[__name__]
@@ -20,14 +20,12 @@ def load_model_registry() -> dict[str, type[ModelABC]]:
         for object_name, kls in module.__dict__.items():
             if (
                 isinstance(kls, type)
-                and issubclass(kls, ModelABC)
-                and kls != ModelABC
-                and kls.register  # type: ignore[truthy-function]
+                and issubclass(kls, nn.Module)
+                and kls not in [ModelABC, BaseModel]
+                and hasattr(kls, "model_type")
             ):
                 if kls.__name__ in registry:
-                    raise ValueError(
-                        f"Model {kls.__name__} from plugin {object_name} already exists in the registry."
-                    )
+                    continue
                 registry[kls.__name__] = kls
                 setattr(this_module, kls.__name__, kls)
     return registry

@@ -8,40 +8,37 @@ from torch import nn
 
 from .base import AutoPaddingModel, ModelABC, ModelType
 
-# Load all models from the torch.models package
-# which are ModelABC subclasses and have the register attribute set to True
-registry: dict[str, type[ModelABC]] = dict()
-package: ModuleType = importlib.import_module("mfai.pytorch.models")
-this_module = sys.modules[__name__]
-for module_info in pkgutil.walk_packages(package.__path__, package.__name__ + "."):
-    module: ModuleType = importlib.import_module(module_info.name)
-    for object_name, kls in module.__dict__.items():
-        if (
-            isinstance(kls, type)
-            and issubclass(kls, ModelABC)
-            and kls != ModelABC
-            and kls.register  # type: ignore[truthy-function]
-        ):
-            if kls.__name__ in registry:
-                raise ValueError(
-                    f"Model {kls.__name__} from plugin {object_name} already exists in the registry."
-                )
-            registry[kls.__name__] = kls
-            setattr(this_module, kls.__name__, kls)
-all_nn_architectures: list[type[ModelABC]] = list(registry.values())
+def load_model_registry() -> dict[ModelType, list[type[ModelABC]]]:
+    # Load all models from the torch.models package
+    # which are ModelABC subclasses and have the register attribute set to True
+    registry: dict[str, type[ModelABC]] = dict()
+    package: ModuleType = importlib.import_module("mfai.pytorch.models")
+    this_module = sys.modules[__name__]
+    for module_info in pkgutil.walk_packages(package.__path__, package.__name__ + "."):
+        module: ModuleType = importlib.import_module(module_info.name)
+        for object_name, kls in module.__dict__.items():
+            if (
+                isinstance(kls, type)
+                and issubclass(kls, ModelABC)
+                and kls != ModelABC
+                and kls.register  # type: ignore[truthy-function]
+            ):
+                if kls.__name__ in registry:
+                    raise ValueError(
+                        f"Model {kls.__name__} from plugin {object_name} already exists in the registry."
+                    )
+                registry[kls.__name__] = kls
+                setattr(this_module, kls.__name__, kls)
+    nn_classes = list(registry.values())
 
-nn_architectures: dict[ModelType, list[type[ModelABC]]] = {
-    model_type: [
-        architecture
-        for architecture in all_nn_architectures
-        if architecture.model_type == model_type
-    ]
-    for model_type in ModelType
-}
-
-autopad_nn_architectures = {
-    obj for obj in all_nn_architectures if issubclass(obj, AutoPaddingModel)
-}
+    return {
+        model_type: [
+            architecture
+            for architecture in nn_classes
+            if architecture.model_type == model_type
+        ]
+        for model_type in ModelType
+    }
 
 
 def load_from_settings_file(

@@ -20,12 +20,10 @@ from torch import Tensor
 
 from mfai.pytorch import export_to_onnx, onnx_load_and_infer, padding
 from mfai.pytorch.models import (
-    all_nn_architectures,
-    autopad_nn_architectures,
+    load_model_registry,
     load_from_settings_file,
-    nn_architectures,
 )
-from mfai.pytorch.models.base import ModelABC, ModelType
+from mfai.pytorch.models.base import AutoPaddingModel, ModelABC, ModelType
 from mfai.pytorch.models.deeplabv3 import DeepLabV3Plus
 from mfai.pytorch.models.half_unet import HalfUNet
 from mfai.pytorch.models.identity import IdentityModel
@@ -35,6 +33,15 @@ from mfai.pytorch.models.llms.gpt2 import GPT2, CrossAttentionGPT2
 from mfai.pytorch.models.llms.llama2 import Llama2
 from mfai.pytorch.models.vit import ViTClassifier
 
+
+# Compose nn classes
+nn_classes: dict[ModelType, list[type[ModelABC]]] = load_model_registry()
+autopad_nn_classes: set[type[AutoPaddingModel]] = {
+    obj
+    for nn_type in nn_classes.values()
+    for obj in nn_type
+    if issubclass(obj, AutoPaddingModel)
+}
 
 def to_numpy(tensor: Tensor) -> Any:
     return (
@@ -138,7 +145,7 @@ def meshgrid(grid_width: int, grid_height: int) -> Tensor:
     return torch.from_numpy(np.asarray([xx, yy]))
 
 
-@pytest.mark.parametrize("model_kls", nn_architectures[ModelType.GRAPH])
+@pytest.mark.parametrize("model_kls", nn_classes[ModelType.GRAPH])
 def test_torch_graph_training_loop(model_kls: Any) -> None:
     """
     Checks that our models are trainable on a toy problem (sum).
@@ -170,8 +177,8 @@ def test_torch_graph_training_loop(model_kls: Any) -> None:
 
 @pytest.mark.parametrize(
     "model_kls",
-    nn_architectures[ModelType.CONVOLUTIONAL]
-    + nn_architectures[ModelType.VISION_TRANSFORMER],
+    nn_classes[ModelType.CONVOLUTIONAL]
+    + nn_classes[ModelType.VISION_TRANSFORMER],
 )
 def test_torch_convolutional_and_vision_transformer_training_loop(
     model_kls: Any,
@@ -214,7 +221,7 @@ def test_torch_convolutional_and_vision_transformer_training_loop(
                 )
 
 
-@pytest.mark.parametrize("model_kls", nn_architectures[ModelType.PANGU])
+@pytest.mark.parametrize("model_kls", nn_classes[ModelType.PANGU])
 def test_torch_pangu_training_loop(model_kls: Any) -> None:
     """
     Checks that our models are trainable on a toy problem (sum).
@@ -395,7 +402,7 @@ def test_load_model_by_name() -> None:
         )
 
 
-@pytest.mark.parametrize("model_class", autopad_nn_architectures)
+@pytest.mark.parametrize("model_class", autopad_nn_classes)
 def test_input_shape_validation(model_class: Any) -> None:
     B, C, W, H = 8, 3, 61, 65
 
@@ -423,7 +430,7 @@ def test_input_shape_validation(model_class: Any) -> None:
     net(input_data_pad)
 
 
-@pytest.mark.parametrize("model_class", autopad_nn_architectures)
+@pytest.mark.parametrize("model_class", autopad_nn_classes)
 def test_autopad_models(model_class: Any) -> None:
     B, C, W, H = 32, 3, 64, 65  # invalid [W,H]
 
@@ -439,7 +446,7 @@ def test_autopad_models(model_class: Any) -> None:
 
 @pytest.mark.parametrize(
     "model_class",
-    all_nn_architectures + [Fuyu, XAttMultiModalLM, CrossAttentionGPT2, Llama2, GPT2],
+    list(nn_classes.values()) + [Fuyu, XAttMultiModalLM, CrossAttentionGPT2, Llama2, GPT2],
 )
 def test_model_attributes(model_class: ModelABC) -> None:
     """

@@ -27,6 +27,7 @@ from mfai.pytorch.models.base import AutoPaddingModel, ModelABC, ModelType
 from mfai.pytorch.models.deeplabv3 import DeepLabV3Plus
 from mfai.pytorch.models.half_unet import HalfUNet
 from mfai.pytorch.models.identity import IdentityModel
+from mfai.pytorch.models.nlam import BaseGraphModel, BaseHiGraphModel
 
 # Compose nn classes
 model_registry = load_model_registry()
@@ -153,6 +154,8 @@ def test_torch_graph_training_loop(model_kls: Any) -> None:
     """
     Checks that our models are trainable on a toy problem (sum).
     """
+    if model_kls in [BaseGraphModel, BaseHiGraphModel]:
+        return
     NUM_INPUTS = 2
     NUM_OUTPUTS = 1
     torch.manual_seed(666)

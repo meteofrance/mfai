@@ -3,14 +3,15 @@ Usage: instanciate the callback and add it to the lightning Trainer's arguments,
 or add the class path to your lightning yaml config file.
 """
 
+import importlib
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 import lightning as L
 from lightning.fabric.utilities.exceptions import MisconfigurationException
 from lightning.pytorch.cli import SaveConfigCallback
 from lightning.pytorch.loggers.mlflow import MLFlowLogger
-from mlflow.system_metrics.system_metrics_monitor import SystemMetricsMonitor
 from typing_extensions import override
 
 
@@ -21,12 +22,24 @@ class MLFlowSystemMonitorCallback(L.Callback):
     See this issue: https://github.com/Lightning-AI/pytorch-lightning/issues/20563.
     """
 
+    def __init__(self, *args: Any, **kwargs: dict[str, Any]) -> None:
+        super().__init__(*args, **kwargs)
+        mlflow_found: None | ModuleType = importlib.import_module("mlflow")
+
+        if mlflow_found is None:
+            raise ModuleNotFoundError(
+                "To use mfai's MLFLowSystemMonitorCallback, you need to install "
+                "mlflow>=3.11 alongside mfai in your project."
+            )
+
     @override
     def on_fit_start(self, trainer: L.Trainer, pl_module: L.LightningModule) -> None:
         if not isinstance(trainer.logger, MLFlowLogger):
             raise MisconfigurationException(
                 "MLFlowSystemMonitorCallback requires MLFlowLogger"
             )
+
+        from mlflow.system_metrics.system_metrics_monitor import SystemMetricsMonitor
 
         self.system_monitor = SystemMetricsMonitor(
             run_id=trainer.logger.run_id,

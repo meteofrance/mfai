@@ -299,7 +299,6 @@ class DeepLabV3(BaseModel, AutoPaddingModel):
     features_last: bool = False
     model_type: ModelType = ModelType.CONVOLUTIONAL
     num_spatial_dims: int = 2
-    register: bool = True
 
     def __init__(
         self,

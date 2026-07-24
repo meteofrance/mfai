@@ -70,7 +70,6 @@ class HalfUNet(BaseModel, AutoPaddingModel):
     num_spatial_dims: int = 2
     features_last: bool = False
     model_type: ModelType = ModelType.CONVOLUTIONAL
-    register: bool = True
 
     def __init__(
         self,

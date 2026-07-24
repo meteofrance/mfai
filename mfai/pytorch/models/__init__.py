@@ -6,42 +6,29 @@ from types import ModuleType
 
 from torch import nn
 
-from .base import AutoPaddingModel, ModelABC, ModelType
+from .base import BaseModel, ModelABC
 
-# Load all models from the torch.models package
-# which are ModelABC subclasses and have the register attribute set to True
-registry: dict[str, type[ModelABC]] = dict()
-package: ModuleType = importlib.import_module("mfai.pytorch.models")
-this_module = sys.modules[__name__]
-for module_info in pkgutil.walk_packages(package.__path__, package.__name__ + "."):
-    module: ModuleType = importlib.import_module(module_info.name)
-    for object_name, kls in module.__dict__.items():
-        if (
-            isinstance(kls, type)
-            and issubclass(kls, ModelABC)
-            and kls != ModelABC
-            and kls.register  # type: ignore[truthy-function]
-        ):
-            if kls.__name__ in registry:
-                raise ValueError(
-                    f"Model {kls.__name__} from plugin {object_name} already exists in the registry."
-                )
-            registry[kls.__name__] = kls
-            setattr(this_module, kls.__name__, kls)
-all_nn_architectures: list[type[ModelABC]] = list(registry.values())
 
-nn_architectures: dict[ModelType, list[type[ModelABC]]] = {
-    model_type: [
-        architecture
-        for architecture in all_nn_architectures
-        if architecture.model_type == model_type
-    ]
-    for model_type in ModelType
-}
-
-autopad_nn_architectures = {
-    obj for obj in all_nn_architectures if issubclass(obj, AutoPaddingModel)
-}
+def load_model_registry() -> dict[str, type[nn.Module]]:
+    # Load all models from the torch.models package
+    # which are ModelABC subclasses and have a `model_type` attribute
+    registry: dict[str, type[nn.Module]] = dict()
+    package: ModuleType = importlib.import_module("mfai.pytorch.models")
+    this_module = sys.modules[__name__]
+    for module_info in pkgutil.walk_packages(package.__path__, package.__name__ + "."):
+        module: ModuleType = importlib.import_module(module_info.name)
+        for kls in module.__dict__.values():
+            if (
+                isinstance(kls, type)
+                and issubclass(kls, nn.Module)
+                and kls not in [ModelABC, BaseModel]
+                and hasattr(kls, "model_type")
+            ):
+                if kls.__name__ in registry:
+                    continue
+                registry[kls.__name__] = kls
+                setattr(this_module, kls.__name__, kls)
+    return registry
 
 
 def load_from_settings_file(
@@ -56,6 +43,7 @@ def load_from_settings_file(
     """
 
     # Pick the class matching the supplied name
+    registry: dict[str, type[nn.Module]] = load_model_registry()
     model_kls = registry.get(model_name, None)
 
     if model_kls is None:

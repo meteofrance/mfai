@@ -77,7 +77,6 @@ class SwinUNetR(ModelABC, MonaiSwinUNETR, AutoPaddingModel):
     features_last: bool = False
     model_type: ModelType = ModelType.VISION_TRANSFORMER
     num_spatial_dims: int = 2
-    register: bool = True
 
     def __init__(
         self,

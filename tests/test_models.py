@@ -16,24 +16,35 @@ import numpy as np
 import pytest
 import torch
 from marshmallow.exceptions import ValidationError
-from torch import Tensor
+from torch import Tensor, nn
 
 from mfai.pytorch import export_to_onnx, onnx_load_and_infer, padding
 from mfai.pytorch.models import (
-    all_nn_architectures,
-    autopad_nn_architectures,
     load_from_settings_file,
-    nn_architectures,
+    load_model_registry,
 )
-from mfai.pytorch.models.base import ModelABC, ModelType
+from mfai.pytorch.models.base import AutoPaddingModel, ModelABC, ModelType
 from mfai.pytorch.models.deeplabv3 import DeepLabV3Plus
 from mfai.pytorch.models.half_unet import HalfUNet
 from mfai.pytorch.models.identity import IdentityModel
-from mfai.pytorch.models.llms.cross_attention import XAttMultiModalLM
-from mfai.pytorch.models.llms.fuyu import Fuyu
-from mfai.pytorch.models.llms.gpt2 import GPT2, CrossAttentionGPT2
-from mfai.pytorch.models.llms.llama2 import Llama2
-from mfai.pytorch.models.vit import ViTClassifier
+from mfai.pytorch.models.nlam import BaseGraphModel, BaseHiGraphModel
+
+# Compose nn classes
+model_registry = load_model_registry()
+nn_classes: dict[ModelType, list[type[nn.Module]]] = {
+    model_type: [
+        architecture
+        for architecture in list(model_registry.values())
+        if architecture.model_type == model_type
+    ]
+    for model_type in ModelType
+}
+autopad_nn_classes: set[type[AutoPaddingModel]] = {
+    obj
+    for nn_type in nn_classes.values()
+    for obj in nn_type
+    if issubclass(obj, AutoPaddingModel)
+}
 
 
 def to_numpy(tensor: Tensor) -> Any:
@@ -138,11 +149,13 @@ def meshgrid(grid_width: int, grid_height: int) -> Tensor:
     return torch.from_numpy(np.asarray([xx, yy]))
 
 
-@pytest.mark.parametrize("model_kls", nn_architectures[ModelType.GRAPH])
+@pytest.mark.parametrize("model_kls", nn_classes[ModelType.GRAPH])
 def test_torch_graph_training_loop(model_kls: Any) -> None:
     """
     Checks that our models are trainable on a toy problem (sum).
     """
+    if model_kls in [BaseGraphModel, BaseHiGraphModel]:
+        return
     NUM_INPUTS = 2
     NUM_OUTPUTS = 1
     torch.manual_seed(666)
@@ -170,8 +183,7 @@ def test_torch_graph_training_loop(model_kls: Any) -> None:
 
 @pytest.mark.parametrize(
     "model_kls",
-    nn_architectures[ModelType.CONVOLUTIONAL]
-    + nn_architectures[ModelType.VISION_TRANSFORMER],
+    nn_classes[ModelType.CONVOLUTIONAL] + nn_classes[ModelType.VISION_TRANSFORMER],
 )
 def test_torch_convolutional_and_vision_transformer_training_loop(
     model_kls: Any,
@@ -214,7 +226,7 @@ def test_torch_convolutional_and_vision_transformer_training_loop(
                 )
 
 
-@pytest.mark.parametrize("model_kls", nn_architectures[ModelType.PANGU])
+@pytest.mark.parametrize("model_kls", nn_classes[ModelType.PANGU])
 def test_torch_pangu_training_loop(model_kls: Any) -> None:
     """
     Checks that our models are trainable on a toy problem (sum).
@@ -345,7 +357,7 @@ def test_extra_models(model_and_settings: Any) -> None:
         train_model(model, (NUM_INPUTS, *INPUT_SHAPE[:spatial_dims]))
 
 
-@pytest.mark.parametrize("model_kls", [ViTClassifier])
+@pytest.mark.parametrize("model_kls", nn_classes[ModelType.ENCODER])
 def test_full_sample_classifiers(model_kls: torch.nn.Module) -> None:
     """
     Testing the models classifying the full input/sample/image (and not per pixel).
@@ -395,18 +407,24 @@ def test_load_model_by_name() -> None:
         )
 
 
-@pytest.mark.parametrize("model_class", autopad_nn_architectures)
+@pytest.mark.parametrize("model_class", autopad_nn_classes)
 def test_input_shape_validation(model_class: Any) -> None:
     B, C, W, H = 8, 3, 61, 65
 
     input_data = torch.randn(B, C, W, H)
-    net = model_class(in_channels=C, out_channels=1, input_shape=input_data.shape)
+    input_shape = input_data.shape[-2:]
+    if model_class.model_type == ModelType.ENCODER:
+        kwargs = {"settings": model_class.settings_kls(**{"patch_size": 32})}
+    else:
+        kwargs = {}
+
+    net = model_class(in_channels=C, out_channels=1, input_shape=input_shape, **kwargs)
 
     # assert it fails before padding
     with pytest.raises((RuntimeError, ValueError)):
         net(input_data)
 
-    valid_shape, new_shape = net.validate_input_shape(input_data.shape[-2:])
+    valid_shape, new_shape = net.validate_input_shape(input_shape)
 
     assert not valid_shape
 
@@ -423,7 +441,7 @@ def test_input_shape_validation(model_class: Any) -> None:
     net(input_data_pad)
 
 
-@pytest.mark.parametrize("model_class", autopad_nn_architectures)
+@pytest.mark.parametrize("model_class", autopad_nn_classes)
 def test_autopad_models(model_class: Any) -> None:
     B, C, W, H = 32, 3, 64, 65  # invalid [W,H]
 
@@ -437,10 +455,7 @@ def test_autopad_models(model_class: Any) -> None:
     net(input_data)  # assert it does not fail
 
 
-@pytest.mark.parametrize(
-    "model_class",
-    all_nn_architectures + [Fuyu, XAttMultiModalLM, CrossAttentionGPT2, Llama2, GPT2],
-)
+@pytest.mark.parametrize("model_class", model_registry.values())
 def test_model_attributes(model_class: ModelABC) -> None:
     """
     We check that ALL our models have the required attributes
@@ -451,6 +466,9 @@ def test_model_attributes(model_class: ModelABC) -> None:
     ), (
         f"Model implementation {model_class} is missing attribute 'model_type' of type ModelType"
     )
+    if model_class.model_type == ModelType.DGMR:
+        return
+
     assert hasattr(model_class, "settings_kls") and dataclasses.is_dataclass(
         model_class.settings_kls
     ), (

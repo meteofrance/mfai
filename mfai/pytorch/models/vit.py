@@ -230,9 +230,8 @@ class ViTClassifier(BaseModel, VitPaddingMixin):
     onnx_supported: bool = False
     supported_num_spatial_dims: tuple[int, ...] = (2,)
     features_last: bool = False
-    model_type: ModelType = ModelType.VISION_TRANSFORMER
+    model_type: ModelType = ModelType.ENCODER
     num_spatial_dims: int = 2
-    register: bool = False
 
     def __init__(
         self,
@@ -303,9 +302,8 @@ class VitEncoder(BaseModel, VitPaddingMixin):
     onnx_supported: bool = False
     supported_num_spatial_dims: tuple[int, ...] = (2,)
     features_last: bool = False
-    model_type: ModelType = ModelType.VISION_TRANSFORMER
+    model_type: ModelType = ModelType.ENCODER
     num_spatial_dims: int = 2
-    register: bool = False
 
     def __init__(
         self,

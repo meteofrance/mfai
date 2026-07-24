@@ -585,8 +585,6 @@ class GraphLAM(BaseGraphModel):
     Used for GC-LAM and L1-LAM in Oskarsson et al. (2023).
     """
 
-    register: bool = True
-
     def finalize_graph_model(self) -> None:
         if self.hierarchical:
             raise ValueError("GraphLAM does not use a hierarchical mesh graph")
@@ -668,8 +666,6 @@ class HiLAMParallel(BaseHiGraphModel):
 
     This is a somewhat simpler alternative to the sequential message passing of Hi-LAM.
     """
-
-    register: bool = True
 
     def finalize_graph_model(self) -> None:
         super().finalize_graph_model()
@@ -757,8 +753,6 @@ class HiLAM(BaseHiGraphModel):
     the hierarchy during processing.
     The Hi-LAM model from Oskarsson et al. (2023).
     """
-
-    register: bool = True
 
     def finalize_graph_model(self) -> None:
         super().finalize_graph_model()

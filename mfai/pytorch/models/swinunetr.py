@@ -4,11 +4,20 @@ from typing import Any, Literal
 
 import torch
 from dataclasses_json import dataclass_json
-from monai.networks.blocks.dynunet_block import UnetResBlock
-from monai.networks.nets.swin_unetr import SwinUNETR as MonaiSwinUNETR
 from torch import Tensor, nn
 
 from .base import AutoPaddingModel, ModelABC, ModelType
+
+# Optional dependency
+try:
+    from monai.networks.blocks.dynunet_block import UnetResBlock
+    from monai.networks.nets.swin_unetr import SwinUNETR as MonaiSwinUNETR
+except ImportError as e:
+    print(
+        "To use the SwinUnet model, install mfai's "
+        "optional dependency\n\tmfai[vision_transformers]"
+    )
+    raise e
 
 
 @dataclass_json

@@ -42,30 +42,37 @@ dynamic = ["version"]
 license-files = ["LICENSE"]
 keywords = ["PyTorch", "Deep Learning", "Artificial Intelligence", "Meteo-France"]
 dependencies = [
-  "axial-attention>=0.6.1",
   "dataclasses-json>=0.6",
   "einops>=0.8",
   "lightning[pytorch-extra]",
-  "monai>=1.5",
   "onnx>=1.17.0",
   "onnxruntime>=1.20",
   "onnxscript>=0.1",
-  "scipy>=1.14",
   "torch>=2.5,<3",
   "torchvision>=0.19",
   "tabulate>=0.9",
-  "timm>=1.0",
   "torchmetrics>=1.6",
-  "torch-geometric>=2.6",
 ]
 
 [project.optional-dependencies]
 llm = [
+  # Tokenizers, GPT2, Llama2, Llama3, Fuyu, Qwen
   "huggingface_hub>=0.26",
   "sentencepiece>=0.2",
   "tensorflow>=2.20",
   "tiktoken>=0.8",
   "tokenizers>=0.22",
+]
+weather_forecast = [
+  # Nlam, pangu and archesweather models
+  "timm>=1.0",
+  "scipy>=1.14",
+  "torch-geometric>=2.6",
+  "axial-attention>=0.6.1",
+]
+vision_transformers = [
+  # Swinunetr and UnetrPP models
+  "monai>=1.5",
 ]
 docs = [
   "sphinx>=7.0.0",

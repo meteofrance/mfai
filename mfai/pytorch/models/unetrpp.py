@@ -12,20 +12,29 @@ from typing import Union
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from dataclasses_json import dataclass_json
-from monai.networks.blocks.dynunet_block import (
-    UnetOutBlock,
-    UnetResBlock,
-    get_conv_layer,
-    get_output_padding,
-    get_padding,
-)
-from monai.networks.layers.utils import get_norm_layer
-from monai.utils import optional_import
 from torch import Tensor
 from torch.nn.functional import scaled_dot_product_attention
 
 from .base import AutoPaddingModel, BaseModel, ModelType
+
+# Optional dependency
+try:
+    from dataclasses_json import dataclass_json
+    from monai.networks.blocks.dynunet_block import (
+        UnetOutBlock,
+        UnetResBlock,
+        get_conv_layer,
+        get_output_padding,
+        get_padding,
+    )
+    from monai.networks.layers.utils import get_norm_layer
+    from monai.utils import optional_import
+except ImportError as e:
+    print(
+        "To use the UNetRPP model, install mfai's "
+        "optional dependency\n\tmfai[vision_transformers]"
+    )
+    raise e
 
 
 def _trunc_normal_(

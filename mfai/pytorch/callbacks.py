@@ -40,7 +40,7 @@ class MLFlowSystemMonitorCallback(L.Callback):
             )
 
         from mlflow.system_metrics.system_metrics_monitor import (
-            SystemMetricsMonitor,  # type: ignore[import-not-found]
+            SystemMetricsMonitor,
         )
 
         self.system_monitor = SystemMetricsMonitor(

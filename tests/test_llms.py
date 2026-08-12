@@ -86,7 +86,7 @@ def test_kv_cache(model_tokenizer: tuple[nn.Module, Tokenizer]) -> None:
         model=model,
         idx=encoded_tensor,
         max_new_tokens=400,
-        context_size=model.context_length,  #type: ignore[arg-type]
+        context_size=model.context_length,  # type: ignore[arg-type]
         use_cache=False,
     )
     end = time.perf_counter()
@@ -98,7 +98,7 @@ def test_kv_cache(model_tokenizer: tuple[nn.Module, Tokenizer]) -> None:
         model=model,
         idx=encoded_tensor,
         max_new_tokens=400,
-        context_size=model.context_length,  #type: ignore[arg-type]
+        context_size=model.context_length,  # type: ignore[arg-type]
         use_cache=True,
     )
     end = time.perf_counter()

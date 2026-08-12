@@ -5,6 +5,7 @@ from typing import Any
 
 import pytest
 import torch
+from torch import nn
 from test_multimodal_lm import generate_text_simple
 
 from mfai.pytorch.models.llms.gpt2 import (
@@ -71,7 +72,7 @@ def test_llms(model_target_tokenizer: tuple[Any, str, Tokenizer]) -> None:
         (Llama3(Llama3Settings()), LlamaTokenizer()),
     ],
 )
-def test_kv_cache(model_tokenizer: tuple[GPT2, GPT2Settings]) -> None:
+def test_kv_cache(model_tokenizer: tuple[nn.Module, Tokenizer]) -> None:
     """
     We check that KV cache implementation is working and a speed-up text generation.
     """

@@ -95,6 +95,12 @@ dev = [
 [project.urls]
 Homepage = "https://github.com/meteofrance/mfai"
 
+[tool.uv]
+# Enforces the use of prebuilt binary wheels over source distributions
+# that require a build step and executes arbitrary code when installing.
+pip.only-binary = [":all:"]
+exclude-newer = "15 days"
+
 [tool.ruff]
 target-version = "py312"
 line-length = 88

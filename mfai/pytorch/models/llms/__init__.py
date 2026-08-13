@@ -2,10 +2,6 @@ from importlib.util import find_spec
 
 from torch import nn
 
-from mfai.pytorch.models.llms.gpt2 import GPT2, CrossAttentionGPT2
-from mfai.pytorch.models.llms.llama2 import Llama2
-from mfai.pytorch.models.llms.llama3 import Llama3
-
 # Check for optional dependency
 if any(
     (
@@ -19,6 +15,10 @@ if any(
     raise ImportError(
         "To use mfai's llm models, install mfai's optional dependency\n\tmfai[llm]"
     )
+
+from mfai.pytorch.models.llms.gpt2 import GPT2, CrossAttentionGPT2
+from mfai.pytorch.models.llms.llama2 import Llama2
+from mfai.pytorch.models.llms.llama3 import Llama3
 
 
 class FreezeMLMMixin:

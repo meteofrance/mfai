@@ -415,9 +415,6 @@ We provide a [RandomCropWithMinPositivePixels](https://github.com/meteofrance/mf
 
 # Installation
 
-
-
-
 ## Cloning the repository
 
 ```bash
@@ -447,22 +444,20 @@ Before version 6.2.1:
 pip install git+https://github.com/meteofrance/mfai@v1.0.1
 ```
 
-After version 7.0.0, mfai comes with optional dependencies for llm models.
-To install them, add `[llm]` behind the pip installation instruction:
+To lighten dependencies, mfai comes with optional dependencies for specific models:
+- `llm` for llm models (Tokenizers, GPT2, Llama2, Llama3, Fuyu, Qwen)
+- `vision_transformers` for for vision transformer models (Swinunetr, UnetrPP)
+- `weather_forecast` for weather forcasting models (Nlam, pangu, archesweather)
+- `dev` for development dependencies (unit tests, type checking)
+- `doc` for documentation build dependencies
+
+Install only what your project requires with:
 ```bash
-pip install .[dev]
-
-
-# or
-
-pip install mfai[llm]>=7.0.0
+pip install mfai[llm, vision_transformers]>=8.0.0
 ```
 
 
 # Usage
-
-
-
 
 ## Instanciate a model
 

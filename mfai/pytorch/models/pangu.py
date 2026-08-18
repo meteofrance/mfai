@@ -5,7 +5,6 @@ from typing import Optional, Tuple
 
 import torch
 from dataclasses_json import dataclass_json
-from timm.layers import DropPath
 from torch import Tensor, nn
 from torch.nn import (
     GELU,
@@ -23,6 +22,16 @@ from torch.nn import (
 from torch.utils.checkpoint import checkpoint
 
 from .base import BaseModel, ModelType
+
+# Optional dependency
+try:
+    from timm.layers import DropPath
+except ImportError as e:
+    print(
+        "To use the PanguWeather model, install mfai's "
+        "optional dependency\n\tmfai[weather_forecast]"
+    )
+    raise e
 
 
 def define_3d_earth_position_index(window_size: Tuple[int, int, int]) -> Tensor:

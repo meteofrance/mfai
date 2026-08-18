@@ -3,11 +3,11 @@ Graph Neural Network architectures adapted from https://github.com/mllam/neural-
 """
 
 from dataclasses import dataclass
+from importlib.util import find_spec
 from pathlib import Path
 from typing import Any, Literal
 
 import torch
-import torch_geometric as pyg
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
 from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import offload_wrapper
@@ -17,6 +17,19 @@ from mfai.pytorch.models.utils import expand_to_batch
 
 from .create_mesh import build_graph_for_grid
 from .interaction_net import InteractionNet, make_mlp
+
+# Check for optional dependency
+if any(
+    (
+        find_spec("torch_geometric") is None,
+        find_spec("scipy") is None,
+    )
+):
+    raise ImportError(
+        "To use the GraphLAM, HiLAM or HiLAMParallel models, "
+        "install mfai's optional dependency\n\tmfai[weather_forecast]"
+    )
+import torch_geometric as pyg
 
 
 def offload_to_cpu(model: nn.ModuleList) -> nn.ModuleList:

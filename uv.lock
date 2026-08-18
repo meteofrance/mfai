@@ -8,6 +8,10 @@ resolution-markers = [
     "python_full_version < '3.11'",
 ]
 
+[options]
+exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for backwards compatibility when using relative exclude-newer values.
+exclude-newer-span = "P15D"
+
 [[package]]
 name = "absl-py"
 version = "2.5.0"
@@ -1715,22 +1719,15 @@ wheels = [
 name = "mfai"
 source = { editable = "." }
 dependencies = [
-    { name = "axial-attention" },
     { name = "dataclasses-json" },
     { name = "einops" },
     { name = "lightning", extra = ["pytorch-extra"] },
-    { name = "monai" },
     { name = "onnx" },
     { name = "onnxruntime", version = "1.24.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "onnxruntime", version = "1.27.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "onnxscript" },
-    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
-    { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "tabulate" },
-    { name = "timm" },
     { name = "torch" },
-    { name = "torch-geometric" },
     { name = "torchmetrics" },
     { name = "torchvision" },
 ]
@@ -1765,17 +1762,28 @@ llm = [
     { name = "tiktoken" },
     { name = "tokenizers" },
 ]
+vision-transformers = [
+    { name = "monai" },
+]
+weather-forecast = [
+    { name = "axial-attention" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "timm" },
+    { name = "torch-geometric" },
+]
 
 [package.metadata]
 requires-dist = [
-    { name = "axial-attention", specifier = ">=0.6.1" },
+    { name = "axial-attention", marker = "extra == 'weather-forecast'", specifier = ">=0.6.1" },
     { name = "dataclasses-json", specifier = ">=0.6" },
     { name = "einops", specifier = ">=0.8" },
     { name = "furo", marker = "extra == 'docs'" },
     { name = "ghp-import", marker = "extra == 'docs'" },
     { name = "huggingface-hub", marker = "extra == 'llm'", specifier = ">=0.26" },
     { name = "lightning", extras = ["pytorch-extra"] },
-    { name = "monai", specifier = ">=1.5" },
+    { name = "monai", marker = "extra == 'vision-transformers'", specifier = ">=1.5" },
     { name = "mypy", marker = "extra == 'dev'", specifier = "==2.1.0" },
     { name = "myst-parser", marker = "extra == 'docs'" },
     { name = "onnx", specifier = ">=1.17.0" },
@@ -1784,7 +1792,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = "==9.1.1" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = "==7.1.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = "==0.15.20" },
-    { name = "scipy", specifier = ">=1.14" },
+    { name = "scipy", marker = "extra == 'weather-forecast'", specifier = ">=1.14" },
     { name = "sentencepiece", marker = "extra == 'llm'", specifier = ">=0.2" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = ">=7.0.0" },
     { name = "sphinx-autodoc-typehints", marker = "extra == 'docs'" },
@@ -1792,17 +1800,17 @@ requires-dist = [
     { name = "tabulate", specifier = ">=0.9" },
     { name = "tensorflow", marker = "extra == 'llm'", specifier = ">=2.20" },
     { name = "tiktoken", marker = "extra == 'llm'", specifier = ">=0.8" },
-    { name = "timm", specifier = ">=1.0" },
+    { name = "timm", marker = "extra == 'weather-forecast'", specifier = ">=1.0" },
     { name = "tokenizers", marker = "extra == 'llm'", specifier = ">=0.22" },
     { name = "torch", specifier = ">=2.5,<3" },
-    { name = "torch-geometric", specifier = ">=2.6" },
+    { name = "torch-geometric", marker = "extra == 'weather-forecast'", specifier = ">=2.6" },
     { name = "torchmetrics", specifier = ">=1.6" },
     { name = "torchvision", specifier = ">=0.19" },
     { name = "types-tabulate", marker = "extra == 'dev'", specifier = "==0.10.0.20260508" },
     { name = "types-tensorflow", marker = "extra == 'dev'", specifier = "==2.18.0.20260610" },
     { name = "types-tqdm", marker = "extra == 'dev'", specifier = "==4.68.0.20260608" },
 ]
-provides-extras = ["llm", "docs", "dev"]
+provides-extras = ["llm", "weather-forecast", "vision-transformers", "docs", "dev"]
 
 [[package]]
 name = "ml-dtypes"

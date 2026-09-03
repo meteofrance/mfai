@@ -1,5 +1,6 @@
 
 
+import json
 from pathlib import Path
 from typing import Any, Literal
 import torch
@@ -15,10 +16,19 @@ GPT2_SIZES: tuple[Gpt2SizesType, ...] = ("124M", "355M", "774M", "1558M")
 
 
 def load_weights_from_tf_checkpoint(ckpt_path: str, settings: dict[str, Any]) -> dict[str, Any]:
-    """
-    Loads a tensorflow checkpoint into a dict.
-    Used to transfer weights from tensorflow
-    to pytorch implementations of same models.
+    """Load a tensorflow checkpoint into a dict.
+
+    Used to transfer weights from tensorflow to pytorch
+    implementations of the same models.
+
+    Args:
+        ckpt_path: Path to the tensorflow checkpoint.
+        settings: Model settings, must contain "n_layer" for the number
+            of transformer blocks.
+
+    Returns:
+        dict[str, Any]: A dict mapping the checkpoint variable names to
+            their loaded values, organized into "blocks" per layer.
     """
     import tensorflow as tf
 
@@ -49,11 +59,19 @@ def load_weights_from_tf_checkpoint(ckpt_path: str, settings: dict[str, Any]) ->
     return params
 
 
-def load_gpt2_from_dict(gpt2: GPT2, params: dict[str, Any]):
-    """
-    Loads weights into self using a dict
-    likely coming from a tensorflow or other framework
-    training. Use this to finetune from the official weights.
+def load_gpt2_from_dict(gpt2: GPT2, params: dict[str, Any]) -> GPT2:
+    """Load weights into a GPT2 model from a dict.
+
+    The dict likely comes from a tensorflow or other framework training.
+    Use this to finetune from the official weights.
+
+    Args:
+        gpt2: The GPT2 model to load weights into.
+        params: A dict of weights, as returned by
+            :func:`load_weights_from_tf_checkpoint`.
+
+    Returns:
+        GPT2: The model with the loaded weights.
     """
 
     # we allow context length longer than official implementation
@@ -165,12 +183,17 @@ def load_gpt2_from_dict(gpt2: GPT2, params: dict[str, Any]):
 
 
 def download_gpt2(
-    model_size: str,
+    model_size: Gpt2SizesType,
     models_root_dir: Path,
 ) -> None:
-    """
-    Downloads GPT2 official weights from openai with a fallback
-    to the LLMs-from-scratch repository.
+    """Download GPT2 official weights from openai with a fallback to the LLMs-from-scratch repository.
+
+    Args:
+        model_size: Size of the GPT2 model to download.
+        models_root_dir: Root directory in which the weights will be stored.
+
+    Returns:
+        None: No return value.
     """
     import tensorflow as tf
 
@@ -214,7 +237,7 @@ def download_gpt2(
     )
     gpt2 = GPT2(gpt2_settings)
     gpt2 = load_gpt2_from_dict(gpt2, params)
-    torch.save(gpt2.state_dict(), models_root_dir / f"gpt2_{size}.pkl")
+    torch.save(gpt2.state_dict(), models_root_dir / f"gpt2_{model_size}.pkl")
 
 
 if __name__ == "__main__":

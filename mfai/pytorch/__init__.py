@@ -80,7 +80,6 @@ def onnx_load_and_infer(
     return ort_session.run(None, {"input": to_numpy(input)})
 
 
-@typing.no_type_check
 def assign(left: Tensor, right: numpy.ndarray) -> torch.nn.Parameter:
     """
     Used when loading weights coming from another training

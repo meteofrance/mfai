@@ -1,20 +1,55 @@
 
 
 from pathlib import Path
-from typing import Any
-
+from typing import Any, Literal
 import torch
-from tqdm import tqdm
-
+import os
+import numpy as np
+from mfai.pytorch import assign
 from mfai.pytorch.models.llms.gpt2 import GPT2, GPT2Settings
-from mfai.tensorflow import download_and_load_gpt2
+from mfai.http import download_file
 
 
 Gpt2SizesType = Literal["124M", "355M", "774M", "1558M"]
-GPT2_SIZES: tuple[Gpt2SizesType] = ("124M", "355M", "774M", "1558M")
+GPT2_SIZES: tuple[Gpt2SizesType, ...] = ("124M", "355M", "774M", "1558M")
 
 
-def load_gpt2_from_dict(gpt2: GPT2, params: dict):
+def load_weights_from_tf_checkpoint(ckpt_path: str, settings: dict[str, Any]) -> dict[str, Any]:
+    """
+    Loads a tensorflow checkpoint into a dict.
+    Used to transfer weights from tensorflow
+    to pytorch implementations of same models.
+    """
+    import tensorflow as tf
+
+    # Initialize parameters dictionary with empty blocks for each layer
+    params: dict[str, Any] = {"blocks": [{} for _ in range(settings["n_layer"])]}
+
+    # Iterate over each variable in the checkpoint
+    for name, _ in tf.train.list_variables(ckpt_path):
+        # Load the variable and remove singleton dimensions
+        variable_array = np.squeeze(tf.train.load_variable(ckpt_path, name))
+
+        # Process the variable name to extract relevant parts
+        variable_name_parts = name.split("/")[1:]  # Skip the 'model/' prefix
+
+        # Identify the target dictionary for the variable
+        target_dict = params
+        if variable_name_parts[0].startswith("h"):
+            layer_number = int(variable_name_parts[0][1:])
+            target_dict = params["blocks"][layer_number]
+
+        # Recursively access or create nested dictionaries
+        for key in variable_name_parts[1:-1]:
+            target_dict = target_dict.setdefault(key, {})
+
+        # Assign the variable array to the last key
+        last_key = variable_name_parts[-1]
+        target_dict[last_key] = variable_array
+    return params
+
+
+def load_gpt2_from_dict(gpt2: GPT2, params: dict[str, Any]):
     """
     Loads weights into self using a dict
     likely coming from a tensorflow or other framework
@@ -131,8 +166,8 @@ def load_gpt2_from_dict(gpt2: GPT2, params: dict):
 
 def download_gpt2(
     model_size: str,
-    models_dir: str | Path,
-) -> tuple[dict, dict]:
+    models_root_dir: Path,
+) -> None:
     """
     Downloads GPT2 official weights from openai with a fallback
     to the LLMs-from-scratch repository.
@@ -140,12 +175,11 @@ def download_gpt2(
     import tensorflow as tf
 
     # Validate model size
-    allowed_sizes = ("124M", "355M", "774M", "1558M")
-    if model_size not in allowed_sizes:
-        raise ValueError(f"Model size not in {allowed_sizes}")
+    if model_size not in GPT2_SIZES:
+        raise ValueError(f"Model size not in {GPT2_SIZES}")
 
     # Define paths
-    model_dir = os.path.join(models_dir, model_size)
+    model_dir = models_root_dir / model_size
     base_url = "https://openaipublic.blob.core.windows.net/gpt-2/models"
     backup_base_url = "https://f001.backblazeb2.com/file/LLMs-from-scratch/gpt2"
     filenames = [
@@ -159,7 +193,7 @@ def download_gpt2(
     ]
 
     # Download files
-    os.makedirs(model_dir, exist_ok=True)
+    model_dir.mkdir(exist_ok=True)
     for filename in filenames:
         file_url = os.path.join(base_url, model_size, filename)
         backup_url = os.path.join(backup_base_url, model_size, filename)
@@ -175,12 +209,12 @@ def download_gpt2(
 
     # Instantiate a gpt2 class and populate it from the downloaded params
     gpt2_settings = GPT2Settings(
-        model_size=size,
+        model_size=model_size,
         attn_tf_compat=True
     )
-    gpt2 = GPT2(settings)
+    gpt2 = GPT2(gpt2_settings)
     gpt2 = load_gpt2_from_dict(gpt2, params)
-    torch.save(gpt2.state_dict(), path / f"gpt2_{size}.pkl")
+    torch.save(gpt2.state_dict(), models_root_dir / f"gpt2_{size}.pkl")
 
 
 if __name__ == "__main__":
@@ -195,7 +229,7 @@ if __name__ == "__main__":
 
     output_dir: Path = args.output_dir
     sizes: list[str] = args.sizes.split(",")
-    if not all(sizes in GPT2_SIZES):
+    if not all(size in GPT2_SIZES for size in sizes):
         raise ValueError(
             f"Argument -s --sizes is expected to be in {GPT2_SIZES}.\n\t"
             "Multiple values can be given, separated with commas.\n\t"

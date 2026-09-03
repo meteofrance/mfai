@@ -4,9 +4,9 @@ import json
 from pathlib import Path
 from typing import Any, Literal
 import torch
+from torch import Tensor
 import os
 import numpy as np
-from mfai.pytorch import assign
 from mfai.pytorch.models.llms.gpt2 import GPT2, GPT2Settings
 from mfai.http import download_file
 
@@ -14,6 +14,21 @@ from mfai.http import download_file
 Gpt2SizesType = Literal["124M", "355M", "774M", "1558M"]
 GPT2_SIZES: tuple[Gpt2SizesType, ...] = ("124M", "355M", "774M", "1558M")
 
+
+
+def assign(left: Tensor, right: np.ndarray) -> torch.nn.Parameter:
+    """
+    Used when loading weights coming from another training
+    framework in to pytorch models.
+    Checks the shapes matches and creates the learnable parameters from the
+    supplied weights (rights).
+    Copied from the llm from scratch repo "as-is".
+    """
+    if left.shape != right.shape:
+        raise ValueError(
+            f"Shape mismatch. Left: {left.shape}, Right: {right.shape}"
+        )
+    return torch.nn.Parameter(torch.tensor(right))
 
 def load_weights_from_tf_checkpoint(ckpt_path: str, settings: dict[str, Any]) -> dict[str, Any]:
     """Load a tensorflow checkpoint into a dict.
@@ -225,9 +240,8 @@ def download_gpt2(
 
     # Load settings and params
     tf_ckpt_path = tf.train.latest_checkpoint(model_dir)
-    settings = json.load(
-        open(os.path.join(model_dir, "hparams.json"), "r", encoding="utf-8")
-    )
+    with open(os.path.join(model_dir, "hparams.json"), "r", encoding="utf-8") as f:
+        settings = json.load(f)
     params = load_weights_from_tf_checkpoint(tf_ckpt_path, settings)
 
     # Instantiate a gpt2 class and populate it from the downloaded params
@@ -247,11 +261,11 @@ if __name__ == "__main__":
         description="Downloads gpt2 model weights as pytorch checkpoints.",
     )
     parser.add_argument("-o", "--output-dir", type=Path, required=True)
-    parser.add_argument("-s", "--sizes", type=str, required=False)
+    parser.add_argument("-s", "--sizes", type=str, required=True)
     args = parser.parse_args()
 
     output_dir: Path = args.output_dir
-    sizes: list[str] = args.sizes.split(",")
+    sizes: list[Gpt2SizesType] = args.sizes.split(",")
     if not all(size in GPT2_SIZES for size in sizes):
         raise ValueError(
             f"Argument -s --sizes is expected to be in {GPT2_SIZES}.\n\t"

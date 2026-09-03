@@ -13,7 +13,6 @@ import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
 
-from mfai.pytorch import assign
 from mfai.pytorch.models.base import ModelType
 from mfai.tensorflow import download_and_load_gpt2
 
@@ -435,126 +434,6 @@ class GPT2(nn.Module):
         self.final_norm = LayerNorm(settings.emb_dim)
         self.out_head = nn.Linear(settings.emb_dim, vocab_size, bias=False)
         self.model_size = settings.model_size
-
-    @typing.no_type_check
-    def load_weights_from_dict(self, params: dict):
-        """
-        Loads weights into self using a dict
-        likely coming from a tensorflow or other framework
-        training. Use this to finetune from the official weights.
-        """
-
-        # we allow context length longer than official implementation
-        # extra parameters are just normally initialised and not loaded
-        # from supplied weights
-
-        if self.pos_emb.weight.shape[0] > len(params["wpe"]):
-            self.pos_emb.weight = torch.nn.Parameter(
-                self.pos_emb.weight.index_put(
-                    (torch.LongTensor(range(len(params["wpe"]))),),
-                    torch.tensor(params["wpe"]),
-                )
-            )
-        else:
-            self.pos_emb.weight = assign(self.pos_emb.weight, params["wpe"])
-
-        # we allow for adding special tokens
-        if self.tok_emb.weight.shape[0] > len(params["wte"]):
-            self.tok_emb.weight = torch.nn.Parameter(
-                self.tok_emb.weight.index_put(
-                    (torch.LongTensor(range(len(params["wte"]))),),
-                    torch.tensor(params["wte"]),
-                )
-            )
-        else:
-            self.tok_emb.weight = assign(self.tok_emb.weight, params["wte"])
-
-        for b in range(len(params["blocks"])):
-            q_w, k_w, v_w = np.split(
-                (params["blocks"][b]["attn"]["c_attn"])["w"], 3, axis=-1
-            )
-            self.trf_blocks[b].att.W_query.weight = assign(
-                self.trf_blocks[b].att.W_query.weight, q_w.T
-            )
-            self.trf_blocks[b].att.W_key.weight = assign(
-                self.trf_blocks[b].att.W_key.weight, k_w.T
-            )
-            self.trf_blocks[b].att.W_value.weight = assign(
-                self.trf_blocks[b].att.W_value.weight, v_w.T
-            )
-
-            q_b, k_b, v_b = np.split(
-                (params["blocks"][b]["attn"]["c_attn"])["b"], 3, axis=-1
-            )
-            self.trf_blocks[b].att.W_query.bias = assign(
-                self.trf_blocks[b].att.W_query.bias, q_b
-            )
-            self.trf_blocks[b].att.W_key.bias = assign(
-                self.trf_blocks[b].att.W_key.bias, k_b
-            )
-            self.trf_blocks[b].att.W_value.bias = assign(
-                self.trf_blocks[b].att.W_value.bias, v_b
-            )
-
-            self.trf_blocks[b].att.out_proj.weight = assign(
-                self.trf_blocks[b].att.out_proj.weight,
-                params["blocks"][b]["attn"]["c_proj"]["w"].T,
-            )
-            self.trf_blocks[b].att.out_proj.bias = assign(
-                self.trf_blocks[b].att.out_proj.bias,
-                params["blocks"][b]["attn"]["c_proj"]["b"],
-            )
-
-            self.trf_blocks[b].ff.layers[0].weight = assign(
-                self.trf_blocks[b].ff.layers[0].weight,
-                params["blocks"][b]["mlp"]["c_fc"]["w"].T,
-            )
-            self.trf_blocks[b].ff.layers[0].bias = assign(
-                self.trf_blocks[b].ff.layers[0].bias,
-                params["blocks"][b]["mlp"]["c_fc"]["b"],
-            )
-            self.trf_blocks[b].ff.layers[2].weight = assign(
-                self.trf_blocks[b].ff.layers[2].weight,
-                params["blocks"][b]["mlp"]["c_proj"]["w"].T,
-            )
-            self.trf_blocks[b].ff.layers[2].bias = assign(
-                self.trf_blocks[b].ff.layers[2].bias,
-                params["blocks"][b]["mlp"]["c_proj"]["b"],
-            )
-
-            self.trf_blocks[b].norm1.scale = assign(
-                self.trf_blocks[b].norm1.scale, params["blocks"][b]["ln_1"]["g"]
-            )
-            self.trf_blocks[b].norm1.shift = assign(
-                self.trf_blocks[b].norm1.shift, params["blocks"][b]["ln_1"]["b"]
-            )
-            self.trf_blocks[b].norm2.scale = assign(
-                self.trf_blocks[b].norm2.scale, params["blocks"][b]["ln_2"]["g"]
-            )
-            self.trf_blocks[b].norm2.shift = assign(
-                self.trf_blocks[b].norm2.shift, params["blocks"][b]["ln_2"]["b"]
-            )
-
-        self.final_norm.scale = assign(self.final_norm.scale, params["g"])
-        self.final_norm.shift = assign(self.final_norm.shift, params["b"])
-
-        # same here we allow for extra tokens
-        if self.out_head.weight.shape[0] > len(params["wte"]):
-            self.out_head.weight = torch.nn.Parameter(
-                self.out_head.weight.index_put(
-                    (torch.LongTensor(range(len(params["wte"]))),),
-                    torch.tensor(params["wte"]),
-                )
-            )
-        else:
-            self.out_head.weight = assign(self.out_head.weight, params["wte"])
-
-    def download_weights_from_tf_ckpt(self, model_dir: str | Path) -> None:
-        """
-        Downloads a tensorflow checkpoint into model_dir and sets the weights of self.
-        """
-        _, params = download_and_load_gpt2(self.model_size, model_dir)
-        self.load_weights_from_dict(params)
 
     def forward_vectors(
         self,

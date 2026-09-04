@@ -1,5 +1,20 @@
 # AGENTS.md
 
+## Context
+
+This is the `mfai` (Météo-France AI) librarie, dedicated to sharing bricks of code to people working on meteorology and AI.
+
+Our main features are:
+- Multiple neural networks architectures in pure Pytorch for vision, segmentation and LLMs.
+- Pytorch Lightning modules
+- NamedTensors : an extension of torch Tensors with named feature fields
+
+## Stack
+ - Python >= 3.10 
+ - Pytorch
+ - Pytorch Lightning
+ 
+
 ## Chat answer guidelines
 
 These instructions apply to LLM agents answering to the user's chat prompts.

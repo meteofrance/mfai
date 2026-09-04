@@ -2,7 +2,7 @@
 
 ## Chat answer guidelines
 
-These instructions pply to LLM agents answering to the user's chat prompts.
+These instructions apply to LLM agents answering to the user's chat prompts.
 
 - Be respectful.
 - Be concise, do not give examples unless prompted to. Short answers.

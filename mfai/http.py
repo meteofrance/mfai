@@ -36,12 +36,27 @@ def _get_ssl_context() -> ssl.SSLContext:
 def download_file(url: str, destination: str, backup_url: str | None = None) -> None:
     """
     Downloads a file from url into destination, on failure will try backup_url if provided.
+
+    Args:
+        url: Primary URL to download from.
+        destination: Local path where the file is written.
+        backup_url: Fallback URL used if the primary download fails.
     """
 
     ssl_context = _get_ssl_context()
 
     def _attempt_download(download_url: str) -> bool:
-        with urllib.request.urlopen(download_url, context=ssl_context) as response:
+        """
+        Attempts to download a file, skipping it if it already exists and is up-to-date.
+
+        Args:
+            download_url: URL to download from.
+
+        Returns:
+            bool: True on success, False on failure.
+        """
+
+        with urllib.request.urlopen(download_url) as response:
             # Get the total file size from headers, defaulting to 0 if not present
             file_size = int(response.headers.get("Content-Length", 0))
 

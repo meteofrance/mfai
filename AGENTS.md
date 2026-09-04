@@ -1,5 +1,20 @@
 # AGENTS.md
 
+## Context
+
+This is the `mfai` (Météo-France AI) librarie, dedicated to sharing bricks of code to people working on meteorology and AI.
+
+Our main features are:
+- Multiple neural networks architectures in pure Pytorch for vision, segmentation and LLMs.
+- Pytorch Lightning modules
+- NamedTensors : an extension of torch Tensors with named feature fields
+
+## Stack
+ - Python >= 3.10 
+ - Pytorch
+ - Pytorch Lightning
+ 
+
 ## Chat answer guidelines
 
 These instructions apply to LLM agents answering to the user's chat prompts.
@@ -28,10 +43,10 @@ These instructions apply to LLM agents writing or editing Python code in this re
 - Write clear, descriptive names for variables, functions, and classes.
 - Keep functions short and focused on a single responsibility.
 - Do not add emojis.
-- Do not write code containing security vulnerability
+- Accept no compromise with security vulnerabilities, prefer not writing code than code with a vulnerability.
 - If you propose the usage of third party package, check their cybersecurity status (known vulnerabilities, use appropriate versions, etc)
 - Warn the user if you think there is a cybersecurity risk with either the code you propose or the problem you are asked to resolve 
-- Keep line length shorter or equal to 79 characters.
+- Keep line length shorter or equal to 88 characters.
 - Write code following the structure double line break, comment, code pragraph. Like so:
 ```py
 
@@ -45,6 +60,13 @@ _with = the_next_python_code_paragraph()
 
 ### Respect dev context
 You are writting code in the mfai library, wich should be compatible for all versions of python >= 3.10. Keep it easy to maintain. This libairy is unit tested with a coverage > 85 %. When introducing new features, ensure it is tested.
+
+
+### Post contribution rules
+- After any modification to a Python file, load the `python-code-formating` skill and
+  run `uvx ruff@0.15.20 format` then `uvx ruff@0.15.20 check --fix` on the changed files.
+- Fix any errors the check raises, then re-run both until no errors are raised.
+- Load the `unit-test` skill and run the relevant tests to validate the changed code.
 
 ### Python writing rules
 

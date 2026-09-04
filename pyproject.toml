@@ -70,8 +70,6 @@ llm = [
   "sentencepiece>=0.2",
   "tiktoken>=0.8",
   "tokenizers>=0.22",
-  "tensorflow>=2.20; python_version<'3.14'",
-  "tensorflow>=2.22; python_version>='3.14'",
 ]
 weather_forecast = [
   # Nlam, pangu and archesweather models

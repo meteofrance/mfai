@@ -56,7 +56,7 @@ def download_file(url: str, destination: str, backup_url: str | None = None) -> 
             bool: True on success, False on failure.
         """
 
-        with urllib.request.urlopen(download_url) as response:
+        with urllib.request.urlopen(download_url, context=ssl_context) as response:
             # Get the total file size from headers, defaulting to 0 if not present
             file_size = int(response.headers.get("Content-Length", 0))
 

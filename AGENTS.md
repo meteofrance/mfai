@@ -43,7 +43,7 @@ These instructions apply to LLM agents writing or editing Python code in this re
 - Write clear, descriptive names for variables, functions, and classes.
 - Keep functions short and focused on a single responsibility.
 - Do not add emojis.
-- Do not write code containing security vulnerability
+- Accept no compromise with security vulnerabilities, prefer not writing code than code with a vulnerability.
 - If you propose the usage of third party package, check their cybersecurity status (known vulnerabilities, use appropriate versions, etc)
 - Warn the user if you think there is a cybersecurity risk with either the code you propose or the problem you are asked to resolve 
 - Keep line length shorter or equal to 88 characters.

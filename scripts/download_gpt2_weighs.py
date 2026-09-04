@@ -28,7 +28,9 @@ def assign(left: Tensor, right: np.ndarray) -> torch.nn.Parameter:
         )
     return torch.nn.Parameter(torch.tensor(right))
 
-def load_weights_from_tf_checkpoint(ckpt_path: str, settings: dict[str, Any]) -> dict[str, Any]:
+def load_weights_from_tf_checkpoint(
+    ckpt_path: str, settings: dict[str, Any]
+) -> dict[str, Any]:
     """Load a tensorflow checkpoint into a dict.
 
     Used to transfer weights from tensorflow to pytorch

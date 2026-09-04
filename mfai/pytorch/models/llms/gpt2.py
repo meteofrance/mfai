@@ -1,6 +1,23 @@
 """Pytorch implementation of GPT-2.
 It is widely inspired by Sebastian Raschka's book and work
 https://github.com/rasbt/LLMs-from-scratch/.
+
+You can download weights for this implementation of GPT2 by running:
+```sh
+curl -O https://raw.githubusercontent.com/meteofrance/mfai/refs/heads/main/scripts/download_gpt2_weights.py
+python download_gpt2_weights.py -o <output_dir> -s 124M,355M,774M,1558M
+
+Then load the weights with:
+```py
+import torch
+from mfai.pytorch.models.llms.gpt2 import GPT2, GPT2Settings
+
+output_dir = Path("<output_dir>")
+size = "124M"
+
+gpt2 = GPT2(GPT2Settings())
+gpt2.load_state_dict(torch.load(output_dir / f"gpt2_{size}.pkl", weights_only=True))
+```
 """
 
 import typing

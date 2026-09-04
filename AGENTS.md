@@ -31,7 +31,7 @@ These instructions apply to LLM agents writing or editing Python code in this re
 - Do not write code containing security vulnerability
 - If you propose the usage of third party package, check their cybersecurity status (known vulnerabilities, use appropriate versions, etc)
 - Warn the user if you think there is a cybersecurity risk with either the code you propose or the problem you are asked to resolve 
-- Keep line length shorter or equal to 79 characters.
+- Keep line length shorter or equal to 88 characters.
 - Write code following the structure double line break, comment, code pragraph. Like so:
 ```py
 

@@ -17,12 +17,10 @@ GPT2_SIZES: tuple[Gpt2SizesType, ...] = ("124M", "355M", "774M", "1558M")
 
 
 def assign(left: Tensor, right: np.ndarray) -> torch.nn.Parameter:
-    """
-    Used when loading weights coming from another training
-    framework in to pytorch models.
-    Checks the shapes matches and creates the learnable parameters from the
-    supplied weights (rights).
-    Copied from the llm from scratch repo "as-is".
+    """Used when loading weights coming from another training framework into
+    pytorch models. Checks the shapes matches and creates the learnable
+    parameters from the supplied weights (rights). Copied from
+    the llm from scratch repo "as-is".
     """
     if left.shape != right.shape:
         raise ValueError(
@@ -197,11 +195,12 @@ def load_gpt2_from_dict(gpt2: GPT2, params: dict[str, Any]) -> GPT2:
     return gpt2
 
 
-def download_gpt2(
+def download_gpt2_model_weights_as_pytorch_ckpt(
     model_size: Gpt2SizesType,
     models_root_dir: Path,
 ) -> None:
-    """Download GPT2 official weights from openai with a fallback to the LLMs-from-scratch repository.
+    """Download GPT2 official weights from openai with a fallback to the
+    LLMs-from-scratch repository.
 
     Args:
         model_size: Size of the GPT2 model to download.
@@ -274,4 +273,4 @@ if __name__ == "__main__":
         )
     
     for size in sizes:
-        download_gpt2(size, output_dir)
+        download_gpt2_model_weights_as_pytorch_ckpt(size, output_dir)

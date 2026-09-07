@@ -20,18 +20,14 @@ gpt2.load_state_dict(torch.load(output_dir / f"gpt2_{size}.pkl", weights_only=Tr
 ```
 """
 
-import typing
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Literal, Union
 
-import numpy as np
 import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
 
 from mfai.pytorch.models.base import ModelType
-from mfai.tensorflow import download_and_load_gpt2
 
 
 class LayerNorm(nn.Module):

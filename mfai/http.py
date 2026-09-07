@@ -26,7 +26,9 @@ def _get_ssl_context() -> ssl.SSLContext:
     cafile = os.environ.get("SSL_CERT_FILE")
     capath = os.environ.get("SSL_CERT_DIR")
     try:
-        context = ssl.create_default_context(cafile=cafile or None, capath=capath or None)
+        context = ssl.create_default_context(
+            cafile=cafile or None, capath=capath or None
+        )
     except (OSError, ssl.SSLError):
         context = ssl.create_default_context()
     context.verify_flags &= ~ssl.VERIFY_X509_STRICT

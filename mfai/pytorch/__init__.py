@@ -77,4 +77,3 @@ def onnx_load_and_infer(
     )
 
     return ort_session.run(None, {"input": to_numpy(input)})
-

@@ -27,7 +27,7 @@ size = "124M"
 tokenizer = GPT2Tokenizer()
 
 gpt2 = GPT2(GPT2Settings(attn_tf_compat=True))
-gpt2.load_state_dict(torch.load(output_dir / f"gpt2_{size}.pkl", weights_only=True))
+gpt2.load_weights(output_dir / f"gpt2_{size}.pkl", size)
 gpt2.eval()
 
 tokens = torch.tensor([tokenizer.encode("Why is the sky blue?")])

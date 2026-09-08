@@ -1,19 +1,59 @@
+"""Script that downloads official gpt2 weights, then converts the
+downloaded tensorflow checkpoints to pytorch state dicts compatible
+with the mfai's GPT2 class.
 
+Download weights:
+```sh
+mkdir gpt2_weights_download
+cd gpt2_weights_download
+curl -O https://raw.githubusercontent.com/meteofrance/mfai/refs/heads/main/scripts/download_gpt2_weights/main.py
+curl -O https://raw.githubusercontent.com/meteofrance/mfai/refs/heads/main/scripts/download_gpt2_weights/pyproject.toml
+curl -O https://raw.githubusercontent.com/meteofrance/mfai/refs/heads/main/scripts/download_gpt2_weights/uv.lock
+uv run download_gpt2_weights.py -o <output_dir> -s 124M,355M,774M,1558M
+```
+
+Here is an example on how to load the downloaded weights into
+mfai's GPT2 class.
+```py
+from pathlib import Path
+
+import torch
+from mfai.pytorch.models.llms.gpt2 import GPT2, GPT2Settings
+from mfai.tokenizers import GPT2Tokenizer
+
+output_dir = Path("/scratch/shared/gpt2_weights")
+size = "124M"
+
+tokenizer = GPT2Tokenizer()
+
+gpt2 = GPT2(GPT2Settings(attn_tf_compat=True))
+gpt2.load_state_dict(torch.load(output_dir / f"gpt2_{size}.pkl", weights_only=True))
+gpt2.eval()
+
+tokens = torch.tensor([tokenizer.encode("Why is the sky blue?")])
+with torch.no_grad():
+    for _ in range(20):
+        logits = gpt2(tokens)[0, -1, :]
+        next_token = torch.argmax(logits, dim=-1, keepdim=True).unsqueeze(0)
+        tokens = torch.cat((tokens, next_token), dim=1)
+        print(tokenizer.decode([next_token.item()]), end="", flush=True)
+```
+"""
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Literal
+
+import numpy as np
 import torch
 from torch import Tensor
-import os
-import numpy as np
-from mfai.pytorch.models.llms.gpt2 import GPT2, GPT2Settings
-from mfai.http import download_file
 
+from mfai.http import download_file
+from mfai.pytorch.models.llms.gpt2 import GPT2, GPT2Settings
 
 Gpt2SizesType = Literal["124M", "355M", "774M", "1558M"]
 GPT2_SIZES: tuple[Gpt2SizesType, ...] = ("124M", "355M", "774M", "1558M")
-
 
 
 def assign(left: Tensor, right: np.ndarray) -> torch.nn.Parameter:
@@ -23,10 +63,9 @@ def assign(left: Tensor, right: np.ndarray) -> torch.nn.Parameter:
     the llm from scratch repo "as-is".
     """
     if left.shape != right.shape:
-        raise ValueError(
-            f"Shape mismatch. Left: {left.shape}, Right: {right.shape}"
-        )
+        raise ValueError(f"Shape mismatch. Left: {left.shape}, Right: {right.shape}")
     return torch.nn.Parameter(torch.tensor(right))
+
 
 def load_weights_from_tf_checkpoint(
     ckpt_path: str, settings: dict[str, Any]
@@ -249,10 +288,7 @@ def download_gpt2_model_weights_as_pytorch_ckpt(
     params = load_weights_from_tf_checkpoint(tf_ckpt_path, settings)
 
     # Instantiate a gpt2 class and populate it from the downloaded params
-    gpt2_settings = GPT2Settings(
-        model_size=model_size,
-        attn_tf_compat=True
-    )
+    gpt2_settings = GPT2Settings(model_size=model_size, attn_tf_compat=True)
     gpt2 = GPT2(gpt2_settings)
     gpt2 = load_gpt2_from_dict(gpt2, params)
     torch.save(gpt2.state_dict(), save_path)
@@ -276,6 +312,6 @@ if __name__ == "__main__":
             "Multiple values can be given, separated with commas.\n\t"
             "Like so: --size 124M,355M,774M,1558M"
         )
-    
+
     for size in sizes:
         download_gpt2_model_weights_as_pytorch_ckpt(size, output_dir)

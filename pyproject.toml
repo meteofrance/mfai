@@ -113,7 +113,7 @@ exclude-newer = "15 days"
 target-version = "py312"
 line-length = 88
 builtins = ["_"]
-include = ["mfai/**/*.py", "exemples/**/*.py", "tests/**/*.py", "doc/**/*.py"]
+include = ["mfai/**/*.py", "exemples/**/*.py", "tests/**/*.py", "doc/**/*.py", "scripts/**/*.py"]
 exclude = []
 
 [tool.ruff.format]

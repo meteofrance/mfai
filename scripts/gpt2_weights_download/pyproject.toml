@@ -1,0 +1,17 @@
+[project]
+name = "gpt2-weights-download"
+version = "0.1.0"
+description = "Downloads official gpt2 weights, and converts the downloaded tensorflow checkpoint to pytorch state dicts."
+requires-python = ">=3.10,<3.14"
+dependencies = [
+  "mfai[llm]",
+  "numpy>=1.24",
+  "tensorflow>=2.15",
+  "torch>=2.5",
+]
+
+[tool.uv]
+# This folder is a single script, not a package: do not try to build or
+# install it as a distribution. `uv.lock` pins the environment used to run
+# `gpt2_weights_download.py` with `uv run`.
+package = false

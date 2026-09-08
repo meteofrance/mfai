@@ -383,13 +383,10 @@ class GPT2Settings:
             ValueError: If any architecture field is missing or inconsistent
                 for a custom model size.
         """
-        if (
-            self.n_layers is None
-            or self.emb_dim is None
-            or self.n_heads is None
-        ):
+        if self.n_layers is None or self.emb_dim is None or self.n_heads is None:
             raise ValueError(
-                "n_layers, n_heads and emb_dim must be provided when model_size='custom'")
+                "n_layers, n_heads and emb_dim must be provided when model_size='custom'"
+            )
         if self.emb_dim % self.n_heads != 0:
             raise ValueError(
                 f"emb_dim ({self.emb_dim}) must be divisible by n_heads ({self.n_heads})"

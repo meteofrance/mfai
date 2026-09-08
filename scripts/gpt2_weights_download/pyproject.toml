@@ -10,6 +10,11 @@ dependencies = [
   "torch>=2.5",
 ]
 
+[dependency-groups]
+dev = [
+  "pytest>=9",
+]
+
 [tool.uv]
 # This folder is a single script, not a package: do not try to build or
 # install it as a distribution. `uv.lock` pins the environment used to run

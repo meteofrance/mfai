@@ -133,17 +133,25 @@ def test_cross_attention_gpt2() -> None:
     )
 
 
-def test_download_gpt2_weights(tmp_path: Path) -> None:
-    model = GPT2(GPT2Settings(attn_tf_compat=True))
-    model.download_weights_from_tf_ckpt(tmp_path)
+def test_load_gpt2_checkpoint(tmp_path: Path) -> None:
+    # The gpt2 weights download script saves a pytorch state dict in a
+    # `gpt2_<model_size>.pkl` file. We check that the state dict of every
+    # supported configuration round-trips and fully restores a fresh model.
+    settings_cases = [
+        GPT2Settings(attn_tf_compat=True),
+        GPT2Settings(attn_tf_compat=True, context_length=1032),  # longer context len
+    ]
+    vocab_sizes = [50257, 50400]  # 50400 includes extra tokens
 
-    # test with extra tokens
-    model = GPT2(GPT2Settings(attn_tf_compat=True), vocab_size=50400)
-    model.download_weights_from_tf_ckpt(tmp_path)
-
-    # test with longer context len - default is 1024 for gpt2 small
-    model = GPT2(GPT2Settings(attn_tf_compat=True, context_length=1032))
-    model.download_weights_from_tf_ckpt(tmp_path)
+    for settings in settings_cases:
+        for vocab_size in vocab_sizes:
+            ckpt_path = (
+                tmp_path / f"gpt2_124M_{settings.context_length}_{vocab_size}.pkl"
+            )
+            torch.save(GPT2(settings, vocab_size=vocab_size).state_dict(), ckpt_path)
+            loaded = GPT2(settings, vocab_size=vocab_size)
+            loaded.load_state_dict(torch.load(ckpt_path, weights_only=True))
+            assert loaded.model_size == "124M"
 
 
 def test_lora() -> None:

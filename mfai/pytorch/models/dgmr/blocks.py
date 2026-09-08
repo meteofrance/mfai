@@ -474,6 +474,8 @@ class LatentConditioningStack(torch.nn.Module):
         input_channels: int = 8,
         output_channels: int = 768,
         use_attention: bool = True,
+        mu: float = 0.0,
+        sigma: float = 1.0,
     ) -> None:
         """
         Latent conditioning stack from Skillful Nowcasting, see https://arxiv.org/pdf/2104.00954.pdf.
@@ -484,13 +486,20 @@ class LatentConditioningStack(torch.nn.Module):
             output_channels: Number of output channels for the conditioning
                 stack.
             use_attention: Whether to have a self-attention block or not.
+            mu: mean of normal latent distribution
+            sigma : standard deviation of latent normal distribution
 
         """
         super().__init__()
 
         self.input_channels = input_channels
         self.use_attention = use_attention
-        self.distribution = normal.Normal(loc=Tensor([0.0]), scale=Tensor([1.0]))
+        self.normal_distribution_mean = mu
+        self.normal_distribution_std = sigma
+        self.distribution = normal.Normal(
+            loc=Tensor([self.normal_distribution_mean]), 
+            scale=Tensor([self.normal_distribution_std])
+            )
 
         self.conv_3x3 = spectral_norm(
             torch.nn.Conv2d(

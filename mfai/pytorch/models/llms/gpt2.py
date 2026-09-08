@@ -336,33 +336,96 @@ _GPT2_ARCH: dict[str, tuple[int, int, int]] = {
     "1558M": (1600, 48, 25),
 }
 
+GPT2ModelSize = Literal["custom", "124M", "355M", "774M", "1558M"]
+
 
 @dataclass_json
 @dataclass(slots=True)
 class GPT2Settings:
-    """GPT2 settings, defaulting to the architecture of the specified
-    `model_size` (GPT2 small '124M' by default).
+    """GPT2 settings.
+
+    When `model_size` is one of the official sizes (e.g. "124M"), the
+    architecture fields `emb_dim`, `n_layers` and `n_heads` are forced to
+    the matching official configuration and any explicit conflicting value
+    for them is rejected. `context_length` defaults to 1024 but may be
+    overridden to a larger value for official sizes. To build a fully
+    custom architecture, set `model_size="custom"` and provide the fields
+    explicitly.
     """
 
-    model_size: Literal["124M", "355M", "774M", "1558M"] = "124M"
+    model_size: GPT2ModelSize = "124M"
     drop_rate: float = 0.1  # Dropout rate
     qkv_bias: bool = False  # Query-Key-Value bias
     attn_tf_compat: bool = False  # If true, uses a less GPU efficient implementation of attn compatible with official weights
-    emb_dim: int | None = None  # Embedding dimension, defaults per model_size
+    emb_dim: int | None = (
+        None  # Embedding dimension, required when model_size is "custom"
+    )
     context_length: int | None = None  # Context length, defaults to 1024
-    n_heads: int | None = None  # Number of attention heads, defaults per model_size
-    n_layers: int | None = None  # Number of layers, defaults per model_size
+    n_heads: int | None = (
+        None  # Number of attention heads, required when model_size is "custom"
+    )
+    n_layers: int | None = (
+        None  # Number of layers, required when model_size is "custom"
+    )
 
     def __post_init__(self) -> None:
-        emb_dim, n_layers, n_heads = _GPT2_ARCH[self.model_size]
-        if self.emb_dim is None:
-            self.emb_dim = emb_dim
-        if self.n_layers is None:
-            self.n_layers = n_layers
-        if self.n_heads is None:
-            self.n_heads = n_heads
+        if self.model_size == "custom":
+            self._resolve_custom()
+            return
+        self._force_official()
         if self.context_length is None:
             self.context_length = 1024
+
+    def _resolve_custom(self) -> None:
+        """Resolve a custom architecture from the explicitly provided fields.
+
+        Raises:
+            ValueError: If any architecture field is missing or inconsistent
+                for a custom model size.
+        """
+        if (
+            self.n_layers is None
+            or self.emb_dim is None
+            or self.n_heads is None
+        ):
+            raise ValueError(
+                "n_layers, n_heads and emb_dim must be provided when model_size='custom'")
+        if self.emb_dim % self.n_heads != 0:
+            raise ValueError(
+                f"emb_dim ({self.emb_dim}) must be divisible by n_heads ({self.n_heads})"
+            )
+
+    def _force_official(self) -> None:
+        """Force emb_dim, n_layers and n_heads to the official model_size.
+
+        context_length is left overridable (defaults to 1024).
+
+        Raises:
+            ValueError: If an architecture field conflicts with the official
+                configuration of `model_size`.
+        """
+        emb_dim, n_layers, n_heads = _GPT2_ARCH[self.model_size]
+        if self.emb_dim not in (None, emb_dim):
+            raise ValueError(
+                f"emb_dim ({self.emb_dim}) conflicts with model_size "
+                f"{self.model_size!r} ({emb_dim}). Use model_size='custom' to "
+                "override the architecture."
+            )
+        if self.n_layers not in (None, n_layers):
+            raise ValueError(
+                f"n_layers ({self.n_layers}) conflicts with model_size "
+                f"{self.model_size!r} ({n_layers}). Use model_size='custom' to "
+                "override the architecture."
+            )
+        if self.n_heads not in (None, n_heads):
+            raise ValueError(
+                f"n_heads ({self.n_heads}) conflicts with model_size "
+                f"{self.model_size!r} ({n_heads}). Use model_size='custom' to "
+                "override the architecture."
+            )
+        self.emb_dim = emb_dim
+        self.n_layers = n_layers
+        self.n_heads = n_heads
 
 
 class TransformerBlock(nn.Module):
@@ -553,6 +616,9 @@ class GPT2(nn.Module):
 @dataclass_json
 @dataclass(slots=True)
 class CrossAttentionGPT2Settings(GPT2Settings):
+    """Settings for a custom GPT2 variant with cross attention blocks."""
+
+    model_size: GPT2ModelSize = "custom"  # Cross attention variant is always custom
     x_att_ratio: int = 4  # Ratio of cross attention blocks, default one out of 4
 
 

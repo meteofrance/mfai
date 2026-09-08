@@ -21,7 +21,7 @@ from mfai.pytorch.models.llms.gpt2 import GPT2, GPT2Settings
 def _small_settings() -> GPT2Settings:
     """Return a small GPT2 configuration fast to instantiate in tests."""
     return GPT2Settings(
-        model_size="124M",
+        model_size="custom",
         emb_dim=16,
         n_layers=1,
         n_heads=1,
@@ -112,7 +112,7 @@ def test_load_gpt2_from_dict_with_extra_tokens_and_context() -> None:
     """Extra tokens and longer context are partially loaded from the weights."""
     model = GPT2(
         GPT2Settings(
-            model_size="124M",
+            model_size="custom",
             emb_dim=16,
             n_layers=1,
             n_heads=1,

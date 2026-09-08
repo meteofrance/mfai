@@ -173,6 +173,8 @@ def test_multimodal_with_pretrained_clip() -> None:
     )
     llm_clip = GPT2(
         settings=GPT2Settings(
+            model_size="custom",
+            emb_dim=768,
             n_heads=2,
             n_layers=4,
             context_length=64,

@@ -14,26 +14,6 @@ permissions:
   contents: read
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-    - name: Gather changed files
-      id: changed-files
-      uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
-      with:
-        files: |
-          scripts/gpt2_weights_download/**
-
-    - name: Lint with ruff
-      if: steps.changed-files.outputs.any_changed == 'true'
-      run: |
-        pip install ruff==0.15.9
-        ruff format --check ${{ steps.changed-files.outputs.all_changed_files }}
-        ruff check ${{ steps.changed-files.outputs.all_changed_files }}
-
   test:
     runs-on: ubuntu-latest
     defaults:

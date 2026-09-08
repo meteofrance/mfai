@@ -207,11 +207,14 @@ def download_gpt2_model_weights_as_pytorch_ckpt(
     Args:
         model_size: Size of the GPT2 model to download.
         models_root_dir: Root directory in which the weights will be stored.
-
-    Returns:
-        None: No return value.
     """
     import tensorflow as tf
+
+    # Check if exists
+    save_path = models_root_dir / f"gpt2_{model_size}.pkl"
+    if (save_path).exists():
+        print(f"{save_path} already exists.")
+        return
 
     # Validate model size
     if model_size not in GPT2_SIZES:
@@ -252,7 +255,7 @@ def download_gpt2_model_weights_as_pytorch_ckpt(
     )
     gpt2 = GPT2(gpt2_settings)
     gpt2 = load_gpt2_from_dict(gpt2, params)
-    torch.save(gpt2.state_dict(), models_root_dir / f"gpt2_{model_size}.pkl")
+    torch.save(gpt2.state_dict(), save_path)
 
 
 if __name__ == "__main__":

@@ -343,21 +343,41 @@ class MultiHeadCrossAttentionPySDPA(nn.Module):
         return context_vec
 
 
+_GPT2_ARCH: dict[str, tuple[int, int, int]] = {
+    # model_size -> (emb_dim, n_layers, n_heads)
+    "124M": (768, 12, 12),
+    "355M": (1024, 24, 16),
+    "774M": (1280, 36, 20),
+    "1558M": (1600, 48, 25),
+}
+
+
 @dataclass_json
 @dataclass(slots=True)
 class GPT2Settings:
-    """default settings correspond to a GPT2 small '124M'."""
+    """GPT2 settings, defaulting to the architecture of the specified
+    `model_size` (GPT2 small '124M' by default).
+    """
 
-    emb_dim: int = 768  # Embedding dimension
-    context_length: int = 1024  # Context length
-    n_heads: int = 12  # Number of attention heads
-    n_layers: int = 12  # Number of layers
+    model_size: Literal["124M", "355M", "774M", "1558M"] = "124M"
     drop_rate: float = 0.1  # Dropout rate
     qkv_bias: bool = False  # Query-Key-Value bias
-    model_size: Literal["124M", "355M", "774M", "1558M"] = (
-        "124M"  # Alias used to download official weights
-    )
     attn_tf_compat: bool = False  # If true, uses a less GPU efficient implementation of attn compatible with official weights
+    emb_dim: int | None = None  # Embedding dimension, defaults per model_size
+    context_length: int | None = None  # Context length, defaults to 1024
+    n_heads: int | None = None  # Number of attention heads, defaults per model_size
+    n_layers: int | None = None  # Number of layers, defaults per model_size
+
+    def __post_init__(self) -> None:
+        emb_dim, n_layers, n_heads = _GPT2_ARCH[self.model_size]
+        if self.emb_dim is None:
+            self.emb_dim = emb_dim
+        if self.n_layers is None:
+            self.n_layers = n_layers
+        if self.n_heads is None:
+            self.n_heads = n_heads
+        if self.context_length is None:
+            self.context_length = 1024
 
 
 class TransformerBlock(nn.Module):

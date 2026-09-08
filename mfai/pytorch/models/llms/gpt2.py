@@ -424,6 +424,23 @@ class GPT2Settings:
         self.n_layers = n_layers
         self.n_heads = n_heads
 
+    def resolved_geometry(self) -> tuple[int, int, int, int]:
+        """Return (emb_dim, context_length, n_heads, n_layers), guaranteed non-None.
+
+        `__post_init__` ensures the four optional fields are set, so this
+        narrows them for static type checkers.
+
+        Returns:
+            tuple[int, int, int, int]: The concrete architecture dimensions.
+        """
+        emb_dim = self.emb_dim
+        context_length = self.context_length
+        n_heads = self.n_heads
+        n_layers = self.n_layers
+        assert emb_dim is not None and context_length is not None
+        assert n_heads is not None and n_layers is not None
+        return emb_dim, context_length, n_heads, n_layers
+
 
 class TransformerBlock(nn.Module):
     """A transformer block
@@ -438,29 +455,30 @@ class TransformerBlock(nn.Module):
 
     def __init__(self, settings: GPT2Settings) -> None:
         super().__init__()
+        emb_dim, context_length, n_heads, _ = settings.resolved_geometry()
         if settings.attn_tf_compat:
             self.att: MultiHeadAttention | MultiHeadAttentionPySDPA = (
                 MultiHeadAttention(
-                    d_in=settings.emb_dim,
-                    d_out=settings.emb_dim,
-                    context_length=settings.context_length,
-                    num_heads=settings.n_heads,
+                    d_in=emb_dim,
+                    d_out=emb_dim,
+                    context_length=context_length,
+                    num_heads=n_heads,
                     dropout=settings.drop_rate,
                     qkv_bias=True,
                 )
             )
         else:
             self.att = MultiHeadAttentionPySDPA(
-                d_in=settings.emb_dim,
-                d_out=settings.emb_dim,
-                context_length=settings.context_length,
-                num_heads=settings.n_heads,
+                d_in=emb_dim,
+                d_out=emb_dim,
+                context_length=context_length,
+                num_heads=n_heads,
                 dropout=settings.drop_rate,
                 qkv_bias=settings.qkv_bias,
             )
-        self.ff = FeedForward(settings.emb_dim)
-        self.norm1 = LayerNorm(settings.emb_dim)
-        self.norm2 = LayerNorm(settings.emb_dim)
+        self.ff = FeedForward(emb_dim)
+        self.norm1 = LayerNorm(emb_dim)
+        self.norm2 = LayerNorm(emb_dim)
         self.drop_shortcut = nn.Dropout(settings.drop_rate)
 
     def forward(self, x: Tensor, use_cache: bool = False) -> Tensor:
@@ -498,19 +516,20 @@ class GPT2(nn.Module):
 
     def __init__(self, settings: GPT2Settings, vocab_size: int = 50257) -> None:
         super().__init__()
-        self.context_length = settings.context_length
-        self.emb_dim = settings.emb_dim
-        self.tok_emb = nn.Embedding(vocab_size, settings.emb_dim)
-        self.pos_emb = nn.Embedding(settings.context_length, settings.emb_dim)
+        emb_dim, context_length, _, n_layers = settings.resolved_geometry()
+        self.context_length = context_length
+        self.emb_dim = emb_dim
+        self.tok_emb = nn.Embedding(vocab_size, emb_dim)
+        self.pos_emb = nn.Embedding(context_length, emb_dim)
         self.drop_emb = nn.Dropout(settings.drop_rate)
 
         self.trf_blocks = nn.Sequential(
-            *[TransformerBlock(settings) for _ in range(settings.n_layers)]
+            *[TransformerBlock(settings) for _ in range(n_layers)]
         )
         self.current_pos = 0  # Used for KV cache
 
-        self.final_norm = LayerNorm(settings.emb_dim)
-        self.out_head = nn.Linear(settings.emb_dim, vocab_size, bias=False)
+        self.final_norm = LayerNorm(emb_dim)
+        self.out_head = nn.Linear(emb_dim, vocab_size, bias=False)
         self.model_size = settings.model_size
 
     def forward_vectors(
@@ -626,26 +645,27 @@ class CrossAttentionTransformerBlock(nn.Module):
 
     def __init__(self, settings: CrossAttentionGPT2Settings) -> None:
         super().__init__()
+        emb_dim, context_length, n_heads, _ = settings.resolved_geometry()
         self.x_att = MultiHeadCrossAttentionPySDPA(
-            d_in_q=settings.emb_dim,
-            d_in_kv=settings.emb_dim,
-            d_out=settings.emb_dim,
-            context_length=settings.context_length,
-            num_heads=settings.n_heads,
+            d_in_q=emb_dim,
+            d_in_kv=emb_dim,
+            d_out=emb_dim,
+            context_length=context_length,
+            num_heads=n_heads,
             dropout=settings.drop_rate,
             qkv_bias=settings.qkv_bias,
         )
         self.att = MultiHeadAttentionPySDPA(
-            d_in=settings.emb_dim,
-            d_out=settings.emb_dim,
-            context_length=settings.context_length,
-            num_heads=settings.n_heads,
+            d_in=emb_dim,
+            d_out=emb_dim,
+            context_length=context_length,
+            num_heads=n_heads,
             dropout=settings.drop_rate,
             qkv_bias=settings.qkv_bias,
         )
-        self.ff = FeedForward(settings.emb_dim)
-        self.norm1 = LayerNorm(settings.emb_dim)
-        self.norm2 = LayerNorm(settings.emb_dim)
+        self.ff = FeedForward(emb_dim)
+        self.norm1 = LayerNorm(emb_dim)
+        self.norm2 = LayerNorm(emb_dim)
         self.drop_shortcut = nn.Dropout(settings.drop_rate)
 
     def forward(self, x_q: Tensor, x_kv: Tensor) -> Tensor:
@@ -684,22 +704,23 @@ class CrossAttentionGPT2(nn.Module):
         self, settings: CrossAttentionGPT2Settings, vocab_size: int = 50257
     ) -> None:
         super().__init__()
-        self.context_length = settings.context_length
-        self.emb_dim = settings.emb_dim
-        self.tok_emb = nn.Embedding(vocab_size, settings.emb_dim)
-        self.pos_emb = nn.Embedding(settings.context_length, settings.emb_dim)
+        emb_dim, context_length, _, n_layers = settings.resolved_geometry()
+        self.context_length = context_length
+        self.emb_dim = emb_dim
+        self.tok_emb = nn.Embedding(vocab_size, emb_dim)
+        self.pos_emb = nn.Embedding(context_length, emb_dim)
         self.drop_emb = nn.Dropout(settings.drop_rate)
 
         # Build the transformer blocks, every nth block includes a cross attention block
         trf_blocks: list[TransformerBlock | CrossAttentionTransformerBlock] = []
-        for i in range(settings.n_layers):
+        for i in range(n_layers):
             if i % settings.x_att_ratio == 0:
                 trf_blocks.append(CrossAttentionTransformerBlock(settings))
             else:
                 trf_blocks.append(TransformerBlock(settings))
         self.trf_blocks = nn.Sequential(*trf_blocks)
-        self.final_norm = LayerNorm(settings.emb_dim)
-        self.out_head = nn.Linear(settings.emb_dim, vocab_size, bias=False)
+        self.final_norm = LayerNorm(emb_dim)
+        self.out_head = nn.Linear(emb_dim, vocab_size, bias=False)
 
     def embed_tokens(self, tok_ids: Tensor) -> Tensor:
         """

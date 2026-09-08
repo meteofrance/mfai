@@ -34,7 +34,9 @@ class SegmentationLightningModule(pl.LightningModule):
         self.model = model
         self.channels_last = self.model.in_channels == 3
         if self.channels_last:  # Optimizes computation for RGB images
-            self.model = self.model.to(memory_format=torch.channels_last)
+            self.model = self.model.to(  # type: ignore[call-overload]
+                memory_format=torch.channels_last
+            )
         self.type_segmentation = type_segmentation
         self.loss = loss
         self.metrics = self.get_metrics()

@@ -129,7 +129,7 @@ def test_cross_attention_gpt2() -> None:
         idx=token_ids,
         max_new_tokens=10,
         context_size=model.context_length,
-        vision_inputs=torch.randn(1, 8, settings.emb_dim),
+        vision_inputs=torch.randn(1, 8, model.emb_dim),
     )
 
 

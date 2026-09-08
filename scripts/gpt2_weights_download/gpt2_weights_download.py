@@ -46,6 +46,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
+import tensorflow as tf
 import torch
 from torch import Tensor
 
@@ -84,7 +85,6 @@ def load_weights_from_tf_checkpoint(
         dict[str, Any]: A dict mapping the checkpoint variable names to
             their loaded values, organized into "blocks" per layer.
     """
-    import tensorflow as tf
 
     # Initialize parameters dictionary with empty blocks for each layer
     params: dict[str, Any] = {"blocks": [{} for _ in range(settings["n_layer"])]}
@@ -247,7 +247,6 @@ def download_gpt2_model_weights_as_pytorch_ckpt(
         model_size: Size of the GPT2 model to download.
         models_root_dir: Root directory in which the weights will be stored.
     """
-    import tensorflow as tf
 
     # Check if exists
     save_path = models_root_dir / f"gpt2_{model_size}.pkl"

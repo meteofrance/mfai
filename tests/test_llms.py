@@ -12,6 +12,7 @@ from mfai.pytorch.models.llms.gpt2 import (
     GPT2,
     CrossAttentionGPT2,
     CrossAttentionGPT2Settings,
+    GPT2ModelSize,
     GPT2Settings,
 )
 from mfai.pytorch.models.llms.llama2 import Llama2, Llama2Settings
@@ -152,6 +153,23 @@ def test_load_gpt2_checkpoint(tmp_path: Path) -> None:
             loaded = GPT2(settings, vocab_size=vocab_size)
             loaded.load_state_dict(torch.load(ckpt_path, weights_only=True))
             assert loaded.model_size == "124M"
+
+
+@pytest.mark.parametrize("size", ["124M", "355M", "774M", "1558M"])
+def test_load_official_gpt2(tmp_path: Path, size: GPT2ModelSize) -> None:
+    # `load_official_gpt2` builds a model from an official `model_size` and
+    # restores its weights from the pkl produced by the download script.
+    ckpt_path = tmp_path / f"gpt2_{size}.pkl"
+    reference = GPT2(GPT2Settings(size))
+    torch.save(reference.state_dict(), ckpt_path)
+
+    loaded = GPT2.load_official_gpt2(ckpt_path, size)
+
+    assert loaded.model_size == size
+    for (name, param), (_, ref_param) in zip(
+        loaded.named_parameters(), reference.named_parameters()
+    ):
+        assert torch.equal(param, ref_param)
 
 
 def test_lora() -> None:

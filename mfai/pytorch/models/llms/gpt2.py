@@ -344,49 +344,36 @@ GPT2ModelSize = Literal["custom", "124M", "355M", "774M", "1558M"]
 class GPT2Settings:
     """GPT2 settings.
 
-    When `model_size` is one of the official sizes (e.g. "124M"), the
-    architecture fields `emb_dim`, `n_layers` and `n_heads` are forced to
-    the matching official configuration and any explicit conflicting value
-    for them is rejected. `context_length` defaults to 1024 but may be
-    overridden to a larger value for official sizes. To build a fully
-    custom architecture, set `model_size="custom"` and provide the fields
-    explicitly.
+    The architecture fields `emb_dim`, `n_layers` and `n_heads` default to
+    the `"124M"` official configuration, the reference model size. When
+    `model_size` is an official size, they are forced to its matching
+    architecture (a value still equal to the `"124M"` default is treated as
+    unset, so switching `model_size` works without touching them). To build a
+    fully custom architecture, set `model_size="custom"` and provide the
+    fields explicitly.
     """
 
     model_size: GPT2ModelSize = "124M"
-    drop_rate: float = 0.1  # Dropout rate
-    qkv_bias: bool = False  # Query-Key-Value bias
-    attn_tf_compat: bool = False  # If true, uses a less GPU efficient implementation of attn compatible with official weights
-    emb_dim: int | None = (
-        None  # Embedding dimension, required when model_size is "custom"
-    )
-    context_length: int | None = None  # Context length, defaults to 1024
-    n_heads: int | None = (
-        None  # Number of attention heads, required when model_size is "custom"
-    )
-    n_layers: int | None = (
-        None  # Number of layers, required when model_size is "custom"
-    )
+    drop_rate: float = 0.1
+    qkv_bias: bool = False
+    attn_tf_compat: bool = False
+    emb_dim: int = 768
+    context_length: int = 1024
+    n_heads: int = 12
+    n_layers: int = 12
 
     def __post_init__(self) -> None:
         if self.model_size == "custom":
-            self._resolve_custom()
+            self._validate_custom()
             return
         self._force_official()
-        if self.context_length is None:
-            self.context_length = 1024
 
-    def _resolve_custom(self) -> None:
-        """Resolve a custom architecture from the explicitly provided fields.
+    def _validate_custom(self) -> None:
+        """Ensure a custom architecture has consistent dimensions.
 
         Raises:
-            ValueError: If any architecture field is missing or inconsistent
-                for a custom model size.
+            ValueError: If `emb_dim` is not divisible by `n_heads`.
         """
-        if self.n_layers is None or self.emb_dim is None or self.n_heads is None:
-            raise ValueError(
-                "n_layers, n_heads and emb_dim must be provided when model_size='custom'"
-            )
         if self.emb_dim % self.n_heads != 0:
             raise ValueError(
                 f"emb_dim ({self.emb_dim}) must be divisible by n_heads ({self.n_heads})"
@@ -395,51 +382,33 @@ class GPT2Settings:
     def _force_official(self) -> None:
         """Force emb_dim, n_layers and n_heads to the official model_size.
 
-        context_length is left overridable (defaults to 1024).
+        A field still equal to its `"124M"` default is treated as unset.
 
         Raises:
-            ValueError: If an architecture field conflicts with the official
-                configuration of `model_size`.
+            ValueError: If an explicitly set architecture field conflicts
+                with the official configuration of `model_size`.
         """
+        ref_emb_dim, ref_n_layers, ref_n_heads = _GPT2_ARCH["124M"]
         emb_dim, n_layers, n_heads = _GPT2_ARCH[self.model_size]
-        if self.emb_dim not in (None, emb_dim):
+        if self.emb_dim not in (ref_emb_dim, emb_dim):
             raise ValueError(
                 f"emb_dim ({self.emb_dim}) conflicts with model_size "
                 f"{self.model_size!r} ({emb_dim}). Use model_size='custom' to "
                 "override the architecture."
             )
-        if self.n_layers not in (None, n_layers):
+        if self.n_layers not in (ref_n_layers, n_layers):
             raise ValueError(
                 f"n_layers ({self.n_layers}) conflicts with model_size "
                 f"{self.model_size!r} ({n_layers}). Use model_size='custom' to "
                 "override the architecture."
             )
-        if self.n_heads not in (None, n_heads):
+        if self.n_heads not in (ref_n_heads, n_heads):
             raise ValueError(
                 f"n_heads ({self.n_heads}) conflicts with model_size "
                 f"{self.model_size!r} ({n_heads}). Use model_size='custom' to "
                 "override the architecture."
             )
-        self.emb_dim = emb_dim
-        self.n_layers = n_layers
-        self.n_heads = n_heads
-
-    def resolved_geometry(self) -> tuple[int, int, int, int]:
-        """Return (emb_dim, context_length, n_heads, n_layers), guaranteed non-None.
-
-        `__post_init__` ensures the four optional fields are set, so this
-        narrows them for static type checkers.
-
-        Returns:
-            tuple[int, int, int, int]: The concrete architecture dimensions.
-        """
-        emb_dim = self.emb_dim
-        context_length = self.context_length
-        n_heads = self.n_heads
-        n_layers = self.n_layers
-        assert emb_dim is not None and context_length is not None
-        assert n_heads is not None and n_layers is not None
-        return emb_dim, context_length, n_heads, n_layers
+        self.emb_dim, self.n_layers, self.n_heads = emb_dim, n_layers, n_heads
 
 
 class TransformerBlock(nn.Module):
@@ -455,30 +424,29 @@ class TransformerBlock(nn.Module):
 
     def __init__(self, settings: GPT2Settings) -> None:
         super().__init__()
-        emb_dim, context_length, n_heads, _ = settings.resolved_geometry()
         if settings.attn_tf_compat:
             self.att: MultiHeadAttention | MultiHeadAttentionPySDPA = (
                 MultiHeadAttention(
-                    d_in=emb_dim,
-                    d_out=emb_dim,
-                    context_length=context_length,
-                    num_heads=n_heads,
+                    d_in=settings.emb_dim,
+                    d_out=settings.emb_dim,
+                    context_length=settings.context_length,
+                    num_heads=settings.n_heads,
                     dropout=settings.drop_rate,
                     qkv_bias=True,
                 )
             )
         else:
             self.att = MultiHeadAttentionPySDPA(
-                d_in=emb_dim,
-                d_out=emb_dim,
-                context_length=context_length,
-                num_heads=n_heads,
+                d_in=settings.emb_dim,
+                d_out=settings.emb_dim,
+                context_length=settings.context_length,
+                num_heads=settings.n_heads,
                 dropout=settings.drop_rate,
                 qkv_bias=settings.qkv_bias,
             )
-        self.ff = FeedForward(emb_dim)
-        self.norm1 = LayerNorm(emb_dim)
-        self.norm2 = LayerNorm(emb_dim)
+        self.ff = FeedForward(settings.emb_dim)
+        self.norm1 = LayerNorm(settings.emb_dim)
+        self.norm2 = LayerNorm(settings.emb_dim)
         self.drop_shortcut = nn.Dropout(settings.drop_rate)
 
     def forward(self, x: Tensor, use_cache: bool = False) -> Tensor:
@@ -516,20 +484,19 @@ class GPT2(nn.Module):
 
     def __init__(self, settings: GPT2Settings, vocab_size: int = 50257) -> None:
         super().__init__()
-        emb_dim, context_length, _, n_layers = settings.resolved_geometry()
-        self.context_length = context_length
-        self.emb_dim = emb_dim
-        self.tok_emb = nn.Embedding(vocab_size, emb_dim)
-        self.pos_emb = nn.Embedding(context_length, emb_dim)
+        self.context_length = settings.context_length
+        self.emb_dim = settings.emb_dim
+        self.tok_emb = nn.Embedding(vocab_size, settings.emb_dim)
+        self.pos_emb = nn.Embedding(settings.context_length, settings.emb_dim)
         self.drop_emb = nn.Dropout(settings.drop_rate)
 
         self.trf_blocks = nn.Sequential(
-            *[TransformerBlock(settings) for _ in range(n_layers)]
+            *[TransformerBlock(settings) for _ in range(settings.n_layers)]
         )
         self.current_pos = 0  # Used for KV cache
 
-        self.final_norm = LayerNorm(emb_dim)
-        self.out_head = nn.Linear(emb_dim, vocab_size, bias=False)
+        self.final_norm = LayerNorm(settings.emb_dim)
+        self.out_head = nn.Linear(settings.emb_dim, vocab_size, bias=False)
         self.model_size = settings.model_size
 
     def forward_vectors(
@@ -645,27 +612,26 @@ class CrossAttentionTransformerBlock(nn.Module):
 
     def __init__(self, settings: CrossAttentionGPT2Settings) -> None:
         super().__init__()
-        emb_dim, context_length, n_heads, _ = settings.resolved_geometry()
         self.x_att = MultiHeadCrossAttentionPySDPA(
-            d_in_q=emb_dim,
-            d_in_kv=emb_dim,
-            d_out=emb_dim,
-            context_length=context_length,
-            num_heads=n_heads,
+            d_in_q=settings.emb_dim,
+            d_in_kv=settings.emb_dim,
+            d_out=settings.emb_dim,
+            context_length=settings.context_length,
+            num_heads=settings.n_heads,
             dropout=settings.drop_rate,
             qkv_bias=settings.qkv_bias,
         )
         self.att = MultiHeadAttentionPySDPA(
-            d_in=emb_dim,
-            d_out=emb_dim,
-            context_length=context_length,
-            num_heads=n_heads,
+            d_in=settings.emb_dim,
+            d_out=settings.emb_dim,
+            context_length=settings.context_length,
+            num_heads=settings.n_heads,
             dropout=settings.drop_rate,
             qkv_bias=settings.qkv_bias,
         )
-        self.ff = FeedForward(emb_dim)
-        self.norm1 = LayerNorm(emb_dim)
-        self.norm2 = LayerNorm(emb_dim)
+        self.ff = FeedForward(settings.emb_dim)
+        self.norm1 = LayerNorm(settings.emb_dim)
+        self.norm2 = LayerNorm(settings.emb_dim)
         self.drop_shortcut = nn.Dropout(settings.drop_rate)
 
     def forward(self, x_q: Tensor, x_kv: Tensor) -> Tensor:
@@ -704,23 +670,22 @@ class CrossAttentionGPT2(nn.Module):
         self, settings: CrossAttentionGPT2Settings, vocab_size: int = 50257
     ) -> None:
         super().__init__()
-        emb_dim, context_length, _, n_layers = settings.resolved_geometry()
-        self.context_length = context_length
-        self.emb_dim = emb_dim
-        self.tok_emb = nn.Embedding(vocab_size, emb_dim)
-        self.pos_emb = nn.Embedding(context_length, emb_dim)
+        self.context_length = settings.context_length
+        self.emb_dim = settings.emb_dim
+        self.tok_emb = nn.Embedding(vocab_size, settings.emb_dim)
+        self.pos_emb = nn.Embedding(settings.context_length, settings.emb_dim)
         self.drop_emb = nn.Dropout(settings.drop_rate)
 
         # Build the transformer blocks, every nth block includes a cross attention block
         trf_blocks: list[TransformerBlock | CrossAttentionTransformerBlock] = []
-        for i in range(n_layers):
+        for i in range(settings.n_layers):
             if i % settings.x_att_ratio == 0:
                 trf_blocks.append(CrossAttentionTransformerBlock(settings))
             else:
                 trf_blocks.append(TransformerBlock(settings))
         self.trf_blocks = nn.Sequential(*trf_blocks)
-        self.final_norm = LayerNorm(emb_dim)
-        self.out_head = nn.Linear(emb_dim, vocab_size, bias=False)
+        self.final_norm = LayerNorm(settings.emb_dim)
+        self.out_head = nn.Linear(settings.emb_dim, vocab_size, bias=False)
 
     def embed_tokens(self, tok_ids: Tensor) -> Tensor:
         """

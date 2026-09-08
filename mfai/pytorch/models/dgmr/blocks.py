@@ -494,11 +494,9 @@ class LatentConditioningStack(torch.nn.Module):
 
         self.input_channels = input_channels
         self.use_attention = use_attention
-        self.normal_distribution_mean = mu
-        self.normal_distribution_std = sigma
         self.distribution = normal.Normal(
-            loc=Tensor([self.normal_distribution_mean]),
-            scale=Tensor([self.normal_distribution_std]),
+            loc=Tensor([mu]),
+            scale=Tensor([sigma]),
         )
 
         self.conv_3x3 = spectral_norm(

@@ -18,7 +18,7 @@ mfai's GPT2 class.
 from pathlib import Path
 
 import torch
-from mfai.pytorch.models.llms.gpt2 import GPT2
+from mfai.pytorch.models.llms.gpt2 import GPT2, GPT2Settings
 from mfai.tokenizers import GPT2Tokenizer
 
 output_dir = Path("/scratch/shared/gpt2_weights")
@@ -26,7 +26,9 @@ size = "124M"
 
 tokenizer = GPT2Tokenizer()
 
-gpt2 = GPT2.load_official_gpt2(output_dir / f"gpt2_{size}.pkl", size)
+gpt2 = GPT2(GPT2Settings(attn_tf_compat=True)).load_official_weights(
+    output_dir / f"gpt2_{size}.pkl"
+)
 gpt2.eval()
 
 tokens = torch.tensor([tokenizer.encode("Why is the sky blue?")])

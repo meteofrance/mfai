@@ -500,21 +500,18 @@ class GPT2(nn.Module):
         self.out_head = nn.Linear(settings.emb_dim, vocab_size, bias=False)
         self.model_size = settings.model_size
 
-    @staticmethod
-    def load_official_gpt2(path: Path, size: GPT2ModelSize) -> "GPT2":
-        """Load weights from one of the pickle files downloaded with
-        mfai's [gpt2_weights_download.py](https://github.com/meteofrance/mfai/blob/main/scripts/gpt2_weights_download/gpt2_weights_download.py) script.
+    def load_official_weights(self, path: Path) -> None:
+        """Load official GPT2 weights into this model in place.
+
+        The weights come from one of the pickle files downloaded with
+        mfai's [gpt2_weights_download.py](https://github.com/meteofrance/mfai/blob/main/scripts/gpt2_weights_download/gpt2_weights_download.py)
+        script. Should match the size in the class settings.
 
         Args:
             path: Path to a torch state_dict pickle file containing
                 official weights.
-            size: One of "124M", "355M", "774M", "1558M".
         """
-
-        model = GPT2(GPT2Settings(size))
-        model.load_state_dict(torch.load(path, weights_only=True))
-
-        return model
+        self.load_state_dict(torch.load(path, weights_only=True))
 
     def forward_vectors(
         self,

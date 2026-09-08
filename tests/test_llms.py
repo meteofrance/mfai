@@ -156,14 +156,14 @@ def test_load_gpt2_checkpoint(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize("size", ["124M", "355M", "774M", "1558M"])
-def test_load_official_gpt2(tmp_path: Path, size: GPT2ModelSize) -> None:
-    # `load_official_gpt2` builds a model from an official `model_size` and
-    # restores its weights from the pkl produced by the download script.
+def test_load_official_weights(tmp_path: Path, size: GPT2ModelSize) -> None:
+    # `load_official_weights` restores official weights into an already
+    # instantiated model from the pkl produced by the download script.
     ckpt_path = tmp_path / f"gpt2_{size}.pkl"
     reference = GPT2(GPT2Settings(size))
     torch.save(reference.state_dict(), ckpt_path)
 
-    loaded = GPT2.load_official_gpt2(ckpt_path, size)
+    loaded = GPT2(GPT2Settings(size)).load_official_weights(ckpt_path)
 
     assert loaded.model_size == size
     for (name, param), (_, ref_param) in zip(

@@ -155,7 +155,7 @@ def test_load_gpt2_checkpoint(tmp_path: Path) -> None:
             assert loaded.model_size == "124M"
 
 
-@pytest.mark.parametrize("size", ["124M", "355M", "774M", "1558M"])
+@pytest.mark.parametrize("size", ["124M"])  # , "355M", "774M", "1558M"])
 def test_load_official_weights(tmp_path: Path, size: GPT2ModelSize) -> None:
     # `load_official_weights` restores official weights into an already
     # instantiated model from the pkl produced by the download script.

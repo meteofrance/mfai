@@ -337,6 +337,7 @@ class _ModelGeometry(NamedTuple):
     n_layers: int
     n_heads: int
 
+
 _GPT2_ARCH: dict[GPT2ModelSize, _ModelGeometry] = {
     # model_size -> (emb_dim, n_layers, n_heads)
     "124M": _ModelGeometry(emb_dim=768, n_layers=12, n_heads=12),

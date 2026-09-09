@@ -52,7 +52,7 @@ import torch
 from torch import Tensor
 
 from mfai.http import download_file
-from mfai.pytorch.models.llms.gpt2 import GPT2, GPT2Settings, GPT2ModelSize
+from mfai.pytorch.models.llms.gpt2 import GPT2, GPT2ModelSize, GPT2Settings
 
 GPT2_SIZES: tuple[GPT2ModelSize, ...] = ("124M", "355M", "774M", "1558M")
 

@@ -109,6 +109,9 @@ Homepage = "https://github.com/meteofrance/mfai"
 pip.only-binary = [":all:"]
 exclude-newer = "15 days"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [tool.ruff]
 target-version = "py312"
 line-length = 88

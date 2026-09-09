@@ -7,7 +7,7 @@ To use official gpt2 weights, see [mfai's gpt2 weights download script](https://
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Union
+from typing import Literal, NamedTuple, Union
 
 import torch
 from dataclasses_json import dataclass_json
@@ -331,12 +331,18 @@ class MultiHeadCrossAttentionPySDPA(nn.Module):
 
 GPT2ModelSize = Literal["custom", "124M", "355M", "774M", "1558M"]
 
-_GPT2_ARCH: dict[GPT2ModelSize, tuple[int, int, int]] = {
+
+class _ModelGeometry(NamedTuple):
+    emb_dim: int
+    n_layers: int
+    n_heads: int
+
+_GPT2_ARCH: dict[GPT2ModelSize, _ModelGeometry] = {
     # model_size -> (emb_dim, n_layers, n_heads)
-    "124M": (768, 12, 12),
-    "355M": (1024, 24, 16),
-    "774M": (1280, 36, 20),
-    "1558M": (1600, 48, 25),
+    "124M": _ModelGeometry(emb_dim=768, n_layers=12, n_heads=12),
+    "355M": _ModelGeometry(emb_dim=1024, n_layers=24, n_heads=16),
+    "774M": _ModelGeometry(emb_dim=1280, n_layers=36, n_heads=20),
+    "1558M": _ModelGeometry(emb_dim=1600, n_layers=48, n_heads=25),
 }
 
 
@@ -389,27 +395,29 @@ class GPT2Settings:
             ValueError: If an explicitly set architecture field conflicts
                 with the official configuration of `model_size`.
         """
-        ref_emb_dim, ref_n_layers, ref_n_heads = _GPT2_ARCH["124M"]
-        emb_dim, n_layers, n_heads = _GPT2_ARCH[self.model_size]
-        if self.emb_dim not in (ref_emb_dim, emb_dim):
+        ref = _GPT2_ARCH["124M"]
+        selected = _GPT2_ARCH[self.model_size]
+        if self.emb_dim not in (ref.emb_dim, selected.emb_dim):
             raise ValueError(
                 f"emb_dim ({self.emb_dim}) conflicts with model_size "
-                f"{self.model_size!r} ({emb_dim}). Use model_size='custom' to "
+                f"{self.model_size!r} ({selected.emb_dim}). Use model_size='custom' to "
                 "override the architecture."
             )
-        if self.n_layers not in (ref_n_layers, n_layers):
+        if self.n_layers not in (ref.n_layers, selected.n_layers):
             raise ValueError(
                 f"n_layers ({self.n_layers}) conflicts with model_size "
-                f"{self.model_size!r} ({n_layers}). Use model_size='custom' to "
+                f"{self.model_size!r} ({selected.n_layers}). Use model_size='custom' to "
                 "override the architecture."
             )
-        if self.n_heads not in (ref_n_heads, n_heads):
+        if self.n_heads not in (ref.n_heads, selected.n_heads):
             raise ValueError(
                 f"n_heads ({self.n_heads}) conflicts with model_size "
-                f"{self.model_size!r} ({n_heads}). Use model_size='custom' to "
+                f"{self.model_size!r} ({selected.n_heads}). Use model_size='custom' to "
                 "override the architecture."
             )
-        self.emb_dim, self.n_layers, self.n_heads = emb_dim, n_layers, n_heads
+        self.emb_dim = selected.emb_dim
+        self.n_layers = selected.n_layers
+        self.n_heads = selected.n_heads
 
 
 class TransformerBlock(nn.Module):

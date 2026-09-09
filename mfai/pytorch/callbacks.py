@@ -81,7 +81,9 @@ class MLFlowSaveConfigCallback(SaveConfigCallback):
                     / trainer.logger.run_id
                 )
             else:
-                raise TypeError("Please ensure that the logger is a `MLFlowLogger` with `artifact_location` or `save_dir` set.")
+                raise TypeError(
+                    "Please ensure that the logger is a `MLFlowLogger` with `artifact_location` or `save_dir` set."
+                )
 
             path_config = dir_run / self.config_filename
             dir_run.mkdir(exist_ok=True, parents=True)

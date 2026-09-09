@@ -163,11 +163,12 @@ def test_load_official_weights(tmp_path: Path, size: GPT2ModelSize) -> None:
     reference = GPT2(GPT2Settings(size))
     torch.save(reference.state_dict(), ckpt_path)
 
-    loaded = GPT2(GPT2Settings(size)).load_official_weights(ckpt_path)
+    gpt2 = GPT2(GPT2Settings(size))
+    gpt2.load_official_weights(ckpt_path)
 
-    assert loaded.model_size == size
+    assert gpt2.model_size == size
     for (name, param), (_, ref_param) in zip(
-        loaded.named_parameters(), reference.named_parameters()
+        gpt2.named_parameters(), reference.named_parameters()
     ):
         assert torch.equal(param, ref_param)
 

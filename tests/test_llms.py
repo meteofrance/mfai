@@ -112,10 +112,12 @@ def test_kv_cache(model_tokenizer: tuple[nn.Module, Tokenizer]) -> None:
 
 def test_cross_attention_gpt2() -> None:
     """
-    Here we only test that the model is mathematically correct (matmul compat, shapes, attention, ...).
+    Here we only test that the model is mathematically correct
+    (matmul compat, shapes, attention, ...).
     """
     torch.manual_seed(999)
     settings = CrossAttentionGPT2Settings(
+        model_size="custom",
         context_length=32,
         n_heads=1,
         n_layers=4,

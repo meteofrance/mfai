@@ -329,7 +329,7 @@ class MultiHeadCrossAttentionPySDPA(nn.Module):
         return context_vec
 
 
-GPT2ModelSize = Literal["124M", "355M", "774M", "1558M"]
+GPT2ModelSize = Literal["custom", "124M", "355M", "774M", "1558M"]
 
 _GPT2_ARCH: dict[GPT2ModelSize, tuple[int, int, int]] = {
     # model_size -> (emb_dim, n_layers, n_heads)
@@ -354,7 +354,7 @@ class GPT2Settings:
     fields explicitly.
     """
 
-    model_size: GPT2ModelSize | Literal["custom"] = "124M"
+    model_size: GPT2ModelSize = "124M"
     drop_rate: float = 0.1  # Dropout rate
     qkv_bias: bool = False  # Query-Key-Value bias
     attn_tf_compat: bool = False

@@ -136,24 +136,22 @@ def test_cross_attention_gpt2() -> None:
     )
 
 
-@pytest.mark.parametrize("vocab_size", [50257, 50400]) # 50400 includes extra tokens
-@pytest.mark.parametrize("settings", [
+@pytest.mark.parametrize("vocab_size", [50257, 50400])  # 50400 includes extra tokens
+@pytest.mark.parametrize(
+    "settings",
+    [
         GPT2Settings(attn_tf_compat=True),
         GPT2Settings(attn_tf_compat=True, context_length=1032),  # longer context len
-    ]
+    ],
 )
 def test_load_gpt2_checkpoint(
-    tmp_path: Path,
-    vocab_size: int,
-    settings: GPT2Settings
+    tmp_path: Path, vocab_size: int, settings: GPT2Settings
 ) -> None:
     # The gpt2 weights download script saves a pytorch state dict in a
     # `gpt2_<model_size>.pkl` file. We check that the state dict of every
     # supported configuration round-trips and fully restores a fresh model.
 
-    ckpt_path = (
-        tmp_path / f"gpt2_124M_{settings.context_length}_{vocab_size}.pkl"
-    )
+    ckpt_path = tmp_path / f"gpt2_124M_{settings.context_length}_{vocab_size}.pkl"
     torch.save(GPT2(settings, vocab_size=vocab_size).state_dict(), ckpt_path)
     loaded = GPT2(settings, vocab_size=vocab_size)
     loaded.load_state_dict(torch.load(ckpt_path, weights_only=True))

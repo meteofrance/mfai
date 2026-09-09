@@ -329,15 +329,15 @@ class MultiHeadCrossAttentionPySDPA(nn.Module):
         return context_vec
 
 
-_GPT2_ARCH: dict[str, tuple[int, int, int]] = {
+GPT2ModelSize = Literal["124M", "355M", "774M", "1558M"]
+
+_GPT2_ARCH: dict[GPT2ModelSize, tuple[int, int, int]] = {
     # model_size -> (emb_dim, n_layers, n_heads)
     "124M": (768, 12, 12),
     "355M": (1024, 24, 16),
     "774M": (1280, 36, 20),
     "1558M": (1600, 48, 25),
 }
-
-GPT2ModelSize = Literal["custom", "124M", "355M", "774M", "1558M"]
 
 
 @dataclass_json
@@ -354,14 +354,14 @@ class GPT2Settings:
     fields explicitly.
     """
 
-    model_size: GPT2ModelSize = "124M"
-    drop_rate: float = 0.1
-    qkv_bias: bool = False
+    model_size: GPT2ModelSize | Literal["custom"] = "124M"
+    drop_rate: float = 0.1  # Dropout rate
+    qkv_bias: bool = False  # Query-Key-Value bias
     attn_tf_compat: bool = False
-    emb_dim: int = 768
-    context_length: int = 1024
-    n_heads: int = 12
-    n_layers: int = 12
+    emb_dim: int = 768  # Embedding dimension
+    context_length: int = 1024  # Context length
+    n_heads: int = 12  # Number of attention heads
+    n_layers: int = 12  # Number of layers
 
     def __post_init__(self) -> None:
         if self.model_size == "custom":
@@ -615,7 +615,7 @@ class GPT2(nn.Module):
 class CrossAttentionGPT2Settings(GPT2Settings):
     """Settings for a custom GPT2 variant with cross attention blocks."""
 
-    model_size: GPT2ModelSize = "custom"  # Cross attention variant is always custom
+    model_size = "custom"  # Cross attention variant is always custom
     x_att_ratio: int = 4  # Ratio of cross attention blocks, default one out of 4
 
 

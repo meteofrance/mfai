@@ -53,7 +53,8 @@ class MLFlowSystemMonitorCallback(L.Callback):
 
 class MLFlowSaveConfigCallback(SaveConfigCallback):
     """A Lightning callback to save the `config.yaml` in the run directory
-    instead of in the top-level `save_dir`.
+    instead of in the top-level `save_dir` or `artifact_location`.
+
     See the issue: https://github.com/Lightning-AI/pytorch-lightning/issues/20184
     """
 
@@ -65,12 +66,25 @@ class MLFlowSaveConfigCallback(SaveConfigCallback):
     def save_config(
         self, trainer: L.Trainer, pl_module: L.LightningModule, stage: str
     ) -> None:
-        if trainer.logger and trainer.logger.save_dir:
-            dir_runs = Path(trainer.logger.save_dir)
-            dir_run = dir_runs / trainer.logger.experiment_id / trainer.logger.run_id
-            path_config = dir_run / self.config_filename
+        if hasattr(trainer, "logger"):
+            if hasattr(trainer.logger, "_artifact_location"):
+                dir_run = (
+                    Path(trainer.logger._artifact_location)
+                    / trainer.logger.experiment_id
+                    / trainer.logger.run_id
+                    / "artifacts"
+                )
+            elif hasattr(trainer.logger, "save_dir"):
+                dir_run = (
+                    Path(trainer.logger.save_dir)
+                    / trainer.logger.experiment_id
+                    / trainer.logger.run_id
+                )
+            else:
+                raise TypeError("Please ensure that the logger is a `MLFlowLogger` with `artifact_location` or `save_dir` set.")
 
-            dir_run.mkdir(exist_ok=True)
+            path_config = dir_run / self.config_filename
+            dir_run.mkdir(exist_ok=True, parents=True)
 
             self.parser.save(
                 self.config,

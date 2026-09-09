@@ -26,8 +26,19 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
 
+    - name: Point mfai at local repo (CI only)
+      run: |
+        python - <<'EOF'
+        from pathlib import Path
+        p = Path("pyproject.toml")
+        text = p.read_text()
+        if "[tool.uv.sources]" not in text:
+            text += '\n[tool.uv.sources]\nmfai = { path = "../.." }\n'
+        p.write_text(text)
+        EOF
+
     - name: Sync dependencies
-      run: uv sync --locked --dev
+      run: uv sync --dev
 
     - name: Test with pytest
       run: uv run pytest

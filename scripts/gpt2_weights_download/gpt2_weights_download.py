@@ -44,7 +44,7 @@ with torch.no_grad():
 import json
 import os
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 import numpy as np
 import tensorflow as tf
@@ -52,10 +52,9 @@ import torch
 from torch import Tensor
 
 from mfai.http import download_file
-from mfai.pytorch.models.llms.gpt2 import GPT2, GPT2Settings
+from mfai.pytorch.models.llms.gpt2 import GPT2, GPT2Settings, GPT2ModelSize
 
-Gpt2SizesType = Literal["124M", "355M", "774M", "1558M"]
-GPT2_SIZES: tuple[Gpt2SizesType, ...] = ("124M", "355M", "774M", "1558M")
+GPT2_SIZES: tuple[GPT2ModelSize, ...] = ("124M", "355M", "774M", "1558M")
 
 
 def assign(left: Tensor, right: np.ndarray) -> torch.nn.Parameter:
@@ -238,7 +237,7 @@ def load_gpt2_from_dict(gpt2: GPT2, params: dict[str, Any]) -> GPT2:
 
 
 def download_gpt2_model_weights_as_pytorch_ckpt(
-    model_size: Gpt2SizesType,
+    model_size: GPT2ModelSize,
     models_root_dir: Path,
 ) -> None:
     """Download GPT2 official weights from openai with a fallback to the
@@ -305,7 +304,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     output_dir: Path = args.output_dir
-    sizes: list[Gpt2SizesType] = args.sizes.split(",")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    sizes: list[GPT2ModelSize] = args.sizes.split(",")
     if not all(size in GPT2_SIZES for size in sizes):
         raise ValueError(
             f"Argument -s --sizes is expected to be in {GPT2_SIZES}.\n\t"

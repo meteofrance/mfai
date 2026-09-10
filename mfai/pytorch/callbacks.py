@@ -76,7 +76,6 @@ class MLFlowSaveConfigCallback(SaveConfigCallback):
             if trainer.logger._artifact_location:
                 dir_run = (
                     Path(trainer.logger._artifact_location)
-                    / trainer.logger.experiment_id
                     / trainer.logger.run_id
                     / "artifacts"
                 )

@@ -66,23 +66,29 @@ class MLFlowSaveConfigCallback(SaveConfigCallback):
     def save_config(
         self, trainer: L.Trainer, pl_module: L.LightningModule, stage: str
     ) -> None:
-        if hasattr(trainer, "logger"):
-            if hasattr(trainer.logger, "_artifact_location"):
+        if isinstance(trainer.logger, MLFlowLogger):
+            assert trainer.logger.experiment_id, (
+                "'experiment_id' is not defined in the MLFlowLogger."
+            )
+            assert trainer.logger.run_id, "'run_id' is not defined in the MLFlowLogger."
+
+            dir_run: Path
+            if trainer.logger._artifact_location:
                 dir_run = (
                     Path(trainer.logger._artifact_location)
                     / trainer.logger.experiment_id
                     / trainer.logger.run_id
                     / "artifacts"
                 )
-            elif hasattr(trainer.logger, "save_dir"):
+            elif trainer.logger.save_dir:
                 dir_run = (
                     Path(trainer.logger.save_dir)
                     / trainer.logger.experiment_id
                     / trainer.logger.run_id
                 )
             else:
-                raise TypeError(
-                    "Please ensure that the logger is a `MLFlowLogger` with `artifact_location` or `save_dir` set."
+                raise AttributeError(
+                    "Please ensure that 'artifact_location' or 'save_dir' attribute is set in the MLFlowLogger."
                 )
 
             path_config = dir_run / self.config_filename
@@ -94,4 +100,8 @@ class MLFlowSaveConfigCallback(SaveConfigCallback):
                 skip_none=False,
                 overwrite=self.overwrite,
                 multifile=self.multifile,
+            )
+        else:
+            raise TypeError(
+                f"Please ensure that the logger is a 'MLFlowLogger', got '{type(trainer)}'."
             )

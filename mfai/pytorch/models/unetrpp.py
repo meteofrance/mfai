@@ -289,7 +289,7 @@ class EPA(nn.Module):
             self.attn_func = scaled_dot_product_attention
             self.use_scaled_dot_product_CA = True
         else:
-            self.use_scaled_dot_product_CA = False
+            self.use_scaled_dot_product_CA = False  # type: ignore[reportUnreachable]
 
         # qkvv are 4 linear layers (query_shared, key_shared, value_spatial, value_channel)
         self.qkvv = nn.Linear(hidden_size, hidden_size * 4, bias=qkv_bias)
@@ -397,7 +397,7 @@ class UNetRPPEncoder(nn.Module):
         transformer_dropout_rate: float = 0.1,
         downsampling_rate: int = 4,
         proj_sizes: tuple[int, ...] = (64, 64, 64, 32),
-        attention_code: str = "torch",
+        attention_code: Literal["torch", "flash"] = "torch",
     ):
         super().__init__()
 
@@ -506,7 +506,7 @@ class UNetRUpBlock(nn.Module):
         conv_decoder: bool = False,
         linear_upsampling: bool = False,
         proj_size: int = 64,
-        attention_code: str = "torch",
+        attention_code: Literal["torch", "flash"] = "torch",
     ) -> None:
         """
         Args:
@@ -723,7 +723,7 @@ class UNetRPPSettings:
     # Options: "torch" : scaled_dot_product_attention from torch.nn.functional
     #          "flash" : flash_attention from flash_attn (loose dependency imported only if needed)
     #          "manual" : manual implementation from the original paper
-    attention_code: str = "torch"
+    attention_code: Literal["torch", "flash"] = "torch"
 
 
 class UNetRPP(BaseModel, AutoPaddingModel):

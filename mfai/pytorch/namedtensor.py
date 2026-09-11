@@ -108,7 +108,7 @@ class NamedTensor(TensorWrapper):
         table_string = str(tabulate(table, headers=headers, tablefmt="simple_outline"))
         return head + table_string
 
-    def __or__(self, other: "NamedTensor | None"]) -> "NamedTensor":
+    def __or__(self, other: "NamedTensor | None") -> "NamedTensor":
         """
         Concatenate two NamedTensors along the features dimension.
         """
@@ -135,7 +135,7 @@ class NamedTensor(TensorWrapper):
         except Exception as e:
             raise ValueError(f"Error while concatenating {self} and {other}") from e
 
-    def __ror__(self, other: Union["NamedTensor", None]) -> "NamedTensor":
+    def __ror__(self, other: "NamedTensor | None") -> "NamedTensor":
         return self.__or__(other)
 
     @staticmethod
@@ -278,7 +278,7 @@ class NamedTensor(TensorWrapper):
         self.tensor = self.tensor.unflatten(dim, unflattened_size)
         self.names = self.names[:dim] + [*unflatten_dim_name] + self.names[dim + 1 :]
 
-    def squeeze_(self, dim_name: Union[Sequence[str], str]) -> None:
+    def squeeze_(self, dim_name: Sequence[str] | str) -> None:
         """
         Squeeze the underlying tensor along the dimension(s)
         given its/their name(s).

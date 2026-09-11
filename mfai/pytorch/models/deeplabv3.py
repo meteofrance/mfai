@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from math import ceil
-from typing import Any, Callable, Literal, Optional
+from typing import Any, Literal
+from collections.abc import Callable
 
 import torch
 import torch.nn as nn
@@ -279,7 +280,7 @@ class DeepLabV3Settings:
     decoder_channels: int = 256
     activation: str | None = None
     upsampling: int = 8
-    aux_params: Optional[dict] = None
+    aux_params: dict | None = None
     autopad_enabled: bool = False
 
 

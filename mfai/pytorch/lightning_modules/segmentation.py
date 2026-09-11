@@ -1,4 +1,4 @@
-from typing import Any, Literal, Tuple
+from typing import Any, Literal
 
 import lightning.pytorch as pl
 import torch
@@ -203,7 +203,7 @@ class SegmentationLightningModule(pl.LightningModule):
             self.logger.log_hyperparams(hparams)
 
     @override
-    def training_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> Any:
+    def training_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> Any:
         x, y = batch
         _, loss = self._shared_forward_step(x, y)
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
@@ -236,7 +236,7 @@ class SegmentationLightningModule(pl.LightningModule):
             tb.add_image("val_plots/pred_image", y_hat[0], step, dataformats=dformat)
 
     @override
-    def validation_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> Any:
+    def validation_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> Any:
         x, y = batch
         y_hat, loss = self._shared_forward_step(x, y)
         self.log("val_loss", loss, on_epoch=True, sync_dist=True)
@@ -265,7 +265,7 @@ class SegmentationLightningModule(pl.LightningModule):
         )  # Used to compute overall metrics on test dataset
 
     @override
-    def test_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> None:
+    def test_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> None:
         """Computes metrics for each sample, at the end of the run."""
         x, y = batch
         y_hat, loss = self._shared_forward_step(x, y)

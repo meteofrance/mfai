@@ -334,7 +334,7 @@ class EarthSpecificLayer(nn.Module):
         self,
         x: Tensor,
         embedding_shape: torch.Size,
-        cond_embed: Optional[Tensor] = None,
+        cond_embed: Tensor | None = None,
     ) -> Tensor:
         for i, block in enumerate(self.blocks):
             # Roll the input every two blocks
@@ -791,8 +791,8 @@ class ArchesWeather(BaseModel):
         self,
         input_level: Tensor,
         input_surface: Tensor,
-        static_data: Optional[Tensor] = None,
-        cond_emb: Optional[Tensor] = None,
+        static_data: Tensor | None = None,
+        cond_emb: Tensor | None = None,
     ) -> tuple[Tensor, Tensor]:
         if static_data is not None:
             input_surface = torch.cat([input_surface, static_data], dim=1)

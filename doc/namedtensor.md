@@ -1,7 +1,7 @@
 # NamedTensor
 
 ```python
-class mfai.NamedTensor(tensor: Tensor, names: List[str], feature_names: List[str], feature_dim_name: str = "features")
+class mfai.NamedTensor(tensor: Tensor, names: list[str], feature_names: list[str], feature_dim_name: str = "features")
 ```
 
 The [**NamedTensor**](mfai/pytorch/namedtensor.py#L28) class is a wrapper around a PyTorch tensor with additionnal attributes and methods, it allows us to pass consistent object linking data and metadata with extra utility methods (concat along features dimension, flatten in place, ...).

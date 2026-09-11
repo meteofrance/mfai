@@ -83,7 +83,7 @@ class AbsolutePosEmdebding(nn.Module):
 
     def __init__(
         self,
-        input_shape: Tuple[int, ...],
+        input_shape: tuple[int, ...],
         num_features: int,
         feature_last: bool = False,
     ):

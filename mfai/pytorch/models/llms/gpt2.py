@@ -7,7 +7,7 @@ To use official gpt2 weights, see [mfai's gpt2 weights download script](https://
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, NamedTuple, Union
+from typing import Literal, NamedTuple
 
 import torch
 from dataclasses_json import dataclass_json
@@ -535,7 +535,7 @@ class GPT2(nn.Module):
         self,
         embeddings: Tensor,
         use_cache: bool = False,
-        first_embedding: Union[None, Tensor] = None,
+        first_embedding: Tensor | None = None,
     ) -> Tensor:
         """
         Process a batch of embeddings through the model.

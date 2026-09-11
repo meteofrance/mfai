@@ -1,4 +1,4 @@
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 import torch
 import torch.nn.functional as F
@@ -95,7 +95,7 @@ class CSINeighborhood(Metric):
         num_neighbors: int,
         task: Literal["binary", "multiclass", "multilabel"],
         num_classes: int = 0,
-        average: Optional[Literal["macro", False]] = "macro",
+        average: Literal["macro", False] | None = "macro",
     ):
         super().__init__()
         self.num_neighbors = num_neighbors

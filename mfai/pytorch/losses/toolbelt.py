@@ -272,9 +272,9 @@ class SoftBCEWithLogitsLoss(nn.Module):
     def __init__(
         self,
         weight: torch.Tensor | None = None,
-        ignore_index: Optional[int] = -100,
+        ignore_index: int | None = -100,
         reduction: str = "mean",
-        smooth_factor: Optional[float] = None,
+        smooth_factor: float | None = None,
         pos_weight: torch.Tensor | None = None,
     ):
         """Drop-in replacement for torch.nn.BCEWithLogitsLoss with few additions: ignore_index and label_smoothing.

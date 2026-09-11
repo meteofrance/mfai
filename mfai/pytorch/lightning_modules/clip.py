@@ -167,12 +167,12 @@ class CLIPLightningModule(pl.LightningModule):
         return plt.gcf()
 
     @override
-    def forward(self, images: NamedTensor, texts: Tensor) -> Tuple[Tensor, Tensor]:
+    def forward(self, images: NamedTensor, texts: Tensor) -> tuple[Tensor, Tensor]:
         return self.model(texts, images)
 
     def _shared_forward_step(
-        self, batch: Tuple[NamedTensor, Tensor, Tensor]
-    ) -> Tuple[Tensor, Tensor]:
+        self, batch: tuple[NamedTensor, Tensor, Tensor]
+    ) -> tuple[Tensor, Tensor]:
         images, texts, _ = batch
 
         if len(images.tensor.shape) == 5:
@@ -193,7 +193,7 @@ class CLIPLightningModule(pl.LightningModule):
 
     @override
     def training_step(
-        self, batch: Tuple[NamedTensor, Tensor, Tensor], batch_idx: int
+        self, batch: tuple[NamedTensor, Tensor, Tensor], batch_idx: int
     ) -> Tensor:
         loss, _ = self._shared_forward_step(batch)
 
@@ -204,7 +204,7 @@ class CLIPLightningModule(pl.LightningModule):
 
     @override
     def validation_step(
-        self, batch: Tuple[NamedTensor, Tensor, Tensor], batch_idx: int
+        self, batch: tuple[NamedTensor, Tensor, Tensor], batch_idx: int
     ) -> Tensor:
         loss, image_logits = self._shared_forward_step(batch)
         probas = image_logits.softmax(dim=-1)

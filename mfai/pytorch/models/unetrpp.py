@@ -704,7 +704,7 @@ class UNetRPPSettings:
     num_heads_encoder: int = 4
     num_heads_decoder: int = 4
     pos_embed: str = "perceptron"
-    norm_name: Union[tuple, str] = "instance"
+    norm_name: tuple | str = "instance"
     dropout_rate: float = 0.0
     depths: tuple[int, ...] = (3, 3, 3, 3)
     conv_op: str = "Conv2d"

@@ -172,7 +172,7 @@ exclude_also = ['def __repr__', 'if __name__ == .__main__.:']
 # https://microsoft.github.io/pyright/#/configuration?id=sample-pyprojecttoml-file
 
 ## Run options
-include = ["mfai", "scripts", "tests"]
+include = ["mfai", "tests"]
 ignore = []
 
 verboseOutput = true

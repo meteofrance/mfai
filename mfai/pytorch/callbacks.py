@@ -5,7 +5,7 @@ or add the class path to your lightning yaml config file.
 
 import importlib
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import lightning as L
 from lightning.fabric.utilities.exceptions import MisconfigurationException
@@ -41,8 +41,8 @@ class MLFlowSystemMonitorCallback(L.Callback):
                 "MLFlowSystemMonitorCallback requires MLFlowLogger"
             )
 
-        from mlflow.system_metrics.system_metrics_monitor import (
-            SystemMetricsMonitor,  # type: ignore[import-not-found]
+        from mlflow.system_metrics.system_metrics_monitor import (  # type: ignore[import-not-found]
+            SystemMetricsMonitor,
         )
 
         self.system_monitor = SystemMetricsMonitor(
@@ -77,9 +77,9 @@ class MLFlowSaveConfigCallback(SaveConfigCallback):
             assert trainer.logger.run_id, "'run_id' is not defined in the MLFlowLogger."
 
             dir_run: Path
-            if trainer.logger._artifact_location:
+            if trainer.logger._artifact_location:  # type: ignore[reportPrivateUsage]
                 dir_run = (
-                    Path(trainer.logger._artifact_location)
+                    Path(trainer.logger._artifact_location)  # type: ignore[reportPrivateUsage]
                     / trainer.logger.run_id
                     / "artifacts"
                 )

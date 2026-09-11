@@ -160,7 +160,7 @@ class TransformerBlock(nn.Module):
         pos_embed: bool = False,
         spatial_dims: int = 2,
         proj_size: int = 64,
-        attention_code: str = "torch",
+        attention_code: Literal["torch", "flash"] = "torch",
     ) -> None:
         """
         Args:

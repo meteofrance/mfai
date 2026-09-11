@@ -41,7 +41,7 @@ class MLFlowSystemMonitorCallback(L.Callback):
                 "MLFlowSystemMonitorCallback requires MLFlowLogger"
             )
 
-        from mlflow.system_metrics.system_metrics_monitor import (  # type: ignore[import-not-found]
+        from mlflow.system_metrics.system_metrics_monitor import (
             SystemMetricsMonitor,
         )
 

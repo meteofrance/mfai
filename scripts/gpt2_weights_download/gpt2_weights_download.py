@@ -68,6 +68,10 @@ def assign(left: Tensor, right: np.ndarray) -> torch.nn.Parameter:
     pytorch models. Checks the shapes matches and creates the learnable
     parameters from the supplied weights (rights). Copied from
     the llm from scratch repo "as-is".
+
+    Args:
+        left: The reference tensor the `right` ndarray must match.
+        right: The ndarray that will be converted to a tensor.
     """
     if left.shape != right.shape:
         raise ValueError(f"Shape mismatch. Left: {left.shape}, Right: {right.shape}")

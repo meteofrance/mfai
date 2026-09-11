@@ -7,7 +7,7 @@ from torch import Tensor, nn
 
 from mfai.pytorch.models.base import ModelType
 from mfai.pytorch.models.llms.fuyu import FreezeMLMMixin
-from mfai.pytorch.models.llms.gpt2 import CrossAttentionGPT2
+from mfai.pytorch.models.llms.gpt2 import CrossAttentionGPT2, GPT2ModelSize
 from mfai.pytorch.models.resnet import (
     ResNet50MLM,
     ResNet50MLMSettings,
@@ -26,6 +26,7 @@ class XAttMultiModalLMSettings:
     Settings for our cross attention multimodal language model.
     """
 
+    model_size: GPT2ModelSize = "custom"
     emb_dim: int = 768  # Embedding dimension
     context_length: int = 1024  # Context length
     n_heads: int = 12  # Number of attention heads

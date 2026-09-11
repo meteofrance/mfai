@@ -7,7 +7,6 @@ if any(
     (
         find_spec("huggingface_hub") is None,
         find_spec("sentencepiece") is None,
-        find_spec("tensorflow") is None,
         find_spec("tiktoken") is None,
         find_spec("tokenizers") is None,
     )

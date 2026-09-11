@@ -1,21 +1,19 @@
 """Pytorch implementation of GPT-2.
 It is widely inspired by Sebastian Raschka's book and work
 https://github.com/rasbt/LLMs-from-scratch/.
+
+To use official gpt2 weights, see [mfai's gpt2 weights download script](https://github.com/meteofrance/mfai/blob/main/scripts/gpt2_weights_download/gpt2_weights_download.py).
 """
 
-import typing
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Union
+from typing import Literal, NamedTuple, Union
 
-import numpy as np
 import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
 
-from mfai.pytorch import assign
 from mfai.pytorch.models.base import ModelType
-from mfai.tensorflow import download_and_load_gpt2
 
 
 class LayerNorm(nn.Module):
@@ -331,21 +329,96 @@ class MultiHeadCrossAttentionPySDPA(nn.Module):
         return context_vec
 
 
+GPT2ModelSize = Literal["custom", "124M", "355M", "774M", "1558M"]
+
+
+class _ModelGeometry(NamedTuple):
+    emb_dim: int
+    n_layers: int
+    n_heads: int
+
+
+_GPT2_ARCH: dict[GPT2ModelSize, _ModelGeometry] = {
+    # model_size -> (emb_dim, n_layers, n_heads)
+    "124M": _ModelGeometry(emb_dim=768, n_layers=12, n_heads=12),
+    "355M": _ModelGeometry(emb_dim=1024, n_layers=24, n_heads=16),
+    "774M": _ModelGeometry(emb_dim=1280, n_layers=36, n_heads=20),
+    "1558M": _ModelGeometry(emb_dim=1600, n_layers=48, n_heads=25),
+}
+
+
 @dataclass_json
 @dataclass(slots=True)
 class GPT2Settings:
-    """default settings correspond to a GPT2 small '124M'."""
+    """GPT2 settings.
 
+    The architecture fields `emb_dim`, `n_layers` and `n_heads` default to
+    the `"124M"` official configuration, the reference model size. When
+    `model_size` is an official size, they are forced to its matching
+    architecture (a value still equal to the `"124M"` default is treated as
+    unset, so switching `model_size` works without touching them). To build a
+    fully custom architecture, set `model_size="custom"` and provide the
+    fields explicitly.
+    """
+
+    model_size: GPT2ModelSize = "124M"
+    drop_rate: float = 0.1  # Dropout rate
+    qkv_bias: bool = False  # Query-Key-Value bias
+    attn_tf_compat: bool = False
     emb_dim: int = 768  # Embedding dimension
     context_length: int = 1024  # Context length
     n_heads: int = 12  # Number of attention heads
     n_layers: int = 12  # Number of layers
-    drop_rate: float = 0.1  # Dropout rate
-    qkv_bias: bool = False  # Query-Key-Value bias
-    model_size: Literal["124M", "355M", "774M", "1558M"] = (
-        "124M"  # Alias used to download official weights
-    )
-    attn_tf_compat: bool = False  # If true, uses a less GPU efficient implementation of attn compatible with official weights
+
+    def __post_init__(self) -> None:
+        if self.model_size == "custom":
+            self._validate_custom()
+            return
+        self._force_official()
+
+    def _validate_custom(self) -> None:
+        """Ensure a custom architecture has consistent dimensions.
+
+        Raises:
+            ValueError: If `emb_dim` is not divisible by `n_heads`.
+        """
+        if self.emb_dim % self.n_heads != 0:
+            raise ValueError(
+                f"emb_dim ({self.emb_dim}) must be divisible by n_heads ({self.n_heads})"
+            )
+
+    def _force_official(self) -> None:
+        """Force emb_dim, n_layers and n_heads to the official model_size.
+
+        A field still equal to its `"124M"` default is treated as unset.
+
+        Raises:
+            ValueError: If an explicitly set architecture field conflicts
+                with the official configuration of `model_size`.
+        """
+        ref = _GPT2_ARCH["124M"]
+        selected = _GPT2_ARCH[self.model_size]
+        if self.emb_dim not in (ref.emb_dim, selected.emb_dim):
+            raise ValueError(
+                f"emb_dim ({self.emb_dim}) conflicts with model_size "
+                f"{self.model_size!r} ({selected.emb_dim}). Use model_size='custom' to "
+                "override the architecture."
+            )
+        if self.n_layers not in (ref.n_layers, selected.n_layers):
+            raise ValueError(
+                f"n_layers ({self.n_layers}) conflicts with model_size "
+                f"{self.model_size!r} ({selected.n_layers}). Use model_size='custom' to "
+                "override the architecture."
+            )
+        if self.n_heads not in (ref.n_heads, selected.n_heads):
+            raise ValueError(
+                f"n_heads ({self.n_heads}) conflicts with model_size "
+                f"{self.model_size!r} ({selected.n_heads}). Use model_size='custom' to "
+                "override the architecture."
+            )
+        self.emb_dim = selected.emb_dim
+        self.n_layers = selected.n_layers
+        self.n_heads = selected.n_heads
 
 
 class TransformerBlock(nn.Module):
@@ -436,125 +509,18 @@ class GPT2(nn.Module):
         self.out_head = nn.Linear(settings.emb_dim, vocab_size, bias=False)
         self.model_size = settings.model_size
 
-    @typing.no_type_check
-    def load_weights_from_dict(self, params: dict):
+    def load_official_weights(self, path: Path) -> None:
+        """Load official GPT2 weights into this model in place.
+
+        The weights come from one of the pickle files downloaded with
+        mfai's [gpt2_weights_download.py](https://github.com/meteofrance/mfai/blob/main/scripts/gpt2_weights_download/gpt2_weights_download.py)
+        script. Should match the size in the class settings.
+
+        Args:
+            path: Path to a torch state_dict pickle file containing
+                official weights.
         """
-        Loads weights into self using a dict
-        likely coming from a tensorflow or other framework
-        training. Use this to finetune from the official weights.
-        """
-
-        # we allow context length longer than official implementation
-        # extra parameters are just normally initialised and not loaded
-        # from supplied weights
-
-        if self.pos_emb.weight.shape[0] > len(params["wpe"]):
-            self.pos_emb.weight = torch.nn.Parameter(
-                self.pos_emb.weight.index_put(
-                    (torch.LongTensor(range(len(params["wpe"]))),),
-                    torch.tensor(params["wpe"]),
-                )
-            )
-        else:
-            self.pos_emb.weight = assign(self.pos_emb.weight, params["wpe"])
-
-        # we allow for adding special tokens
-        if self.tok_emb.weight.shape[0] > len(params["wte"]):
-            self.tok_emb.weight = torch.nn.Parameter(
-                self.tok_emb.weight.index_put(
-                    (torch.LongTensor(range(len(params["wte"]))),),
-                    torch.tensor(params["wte"]),
-                )
-            )
-        else:
-            self.tok_emb.weight = assign(self.tok_emb.weight, params["wte"])
-
-        for b in range(len(params["blocks"])):
-            q_w, k_w, v_w = np.split(
-                (params["blocks"][b]["attn"]["c_attn"])["w"], 3, axis=-1
-            )
-            self.trf_blocks[b].att.W_query.weight = assign(
-                self.trf_blocks[b].att.W_query.weight, q_w.T
-            )
-            self.trf_blocks[b].att.W_key.weight = assign(
-                self.trf_blocks[b].att.W_key.weight, k_w.T
-            )
-            self.trf_blocks[b].att.W_value.weight = assign(
-                self.trf_blocks[b].att.W_value.weight, v_w.T
-            )
-
-            q_b, k_b, v_b = np.split(
-                (params["blocks"][b]["attn"]["c_attn"])["b"], 3, axis=-1
-            )
-            self.trf_blocks[b].att.W_query.bias = assign(
-                self.trf_blocks[b].att.W_query.bias, q_b
-            )
-            self.trf_blocks[b].att.W_key.bias = assign(
-                self.trf_blocks[b].att.W_key.bias, k_b
-            )
-            self.trf_blocks[b].att.W_value.bias = assign(
-                self.trf_blocks[b].att.W_value.bias, v_b
-            )
-
-            self.trf_blocks[b].att.out_proj.weight = assign(
-                self.trf_blocks[b].att.out_proj.weight,
-                params["blocks"][b]["attn"]["c_proj"]["w"].T,
-            )
-            self.trf_blocks[b].att.out_proj.bias = assign(
-                self.trf_blocks[b].att.out_proj.bias,
-                params["blocks"][b]["attn"]["c_proj"]["b"],
-            )
-
-            self.trf_blocks[b].ff.layers[0].weight = assign(
-                self.trf_blocks[b].ff.layers[0].weight,
-                params["blocks"][b]["mlp"]["c_fc"]["w"].T,
-            )
-            self.trf_blocks[b].ff.layers[0].bias = assign(
-                self.trf_blocks[b].ff.layers[0].bias,
-                params["blocks"][b]["mlp"]["c_fc"]["b"],
-            )
-            self.trf_blocks[b].ff.layers[2].weight = assign(
-                self.trf_blocks[b].ff.layers[2].weight,
-                params["blocks"][b]["mlp"]["c_proj"]["w"].T,
-            )
-            self.trf_blocks[b].ff.layers[2].bias = assign(
-                self.trf_blocks[b].ff.layers[2].bias,
-                params["blocks"][b]["mlp"]["c_proj"]["b"],
-            )
-
-            self.trf_blocks[b].norm1.scale = assign(
-                self.trf_blocks[b].norm1.scale, params["blocks"][b]["ln_1"]["g"]
-            )
-            self.trf_blocks[b].norm1.shift = assign(
-                self.trf_blocks[b].norm1.shift, params["blocks"][b]["ln_1"]["b"]
-            )
-            self.trf_blocks[b].norm2.scale = assign(
-                self.trf_blocks[b].norm2.scale, params["blocks"][b]["ln_2"]["g"]
-            )
-            self.trf_blocks[b].norm2.shift = assign(
-                self.trf_blocks[b].norm2.shift, params["blocks"][b]["ln_2"]["b"]
-            )
-
-        self.final_norm.scale = assign(self.final_norm.scale, params["g"])
-        self.final_norm.shift = assign(self.final_norm.shift, params["b"])
-
-        # same here we allow for extra tokens
-        if self.out_head.weight.shape[0] > len(params["wte"]):
-            self.out_head.weight = torch.nn.Parameter(
-                self.out_head.weight.index_put(
-                    (torch.LongTensor(range(len(params["wte"]))),),
-                    torch.tensor(params["wte"]),
-                )
-            )
-        else:
-            self.out_head.weight = assign(self.out_head.weight, params["wte"])
-
-    def download_weights_from_tf_ckpt(self, model_dir: str | Path) -> None:
-        """
-        Downloads a tensorflow checkpoint into model_dir and sets the weights of self.
-        """
-        _, params = download_and_load_gpt2(self.model_size, model_dir)
-        self.load_weights_from_dict(params)
+        self.load_state_dict(torch.load(path, weights_only=True))
 
     def forward_vectors(
         self,
@@ -656,6 +622,9 @@ class GPT2(nn.Module):
 @dataclass_json
 @dataclass(slots=True)
 class CrossAttentionGPT2Settings(GPT2Settings):
+    """Settings for a custom GPT2 variant with cross attention blocks."""
+
+    model_size = "custom"  # Cross attention variant is always custom
     x_att_ratio: int = 4  # Ratio of cross attention blocks, default one out of 4
 
 

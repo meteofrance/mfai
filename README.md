@@ -53,59 +53,45 @@ The full package documentation is available at [meteofrance.github.io/mfai](http
 
 # Table of Content
 
+- [MFAI: Météo-France's AI Python package](#mfai-météo-frances-ai-python-package)
 - [Use Cases](#use-cases)
+- [Package Documentation](#package-documentation)
+- [Table of Content](#table-of-content)
 - [Neural Network Architectures](#neural-network-architectures)
-    - Convolutional Neural Networks:
-      - deeplabv3/deeplabv3+
-      - halfunet
-      - unet/customunet
-      - Resnet50, with a specific last stage to output multiple tokens (for MLM)
-    - Vision Transformers:
-      - segformer
-      - swinunetr
-      - unetr++
-      - PanguWeather
-      - ArchesWeather
-    - Generative Adversarial Networks:
-      - DGMR
-    - Graph Neural Networks:
-      - HiLAM
-      - GraphLAM
-    - Large Language Models (LLMs):
-      - GPT2 (classical and cross attention version)
-      - LLama2
-      - LLama3
-    - Multimodal Language Models (MLMs):
-      - A custom Fuyu inspired model with backend choice: GPT2, Llama2, Llama3
-      - A custom model combining a Resnet50 vision encoder with a cross attention GPT2
-    - Vision Language Models:
-      - CLIP
-
-- [LightningModule](#lightning-modules)
-    - Segmentation
-    - CLIP
-    - DGMR
+  - [Convolutional Neural Networks](#convolutional-neural-networks)
+  - [Vision Transformers](#vision-transformers)
+  - [Generative Adversarial Networks](#generative-adversarial-networks)
+  - [Graph Neural Networks](#graph-neural-networks)
+  - [Large Language Models](#large-language-models)
+  - [Multimodal Language Models](#multimodal-language-models)
+  - [Vision Language Models](#vision-language-models)
+- [Lightning Modules](#lightning-modules)
+  - [Segmentation](#segmentation)
+  - [Clip](#clip)
+  - [DGMR](#dgmr)
 - [Lightning CLI](#lightning-cli)
 - [NamedTensors](#namedtensors)
 - [Metrics](#metrics)
-    - Critical Sucess Index
-    - False Alarm Rate
-    - False Negative Rate
-    - Precision-Recall Area Under Curve
 - [Losses](#losses)
-  - DiceLoss
-  - SoftCrossEntropyLoss
-  - SoftBCEWithLogitsLoss
-  - Perceptual loss
-  - LPIPS
-  - GridCell loss and Hinge losses for GANs
+  - [Perceptual Loss](#perceptual-loss)
+    - [Multi Scale :](#multi-scale-)
+    - [Channel handling case :](#channel-handling-case-)
+    - [Pre Trained](#pre-trained)
+  - [Example](#example)
+  - [LPIPS](#lpips)
+  - [GANs losses for Nowcasting](#gans-losses-for-nowcasting)
 - [Transforms](#transforms)
 - [Installation](#installation)
+  - [Cloning the repository](#cloning-the-repository)
+  - [Using pip](#using-pip)
 - [Usage](#usage)
-    - [Instanciate a model](#instanciate-a-model)
-    - [Export to onnx](#export-to-onnx)
-    - [NamedTensors](#namedtensors-example)
-- [Running tests](#running-tests)
+  - [Instanciate a model](#instanciate-a-model)
+  - [Export to onnx](#export-to-onnx)
+  - [SegmentationLightningModule](#segmentationlightningmodule)
+    - [Add a new metric](#add-a-new-metric)
+  - [Lightning CLI](#lightning-cli-1)
+  - [Metrics](#metrics-1)
+- [Running Tests](#running-tests)
 - [Contributing](#contributing)
 - [Publishing](#publishing)
 - [Citation](#citation)
@@ -158,7 +144,7 @@ Currently we support the following neural network architectures:
 
 | Model  | Research Paper  | Input Shape    | ONNX exportable ? | Notes | Use-Cases at MF |
 | :---:   | :---: | :---: | :---: | :---: | :---: |
-| [GPT2](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/models/llms/gpt2.py) | [openai paper](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf)  | (Batch, token_id) | No   | Imported and adapted from [Sebastian Raschka's book and github](https://github.com/rasbt/LLMs-from-scratch/) |
+| [GPT2](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/models/llms/gpt2.py) | [openai paper](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf)  | (Batch, token_id) | No   | Imported and adapted from [Sebastian Raschka's book and github](https://github.com/rasbt/LLMs-from-scratch/). Allows to load official weights, see [instructions](https://github.com/meteofrance/mfai/blob/main/scripts/gpt2_weights_download/gpt2_weights_download.py). |
 | [Llama2](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/models/llms/llama2.py) | [arxiv link](https://arxiv.org/abs/2307.09288)  | (Batch, token_id) | No  | Imported and adapted from [Sebastian Raschka's book and github](https://github.com/rasbt/LLMs-from-scratch/) |
 | [Llama3](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/models/llms/llama3.py) | [arxiv link](https://arxiv.org/abs/2407.21783)  | (Batch, token_id) | No  | Imported and adapted from [Sebastian Raschka's book and github](https://github.com/rasbt/LLMs-from-scratch/) |
 | [Custom GPT-2 with Cross Attention](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/models/llms/__init__.py#L372) | | (Batch, token_id, other) | No  | Inspired from [Sebastian Raschka's blog](https://magazine.sebastianraschka.com/p/understanding-multimodal-llms) |
@@ -319,7 +305,6 @@ We also provide slightly modified losses (DiceLoss, SoftCrossEntropyLoss, SoftBC
 
 
 ## Perceptual Loss
-
 It was introduced by Johnson et al. - Perceptual losses for real-time style transfer and super-resolution. (https://arxiv.org/pdf/1603.08155).
 
 The [**PerceptualLoss**](https://github.com/meteofrance/mfai/blob/main/mfai/pytorch/losses/perceptual.py#L28) class is a `torch.nn.Module` that allows to initialize a VGG-16 and compute directly the perceptual loss between a given input and target.

@@ -40,8 +40,8 @@ class FuyuSettings:
     )
     num_kv_groups: int = 2  # LLama3 grouped query attention number of kv groups
     rope_base: float = 500_000.0  # LLama3 rope base freq
-    model_size: Literal["124M", "355M", "774M", "1558M"] = (
-        "124M"  # Alias used to download official weights
+    model_size: Literal["custom", "124M", "355M", "774M", "1558M"] = (
+        "custom"  # Fuyu always builds a custom architecture
     )
     attn_tf_compat: bool = False  # If true, uses a less GPU efficient implementation of attn compatible with official weights
 

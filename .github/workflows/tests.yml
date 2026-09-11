@@ -42,13 +42,19 @@ jobs:
       PYTHONPATH: '.'
     runs-on: ubuntu-latest
     container:
-      image: python:3.10-slim
+      image: python:3.11-slim
 
     steps:
     - name: Install git  # necessary for the checkout and changed-py-files actions
       run: apt-get update && apt-get install -y git
 
     - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0
+      with:
+        python-version: 3.11
+        enable-cache: true
 
     - name: Gather Python changed files
       if: github.event_name == 'pull_request'
@@ -63,16 +69,15 @@ jobs:
     - name: Install dependencies
       if: github.event_name != 'pull_request' || steps.changed-py-files.outputs.any_changed == 'true' 
       run: |
-        pip install --upgrade pip
-        pip install .[llm,weather_forecast,vision_transformers,dev]
-        pip install mlflow
+        uv sync --extra llm --extra weather_forecast --extra vision_transformers --extra dev
+        uv pip install mlflow
 
     - name: Type hinting with mypy on changed files
       if: github.event_name != 'pull_request' || steps.changed-py-files.outputs.any_changed == 'true'
       run: |
-        mypy mfai/ tests/
+        uv run mypy mfai/ tests/
 
     - name: Test with pytest
       if: github.event_name != 'pull_request' || steps.changed-py-files.outputs.any_changed == 'true'
       run: |
-        pytest --cov=mfai --cov-fail-under=85 tests/
+        uv run pytest --cov=mfai --cov-fail-under=85 tests/

@@ -12,6 +12,7 @@ from mfai.pytorch.models.llms.gpt2 import (
     GPT2,
     CrossAttentionGPT2,
     CrossAttentionGPT2Settings,
+    GPT2ModelSize,
     GPT2Settings,
 )
 from mfai.pytorch.models.llms.llama2 import Llama2, Llama2Settings
@@ -111,10 +112,12 @@ def test_kv_cache(model_tokenizer: tuple[nn.Module, Tokenizer]) -> None:
 
 def test_cross_attention_gpt2() -> None:
     """
-    Here we only test that the model is mathematically correct (matmul compat, shapes, attention, ...).
+    Here we only test that the model is mathematically correct
+    (matmul compat, shapes, attention, ...).
     """
     torch.manual_seed(999)
     settings = CrossAttentionGPT2Settings(
+        model_size="custom",
         context_length=32,
         n_heads=1,
         n_layers=4,
@@ -129,21 +132,48 @@ def test_cross_attention_gpt2() -> None:
         idx=token_ids,
         max_new_tokens=10,
         context_size=model.context_length,
-        vision_inputs=torch.randn(1, 8, settings.emb_dim),
+        vision_inputs=torch.randn(1, 8, model.emb_dim),
     )
 
 
-def test_download_gpt2_weights(tmp_path: Path) -> None:
-    model = GPT2(GPT2Settings(attn_tf_compat=True))
-    model.download_weights_from_tf_ckpt(tmp_path)
+@pytest.mark.parametrize("vocab_size", [50257, 50400])  # 50400 includes extra tokens
+@pytest.mark.parametrize(
+    "settings",
+    [
+        GPT2Settings(attn_tf_compat=True),
+        GPT2Settings(attn_tf_compat=True, context_length=1032),  # longer context len
+    ],
+)
+def test_load_gpt2_checkpoint(
+    tmp_path: Path, vocab_size: int, settings: GPT2Settings
+) -> None:
+    # The gpt2 weights download script saves a pytorch state dict in a
+    # `gpt2_<model_size>.pkl` file. We check that the state dict of every
+    # supported configuration round-trips and fully restores a fresh model.
 
-    # test with extra tokens
-    model = GPT2(GPT2Settings(attn_tf_compat=True), vocab_size=50400)
-    model.download_weights_from_tf_ckpt(tmp_path)
+    ckpt_path = tmp_path / f"gpt2_124M_{settings.context_length}_{vocab_size}.pkl"
+    torch.save(GPT2(settings, vocab_size=vocab_size).state_dict(), ckpt_path)
+    loaded = GPT2(settings, vocab_size=vocab_size)
+    loaded.load_state_dict(torch.load(ckpt_path, weights_only=True))
+    assert loaded.model_size == "124M"
 
-    # test with longer context len - default is 1024 for gpt2 small
-    model = GPT2(GPT2Settings(attn_tf_compat=True, context_length=1032))
-    model.download_weights_from_tf_ckpt(tmp_path)
+
+@pytest.mark.parametrize("size", ["124M"])  # , "355M", "774M", "1558M"])
+def test_load_official_weights(tmp_path: Path, size: GPT2ModelSize) -> None:
+    # `load_official_weights` restores official weights into an already
+    # instantiated model from the pkl produced by the download script.
+    ckpt_path = tmp_path / f"gpt2_{size}.pkl"
+    reference = GPT2(GPT2Settings(size))
+    torch.save(reference.state_dict(), ckpt_path)
+
+    gpt2 = GPT2(GPT2Settings(size))
+    gpt2.load_official_weights(ckpt_path)
+
+    assert gpt2.model_size == size
+    for (name, param), (_, ref_param) in zip(
+        gpt2.named_parameters(), reference.named_parameters()
+    ):
+        assert torch.equal(param, ref_param)
 
 
 def test_lora() -> None:

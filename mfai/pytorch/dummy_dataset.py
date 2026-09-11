@@ -93,9 +93,9 @@ class DummyDataModule(LightningDataModule):
 
     @override
     def setup(  # type: ignore[override]
-        self, stage: Literal["train", "val", "test", "predict"] | None = None
+        self, stage: Literal["fit", "validate", "test", "predict"] | None = None
     ) -> None:
-        if stage == "train" or stage is None:
+        if stage in ("fit", "validate", None):
             self.dummy_train = DummyDataset(
                 "train",
                 self.task,
@@ -104,7 +104,6 @@ class DummyDataModule(LightningDataModule):
                 self.nb_input_channels,
                 self.nb_output_channels,
             )
-        if stage == "val" or stage is None:
             self.dummy_val = DummyDataset(
                 "val",
                 self.task,
@@ -113,7 +112,7 @@ class DummyDataModule(LightningDataModule):
                 self.nb_input_channels,
                 self.nb_output_channels,
             )
-        if stage == "test" or stage is None:
+        if stage in ("test", None):
             self.dummy_test = DummyDataset(
                 "test",
                 self.task,
@@ -122,7 +121,7 @@ class DummyDataModule(LightningDataModule):
                 self.nb_input_channels,
                 self.nb_output_channels,
             )
-        if stage == "predict" or stage is None:
+        if stage in ("predict", None):
             self.dummy_predict = DummyDataset(
                 "predict",
                 self.task,
@@ -241,9 +240,9 @@ class DummyMultiModalDataModule(LightningDataModule):
 
     @override
     def setup(  # type: ignore[override]
-        self, stage: Literal["train", "val", "test", "predict"] | None = None
+        self, stage: Literal["fit", "validate", "test", "predict"] | None = None
     ) -> None:
-        if stage == "train":
+        if stage in ("fit", "validate", None):
             self.dummy_train = DummyMultiModalDataset(
                 "train",
                 self.dim_x,
@@ -251,7 +250,6 @@ class DummyMultiModalDataModule(LightningDataModule):
                 self.nb_input_channels,
                 self.context_length,
             )
-        elif stage == "val":
             self.dummy_val = DummyMultiModalDataset(
                 "val",
                 self.dim_x,
@@ -259,7 +257,7 @@ class DummyMultiModalDataModule(LightningDataModule):
                 self.nb_input_channels,
                 self.context_length,
             )
-        elif stage == "test":
+        if stage in ("test", None):
             self.dummy_test = DummyMultiModalDataset(
                 "test",
                 self.dim_x,
@@ -297,7 +295,9 @@ class DummyMultiModalDataModule(LightningDataModule):
 
     @override
     def train_dataloader(self) -> DataLoader:
-        assert self.dummy_train is not None, "Call setup() before requesting a dataloader"
+        assert self.dummy_train is not None, (
+            "Call setup() before requesting a dataloader"
+        )
         return DataLoader(
             self.dummy_train,
             self.batch_size,
@@ -317,7 +317,9 @@ class DummyMultiModalDataModule(LightningDataModule):
 
     @override
     def test_dataloader(self) -> DataLoader:
-        assert self.dummy_test is not None, "Call setup() before requesting a dataloader"
+        assert self.dummy_test is not None, (
+            "Call setup() before requesting a dataloader"
+        )
         # for test, batch_size = 1 to log loss and metrics for each sample
         return DataLoader(
             self.dummy_test,

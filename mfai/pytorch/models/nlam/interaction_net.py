@@ -1,9 +1,10 @@
 from typing import Any, Literal
 
 import torch
-import torch_geometric as pyg
+import torch_geometric.nn as pyg_nn
 from torch import Tensor, nn
 from torch.utils.checkpoint import checkpoint
+from typing_extensions import override
 
 
 class CheckpointWrapper(nn.Module):
@@ -13,11 +14,12 @@ class CheckpointWrapper(nn.Module):
         super().__init__()
         self.module = module
 
+    @override
     def forward(self, *args: Any, **kwargs: Any) -> nn.Sequential:
         return checkpoint(self.module, *args, **kwargs, use_reentrant=False)
 
 
-class InteractionNet(pyg.nn.MessagePassing):
+class InteractionNet(pyg_nn.MessagePassing):
     """
     Implementation of a generic Interaction Network, from Battaglia et al. (2016).
     """
@@ -58,7 +60,7 @@ class InteractionNet(pyg.nn.MessagePassing):
         # Make both sender and receiver indices of edge_index start at 0
         edge_index = edge_index - edge_index.min(dim=1, keepdim=True)[0]
         # Store number of receiver nodes according to edge_index
-        self.num_rec = edge_index[1].max() + 1
+        self.num_rec = int(edge_index[1].max()) + 1
         edge_index[0] = edge_index[0] + self.num_rec  # Make sender indices after rec
         self.register_buffer("edge_index", edge_index, persistent=False)
 
@@ -98,6 +100,7 @@ class InteractionNet(pyg.nn.MessagePassing):
 
         self.update_edges = update_edges
 
+    @override
     def forward(
         self, send_rep: Tensor, rec_rep: Tensor, edge_rep: Tensor
     ) -> Tensor | tuple[Tensor, Tensor]:
@@ -133,13 +136,15 @@ class InteractionNet(pyg.nn.MessagePassing):
 
         return rec_rep
 
-    def message(self, x_j: Tensor, x_i: Tensor, edge_attr: Tensor) -> Tensor:
+    @override
+    def message(self, x_j: Tensor, x_i: Tensor, edge_attr: Tensor) -> Tensor:  # type: ignore[override]
         """
         Compute messages from node j to node i.
         """
         return self.edge_mlp(torch.cat((edge_attr, x_j, x_i), dim=-1))
 
-    def aggregate(
+    @override
+    def aggregate(  # type: ignore[override]
         self,
         messages: Tensor,
         index: Tensor,
@@ -173,6 +178,7 @@ class SplitMLPs(nn.Module):
         self.mlps = nn.ModuleList(mlps)
         self.chunk_sizes = chunk_sizes
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         """
         Chunk up input and feed through MLPs.

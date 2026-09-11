@@ -4,6 +4,7 @@ import einops
 import torch
 from torch import Tensor, nn
 from torch.nn import functional as F
+from typing_extensions import override
 
 
 def attention_einsum(q: Tensor, k: Tensor, v: Tensor) -> Tensor:
@@ -71,6 +72,7 @@ class AttentionLayer(torch.nn.Module):
         # Learnable gain parameter
         self.gamma = nn.Parameter(torch.zeros(1))
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         # Compute query, key and value using 1x1 convolutions.
         query = self.query(x)

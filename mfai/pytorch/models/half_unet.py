@@ -1,12 +1,14 @@
 from collections import OrderedDict
+from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import reduce
 from math import ceil
-from typing import Any, Literal, Sequence
+from typing import Any, Literal
 
 import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
+from typing_extensions import override
 
 from mfai.pytorch.models.base import AutoPaddingModel, BaseModel, ModelType
 from mfai.pytorch.models.utils import AbsolutePosEmdebding
@@ -55,6 +57,7 @@ class GhostModule(nn.Module):
         self.bn = nn.BatchNorm2d(num_features=out_channels)
         self.relu = nn.ReLU(inplace=True)
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         x = self.conv(x)
         x2 = self.sepconv(x)
@@ -67,9 +70,13 @@ class HalfUNet(BaseModel, AutoPaddingModel):
     settings_kls = HalfUNetSettings
     onnx_supported: bool = True
     supported_num_spatial_dims: tuple[int, ...] = (2,)
-    num_spatial_dims: int = 2
     features_last: bool = False
     model_type: ModelType = ModelType.CONVOLUTIONAL
+
+    @property
+    @override
+    def num_spatial_dims(self) -> int:
+        return 2
 
     def __init__(
         self,
@@ -175,9 +182,11 @@ class HalfUNet(BaseModel, AutoPaddingModel):
         self.check_required_attributes()
 
     @property
+    @override
     def settings(self) -> HalfUNetSettings:
         return self._settings
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         x, old_shape = self._maybe_padding(data_tensor=x)
 
@@ -281,6 +290,7 @@ class HalfUNet(BaseModel, AutoPaddingModel):
             )
         return layers
 
+    @override
     def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
         number_pool_layers = sum(
             1 for layer in self.modules() if isinstance(layer, nn.MaxPool2d)

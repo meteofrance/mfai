@@ -1,9 +1,10 @@
-from typing import Any, Literal, Tuple
+from typing import Any, Literal
 
 import lightning.pytorch as pl
 import torch
 import torchmetrics as tm
 from torch import Tensor
+from typing_extensions import override
 
 from mfai.pytorch.models.base import BaseModel
 
@@ -16,28 +17,39 @@ layout = {
 
 
 class SegmentationLightningModule(pl.LightningModule):
+    training_loss: list[Any]
+    validation_loss: list[Any]
+    valid_metrics: tm.MetricCollection
+    test_metrics: tm.MetricCollection
+
     def __init__(
         self,
         model: BaseModel,
         type_segmentation: Literal["binary", "multiclass", "multilabel", "regression"],
-        loss: torch.nn.modules.loss._Loss,
+        loss: torch.nn.Module,
     ) -> None:
         """A lightning module adapted for segmentation of weather images.
 
         Args:
-            model (BaseModel): Torch neural network model in [DeepLabV3, DeepLabV3Plus, HalfUNet, Segformer, SwinUNetR, UNet, CustomUNet, UNetRPP]
-            type_segmentation (Literal["binary", "multiclass", "multilabel", "regression"]): Type of segmentation we want to do
-            loss (torch.nn.modules.loss._Loss): Loss function
-
+            model: Torch neural network model in [DeepLabV3, DeepLabV3Plus, HalfUNet, Segformer, SwinUNetR, UNet, CustomUNet, UNetRPP]
+            type_segmentation: Type of segmentation we want to do
+            loss: Loss function
         """
+
         super().__init__()
         self.model = model
         self.channels_last = self.model.in_channels == 3
         if self.channels_last:  # Optimizes computation for RGB images
             self.model = self.model.to(memory_format=torch.channels_last)  # type: ignore[call-overload]
-        self.type_segmentation = type_segmentation
+        self.type_segmentation: Literal[
+            "binary", "multiclass", "multilabel", "regression"
+        ] = type_segmentation
         self.loss = loss
         self.metrics = self.get_metrics()
+        self.training_loss: list[Any] = []
+        self.validation_loss: list[Any] = []
+        self.valid_metrics = self.metrics.clone(prefix="val_")
+        self.test_metrics = self.metrics.clone()
 
         self.save_hyperparameters(ignore=["loss", "model"])
 
@@ -132,12 +144,14 @@ class SegmentationLightningModule(pl.LightningModule):
     ########################################################################################
     #                                       OPTIMIZER                                      #
     ########################################################################################
+    @override
     def configure_optimizers(self) -> torch.optim.Adam:
         return torch.optim.Adam(self.parameters(), lr=0.001)
 
     ########################################################################################
     #                                   SHARED STEPS                                       #
     ########################################################################################
+    @override
     def forward(self, inputs: Tensor) -> Tensor:
         """Runs data through the model. Separate from training step."""
         if self.channels_last:
@@ -174,6 +188,7 @@ class SegmentationLightningModule(pl.LightningModule):
     ########################################################################################
     #                                      TRAIN STEPS                                     #
     ########################################################################################
+    @override
     def on_train_start(self) -> None:
         """Setup custom scalars panel on tensorboard and log hparams.
         Useful to easily compare train and valid loss and detect overtfitting.
@@ -184,16 +199,18 @@ class SegmentationLightningModule(pl.LightningModule):
             print(
                 f"Logs will be saved in \033[96m{self.logger.log_dir}\033[0m"
             )  # bright cyan
-            self.logger.experiment.add_custom_scalars(layout)
+            self.logger.experiment.add_custom_scalars(layout)  # type: ignore[attr-defined]
             self.logger.log_hyperparams(hparams)
 
-    def training_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> Any:
+    @override
+    def training_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> Any:
         x, y = batch
         _, loss = self._shared_forward_step(x, y)
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         self.training_loss.append(loss)
         return loss
 
+    @override
     def on_train_epoch_end(self) -> None:
         self._shared_epoch_end(self.training_loss, "train")
         self.training_loss.clear()  # free memory
@@ -201,6 +218,7 @@ class SegmentationLightningModule(pl.LightningModule):
     ########################################################################################
     #                                      VALID STEPS                                     #
     ########################################################################################
+    @override
     def on_validation_start(self) -> None:
         self.validation_loss: list[Any] = []
         self.valid_metrics = self.metrics.clone(prefix="val_")
@@ -217,7 +235,8 @@ class SegmentationLightningModule(pl.LightningModule):
                 tb.add_image("val_plots/true_image", y[0], dataformats=dformat)
             tb.add_image("val_plots/pred_image", y_hat[0], step, dataformats=dformat)
 
-    def validation_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> Any:
+    @override
+    def validation_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> Any:
         x, y = batch
         y_hat, loss = self._shared_forward_step(x, y)
         self.log("val_loss", loss, on_epoch=True, sync_dist=True)
@@ -227,6 +246,7 @@ class SegmentationLightningModule(pl.LightningModule):
         self.val_plot_step(batch_idx, y, y_hat)
         return loss
 
+    @override
     def on_validation_epoch_end(self) -> None:
         self._shared_epoch_end(self.validation_loss, "validation")
         self.validation_loss.clear()  # free memory
@@ -238,12 +258,14 @@ class SegmentationLightningModule(pl.LightningModule):
     ########################################################################################
     #                                      TEST STEPS                                      #
     ########################################################################################
+    @override
     def on_test_start(self) -> None:
         self.test_metrics = (
             self.metrics.clone()
         )  # Used to compute overall metrics on test dataset
 
-    def test_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> None:
+    @override
+    def test_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> None:
         """Computes metrics for each sample, at the end of the run."""
         x, y = batch
         y_hat, loss = self._shared_forward_step(x, y)
@@ -251,6 +273,7 @@ class SegmentationLightningModule(pl.LightningModule):
 
         self.test_metrics.update(y_hat, y)
 
+    @override
     def on_test_epoch_end(self) -> None:
         """Logs metrics in logger hparams view, at the end of run."""
         metrics = self.test_metrics.compute()

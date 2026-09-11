@@ -1,9 +1,10 @@
 import random
-from typing import Sequence
+from collections.abc import Sequence
 
 import torch
 import torchvision.transforms.functional as TF
 from torch import Tensor, nn
+from typing_extensions import override
 
 from mfai.pytorch.namedtensor import NamedTensor
 
@@ -117,6 +118,7 @@ class DimensionSubSampler(nn.Module):
         self.dim_name = dim_name
         self.idx_to_keep = idx_to_keep
 
+    @override
     def forward(self, named_tensor: NamedTensor) -> NamedTensor:
         return named_tensor.index_select_dim(self.dim_name, self.idx_to_keep)
 
@@ -178,6 +180,7 @@ class MeanDimensionSubsampler(nn.Module):
         self.dim_name = dim_name
         self.idx_to_be_meaned = idx_to_be_meaned
 
+    @override
     def forward(self, named_tensor: NamedTensor) -> NamedTensor:
         # The named tensor's dimension names without the target dimension
         meaned_tensor_dimension_names = (

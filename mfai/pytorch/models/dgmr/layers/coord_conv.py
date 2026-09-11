@@ -4,6 +4,7 @@ from typing import Any
 
 import torch
 from torch import Tensor, nn
+from typing_extensions import override
 
 
 class AddCoords(nn.Module):
@@ -19,6 +20,7 @@ class AddCoords(nn.Module):
         super().__init__()
         self.with_r: bool = with_r
 
+    @override
     def forward(self, input_tensor: Tensor) -> Tensor:
         """
         Add spatial information to the input tensor.
@@ -81,6 +83,7 @@ class CoordConv(nn.Module):
             in_size += 1
         self.conv = nn.Conv2d(in_size, out_channels, **kwargs)
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         """Apply a forward pass on the input tensor."""
         ret = self.addcoords(x)

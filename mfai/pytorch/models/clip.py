@@ -4,12 +4,12 @@ Implementation of CLIP (Contrastive Langage-Image Pre-training) model. Based on 
 
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Tuple, Union
 
 import torch
 import torch.nn as nn
 from dataclasses_json import dataclass_json
 from torch import Tensor
+from typing_extensions import override
 
 from mfai.pytorch.models.llms.gpt2 import GPT2, LayerNorm
 from mfai.pytorch.models.llms.llama2 import Llama2
@@ -24,7 +24,7 @@ class ClipSettings:
     image_encoder: ResNet50
 
     # Text settings
-    text_encoder: Union[GPT2, Llama2]
+    text_encoder: GPT2 | Llama2
 
     emb_dim: int = 1024
     init_temperature: float = 1 / 0.07  # Value from CLIP paper
@@ -74,9 +74,10 @@ class Clip(nn.Module):
         )
         return x  # [batch_size, emb_dim]
 
+    @override
     def forward(
         self, text_tokens: Tensor, image_input: NamedTensor
-    ) -> Tuple[Tensor, Tensor]:
+    ) -> tuple[Tensor, Tensor]:
         image_features = self.image_encoder(image_input.tensor)
         text_features = self.encode_text(text_tokens)
 

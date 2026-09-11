@@ -5,7 +5,6 @@ or add the class path to your lightning yaml config file.
 
 import importlib
 from pathlib import Path
-from types import ModuleType
 from typing import Any
 
 import lightning as L
@@ -22,11 +21,14 @@ class MLFlowSystemMonitorCallback(L.Callback):
     See this issue: https://github.com/Lightning-AI/pytorch-lightning/issues/20563.
     """
 
+    system_monitor: Any
+
     def __init__(self, *args: Any, **kwargs: dict[str, Any]) -> None:
         super().__init__(*args, **kwargs)
-        mlflow_found: None | ModuleType = importlib.import_module("mlflow")
-
-        if mlflow_found is None:
+        self.system_monitor = None
+        try:
+            importlib.import_module("mlflow")
+        except ModuleNotFoundError:
             raise ModuleNotFoundError(
                 "To use mfai's MLFLowSystemMonitorCallback, you need to install "
                 "mlflow>=3.11 alongside mfai in your project."
@@ -39,7 +41,9 @@ class MLFlowSystemMonitorCallback(L.Callback):
                 "MLFlowSystemMonitorCallback requires MLFlowLogger"
             )
 
-        from mlflow.system_metrics.system_metrics_monitor import SystemMetricsMonitor
+        from mlflow.system_metrics.system_metrics_monitor import (
+            SystemMetricsMonitor,
+        )
 
         self.system_monitor = SystemMetricsMonitor(
             run_id=trainer.logger.run_id,
@@ -73,9 +77,9 @@ class MLFlowSaveConfigCallback(SaveConfigCallback):
             assert trainer.logger.run_id, "'run_id' is not defined in the MLFlowLogger."
 
             dir_run: Path
-            if trainer.logger._artifact_location:
+            if trainer.logger._artifact_location:  # type: ignore[reportPrivateUsage]
                 dir_run = (
-                    Path(trainer.logger._artifact_location)
+                    Path(trainer.logger._artifact_location)  # type: ignore[reportPrivateUsage]
                     / trainer.logger.run_id
                     / "artifacts"
                 )

@@ -2,16 +2,17 @@
 A class based NamedTensor implementation for PyTorch, inspired from the unstable PyTorch namedtensors.
 """
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from copy import deepcopy
 from dataclasses import dataclass
 from itertools import chain
-from typing import Any, Sequence, Union
+from typing import Any
 
 import einops
 import torch
 from tabulate import tabulate
 from torch import Tensor
+from typing_extensions import override
 
 
 @dataclass(slots=True)
@@ -94,6 +95,7 @@ class NamedTensor(TensorWrapper):
         """
         return self.names.index(self.feature_dim_name)
 
+    @override
     def __str__(self) -> str:
         head = "--- NamedTensor ---\n"
         head += f"Names: {self.names}\nTensor Shape: {self.tensor.shape})\nFeatures:\n"
@@ -105,15 +107,12 @@ class NamedTensor(TensorWrapper):
         table_string = str(tabulate(table, headers=headers, tablefmt="simple_outline"))
         return head + table_string
 
-    def __or__(self, other: Union["NamedTensor", None]) -> "NamedTensor":
+    def __or__(self, other: "NamedTensor | None") -> "NamedTensor":
         """
         Concatenate two NamedTensors along the features dimension.
         """
         if other is None:
             return self
-
-        if not isinstance(other, NamedTensor):
-            raise ValueError("Can only concatenate NamedTensor with NamedTensor")
 
         # check features names are distinct between the two tensors
         if set(self.feature_names) & set(other.feature_names):
@@ -135,7 +134,7 @@ class NamedTensor(TensorWrapper):
         except Exception as e:
             raise ValueError(f"Error while concatenating {self} and {other}") from e
 
-    def __ror__(self, other: Union["NamedTensor", None]) -> "NamedTensor":
+    def __ror__(self, other: "NamedTensor | None") -> "NamedTensor":
         return self.__or__(other)
 
     @staticmethod
@@ -278,7 +277,7 @@ class NamedTensor(TensorWrapper):
         self.tensor = self.tensor.unflatten(dim, unflattened_size)
         self.names = self.names[:dim] + [*unflatten_dim_name] + self.names[dim + 1 :]
 
-    def squeeze_(self, dim_name: Union[Sequence[str], str]) -> None:
+    def squeeze_(self, dim_name: Sequence[str] | str) -> None:
         """
         Squeeze the underlying tensor along the dimension(s)
         given its/their name(s).

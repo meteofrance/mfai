@@ -55,7 +55,8 @@ dependencies = [
   "einops>=0.8",
   "lightning[pytorch-extra]",
   "onnx>=1.17.0",
-  "onnxruntime>=1.20",
+  "onnxruntime>=1.20,<1.24 ; python_version < '3.11'",
+  "onnxruntime>=1.20 ; python_version >= '3.11'",
   "onnxscript>=0.1",
   "torch>=2.5,<3",
   "torchvision>=0.19",
@@ -94,10 +95,7 @@ dev = [
   "pytest==9.1.1",
   "pytest-cov==7.1.0",
   "ruff==0.15.20",
-  "mypy==2.1.0",
-  "types-tabulate==0.10.0.20260508",
-  "types-tensorflow==2.18.0.20260610",
-  "types-tqdm==4.68.0.20260608",
+  "pyright[nodejs]==1.1.411",
 ]
 
 [project.urls]
@@ -170,53 +168,101 @@ fail_under = 85
 show_missing = true
 exclude_also = ['def __repr__', 'if __name__ == .__main__.:']
 
-[tool.mypy]
-# [mypy configuration file doc](https://mypy.readthedocs.io/en/stable/config_file.html#confval-exclude)
-exclude = []
+[tool.pyright]
+# https://microsoft.github.io/pyright/#/configuration?id=sample-pyprojecttoml-file
 
-# Disallows defining functions without type annotations or with incomplete type annotations.
-# Use Any for *args and **kwargs
-disallow_untyped_defs = true
+## Run options
+include = ["mfai", "tests"]
+ignore = []
 
-# Causes mypy to treat parameters with a None default value as having an implicit optional type (T | None)
-# Allows `def foo(a: str = None)` instead of `def foo(a: str | None = None)` or `def foo(a: Union[str, None] = None)`
-implicit_optional = true
+verboseOutput = true
 
-# Warn when a # type: ignore comment does not specify any error codes.
-# This clarifies the intent of the ignore and ensures that only the expected errors are silenced.
-# Ignore comments should contain the error code silenced:
-# a: str = 1  # type: ignore[assignment]
-enable_error_code = ["ignore-without-code"]
+reportMissingImports = "error"
+reportMissingTypeStubs = false
 
-# Warn when a `#type: ignore` silences a line that is not actually generating an error
-warn_unused_ignores = true
+pythonVersion = "3.12"
+pythonPlatform = "Linux"
 
-# Shows a warning when encountering any code inferred to be unreachable or redundant after performing type analysis.
-warn_unreachable = true
+useLibraryCodeForTypes = true
 
-# Disable the check for dynamically defined attributes, for more details see link below
-# [attr-defined](https://mypy.readthedocs.io/en/stable/error_code_list.html#check-that-attribute-exists-attr-defined)
-disable_error_code = ["attr-defined", "unreachable"]
+## Type hinting options
+# Disallow list[Any] and set[any], forces to fully type them.
+strictListInference = true
+strictSetInference = true
+# Allow dict[Any] as complex dict structures make typing irelevant.
+strictDictionaryInference = false
 
-# Configure mypy output styling
-show_error_code_links = true
-show_error_codes = true
-pretty = true
+# Analyse everything
+analyzeUnannotatedFunctions = true
 
-# Override mypy default value `ignore_missing_imports = false` to `true` for modules with no typing
-# Has the effect of silencing `import-untyped` error
-[[tool.mypy.overrides]]
-module = [
-  "tiktoken_ext.*",
-  "sentencepiece",
-  "onnxruntime",
-  "pl_bolts.*",
-  "torchvision.*",
-  "torch_geometric.*",
-  "networkx.*",
-  "scipy.spatial",
-  "timm.*",
-  "flash_attn.*",
-  "mlflow.*",
-]
-ignore_missing_imports = true
+# Allow implicit optional in function parameter definition.
+# def foo(param: int = None) -> None:
+strictParameterNoneValue = false
+
+enableTypeIgnoreComments = true # Allows  # type: ignore
+
+deprecateTypingAliases = true # Deprecates the use of typing.List, Dict, ...
+
+## Type checking rules
+# When a class @property getter and setter have different types.
+reportPropertyTypeMismatch = "error"
+
+# Cyclical import chains slow down type analysis and hint at architectural layering issues.
+reportImportCycles = "error"
+
+reportUnusedImport = "error"
+
+reportDuplicateImport = "error"
+
+reportWildcardImportFromLibrary = "error"
+
+reportUntypedFunctionDecorator = "error"
+
+reportUntypedClassDecorator = "error"
+
+reportUntypedBaseClass = "error"
+
+reportUntypedNamedTuple = "error"
+
+reportPrivateUsage = "error"
+
+reportTypeCommentUsage = "error"
+
+reportPrivateImportUsage = "error"
+
+reportConstantRedefinition = "error"
+
+# reportDeprecated [boolean or string, optional]: Generate or suppress diagnostics for use of a class or function that has been marked as deprecated. The default value for this setting is "none".
+
+reportInconsistentConstructor = "error"
+
+reportUninitializedInstanceVariable = "error"
+
+# Disallow input or return parameters for functions or methods that have an unknown type
+reportUnknownParameterType = "none"
+reportUnknownArgumentType = "none"
+reportUnknownLambdaType = "none"
+reportUnknownVariableType = "none"
+reportUnknownMemberType = "none"
+
+reportMissingParameterType = "error"
+reportMissingTypeArgument = "none"
+
+reportCallInDefaultInitializer = "none"
+
+reportUnnecessaryIsInstance = "error"
+reportUnnecessaryCast = "error"
+reportUnnecessaryComparison = "error"
+reportUnnecessaryContains = "error"
+reportAssertAlwaysTrue = "error"
+reportImplicitStringConcatenation = "none"
+
+reportUnusedExpression = "error"
+
+reportUnnecessaryTypeIgnoreComment = "error"
+
+reportMatchNotExhaustive = "error"
+
+reportUnreachable = "error"
+
+reportImplicitOverride = "error"

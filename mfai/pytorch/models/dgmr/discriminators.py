@@ -9,6 +9,7 @@ from torch import Tensor
 from torch.nn.modules.pixelshuffle import PixelUnshuffle
 from torch.nn.utils.parametrizations import spectral_norm
 from torchvision.transforms import RandomCrop
+from typing_extensions import override
 
 from ..base import ModelType
 from .blocks import DBlock
@@ -52,6 +53,7 @@ class Discriminator(torch.nn.Module):
             num_layers=temporal_num_layers,
         )
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         """Mixes the spatial loss and temporal loss of the tensor prior to returning it.
 
@@ -121,6 +123,7 @@ class TemporalDiscriminator(torch.nn.Module):
         self.relu = torch.nn.ReLU()
         self.bn = torch.nn.BatchNorm1d(2 * internal_chn * input_channels)
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         """
         Args:
@@ -228,6 +231,7 @@ class SpatialDiscriminator(torch.nn.Module):
         self.relu = torch.nn.ReLU()
         self.bn = torch.nn.BatchNorm1d(2 * internal_chn * input_channels)
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         """
         Args:

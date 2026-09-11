@@ -126,9 +126,7 @@ class EarthSpecificBlock(nn.Module):
 
         # ArchesWeather code
         if cond_embed is not None:
-            shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
-                cond_embed.chunk(6, dim=1)
-            )
+            shift_msa, scale_msa, _, _, _, _ = cond_embed.chunk(6, dim=1)
             x = x * (1 + scale_msa[:, None, :]) + shift_msa[:, None, :]
         # End of ArchesWeather code
 
@@ -250,6 +248,7 @@ class EarthSpecificBlock(nn.Module):
         x = x.reshape(shape=(batch_size, -1, channels))
 
         # ArchesWeather code
+        x2 = x
         if hasattr(self, "axial_attn"):
             x2 = rearrange(
                 x, "b (pl lat lon) c -> (b lat lon) pl c", pl=pl, lat=lat, lon=lon
@@ -272,6 +271,8 @@ class EarthSpecificBlock(nn.Module):
                 x = x + self.drop_path(x2)
             x = x + self.drop_path(self.mlp(self.norm2(x)))
         else:
+            assert cond_embed is not None
+            _, _, gate_msa, shift_mlp, scale_mlp, gate_mlp = cond_embed.chunk(6, dim=1)
             if hasattr(self, "axial_attn"):
                 x = x + self.drop_path(x2)
             x = shortcut + gate_msa[:, None, :] * self.drop_path(x)

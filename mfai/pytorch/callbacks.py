@@ -53,7 +53,8 @@ class MLFlowSystemMonitorCallback(L.Callback):
 
 class MLFlowSaveConfigCallback(SaveConfigCallback):
     """A Lightning callback to save the `config.yaml` in the run directory
-    instead of in the top-level `save_dir`.
+    instead of in the top-level `save_dir` or `artifact_location`.
+
     See the issue: https://github.com/Lightning-AI/pytorch-lightning/issues/20184
     """
 
@@ -65,12 +66,32 @@ class MLFlowSaveConfigCallback(SaveConfigCallback):
     def save_config(
         self, trainer: L.Trainer, pl_module: L.LightningModule, stage: str
     ) -> None:
-        if trainer.logger and trainer.logger.save_dir:
-            dir_runs = Path(trainer.logger.save_dir)
-            dir_run = dir_runs / trainer.logger.experiment_id / trainer.logger.run_id
-            path_config = dir_run / self.config_filename
+        if isinstance(trainer.logger, MLFlowLogger):
+            assert trainer.logger.experiment_id, (
+                "'experiment_id' is not defined in the MLFlowLogger."
+            )
+            assert trainer.logger.run_id, "'run_id' is not defined in the MLFlowLogger."
 
-            dir_run.mkdir(exist_ok=True)
+            dir_run: Path
+            if trainer.logger._artifact_location:
+                dir_run = (
+                    Path(trainer.logger._artifact_location)
+                    / trainer.logger.run_id
+                    / "artifacts"
+                )
+            elif trainer.logger.save_dir:
+                dir_run = (
+                    Path(trainer.logger.save_dir)
+                    / trainer.logger.experiment_id
+                    / trainer.logger.run_id
+                )
+            else:
+                raise AttributeError(
+                    "Please ensure that 'artifact_location' or 'save_dir' attribute is set in the MLFlowLogger."
+                )
+
+            path_config = dir_run / self.config_filename
+            dir_run.mkdir(exist_ok=True, parents=True)
 
             self.parser.save(
                 self.config,
@@ -78,4 +99,8 @@ class MLFlowSaveConfigCallback(SaveConfigCallback):
                 skip_none=False,
                 overwrite=self.overwrite,
                 multifile=self.multifile,
+            )
+        else:
+            raise TypeError(
+                f"Please ensure that the logger is a 'MLFlowLogger', got '{type(trainer)}'."
             )

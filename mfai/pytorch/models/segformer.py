@@ -2,11 +2,11 @@
 SegFormer adapted from https://github.com/lucidrains/segformer-pytorch.
 """
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from functools import partial
 from math import ceil, sqrt
 from typing import Any, Literal, cast
-from collections.abc import Callable, Sequence
 
 import torch
 from dataclasses_json import dataclass_json

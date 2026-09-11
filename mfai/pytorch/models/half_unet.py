@@ -1,9 +1,9 @@
 from collections import OrderedDict
+from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import reduce
 from math import ceil
 from typing import Any, Literal
-from collections.abc import Sequence
 
 import torch
 from dataclasses_json import dataclass_json

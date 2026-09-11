@@ -41,7 +41,9 @@ class MLFlowSystemMonitorCallback(L.Callback):
                 "MLFlowSystemMonitorCallback requires MLFlowLogger"
             )
 
-        from mlflow.system_metrics.system_metrics_monitor import SystemMetricsMonitor  # type: ignore[import-not-found]
+        from mlflow.system_metrics.system_metrics_monitor import (
+            SystemMetricsMonitor,  # type: ignore[import-not-found]
+        )
 
         self.system_monitor = SystemMetricsMonitor(
             run_id=trainer.logger.run_id,
@@ -69,10 +71,7 @@ class MLFlowSaveConfigCallback(SaveConfigCallback):
     ) -> None:
 
         # Do not save if logger is not MLFlowLogger or if save_dir is None
-        if not(
-            isinstance(trainer.logger, MLFlowLogger)
-            and trainer.logger.save_dir
-        ):
+        if not (isinstance(trainer.logger, MLFlowLogger) and trainer.logger.save_dir):
             return
 
         dir_runs = Path(trainer.logger.save_dir)

@@ -2,12 +2,11 @@
 A class based NamedTensor implementation for PyTorch, inspired from the unstable PyTorch namedtensors.
 """
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from copy import deepcopy
 from dataclasses import dataclass
 from itertools import chain
 from typing import Any
-from collections.abc import Sequence
 
 import einops
 import torch

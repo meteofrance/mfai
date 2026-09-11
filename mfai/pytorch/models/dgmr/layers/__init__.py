@@ -1,6 +1,5 @@
 """Submodules for the layers."""
 
-
 import torch
 
 from .attention import AttentionLayer  # noqa: F401

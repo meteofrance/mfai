@@ -23,7 +23,7 @@ def load_model_registry() -> dict[str, type[nn.Module]]:
                 and issubclass(kls, nn.Module)
                 and kls not in [ModelABC, BaseModel]
                 and hasattr(kls, "model_type")
-                and not kls.__name__ in registry
+                and kls.__name__ not in registry
             ):
                 registry[kls.__name__] = kls
                 setattr(this_module, kls.__name__, kls)

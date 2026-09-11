@@ -3,9 +3,9 @@ VIT adapted from Lucidrain's repo https://github.com/lucidrains/vit-pytorch.
 Added a multi-token output for multimodal LLMs.
 """
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Literal
-from collections.abc import Iterable
 
 import torch
 from dataclasses_json import dataclass_json

@@ -5,6 +5,7 @@ Lora layer and utility code adapted from https://github.com/rasbt/LLMs-from-scra
 import math
 
 import torch
+from typing_extensions import override
 
 
 class LoRALayer(torch.nn.Module):
@@ -18,6 +19,7 @@ class LoRALayer(torch.nn.Module):
         self.alpha = alpha
         self.rank = rank
 
+    @override
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Note: The original chapter didn't include the scaling by self.rank
         # This scaling is not necessary, but it's more canonical and convenient
@@ -32,6 +34,7 @@ class LinearWithLoRA(torch.nn.Module):
         self.linear = linear
         self.lora = LoRALayer(linear.in_features, linear.out_features, rank, alpha)
 
+    @override
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.linear(x) + self.lora(x)
 

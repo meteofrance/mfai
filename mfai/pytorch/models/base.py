@@ -35,29 +35,23 @@ class ModelABC(ABC):
     out_channels: int
     input_shape: tuple[int, ...]
 
-    @property
-    @abstractmethod
-    def onnx_supported(self) -> bool:
-        """
-        Indicates if our model supports onnx export.
-        """
+    onnx_supported: bool
+    """
+    Indicates if the model supports onnx export.
+    """
 
-    @property
-    @abstractmethod
-    def settings_kls(self) -> Any:
-        """
-        Returns the settings class for this model.
-        """
+    settings_kls: type[Any]
+    """
+    The settings class for this model.
+    """
 
-    @property
-    @abstractmethod
-    def supported_num_spatial_dims(self) -> tuple[int, ...]:
-        """
-        Returns the number of input spatial dimensions supported by the model.
-        A 2d vision model supporting (H, W) should return (2,).
-        A model supporting both 2d and 3d inputs (by settings) should return (2, 3).
-        Once instanciated the model will be in 2d OR 3d mode.
-        """
+    supported_num_spatial_dims: tuple[int, ...]
+    """
+    The number of input spatial dimensions supported by the model.
+    A 2d vision model supporting (H, W) should return (2,).
+    A model supporting both 2d and 3d inputs (by settings) should return (2, 3).
+    Once instanciated the model will be in 2d OR 3d mode.
+    """
 
     @property
     @abstractmethod
@@ -66,28 +60,24 @@ class ModelABC(ABC):
         Returns the settings instance used to configure for this model.
         """
 
-    @property
-    @abstractmethod
-    def model_type(self) -> ModelType:
-        """
-        Returns the model type.
-        """
+    model_type: ModelType
+    """
+    The type of the model.
+    """
 
     @property
     @abstractmethod
     def num_spatial_dims(self) -> int:
         """
-        Returns the number of spatial dimensions of the instanciated model.
+        The number of spatial dimensions of the instanciated model.
         """
 
-    @property
-    @abstractmethod
-    def features_last(self) -> bool:
-        """
-        Indicates if the features are the last dimension in the input/output tensors.
-        Conv and ViT typically have features as the second dimension (Batch, Features, ...)
-        versus GNNs for which features are the last dimension (Batch, ..., Features).
-        """
+    features_last: bool
+    """
+    Indicates if the features are the last dimension in the input/output tensors.
+    Conv and ViT typically have features as the second dimension (Batch, Features, ...)
+    versus GNNs for which features are the last dimension (Batch, ..., Features).
+    """
 
     @property
     def features_second(self) -> bool:

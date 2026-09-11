@@ -5,8 +5,7 @@ or add the class path to your lightning yaml config file.
 
 import importlib
 from pathlib import Path
-from types import ModuleType
-from typing import Any
+from typing import Any, cast
 
 import lightning as L
 from lightning.fabric.utilities.exceptions import MisconfigurationException
@@ -22,11 +21,14 @@ class MLFlowSystemMonitorCallback(L.Callback):
     See this issue: https://github.com/Lightning-AI/pytorch-lightning/issues/20563.
     """
 
+    system_monitor: Any
+
     def __init__(self, *args: Any, **kwargs: dict[str, Any]) -> None:
         super().__init__(*args, **kwargs)
-        mlflow_found: None | ModuleType = importlib.import_module("mlflow")
-
-        if mlflow_found is None:
+        self.system_monitor = None
+        try:
+            importlib.import_module("mlflow")
+        except ModuleNotFoundError:
             raise ModuleNotFoundError(
                 "To use mfai's MLFLowSystemMonitorCallback, you need to install "
                 "mlflow>=3.11 alongside mfai in your project."
@@ -39,7 +41,7 @@ class MLFlowSystemMonitorCallback(L.Callback):
                 "MLFlowSystemMonitorCallback requires MLFlowLogger"
             )
 
-        from mlflow.system_metrics.system_metrics_monitor import SystemMetricsMonitor
+        from mlflow.system_metrics.system_metrics_monitor import SystemMetricsMonitor  # type: ignore[import-not-found]
 
         self.system_monitor = SystemMetricsMonitor(
             run_id=trainer.logger.run_id,
@@ -65,17 +67,28 @@ class MLFlowSaveConfigCallback(SaveConfigCallback):
     def save_config(
         self, trainer: L.Trainer, pl_module: L.LightningModule, stage: str
     ) -> None:
-        if trainer.logger and trainer.logger.save_dir:
-            dir_runs = Path(trainer.logger.save_dir)
-            dir_run = dir_runs / trainer.logger.experiment_id / trainer.logger.run_id
-            path_config = dir_run / self.config_filename
 
-            dir_run.mkdir(exist_ok=True)
+        # Do not save if logger is not MLFlowLogger or if save_dir is None
+        if not(
+            isinstance(trainer.logger, MLFlowLogger)
+            and trainer.logger.save_dir
+        ):
+            return
 
-            self.parser.save(
-                self.config,
-                path_config,
-                skip_none=False,
-                overwrite=self.overwrite,
-                multifile=self.multifile,
-            )
+        dir_runs = Path(trainer.logger.save_dir)
+        dir_run = (
+            dir_runs
+            / cast(str, trainer.logger.experiment_id)
+            / cast(str, trainer.logger.run_id)
+        )
+        path_config = dir_run / self.config_filename
+
+        dir_run.mkdir(exist_ok=True)
+
+        self.parser.save(
+            self.config,
+            path_config,
+            skip_none=False,
+            overwrite=self.overwrite,
+            multifile=self.multifile,
+        )

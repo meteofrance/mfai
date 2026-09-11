@@ -1,12 +1,17 @@
 from pathlib import Path
+from typing import cast
 
 import matplotlib
+import matplotlib.collections
 import matplotlib.pyplot as plt
 import networkx
 import numpy as np
 import torch
-import torch_geometric as pyg
-from networkx.classes.reportviews import NodeView
+import torch_geometric.data as pyg_data
+import torch_geometric.utils as pyg_utils
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+from networkx.classes.reportviews import NodeDataView, NodeView
 from scipy.spatial import KDTree
 from torch import Tensor
 from torch_geometric.utils.convert import from_networkx
@@ -31,15 +36,16 @@ def sort_nodes_internally(
     return H
 
 
-def prepend_node_index(graph: networkx.Graph, new_index: int) -> networkx.Graph:
+def prepend_node_index(graph: networkx.Graph, new_index: int) -> networkx.DiGraph:
     # Relabel node indices in graph, insert (graph_level, i, j)
     ijk = [tuple((new_index,) + x) for x in graph.nodes]
     to_mapping = dict(zip(graph.nodes, ijk))
-    return networkx.relabel_nodes(graph, to_mapping, copy=True)
+    return cast(networkx.DiGraph, networkx.relabel_nodes(graph, to_mapping, copy=True))
 
 
-def plot_graph(graph: networkx.Graph, title: str = None) -> tuple[plt.Figure, plt.Axes]:
+def plot_graph(graph: pyg_data.Data, title: str = None) -> tuple[Figure, Axes]:
     fig, axis = plt.subplots(figsize=(8, 8), dpi=200)  # W,H
+    assert graph.edge_index is not None and graph.pos is not None
     edge_index = graph.edge_index
     pos = graph.pos
 
@@ -47,13 +53,13 @@ def plot_graph(graph: networkx.Graph, title: str = None) -> tuple[plt.Figure, pl
     # higher levels in hierarchy
     edge_index = edge_index - edge_index.min()
 
-    if pyg.utils.is_undirected(edge_index):
+    if pyg_utils.is_undirected(edge_index):
         # Keep only 1 direction of edge_index
         edge_index = edge_index[:, edge_index[0] < edge_index[1]]  # (2, M/2)
     # TODO: indicate direction of directed edges
 
     # Move all to cpu and numpy, compute (in)-degrees
-    degrees = pyg.utils.degree(edge_index[1], num_nodes=pos.shape[0]).cpu().numpy()
+    degrees = pyg_utils.degree(edge_index[1], num_nodes=pos.shape[0]).cpu().numpy()
     edge_index = edge_index.cpu().numpy()
     pos = pos.cpu().numpy()
 
@@ -92,7 +98,7 @@ def plot_graph(graph: networkx.Graph, title: str = None) -> tuple[plt.Figure, pl
 
 def from_networkx_with_start_index(
     nx_graph: networkx.Graph | networkx.DiGraph, start_index: int
-) -> pyg.data.Data:
+) -> pyg_data.Data:
     pyg_graph = from_networkx(nx_graph)
     pyg_graph.edge_index += start_index
     return pyg_graph
@@ -135,7 +141,12 @@ def mk_2d_graph(xy: np.ndarray, nx: int, ny: int) -> networkx.DiGraph:
     return dg
 
 
-def save_edges(graph: pyg.data.Data, name: str, base_path: Path) -> None:
+def save_edges(graph: pyg_data.Data, name: str, base_path: Path) -> None:
+    assert (
+        graph.edge_index is not None
+        and graph.len is not None
+        and graph.vdiff is not None
+    )
     torch_save(graph.edge_index, base_path / f"{name}_edge_index.pt")
 
     edge_features = torch.cat((graph.len.unsqueeze(1), graph.vdiff), dim=1).to(
@@ -144,13 +155,20 @@ def save_edges(graph: pyg.data.Data, name: str, base_path: Path) -> None:
     torch_save(edge_features, base_path / f"{name}_features.pt")
 
 
-def save_edges_list(graphs: list[pyg.data.Data], name: str, base_path: Path) -> None:
-    list_edge_index = [graph.edge_index for graph in graphs]
+def save_edges_list(graphs: list[pyg_data.Data], name: str, base_path: Path) -> None:
+    list_edge_index = []
+    edge_features = []
+    for graph in graphs:
+        assert (
+            graph.edge_index is not None
+            and graph.len is not None
+            and graph.vdiff is not None
+        )
+        list_edge_index.append(graph.edge_index)
+        edge_features.append(
+            torch.cat((graph.len.unsqueeze(1), graph.vdiff), dim=1).to(torch.float32)
+        )  # Save as float32
     torch_save(list_edge_index, base_path / f"{name}_edge_index.pt")
-    edge_features = [
-        torch.cat((graph.len.unsqueeze(1), graph.vdiff), dim=1).to(torch.float32)
-        for graph in graphs
-    ]  # Save as float32
     torch_save(edge_features, base_path / f"{name}_features.pt")
 
 
@@ -158,10 +176,13 @@ def save_edges_list(graphs: list[pyg.data.Data], name: str, base_path: Path) -> 
 
 
 def hierarchical_mesh(
-    G: list[networkx.DiGraph], mesh_levels: int, plot: bool, cache_dir_path: Path
-) -> tuple[list[pyg.data.Data], list[Tensor], networkx.DiGraph, NodeView]:
+    graphs: list[networkx.DiGraph],
+    mesh_levels: int,
+    plot: bool,
+    cache_dir_path: Path,
+) -> tuple[list[pyg_data.Data], list[Tensor], networkx.DiGraph, NodeDataView]:
     # Relabel nodes of each level with level index first
-    G = [prepend_node_index(graph, level_i) for level_i, graph in enumerate(G)]
+    G = [prepend_node_index(graph, level_i) for level_i, graph in enumerate(graphs)]
 
     num_nodes_level = np.array([len(g_level.nodes) for g_level in G])
     # First node index in each level in the hierarcical graph
@@ -214,6 +235,7 @@ def hierarchical_mesh(
         )  # Issue with sorting here
         G_down_int = sort_nodes_internally(G_down_int)
         pyg_down = from_networkx_with_start_index(G_down_int, start_index)
+        assert pyg_down.edge_index is not None
 
         # Create up graph, invert downwards edges
         up_edges = torch.stack((pyg_down.edge_index[1], pyg_down.edge_index[0]), dim=0)
@@ -245,7 +267,10 @@ def hierarchical_mesh(
         for level_graph, start_index in zip(G, first_index_level)
     ]
 
-    mesh_pos = [graph.pos.to(torch.float32) for graph in m2m_graphs]
+    mesh_pos = []
+    for graph in m2m_graphs:
+        assert graph.pos is not None
+        mesh_pos.append(graph.pos.to(torch.float32))
 
     # For use in g2m and m2g
     G_bottom_mesh = G[0]
@@ -261,7 +286,7 @@ def hierarchical_mesh(
 
 def monolevel_mesh(
     G: list[networkx.DiGraph], nx: int, plot: bool
-) -> tuple[list[pyg.data.Data], list[Tensor], networkx.DiGraph, NodeView]:
+) -> tuple[list[pyg_data.Data], list[Tensor], networkx.DiGraph, NodeDataView]:
     # combine all levels to one graph
     G_tot = G[0]
     for lev in range(1, len(G)):
@@ -291,7 +316,8 @@ def monolevel_mesh(
     all_mesh_nodes = G_tot.nodes(data=True)
 
     # export the nx graph to PyTorch geometric
-    pyg_m2m: pyg.data.Data = from_networkx(G_int)
+    pyg_m2m: pyg_data.Data = from_networkx(G_int)
+    assert pyg_m2m.pos is not None
     m2m_graphs = [pyg_m2m]
     mesh_pos = [pyg_m2m.pos.to(torch.float32)]
 
@@ -381,7 +407,7 @@ def build_graph_for_grid(
 
 def grid2mesh(
     G_bottom_mesh: networkx.DiGraph,
-    all_mesh_nodes: NodeView,
+    all_mesh_nodes: NodeDataView,
     xy: np.ndarray,
     plot: bool,
     cache_dir_path: Path,
@@ -395,7 +421,7 @@ def grid2mesh(
     print("Bottom_mesh nodes", len(vm))
     vm_xy = np.array([xy for _, xy in vm.data("pos")])
     # distance between mesh nodes
-    dm = np.sqrt(np.sum((vm.data("pos")[(0, 1, 0)] - vm.data("pos")[(0, 0, 0)]) ** 2))
+    dm = np.sqrt(np.sum((vm[(0, 1, 0)]["pos"] - vm[(0, 0, 0)]["pos"]) ** 2))
 
     print(f"Distance between mesh node {dm}, {DM_SCALE}")
     # grid nodes
@@ -478,7 +504,7 @@ def mesh2grid(
     # add edges from mesh to grid
     for v in vg_list:
         # find 4 nearest neighbours (index to vm_xy)
-        neigh_idxs = kdt_m.query(G_m2g.nodes[v]["pos"], 4)[1]
+        neigh_idxs = np.asarray(kdt_m.query(G_m2g.nodes[v]["pos"], 4)[1])
         for i in neigh_idxs:
             u = vm_list[i]
             # add edge from mesh to grid

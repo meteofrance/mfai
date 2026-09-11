@@ -2,10 +2,10 @@ import math
 import warnings
 
 from torch.optim import Optimizer
-from torch.optim.lr_scheduler import _LRScheduler
+from torch.optim.lr_scheduler import LRScheduler
 
 
-class LinearWarmupCosineAnnealingLR(_LRScheduler):
+class LinearWarmupCosineAnnealingLR(LRScheduler):
     """Sets the learning rate of each parameter group to follow a linear warmup schedule between warmup_start_lr and
     base_lr followed by a cosine annealing schedule between base_lr and eta_min.
 

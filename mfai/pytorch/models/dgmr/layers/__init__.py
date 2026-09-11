@@ -1,6 +1,5 @@
 """Submodules for the layers."""
 
-from typing import Literal, Union
 
 import torch
 
@@ -8,10 +7,12 @@ from .attention import AttentionLayer  # noqa: F401
 from .conv_gru import ConvGRU  # noqa: F401
 from .coord_conv import CoordConv
 
+__all__ = ["AttentionLayer", "ConvGRU", "CoordConv", "get_conv_layer"]
+
 
 def get_conv_layer(
-    conv_type: Literal["standard", "coord", "3d"] = "standard",
-) -> Union[type[torch.nn.Conv2d], type[CoordConv], type[torch.nn.Conv3d]]:
+    conv_type: str = "standard",
+) -> type[torch.nn.Conv2d] | type[CoordConv] | type[torch.nn.Conv3d]:
     """Return a conv layer based on the passed in string name."""
     if conv_type == "standard":
         return torch.nn.Conv2d

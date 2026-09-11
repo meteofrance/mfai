@@ -1,10 +1,11 @@
 import random
-from typing import List, Literal, Tuple
+from typing import Literal
 
 import torch
 from lightning.pytorch.core import LightningDataModule
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
+from typing_extensions import override
 
 from .namedtensor import NamedTensor
 
@@ -44,6 +45,7 @@ class DummyDataset(Dataset):
     def __len__(self) -> int:
         return self.len
 
+    @override
     def __getitem__(self, index: int) -> tuple[Tensor, Tensor]:
         x = torch.randn((self.nb_input_channels, self.dim_x, self.dim_y)).float()
         if self.task == "multiclass":
@@ -67,6 +69,11 @@ class DummyDataModule(LightningDataModule):
     It defines the train/valid/test/predict datasets and their dataloaders.
     """
 
+    dummy_train: DummyDataset | None = None
+    dummy_val: DummyDataset | None = None
+    dummy_test: DummyDataset | None = None
+    dummy_predict: DummyDataset | None = None
+
     def __init__(
         self,
         task: Literal["binary", "multiclass", "multilabel", "regression"] = "binary",
@@ -77,58 +84,73 @@ class DummyDataModule(LightningDataModule):
         nb_output_channels: int = 1,
     ):
         super().__init__()
-        self.task = task
+        self.task: Literal["binary", "multiclass", "multilabel", "regression"] = task
         self.batch_size = batch_size
         self.dim_x = dim_x
         self.dim_y = dim_y
         self.nb_input_channels = nb_input_channels
         self.nb_output_channels = nb_output_channels
 
-    def setup(self, stage: str = "") -> None:
-        self.dummy_train = DummyDataset(
-            "train",
-            self.task,
-            self.dim_x,
-            self.dim_y,
-            self.nb_input_channels,
-            self.nb_output_channels,
-        )
-        self.dummy_val = DummyDataset(
-            "val",
-            self.task,
-            self.dim_x,
-            self.dim_y,
-            self.nb_input_channels,
-            self.nb_output_channels,
-        )
-        self.dummy_test = DummyDataset(
-            "test",
-            self.task,
-            self.dim_x,
-            self.dim_y,
-            self.nb_input_channels,
-            self.nb_output_channels,
-        )
-        self.dummy_predict = DummyDataset(
-            "predict",
-            self.task,
-            self.dim_x,
-            self.dim_y,
-            self.nb_input_channels,
-            self.nb_output_channels,
-        )
+    @override
+    def setup(  # type: ignore[override]
+        self, stage: Literal["train", "val", "test", "predict"] | None = None
+    ) -> None:
+        if stage == "train" or stage is None:
+            self.dummy_train = DummyDataset(
+                "train",
+                self.task,
+                self.dim_x,
+                self.dim_y,
+                self.nb_input_channels,
+                self.nb_output_channels,
+            )
+        if stage == "val" or stage is None:
+            self.dummy_val = DummyDataset(
+                "val",
+                self.task,
+                self.dim_x,
+                self.dim_y,
+                self.nb_input_channels,
+                self.nb_output_channels,
+            )
+        if stage == "test" or stage is None:
+            self.dummy_test = DummyDataset(
+                "test",
+                self.task,
+                self.dim_x,
+                self.dim_y,
+                self.nb_input_channels,
+                self.nb_output_channels,
+            )
+        if stage == "predict" or stage is None:
+            self.dummy_predict = DummyDataset(
+                "predict",
+                self.task,
+                self.dim_x,
+                self.dim_y,
+                self.nb_input_channels,
+                self.nb_output_channels,
+            )
 
+    @override
     def train_dataloader(self) -> DataLoader:
+        assert self.dummy_train is not None, "Call setup() to instantiate a datset"
         return DataLoader(self.dummy_train, self.batch_size, shuffle=True)
 
+    @override
     def val_dataloader(self) -> DataLoader:
+        assert self.dummy_val is not None, "Call setup() to instantiate a datset"
         return DataLoader(self.dummy_val, self.batch_size, shuffle=False)
 
+    @override
     def test_dataloader(self) -> DataLoader:
         # for test, batch_size = 1 to log loss and metrics for each sample
+        assert self.dummy_test is not None, "Call setup() to instantiate a datset"
         return DataLoader(self.dummy_test, 1, shuffle=False)
 
+    @override
     def predict_dataloader(self) -> DataLoader:
+        assert self.dummy_predict is not None, "Call setup() to instantiate a datset"
         return DataLoader(self.dummy_predict, self.batch_size, shuffle=False)
 
 
@@ -166,6 +188,7 @@ class DummyMultiModalDataset(Dataset):
     def __len__(self) -> int:
         return self.len
 
+    @override
     def __getitem__(self, index: int) -> tuple[NamedTensor, Tensor, Tensor]:
         # Create the random vision input
         x = torch.randn((self.nb_input_channels, self.dim_x, self.dim_y)).float()
@@ -187,6 +210,11 @@ class DummyMultiModalDataModule(LightningDataModule):
     It defines the train/valid/test/predict datasets and their dataloaders.
     """
 
+    dummy_train: DummyMultiModalDataset | None = None
+    dummy_val: DummyMultiModalDataset | None = None
+    dummy_test: DummyMultiModalDataset | None = None
+    eot_token: int
+
     def __init__(
         self,
         batch_size: int = 2,
@@ -202,7 +230,6 @@ class DummyMultiModalDataModule(LightningDataModule):
         self.nb_input_channels = nb_input_channels
         self.context_length = context_length
 
-    def setup(self, stage: str = "") -> None:
         self.dummy_train = DummyMultiModalDataset(
             "train",
             self.dim_x,
@@ -210,26 +237,40 @@ class DummyMultiModalDataModule(LightningDataModule):
             self.nb_input_channels,
             self.context_length,
         )
-        self.dummy_val = DummyMultiModalDataset(
-            "val",
-            self.dim_x,
-            self.dim_y,
-            self.nb_input_channels,
-            self.context_length,
-        )
-        self.dummy_test = DummyMultiModalDataset(
-            "test",
-            self.dim_x,
-            self.dim_y,
-            self.nb_input_channels,
-            self.context_length,
-        )
-
         self.eot_token = self.dummy_train.eot_token
 
+    @override
+    def setup(  # type: ignore[override]
+        self, stage: Literal["train", "val", "test", "predict"] | None = None
+    ) -> None:
+        if stage == "train":
+            self.dummy_train = DummyMultiModalDataset(
+                "train",
+                self.dim_x,
+                self.dim_y,
+                self.nb_input_channels,
+                self.context_length,
+            )
+        elif stage == "val":
+            self.dummy_val = DummyMultiModalDataset(
+                "val",
+                self.dim_x,
+                self.dim_y,
+                self.nb_input_channels,
+                self.context_length,
+            )
+        elif stage == "test":
+            self.dummy_test = DummyMultiModalDataset(
+                "test",
+                self.dim_x,
+                self.dim_y,
+                self.nb_input_channels,
+                self.context_length,
+            )
+
     def collate_fn_fit(
-        self, batch: List[Tuple[NamedTensor, Tensor, Tensor]]
-    ) -> Tuple[NamedTensor, Tensor, Tensor]:
+        self, batch: list[tuple[NamedTensor, Tensor, Tensor]]
+    ) -> tuple[NamedTensor, Tensor, Tensor]:
         """Collate a batch of multimodal data."""
         images: list[NamedTensor]
         input_txt: list[Tensor]
@@ -242,7 +283,7 @@ class DummyMultiModalDataModule(LightningDataModule):
         )
 
     def collate_text(
-        self, batch: List[Tensor], target: bool = False, prompt: bool = False
+        self, batch: list[Tensor], target: bool = False, prompt: bool = False
     ) -> Tensor:
         """Collate a batch of text tensors."""
         batch_max_len = max([len(text) for text in batch]) + 1
@@ -254,7 +295,9 @@ class DummyMultiModalDataModule(LightningDataModule):
             new_texts.append(pad_txt)
         return torch.stack(new_texts)
 
+    @override
     def train_dataloader(self) -> DataLoader:
+        assert self.dummy_train is not None, "Call setup() before requesting a dataloader"
         return DataLoader(
             self.dummy_train,
             self.batch_size,
@@ -262,7 +305,9 @@ class DummyMultiModalDataModule(LightningDataModule):
             collate_fn=self.collate_fn_fit,
         )
 
+    @override
     def val_dataloader(self) -> DataLoader:
+        assert self.dummy_val is not None, "Call setup() before requesting a dataloader"
         return DataLoader(
             self.dummy_val,
             self.batch_size,
@@ -270,7 +315,9 @@ class DummyMultiModalDataModule(LightningDataModule):
             collate_fn=self.collate_fn_fit,
         )
 
+    @override
     def test_dataloader(self) -> DataLoader:
+        assert self.dummy_test is not None, "Call setup() before requesting a dataloader"
         # for test, batch_size = 1 to log loss and metrics for each sample
         return DataLoader(
             self.dummy_test,

@@ -3,23 +3,24 @@
 and adapted to our projects.
 """
 
-from typing import List, Literal, Optional
+from typing import Literal
 
 import torch
 import torch.nn.functional as F
 from torch import nn
-from torch.nn.modules.loss import _Loss
+from torch.nn.modules.loss import _Loss  # type: ignore[reportPrivateUsage]
+from typing_extensions import override
 
 
 class DiceLoss(_Loss):
     def __init__(
         self,
         mode: Literal["binary", "multiclass", "multilabel"],
-        classes: Optional[List[int]] = None,
+        classes: list[int] | None = None,
         log_loss: bool = False,
         from_logits: bool = True,
         smooth: float = 0.0,
-        ignore_index: Optional[int] = None,
+        ignore_index: int | None = None,
         eps: float = 1e-7,
     ):
         """Dice loss for image segmentation task.
@@ -55,6 +56,7 @@ class DiceLoss(_Loss):
         self.log_loss = log_loss
         self.ignore_index = ignore_index
 
+    @override
     def forward(self, y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
         assert y_true.size(0) == y_pred.size(0)
 
@@ -193,6 +195,7 @@ class SoftCrossEntropyLoss(nn.Module):
         self.reduction = reduction
         self.dim = dim
 
+    @override
     def forward(self, y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
         log_prob = F.log_softmax(y_pred, dim=self.dim)
         return self.label_smoothed_nll_loss(
@@ -309,6 +312,7 @@ class SoftBCEWithLogitsLoss(nn.Module):
         self.weight: torch.Tensor | None
         self.pos_weight: torch.Tensor | None
 
+    @override
     def forward(self, y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
         """
         Args:

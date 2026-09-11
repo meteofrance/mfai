@@ -23,9 +23,8 @@ def load_model_registry() -> dict[str, type[nn.Module]]:
                 and issubclass(kls, nn.Module)
                 and kls not in [ModelABC, BaseModel]
                 and hasattr(kls, "model_type")
+                and not kls.__name__ in registry
             ):
-                if kls.__name__ in registry:
-                    continue
                 registry[kls.__name__] = kls
                 setattr(this_module, kls.__name__, kls)
     return registry
@@ -52,7 +51,7 @@ def load_from_settings_file(
         )
 
     # Check that the class is ModelABC subclass
-    if not (issubclass(model_kls, ModelABC) and issubclass(model_kls, nn.Module)):
+    if not issubclass(model_kls, ModelABC):
         raise ValueError(
             f"Model {model_name} is not a subclass of mfai.pytorch.models.ModelABC and torch.nn.Module."
         )

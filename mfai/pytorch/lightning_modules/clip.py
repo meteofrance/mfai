@@ -3,7 +3,7 @@ LightningModule used to train a Clip model.
 """
 
 from pathlib import Path
-from typing import Any, Literal, Tuple
+from typing import Any, Literal
 
 import lightning.pytorch as pl
 import matplotlib.pyplot as plt
@@ -14,6 +14,7 @@ from matplotlib.figure import Figure
 from torch import Tensor
 from torch.optim import AdamW
 from torchmetrics import Metric
+from typing_extensions import override
 
 from mfai.pytorch.lr_scheduler import LinearWarmupCosineAnnealingLR
 from mfai.pytorch.models.clip import Clip, ClipSettings
@@ -37,6 +38,7 @@ class CLIPAccuracySkillScore(Metric):
         self.add_state("count_positives", default=torch.tensor(0), dist_reduce_fx="sum")
         self.add_state("count_total", default=torch.tensor(0), dist_reduce_fx="sum")
 
+    @override
     def update(self, similarity: Tensor) -> None:
         """Update the metric state with stats from the cosine similarity matrix."""
         # Compute the top_k text indices for each image
@@ -50,6 +52,7 @@ class CLIPAccuracySkillScore(Metric):
         self.count_total += matches_top_k.shape[0]
         # TODO : transform to simple Top 1 accuracy and nique mypy
 
+    @override
     def compute(self) -> Tensor:
         accuracy = self.count_positives / self.count_total
         random_acc = 1 / self.batch_size
@@ -59,6 +62,8 @@ class CLIPAccuracySkillScore(Metric):
 
 
 class CLIPLightningModule(pl.LightningModule):
+    skill_score: CLIPAccuracySkillScore
+
     def __init__(
         self,
         settings: ClipSettings,
@@ -72,6 +77,7 @@ class CLIPLightningModule(pl.LightningModule):
         self.learning_rate = learning_rate
         self.min_learning_rate = min_learning_rate
         self.lr_scheduler_interval = lr_scheduler_interval
+        self.skill_score = CLIPAccuracySkillScore(top_k=1, batch_size=1)
 
         self.save_hyperparameters()
 
@@ -90,22 +96,24 @@ class CLIPLightningModule(pl.LightningModule):
         model_params["model/learning_rate"] = self.learning_rate
         model_params["model/min_learning_rate"] = self.min_learning_rate
         model_params["model/lr_scheduler_interval"] = self.lr_scheduler_interval
-        if hasattr(self.trainer.datamodule, "get_hparams"):
-            data_hparams = self.trainer.datamodule.get_hparams()
+        if hasattr(self.trainer.datamodule, "get_hparams"):  # type: ignore[attr-defined]
+            data_hparams = self.trainer.datamodule.get_hparams()  # type: ignore[attr-defined]
         else:
             data_hparams = {}
         data_hparams = {f"data/{key}": value for key, value in data_hparams.items()}
         return model_params | data_hparams
 
+    @override
     def setup(self, stage: str) -> None:
         """Setup metrics and loggers after the trainer and datamodule are defined."""
-        val_batch_size = self.trainer.datamodule.val_dataloader().batch_size
+        val_batch_size = self.trainer.datamodule.val_dataloader().batch_size  # type: ignore[attr-defined]
         self.skill_score = CLIPAccuracySkillScore(top_k=1, batch_size=val_batch_size)
         if stage == "fit" and self.logger:
             # Log hparams and metrics in "hparams" tab of tensorboard:
             metrics = {"val_loss": float("inf"), "val_skill_score": 0.0}
             self.logger.log_hyperparams(self.get_hparams(), metrics)
 
+    @override
     def configure_optimizers(self) -> OptimizerLRScheduler:
         """
         Lightning method to define optimizers and learning-rate schedulers used for optimization.
@@ -114,7 +122,7 @@ class CLIPLightningModule(pl.LightningModule):
         """
         optimizer = AdamW(self.parameters(), lr=self.learning_rate)
         if self.lr_scheduler_interval in ["step", "epoch"]:
-            num_batches = len(self.trainer.datamodule.train_dataloader())
+            num_batches = len(self.trainer.datamodule.train_dataloader())  # type: ignore[attr-defined]
             warmup_epochs = num_batches if self.lr_scheduler_interval == "step" else 1
             if self.trainer.max_steps > 0:
                 max_steps_or_epochs = self.trainer.max_steps
@@ -158,6 +166,7 @@ class CLIPLightningModule(pl.LightningModule):
         plt.tight_layout()
         return plt.gcf()
 
+    @override
     def forward(self, images: NamedTensor, texts: Tensor) -> Tuple[Tensor, Tensor]:
         return self.model(texts, images)
 
@@ -182,6 +191,7 @@ class CLIPLightningModule(pl.LightningModule):
 
         return loss, image_logits
 
+    @override
     def training_step(
         self, batch: Tuple[NamedTensor, Tensor, Tensor], batch_idx: int
     ) -> Tensor:
@@ -192,6 +202,7 @@ class CLIPLightningModule(pl.LightningModule):
         )
         return loss
 
+    @override
     def validation_step(
         self, batch: Tuple[NamedTensor, Tensor, Tensor], batch_idx: int
     ) -> Tensor:
@@ -202,7 +213,7 @@ class CLIPLightningModule(pl.LightningModule):
 
         # Plot proba matrix for the first validation batch
         if batch_idx == 0 and self.logger:
-            tb = self.logger.experiment
+            tb = self.logger.experiment  # type: ignore[attr-defined]
             fig = self.plot_probabilities_matrix(probas)
             tb.add_figure(f"val_plots/probas_{batch_idx}", fig, self.current_epoch)
 
@@ -219,6 +230,7 @@ class SaveCLIPVisualEncoderWeights(pl.Callback):
         super().__init__()
         self.best_val_loss = float("inf")
 
+    @override
     def on_validation_epoch_end(
         self, trainer: pl.Trainer, pl_module: pl.LightningModule
     ) -> None:

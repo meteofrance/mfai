@@ -12,6 +12,7 @@ from typing import Literal, NamedTuple, Union
 import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
+from typing_extensions import override
 
 from mfai.pytorch.models.base import ModelType
 
@@ -23,6 +24,7 @@ class LayerNorm(nn.Module):
         self.scale = nn.Parameter(torch.ones(emb_dim))
         self.shift = nn.Parameter(torch.zeros(emb_dim))
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         mean = x.mean(dim=-1, keepdim=True)
         var = x.var(dim=-1, keepdim=True, unbiased=False)
@@ -34,6 +36,7 @@ class GELU(nn.Module):
     def __init__(self) -> None:
         super().__init__()
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         return (
             0.5
@@ -57,6 +60,7 @@ class FeedForward(nn.Module):
             nn.Linear(4 * emb_dim, emb_dim),
         )
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         return self.layers(x)
 
@@ -107,7 +111,9 @@ class MultiHeadAttention(nn.Module):
         self.cache_v: Tensor | None
         self.register_buffer("cache_k", None, persistent=False)
         self.register_buffer("cache_v", None, persistent=False)
+        self.ptr_current_pos: int = 0
 
+    @override
     def forward(self, x: Tensor, use_cache: bool) -> Tensor:
         """Computes the multi-head attention output for the given input tensor.
 
@@ -222,6 +228,7 @@ class MultiHeadAttentionPySDPA(nn.Module):
         self.proj = nn.Linear(d_out, d_out)
         self.dropout = dropout
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         batch_size, num_tokens, embed_dim = x.shape
 
@@ -286,6 +293,7 @@ class MultiHeadCrossAttentionPySDPA(nn.Module):
         self.proj = nn.Linear(d_out, d_out)
         self.dropout = dropout
 
+    @override
     def forward(self, x_q: Tensor, x_kv: Tensor) -> Tensor:
         batch_size, num_tokens_q, _ = x_q.shape
         batch_size, num_tokens_kv, _ = x_kv.shape
@@ -459,6 +467,7 @@ class TransformerBlock(nn.Module):
         self.norm2 = LayerNorm(settings.emb_dim)
         self.drop_shortcut = nn.Dropout(settings.drop_rate)
 
+    @override
     def forward(self, x: Tensor, use_cache: bool = False) -> Tensor:
         # Shortcut connection for attention block
         shortcut = x
@@ -576,6 +585,7 @@ class GPT2(nn.Module):
 
         return tok_embeds + pos_embeds  # Shape [batch_size, num_tokens, emb_size]
 
+    @override
     def forward(self, tok_ids: Tensor, use_cache: bool = False) -> Tensor:
         """Performs the forward pass of the GPT-2 model.
 
@@ -657,6 +667,7 @@ class CrossAttentionTransformerBlock(nn.Module):
         self.norm2 = LayerNorm(settings.emb_dim)
         self.drop_shortcut = nn.Dropout(settings.drop_rate)
 
+    @override
     def forward(self, x_q: Tensor, x_kv: Tensor) -> Tensor:
         # Shortcut connection for attention block
         shortcut = x_q
@@ -723,6 +734,7 @@ class CrossAttentionGPT2(nn.Module):
         pos_embeds = self.pos_emb(torch.arange(seq_len, device=tok_ids.device))
         return tok_embeds + pos_embeds  # Shape [batch_size, num_tokens, emb_size]
 
+    @override
     def forward(self, token_ids: Tensor, vision_inputs: Tensor) -> Tensor:
         # token_ids shape=(B, n_tok), vision_input shape=(B, n'_tok * time, embed_dim)
         token_ids = token_ids[

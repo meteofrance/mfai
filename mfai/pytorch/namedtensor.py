@@ -6,12 +6,14 @@ from collections.abc import Iterable
 from copy import deepcopy
 from dataclasses import dataclass
 from itertools import chain
-from typing import Any, Sequence, Union
+from typing import Any
+from collections.abc import Sequence
 
 import einops
 import torch
 from tabulate import tabulate
 from torch import Tensor
+from typing_extensions import override
 
 
 @dataclass(slots=True)
@@ -94,6 +96,7 @@ class NamedTensor(TensorWrapper):
         """
         return self.names.index(self.feature_dim_name)
 
+    @override
     def __str__(self) -> str:
         head = "--- NamedTensor ---\n"
         head += f"Names: {self.names}\nTensor Shape: {self.tensor.shape})\nFeatures:\n"
@@ -105,15 +108,12 @@ class NamedTensor(TensorWrapper):
         table_string = str(tabulate(table, headers=headers, tablefmt="simple_outline"))
         return head + table_string
 
-    def __or__(self, other: Union["NamedTensor", None]) -> "NamedTensor":
+    def __or__(self, other: "NamedTensor | None"]) -> "NamedTensor":
         """
         Concatenate two NamedTensors along the features dimension.
         """
         if other is None:
             return self
-
-        if not isinstance(other, NamedTensor):
-            raise ValueError("Can only concatenate NamedTensor with NamedTensor")
 
         # check features names are distinct between the two tensors
         if set(self.feature_names) & set(other.feature_names):

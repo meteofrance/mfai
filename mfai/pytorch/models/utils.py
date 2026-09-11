@@ -1,10 +1,10 @@
 import math
-from typing import Tuple
 
 import einops
 import torch
 import torch.nn as nn
 from torch import Tensor
+from typing_extensions import override
 
 
 def patch_first_conv(
@@ -20,10 +20,15 @@ def patch_first_conv(
     """
 
     # get first conv
+    first_conv: nn.Conv2d | None = None
     for module in model.modules():
         if isinstance(module, nn.Conv2d) and module.in_channels == default_in_channels:
-            first_conv: nn.Conv2d = module
+            first_conv = module
             break
+    if first_conv is None:
+        raise ValueError(
+            f"No Conv2d layer found with {default_in_channels} input channels."
+        )
 
     weight = first_conv.weight.detach()
     first_conv.in_channels = new_in_channels
@@ -93,6 +98,7 @@ class AbsolutePosEmdebding(nn.Module):
                 requires_grad=True,
             )
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         return x + self.pos_embedding
 

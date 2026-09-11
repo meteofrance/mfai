@@ -1,7 +1,7 @@
 # Copyright (C) Bull S.A.S - 2025
 
 from dataclasses import dataclass
-from typing import Optional, cast
+from typing import cast
 
 import numpy as np
 import torch
@@ -12,6 +12,7 @@ from einops import rearrange
 from torch import Tensor
 from torch.nn import LayerNorm
 from torch.utils.checkpoint import checkpoint
+from typing_extensions import override
 
 from .base import BaseModel, ModelType
 from .pangu import (
@@ -28,11 +29,11 @@ from .pangu import (
 
 # Optional dependency
 try:
-    from axial_attention import (  # type: ignore[import-untyped]
+    from axial_attention import (
         AxialAttention,
         AxialPositionalEmbedding,
     )
-    from timm.layers import DropPath
+    from timm.layers.drop import DropPath
 except ImportError as e:
     print(
         "To use the ArchesWeather model, install mfai's "
@@ -111,11 +112,12 @@ class EarthSpecificBlock(nn.Module):
                 sum_axial_out=True,
             )
 
+    @override
     def forward(
         self,
         x: Tensor,
         embedding_shape: torch.Size,
-        cond_embed: Optional[Tensor] = None,
+        cond_embed: Tensor | None = None,
         roll: bool = False,
     ) -> Tensor:
         # Save the shortcut for skip-connection
@@ -327,6 +329,7 @@ class EarthSpecificLayer(nn.Module):
                 )
             )
 
+    @override
     def forward(
         self,
         x: Tensor,
@@ -362,6 +365,7 @@ class Interpolate(nn.Module):
         self.mode = mode
         self.align_corners = align_corners
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         x = self.interp(
             x,
@@ -443,6 +447,7 @@ class PatchRecoveryConv(nn.Module):
             hidden_dim, plevel_variables, kernel_size=1, stride=1, padding=0
         )
 
+    @override
     def forward(self, x: Tensor) -> tuple[Tensor, Tensor]:
         batch_size = x.shape[0]
         x = x.flatten(1, 2)
@@ -485,6 +490,7 @@ class LinVert(nn.Module):
             embedding_size[-3] * in_features, embedding_size[-3] * in_features
         )
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         x2 = (
             x.reshape((x.shape[0], self.embedding_size[-3], -1, x.shape[-1]))
@@ -543,14 +549,15 @@ class CondBasicLayer(EarthSpecificLayer):
         nn.init.constant_(last_layer.weight, 0)
         nn.init.constant_(last_layer.bias, 0)
 
+    @override
     def forward(
         self,
         x: Tensor,
         embedding_shape: torch.Size,
-        cond_emb: Optional[Tensor] = None,
+        cond_embed: Tensor | None = None,
     ) -> Tensor:
-        if cond_emb is not None:
-            c = self.adaLN_modulation(cond_emb)
+        if cond_embed is not None:
+            c = self.adaLN_modulation(cond_embed)
         else:
             c = None
         return super().forward(x, embedding_shape, c)
@@ -770,13 +777,16 @@ class ArchesWeather(BaseModel):
             )
 
     @property
+    @override
     def settings(self) -> ArchesWeatherSettings:
         return self._settings
 
     @property
+    @override
     def num_spatial_dims(self) -> int:
         return self._settings.spatial_dims
 
+    @override
     def forward(
         self,
         input_level: Tensor,

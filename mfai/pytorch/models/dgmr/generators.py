@@ -7,6 +7,7 @@ import torch
 from torch import Tensor
 from torch.nn.modules.pixelshuffle import PixelShuffle
 from torch.nn.utils.parametrizations import spectral_norm
+from typing_extensions import override
 
 from ..base import ModelType
 from .blocks import (
@@ -140,6 +141,7 @@ class Sampler(torch.nn.Module):
 
         self.depth2space = PixelShuffle(upscale_factor=2)
 
+    @override
     def forward(self, conditioning_states: list[Tensor], latent_dim: Tensor) -> Tensor:
         """
         Perform the sampling from Skillful Nowcasting with GANs.
@@ -233,6 +235,7 @@ class Generator(torch.nn.Module):
         self.latent_stack = latent_stack
         self.sampler = sampler
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         conditioning_states = self.conditioning_stack(x)
         latent_dim = self.latent_stack(x)

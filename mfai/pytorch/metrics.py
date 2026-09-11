@@ -5,7 +5,10 @@ import torch.nn.functional as F
 from einops import rearrange
 from torch import Tensor
 from torchmetrics import Metric, Precision, PrecisionRecallCurve
-from torchmetrics.utilities.compute import _auc_compute
+from torchmetrics.utilities.compute import (
+    _auc_compute,  # type: ignore[reportPrivateUsage]
+)
+from typing_extensions import override
 
 
 class FAR(Metric):
@@ -20,9 +23,11 @@ class FAR(Metric):
         # we do this instead of subclassing because of the way Precision is instanciated
         self.p: Metric = Precision(*args, **kwargs)
 
+    @override
     def update(self, *args: Any, **kwargs: Any) -> None:
         self.p.update(*args, **kwargs)
 
+    @override
     def compute(self) -> Tensor:
         return 1 - self.p.compute()
 
@@ -43,12 +48,14 @@ class FNR(Metric):
         self.add_state("true_positives", default=Tensor(0), dist_reduce_fx="sum")
         self.add_state("false_negatives", default=Tensor(0), dist_reduce_fx="sum")
 
+    @override
     def update(self, preds: Tensor, target: Tensor) -> None:
         assert preds.shape == target.shape
         preds = torch.where(preds >= 0.5, 1, 0)
         self.true_positives += torch.sum((preds == 1) & (target == 1))
         self.false_negatives += torch.sum((preds == 0) & (target == 1))
 
+    @override
     def compute(self) -> Tensor:
         return self.false_negatives / (self.true_positives + self.false_negatives)
 
@@ -59,12 +66,14 @@ class PR_AUC(Metric):
     def __init__(self, task: Literal["binary", "multiclass", "multilabel"] = "binary"):
         super().__init__()
         full_state_update = True  # noqa
-        self.task = task
+        self.task: Literal["binary", "multiclass", "multilabel"] = task
 
+    @override
     def update(self, preds: Tensor, targets: Tensor) -> None:
         pr_curve = PrecisionRecallCurve(task=self.task)
         self.precision, self.recall, _ = pr_curve(preds, targets)
 
+    @override
     def compute(self) -> Tensor:
         return _auc_compute(self.precision, self.recall, reorder=True)
 
@@ -90,12 +99,13 @@ class CSINeighborhood(Metric):
     ):
         super().__init__()
         self.num_neighbors = num_neighbors
-        self.task = task
+        self.task: Literal["binary", "multiclass", "multilabel"] = task
         if task == "binary":
             self.num_classes = 1
-        elif num_classes == 0 and task != "binary":
+        elif num_classes == 0:
             raise ValueError(
-                "Please define the number of class argument (num_class) when the task is not 'binary'."
+                "Please define the number of class argument (num_class) "
+                "when the task is not 'binary'."
             )
         else:
             self.num_classes = num_classes
@@ -147,6 +157,7 @@ class CSINeighborhood(Metric):
         output_tensor.squeeze_(1)
         return output_tensor
 
+    @override
     def update(self, preds: Tensor, targets: Tensor) -> None:
         """
         Preds and targets are Tensors of shape (H, w) or (B,C,H,W).
@@ -202,6 +213,7 @@ class CSINeighborhood(Metric):
             self.false_positives[channel] += fp
             self.false_negatives[channel] += fn
 
+    @override
     def compute(self) -> Tensor:
         csi = self.true_positives / (
             self.true_positives + self.false_negatives + self.false_positives
@@ -290,14 +302,15 @@ class FSS(Metric):
 
     @staticmethod
     def to_category(tensor: Tensor, thresholds: list[int | float]) -> Tensor:
-        category_tensor: Tensor
-        for i, threshold in enumerate(thresholds):
-            if i == 0:
-                category_tensor = torch.where(tensor > torch.tensor(threshold), 1, 0)
-            else:
-                category_tensor = torch.where(
-                    tensor > torch.tensor(threshold), i + 2, category_tensor
-                )
+        if not thresholds:
+            raise ValueError("thresholds must not be empty.")
+
+        category_tensor = torch.where(tensor > torch.tensor(thresholds[0]), 1, 0)
+        for i, threshold in enumerate(thresholds[1:], start=3):
+            category_tensor = torch.where(
+                tensor > torch.tensor(threshold), i, category_tensor
+            )
+
         return category_tensor
 
     def compute_fbs_wfbs(
@@ -338,6 +351,7 @@ class FSS(Metric):
 
         return fbs.item(), worse_fbs.item()
 
+    @override
     def update(self, preds: Tensor, targets: Tensor) -> None:
         """
         Updates the fbs/wfbs list by adding the current fbs/wfbs.
@@ -369,6 +383,7 @@ class FSS(Metric):
             self.list_fbs[n - 1] += fbs
             self.list_wfbs[n - 1] += wfbs
 
+    @override
     def compute(self) -> Tensor:
         fss = 1 - self.list_fbs / self.list_wfbs
 

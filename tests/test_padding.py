@@ -16,7 +16,7 @@ def test_pad(dims: int) -> None:
 
     for comb in mapped_combinations:
         # initial data with 8 batch elements, 3 channels and a combination of even and odd data dimensions
-        tensor_shape = torch.Size([8, 3] + [d for d in comb])
+        tensor_shape = torch.Size([8, 3] + comb.tolist())
         data = torch.randn(*tensor_shape)
 
         # generate a new input shape, larger than the original one

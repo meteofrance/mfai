@@ -1,10 +1,12 @@
 from lightning.pytorch.cli import ArgsType, LightningArgumentParser, LightningCLI
+from typing_extensions import override
 
 from mfai.pytorch.dummy_dataset import DummyMultiModalDataModule
 from mfai.pytorch.lightning_modules.clip import CLIPLightningModule
 
 
 class ClipCLI(LightningCLI):
+    @override
     def add_arguments_to_parser(self, parser: LightningArgumentParser) -> None:
         parser.link_arguments(
             "model.settings.emb_dim",

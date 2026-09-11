@@ -9,6 +9,7 @@ from torch import Tensor
 from torch.distributions import normal
 from torch.nn.modules.pixelshuffle import PixelUnshuffle
 from torch.nn.utils.parametrizations import spectral_norm
+from typing_extensions import override
 
 from ..base import ModelType
 from .layers import AttentionLayer, get_conv_layer
@@ -69,6 +70,7 @@ class GBlock(torch.nn.Module):
             eps=spectral_normalized_eps,
         )
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         """Apply the forward function.
 
@@ -148,6 +150,7 @@ class UpsampleGBlock(torch.nn.Module):
             eps=spectral_normalized_eps,
         )
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         """Apply the forward function."""
         # Spectrally normalized 1x1 convolution
@@ -232,6 +235,7 @@ class DBlock(torch.nn.Module):
         self.relu = torch.nn.ReLU()
         # Concatenate to double final channels and keep reduced spatial extent
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         """Apply the D residual block.
 
@@ -313,6 +317,7 @@ class LBlock(torch.nn.Module):
             stride=1,
         )
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         """Apply the L residual block to this tensor."""
         if self.input_channels < self.output_channels:
@@ -419,6 +424,7 @@ class ContextConditioningStack(torch.nn.Module):
 
         self.relu = torch.nn.ReLU()
 
+    @override
     def forward(self, x: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         """Generate the condition representation."""
         # Each timestep processed separately
@@ -525,6 +531,7 @@ class LatentConditioningStack(torch.nn.Module):
             input_channels=output_channels // 4, output_channels=output_channels
         )
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         """Apply convolution, L blocks, and spatial attention module to the input tensor.
 

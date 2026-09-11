@@ -5,12 +5,14 @@ SegFormer adapted from https://github.com/lucidrains/segformer-pytorch.
 from dataclasses import dataclass
 from functools import partial
 from math import ceil, sqrt
-from typing import Any, Callable, Literal, Sequence, cast
+from typing import Any, Literal, cast
+from collections.abc import Callable, Sequence
 
 import torch
 from dataclasses_json import dataclass_json
 from einops import rearrange
 from torch import Tensor, einsum, nn
+from typing_extensions import override
 
 from .base import AutoPaddingModel, BaseModel, ModelType
 
@@ -63,6 +65,7 @@ class DsConv2d(nn.Module):
             nn.Conv2d(nb_in_channels, nb_out_channels, kernel_size=1, bias=bias),
         )
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         return self.net(x)
 
@@ -74,6 +77,7 @@ class LayerNorm(nn.Module):
         self.g = nn.Parameter(torch.ones(1, dim, 1, 1))
         self.b = nn.Parameter(torch.zeros(1, dim, 1, 1))
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         std = torch.var(x, dim=1, unbiased=False, keepdim=True).sqrt()
         mean = torch.mean(x, dim=1, keepdim=True)
@@ -86,6 +90,7 @@ class PreNorm(nn.Module):
         self.fn = fn
         self.norm = LayerNorm(dim)
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         return self.fn(self.norm(x))
 
@@ -112,6 +117,7 @@ class EfficientSelfAttention(nn.Module):
         )
         self.to_out = nn.Conv2d(dim, dim, 1, bias=False)
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         h, w = x.shape[-2:]
         heads = self.heads
@@ -143,6 +149,7 @@ class MixFeedForward(nn.Module):
             nn.Conv2d(hidden_dim, dim, 1),
         )
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         return self.net(x)
 
@@ -212,6 +219,7 @@ class MiT(nn.Module):
                 nn.ModuleList([get_overlap_patches, overlap_patch_embed, layers])
             )
 
+    @override
     def forward(
         self, x: Tensor, return_layer_outputs: bool = False
     ) -> Tensor | list[Tensor]:
@@ -222,6 +230,7 @@ class MiT(nn.Module):
         for stage in self.stages:
             stage = cast(nn.ModuleList, stage)
             get_overlap_patches, overlap_embed, layers = stage
+            layers = cast(list[nn.ModuleList], layers)
             x = get_overlap_patches(x)
 
             num_patches = x.shape[-1]
@@ -252,7 +261,11 @@ class Segformer(BaseModel, AutoPaddingModel):
     supported_num_spatial_dims = (2,)
     features_last = False
     model_type = ModelType.VISION_TRANSFORMER
-    num_spatial_dims: int = 2
+
+    @property
+    @override
+    def num_spatial_dims(self) -> int:
+        return 2
 
     def __init__(
         self,
@@ -347,9 +360,11 @@ class Segformer(BaseModel, AutoPaddingModel):
         self.check_required_attributes()
 
     @property
+    @override
     def settings(self) -> SegformerSettings:
         return self._settings
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         x, old_shape = self._maybe_padding(data_tensor=x)
 
@@ -363,6 +378,7 @@ class Segformer(BaseModel, AutoPaddingModel):
         out = self.upsampler(out)
         return self._maybe_unpadding(out, old_shape=old_shape)
 
+    @override
     def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
         d = 64  # This number was found with a trial and error procedure
 

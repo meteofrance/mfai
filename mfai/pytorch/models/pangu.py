@@ -20,12 +20,13 @@ from torch.nn import (
     Softmax,
 )
 from torch.utils.checkpoint import checkpoint
+from typing_extensions import override
 
 from .base import BaseModel, ModelType
 
 # Optional dependency
 try:
-    from timm.layers import DropPath
+    from timm.layers.drop import DropPath
 except ImportError as e:
     print(
         "To use the PanguWeather model, install mfai's "
@@ -46,11 +47,6 @@ def define_3d_earth_position_index(window_size: Tuple[int, int, int]) -> Tensor:
         Tensor: index
 
     """
-    if len(window_size) != 3:
-        raise ValueError(
-            f"Data must be 3D, but window has {len(window_size)} dimension(s)"
-        )
-
     # Index in the pressure level of query matrix
     coords_zi = torch.arange(window_size[0])
     # Index in the pressure level of key matrix
@@ -324,13 +320,16 @@ class PanguWeather(BaseModel):
         self.check_required_attributes()
 
     @property
+    @override
     def settings(self) -> PanguWeatherSettings:
         return self._settings
 
     @property
+    @override
     def num_spatial_dims(self) -> int:
         return self.settings.spatial_dims
 
+    @override
     def forward(
         self, input_plevel: Tensor, input_surface: Tensor, static_data: Tensor = None
     ) -> Tuple[Tensor, Tensor]:
@@ -565,6 +564,7 @@ class PatchEmbedding(nn.Module):
         embedding_size[0] += 1
         self.embedding_size = torch.Size(embedding_size)
 
+    @override
     def forward(
         self, input_plevel: Tensor, input_surface: Tensor
     ) -> Tuple[Tensor, torch.Size]:
@@ -620,6 +620,7 @@ class PatchRecovery(nn.Module):
             stride=patch_size,
         )
 
+    @override
     def forward(self, x: Tensor, embedding_shape: torch.Size) -> Tuple[Tensor, Tensor]:
         # Reshape x back to three dimensions
         x = x.reshape(
@@ -655,6 +656,7 @@ class DownSample(nn.Module):
             [padded_size[0], padded_size[1] // 2, padded_size[2] // 2]
         )
 
+    @override
     def forward(
         self, x: Tensor, embedding_shape: torch.Size
     ) -> Tuple[Tensor, torch.Size]:
@@ -702,6 +704,7 @@ class UpSample(nn.Module):
         # Normalization
         self.norm = LayerNorm(output_dim)
 
+    @override
     def forward(self, x: Tensor, embedding_shape: torch.Size) -> Tensor:
         assert x.shape[-1] % 4 == 0, (
             "The token size must be divisible by 4, but is {}".format(x.shape[-1])
@@ -781,6 +784,7 @@ class EarthSpecificLayer(nn.Module):
                 )
             )
 
+    @override
     def forward(self, x: Tensor, embedding_shape: torch.Size) -> Tensor:
         for i, block in enumerate(self.blocks):
             # Roll the input every two blocks
@@ -840,6 +844,7 @@ class EarthSpecificBlock(nn.Module):
         self.norm2 = LayerNorm(dim)
         self.mlp = MLP(dim, dropout_rate=dropout_rate)
 
+    @override
     def forward(self, x: Tensor, embedding_shape: torch.Size, roll: bool) -> Tensor:
         # Save the shortcut for skip-connection
         shortcut = x
@@ -1019,7 +1024,8 @@ class EarthAttention3D(nn.Module):
         # Initialize the tensors using Truncated normal distribution
         torch.nn.init.trunc_normal_(self.earth_specific_bias, mean=0.0, std=0.02)
 
-    def forward(self, x: Tensor, mask: Tensor, batch_size: int) -> Tensor:
+    @override
+    def forward(self, x: Tensor, mask: Tensor | None, batch_size: int) -> Tensor:
         # Record the original shape of the input (B*num_windows, window_size, dim)
         original_shape = x.shape
 
@@ -1044,7 +1050,7 @@ class EarthAttention3D(nn.Module):
         query = query * self.scale
 
         # Calculated the attention, a learnable bias is added to fix the nonuniformity of the grid.
-        self.attention = (
+        qkv_attention = (
             query @ key.mT
         )  # @ denotes matrix multiplication ; B*num_windows_lon*num_windows, head_number, window_size, window_size
 
@@ -1067,9 +1073,9 @@ class EarthAttention3D(nn.Module):
         )  # 1, num_windows, head_number, window_size, window_size
 
         # Add the Earth-Specific bias to the attention matrix
-        attention_shape = self.attention.shape
+        attention_shape = qkv_attention.shape
         # Reshape and permute the lon dim to match the shape of earth_specific_bias
-        attention = self.attention.reshape(
+        attention = qkv_attention.reshape(
             batch_size,
             self.num_windows,
             -1,
@@ -1097,18 +1103,18 @@ class EarthAttention3D(nn.Module):
             attention_shape[-1],
         )
         attention = attention.permute(0, 2, 1, 3, 4, 5)
-        self.attention2 = attention.reshape(attention_shape)
+        attention2 = attention.reshape(attention_shape)
 
         # Mask the attention between non-adjacent pixels, e.g., simply add -100 to the masked element.
         if mask is not None:
-            attention = self.attention2.view(
+            attention = attention2.view(
                 batch_size, -1, self.head_number, original_shape[1], original_shape[1]
             )
             attention = attention + mask.unsqueeze(1).unsqueeze(0)
-            self.attention2 = attention.view(
+            attention2 = attention.view(
                 -1, self.head_number, original_shape[1], original_shape[1]
             )
-        attention = self.softmax(self.attention2)
+        attention = self.softmax(attention2)
         attention = self.dropout(attention)
 
         # Calculated the tensor after spatial mixing.
@@ -1142,6 +1148,7 @@ class MLP(nn.Module):
         self.activation = GELU()
         self.drop = Dropout(p=dropout_rate)
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         x = self.linear1(x)
         x = self.activation(x)

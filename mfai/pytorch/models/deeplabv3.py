@@ -7,6 +7,7 @@ import torch.nn as nn
 from dataclasses_json import dataclass_json
 from torch import Tensor
 from torch.nn import functional as F
+from typing_extensions import override
 
 from .base import AutoPaddingModel, BaseModel, ModelType
 from .resnet import get_resnet_encoder
@@ -37,6 +38,7 @@ class Activation(nn.Module):
                 f"Activation should be callable/sigmoid/softmax/logsoftmax/tanh/None; got {name}"
             )
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         return self.activation(x)
 
@@ -56,8 +58,9 @@ class DeepLabV3Decoder(nn.Sequential):
         )
         self.out_channels = out_channels
 
-    def forward(self, *features: tuple[Tensor]) -> Tensor:
-        return super().forward(features[-1])
+    @override
+    def forward(self, input: Tensor, *features: Tensor) -> Tensor:
+        return super().forward(features[-1] if features else input)
 
 
 class DeepLabV3PlusDecoder(nn.Module):
@@ -110,6 +113,7 @@ class DeepLabV3PlusDecoder(nn.Module):
             nn.ReLU(),
         )
 
+    @override
     def forward(self, *features: tuple[Tensor]) -> Tensor:
         aspp_features = self.aspp(features[-1])
         aspp_features = self.up(aspp_features)
@@ -160,11 +164,12 @@ class ASPPPooling(nn.Sequential):
             nn.ReLU(),
         )
 
-    def forward(self, x: Tensor) -> Tensor:
-        size = x.shape[-2:]
+    @override
+    def forward(self, input: Tensor) -> Tensor:
+        size = input.shape[-2:]
         for mod in self:
-            x = mod(x)
-        return F.interpolate(x, size=size, mode="bilinear", align_corners=False)
+            input = mod(input)
+        return F.interpolate(input, size=size, mode="bilinear", align_corners=False)
 
 
 class ASPP(nn.Module):
@@ -202,6 +207,7 @@ class ASPP(nn.Module):
             nn.Dropout(0.5),
         )
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         res_list = []
         for conv in self.convs:
@@ -298,7 +304,11 @@ class DeepLabV3(BaseModel, AutoPaddingModel):
     supported_num_spatial_dims = (2,)
     features_last: bool = False
     model_type: ModelType = ModelType.CONVOLUTIONAL
-    num_spatial_dims: int = 2
+
+    @property
+    @override
+    def num_spatial_dims(self) -> int:
+        return 2
 
     def __init__(
         self,
@@ -345,6 +355,7 @@ class DeepLabV3(BaseModel, AutoPaddingModel):
         self.check_required_attributes()
 
     @property
+    @override
     def settings(self) -> DeepLabV3Settings:
         """
         Returns the settings instance used to configure the model.
@@ -370,8 +381,7 @@ class DeepLabV3(BaseModel, AutoPaddingModel):
 
             elif isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight)
-                if m.bias is not None:
-                    nn.init.constant_(m.bias, 0)
+                nn.init.constant_(m.bias, 0)
 
     def initialize_head(self, module: nn.Module) -> None:
         for m in module.modules():
@@ -400,6 +410,7 @@ class DeepLabV3(BaseModel, AutoPaddingModel):
                 f"or set 'autopad_enabled=True' in the model settings."
             )
 
+    @override
     def forward(self, x: Tensor) -> Tensor | tuple[Tensor, Tensor]:
         """Sequentially pass `x` trough model`s encoder, decoder and heads."""
 
@@ -418,6 +429,7 @@ class DeepLabV3(BaseModel, AutoPaddingModel):
 
         return masks
 
+    @override
     def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
         # H and W should be divisible by encoder.output_stride
         d = self.encoder.output_stride
@@ -559,6 +571,7 @@ class DeepLabV3Plus(DeepLabV3):
         self.check_required_attributes()
 
     @property
+    @override
     def settings(self) -> DeepLabV3Settings:
         """
         Returns the settings instance used to configure the model.

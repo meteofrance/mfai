@@ -44,7 +44,7 @@ with torch.no_grad():
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import tensorflow as tf
@@ -52,7 +52,13 @@ import torch
 from torch import Tensor
 
 from mfai.http import download_file
-from mfai.pytorch.models.llms.gpt2 import GPT2, GPT2ModelSize, GPT2Settings
+from mfai.pytorch.models.llms.gpt2 import (
+    GPT2,
+    GPT2ModelSize,
+    GPT2Settings,
+    MultiHeadAttention,
+    TransformerBlock,
+)
 
 GPT2_SIZES: tuple[GPT2ModelSize, ...] = ("124M", "355M", "774M", "1558M")
 
@@ -154,70 +160,54 @@ def load_gpt2_from_dict(gpt2: GPT2, params: dict[str, Any]) -> GPT2:
         gpt2.tok_emb.weight = assign(gpt2.tok_emb.weight, params["wte"])
 
     for b in range(len(params["blocks"])):
+        block = cast(TransformerBlock, gpt2.trf_blocks[b])
+        att = cast(MultiHeadAttention, block.att)
+        fc_in = cast(torch.nn.Linear, block.ff.layers[0])
+        fc_out = cast(torch.nn.Linear, block.ff.layers[2])
         q_w, k_w, v_w = np.split(
             (params["blocks"][b]["attn"]["c_attn"])["w"], 3, axis=-1
         )
-        gpt2.trf_blocks[b].att.W_query.weight = assign(
-            gpt2.trf_blocks[b].att.W_query.weight, q_w.T
-        )
-        gpt2.trf_blocks[b].att.W_key.weight = assign(
-            gpt2.trf_blocks[b].att.W_key.weight, k_w.T
-        )
-        gpt2.trf_blocks[b].att.W_value.weight = assign(
-            gpt2.trf_blocks[b].att.W_value.weight, v_w.T
-        )
+        att.W_query.weight = assign(att.W_query.weight, q_w.T)
+        att.W_key.weight = assign(att.W_key.weight, k_w.T)
+        att.W_value.weight = assign(att.W_value.weight, v_w.T)
 
         q_b, k_b, v_b = np.split(
             (params["blocks"][b]["attn"]["c_attn"])["b"], 3, axis=-1
         )
-        gpt2.trf_blocks[b].att.W_query.bias = assign(
-            gpt2.trf_blocks[b].att.W_query.bias, q_b
-        )
-        gpt2.trf_blocks[b].att.W_key.bias = assign(
-            gpt2.trf_blocks[b].att.W_key.bias, k_b
-        )
-        gpt2.trf_blocks[b].att.W_value.bias = assign(
-            gpt2.trf_blocks[b].att.W_value.bias, v_b
-        )
+        att.W_query.bias = assign(att.W_query.bias, q_b)
+        att.W_key.bias = assign(att.W_key.bias, k_b)
+        att.W_value.bias = assign(att.W_value.bias, v_b)
 
-        gpt2.trf_blocks[b].att.out_proj.weight = assign(
-            gpt2.trf_blocks[b].att.out_proj.weight,
+        att.out_proj.weight = assign(
+            att.out_proj.weight,
             params["blocks"][b]["attn"]["c_proj"]["w"].T,
         )
-        gpt2.trf_blocks[b].att.out_proj.bias = assign(
-            gpt2.trf_blocks[b].att.out_proj.bias,
+        att.out_proj.bias = assign(
+            att.out_proj.bias,
             params["blocks"][b]["attn"]["c_proj"]["b"],
         )
 
-        gpt2.trf_blocks[b].ff.layers[0].weight = assign(
-            gpt2.trf_blocks[b].ff.layers[0].weight,
+        fc_in.weight = assign(
+            fc_in.weight,
             params["blocks"][b]["mlp"]["c_fc"]["w"].T,
         )
-        gpt2.trf_blocks[b].ff.layers[0].bias = assign(
-            gpt2.trf_blocks[b].ff.layers[0].bias,
+        fc_in.bias = assign(
+            fc_in.bias,
             params["blocks"][b]["mlp"]["c_fc"]["b"],
         )
-        gpt2.trf_blocks[b].ff.layers[2].weight = assign(
-            gpt2.trf_blocks[b].ff.layers[2].weight,
+        fc_out.weight = assign(
+            fc_out.weight,
             params["blocks"][b]["mlp"]["c_proj"]["w"].T,
         )
-        gpt2.trf_blocks[b].ff.layers[2].bias = assign(
-            gpt2.trf_blocks[b].ff.layers[2].bias,
+        fc_out.bias = assign(
+            fc_out.bias,
             params["blocks"][b]["mlp"]["c_proj"]["b"],
         )
 
-        gpt2.trf_blocks[b].norm1.scale = assign(
-            gpt2.trf_blocks[b].norm1.scale, params["blocks"][b]["ln_1"]["g"]
-        )
-        gpt2.trf_blocks[b].norm1.shift = assign(
-            gpt2.trf_blocks[b].norm1.shift, params["blocks"][b]["ln_1"]["b"]
-        )
-        gpt2.trf_blocks[b].norm2.scale = assign(
-            gpt2.trf_blocks[b].norm2.scale, params["blocks"][b]["ln_2"]["g"]
-        )
-        gpt2.trf_blocks[b].norm2.shift = assign(
-            gpt2.trf_blocks[b].norm2.shift, params["blocks"][b]["ln_2"]["b"]
-        )
+        block.norm1.scale = assign(block.norm1.scale, params["blocks"][b]["ln_1"]["g"])
+        block.norm1.shift = assign(block.norm1.shift, params["blocks"][b]["ln_1"]["b"])
+        block.norm2.scale = assign(block.norm2.scale, params["blocks"][b]["ln_2"]["g"])
+        block.norm2.shift = assign(block.norm2.shift, params["blocks"][b]["ln_2"]["b"])
 
     gpt2.final_norm.scale = assign(gpt2.final_norm.scale, params["g"])
     gpt2.final_norm.shift = assign(gpt2.final_norm.shift, params["b"])

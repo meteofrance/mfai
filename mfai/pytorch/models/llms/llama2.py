@@ -4,11 +4,11 @@ https://github.com/rasbt/LLMs-from-scratch/.
 """
 
 from dataclasses import dataclass
-from typing import Union
 
 import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
+from typing_extensions import override
 
 from mfai.pytorch.models.base import ModelType
 
@@ -20,6 +20,7 @@ class RMSNorm(nn.Module):
         self.emb_dim = emb_dim
         self.weight = nn.Parameter(torch.ones(emb_dim)).float()
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         means = x.pow(2).mean(dim=-1, keepdim=True)
         x_normed = x * torch.rsqrt(means + self.eps)
@@ -30,6 +31,7 @@ class SiLU(nn.Module):
     def __init__(self) -> None:
         super().__init__()
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         return x * torch.sigmoid(x)
 
@@ -44,6 +46,7 @@ class FeedForwardLlama2(nn.Module):
         self.fc3 = nn.Linear(hidden_dim, emb_dim, dtype=dtype, bias=False)
         self.silu = SiLU()
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         x_fc1 = self.fc1(x)
         x_fc2 = self.fc2(x)
@@ -130,7 +133,10 @@ class MultiHeadAttentionPySDPALlama2(nn.Module):
         )
         self.register_buffer("cos", cos)
         self.register_buffer("sin", sin)
+        self.cos = cos
+        self.sin = sin
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         batch_size, num_tokens, _ = x.shape
 
@@ -200,6 +206,7 @@ class TransformerBlockLlama2(nn.Module):
         self.norm1 = RMSNorm(settings.emb_dim)
         self.norm2 = RMSNorm(settings.emb_dim)
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         # Shortcut connection for attention block
         shortcut = x
@@ -243,7 +250,7 @@ class Llama2(nn.Module):
         return self.tok_emb(tok_ids)
 
     def forward_vectors(
-        self, embeddings: Tensor, first_embedding: Union[None, Tensor] = None
+        self, embeddings: Tensor, first_embedding: Tensor | None = None
     ) -> Tensor:
         """
         Process a batch of embeddings through the model.
@@ -266,5 +273,6 @@ class Llama2(nn.Module):
         logits = self.out_head(x)
         return logits
 
+    @override
     def forward(self, tok_ids: Tensor) -> Tensor:
         return self.forward_vectors(self.embed_tokens(tok_ids))

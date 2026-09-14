@@ -95,7 +95,7 @@ dev = [
   "pytest==9.1.1",
   "pytest-cov==7.1.0",
   "ruff==0.15.20",
-  "pyright[nodejs]==1.1.411",
+  "pyright[nodejs]==1.1.414",
 ]
 
 [project.urls]
@@ -105,7 +105,7 @@ Homepage = "https://github.com/meteofrance/mfai"
 # Enforces the use of prebuilt binary wheels over source distributions
 # that require a build step and executes arbitrary code when installing.
 pip.only-binary = [":all:"]
-exclude-newer = "15 days"
+# exclude-newer = "15 days"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

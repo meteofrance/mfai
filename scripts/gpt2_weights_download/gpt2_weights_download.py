@@ -47,7 +47,6 @@ from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
-import tensorflow as tf
 import torch
 from torch import Tensor
 
@@ -95,6 +94,11 @@ def load_weights_from_tf_checkpoint(
         dict[str, Any]: A dict mapping the checkpoint variable names to
             their loaded values, organized into "blocks" per layer.
     """
+
+    # tensorflow is imported lazily: it is only needed to read the checkpoint,
+    # and importing it eagerly makes it collide with torch/triton in the same
+    # process (segfault on CPU runners).
+    import tensorflow as tf
 
     # Initialize parameters dictionary with empty blocks for each layer
     params: dict[str, Any] = {"blocks": [{} for _ in range(settings["n_layer"])]}
@@ -273,6 +277,11 @@ def download_gpt2_model_weights_as_pytorch_ckpt(
         backup_url = os.path.join(backup_base_url, model_size, filename)
         file_path = os.path.join(model_dir, filename)
         download_file(file_url, file_path, backup_url)
+
+    # tensorflow is imported lazily: it is only needed to read the checkpoint,
+    # and importing it eagerly makes it collide with torch/triton in the same
+    # process (segfault on CPU runners).
+    import tensorflow as tf
 
     # Load settings and params
     tf_ckpt_path = tf.train.latest_checkpoint(model_dir)

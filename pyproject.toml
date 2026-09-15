@@ -95,7 +95,7 @@ dev = [
   "pytest==9.1.1",
   "pytest-cov==7.1.0",
   "ruff==0.15.20",
-  "pyright[nodejs]==1.1.414",
+  "pyright[nodejs]==1.1.411",
 ]
 
 [project.urls]

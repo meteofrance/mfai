@@ -9,11 +9,12 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from functools import cached_property
 from math import ceil
-from typing import Literal, Tuple
+from typing import Literal
 
 import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
+from typing_extensions import override
 
 from .base import AutoPaddingModel, BaseModel, ModelType
 from .resnet import get_resnet_encoder
@@ -53,6 +54,7 @@ class DoubleConv(nn.Module):
             )
         )
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         return self.double_conv(x)
 
@@ -91,7 +93,11 @@ class UNet(BaseModel, AutoPaddingModel):
     supported_num_spatial_dims = (2,)
     features_last = False
     model_type = ModelType.CONVOLUTIONAL
-    num_spatial_dims: int = 2
+
+    @property
+    @override
+    def num_spatial_dims(self) -> int:
+        return 2
 
     def __init__(
         self,
@@ -139,9 +145,11 @@ class UNet(BaseModel, AutoPaddingModel):
         self.check_required_attributes()
 
     @property
+    @override
     def settings(self) -> UNetSettings:
         return self._settings
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         """
         Description of the architecture from the original paper (https://arxiv.org/pdf/1505.04597.pdf):
@@ -222,6 +230,7 @@ class UNet(BaseModel, AutoPaddingModel):
             )
         )
 
+    @override
     def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
         number_pool_layers = self._num_pool_layers
 
@@ -280,7 +289,11 @@ class CustomUNet(BaseModel, AutoPaddingModel):
     supported_num_spatial_dims = (2,)
     features_last = False
     model_type = ModelType.CONVOLUTIONAL
-    num_spatial_dims: int = 2
+
+    @property
+    @override
+    def num_spatial_dims(self) -> int:
+        return 2
 
     def __init__(
         self,
@@ -309,6 +322,7 @@ class CustomUNet(BaseModel, AutoPaddingModel):
 
         # Decoder layers
         self.upconvs, self.decoders = nn.ModuleList(), nn.ModuleList()
+        decoder_out_channel = 0
         for i, (decoder_in_channel, decoder_out_channel) in enumerate(
             zip(decoder_channels[:-1], decoder_channels[1:])
         ):
@@ -326,9 +340,11 @@ class CustomUNet(BaseModel, AutoPaddingModel):
         self.check_required_attributes()
 
     @property
+    @override
     def settings(self) -> CustomUNetSettings:
         return self._settings
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         x, old_shape = self._maybe_padding(data_tensor=x)
         # Encoder part
@@ -349,7 +365,8 @@ class CustomUNet(BaseModel, AutoPaddingModel):
         out = self.final_conv(x)
         return self._maybe_unpadding(out, old_shape=old_shape)
 
-    def validate_input_shape(self, input_shape: torch.Size) -> Tuple[bool, torch.Size]:
+    @override
+    def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
         number_pool_layers = self._settings.encoder_depth
         print(number_pool_layers)
         d = 2**number_pool_layers

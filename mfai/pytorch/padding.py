@@ -1,4 +1,4 @@
-from typing import Literal, Optional, Tuple
+from typing import Literal
 
 import torch
 import torch.nn.functional as F
@@ -9,7 +9,7 @@ def pad_batch(
     batch: Tensor,
     new_shape: torch.Size,
     mode: Literal["constant", "reflect", "replicate", "circular"] = "constant",
-    pad_value: Optional[float] = 0,
+    pad_value: float | None = 0,
 ) -> Tensor:
     """Given batch of 2D or 3D data and a shape new_shape,
         pads the tensor with the given pad_value.
@@ -54,7 +54,7 @@ def pad_batch(
 
 def _get_2D_padding(
     new_shape: torch.Size, old_shape: torch.Size
-) -> Tuple[int, int, int, int]:
+) -> tuple[int, int, int, int]:
     """Returns the left, right, top, bottom paddings that needs to be added to a
         2D tensor of shape old_shape to get new_shape as a new shape.
 
@@ -78,7 +78,7 @@ def _get_2D_padding(
 
 def _get_3D_padding(
     new_shape: torch.Size, old_shape: torch.Size
-) -> Tuple[int, int, int, int, int, int]:
+) -> tuple[int, int, int, int, int, int]:
     diff_z = new_shape[0] - old_shape[-3]
     diff_y = new_shape[1] - old_shape[-2]
     diff_x = new_shape[2] - old_shape[-1]

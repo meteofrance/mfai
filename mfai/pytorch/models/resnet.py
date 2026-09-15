@@ -3,10 +3,10 @@ from typing import Any, Literal
 
 import torch
 import torch.nn as nn
-import torch.utils.model_zoo as model_zoo
 from dataclasses_json import dataclass_json
 from torch import Tensor
 from torchvision.models.resnet import BasicBlock, Bottleneck, ResNet
+from typing_extensions import override
 
 from mfai.pytorch.models import utils
 
@@ -26,6 +26,7 @@ class ResNetEncoder(ResNet):
         self._depth = depth
         self._out_channels = out_channels
         self._in_channels = 3
+        self._output_stride = 32
 
         del self.fc
         del self.avgpool
@@ -39,7 +40,8 @@ class ResNetEncoder(ResNet):
             self.layer4,
         ]
 
-    def forward(self, x: Tensor) -> list[Tensor]:
+    @override
+    def forward(self, x: Tensor) -> list[Tensor]:  # type: ignore[override]
         features = []
         for i in range(self._depth + 1):
             x = self.stages[i](x)
@@ -47,7 +49,8 @@ class ResNetEncoder(ResNet):
 
         return features
 
-    def load_state_dict(self, state_dict: dict[str, Any], **kwargs: Any) -> None:
+    @override
+    def load_state_dict(self, state_dict: dict[str, Any], **kwargs: Any) -> None:  # type: ignore[override]
         state_dict.pop("fc.bias", None)
         state_dict.pop("fc.weight", None)
         super().load_state_dict(state_dict, **kwargs)
@@ -163,7 +166,7 @@ def get_resnet_encoder(
             raise KeyError(
                 f"No url is available for the pretrained encoder choosen ({name})."
             )
-        encoder.load_state_dict(model_zoo.load_url(url))
+        encoder.load_state_dict(torch.hub.load_state_dict_from_url(url))
     else:
         pretrained = False
 
@@ -214,6 +217,7 @@ class ResNet50(torch.nn.Module):
         self.settings = settings
         self.num_channels = num_channels
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         y_hat = self.encoder(x)[-1]
         y_hat = self.avgpool(y_hat)
@@ -281,6 +285,7 @@ class ResNet50MLM(torch.nn.Module):
         else:
             self.fc = torch.nn.Linear(512 * 4, num_classes * settings.num_tokens)
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         """Forward function of the ResNetMLM vision encoder.
 

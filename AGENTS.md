@@ -65,6 +65,7 @@ You are writting code in the mfai library, wich should be compatible for all ver
 ### Post contribution rules
 - After any modification to a Python file, load the `python-code-formating` skill and
   run `uvx ruff@0.15.20 format` then `uvx ruff@0.15.20 check --fix` on the changed files.
+- Load the `type-checking` skill and run `uv run pyright`.
 - Fix any errors the check raises, then re-run both until no errors are raised.
 - Load the `unit-test` skill and run the relevant tests to validate the changed code.
 

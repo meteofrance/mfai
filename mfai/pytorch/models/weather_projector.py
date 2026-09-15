@@ -8,6 +8,7 @@ from dataclasses import dataclass
 import einops
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
+from typing_extensions import override
 
 
 class PatchMaker(nn.Module):
@@ -41,6 +42,7 @@ class PatchMaker(nn.Module):
 
             self.zero_pad = nn.ZeroPad2d((0, x_padding, 0, y_padding))
 
+    @override
     def forward(self, t: Tensor) -> Tensor:
         """
         1. zero pad if padding is enabled
@@ -95,6 +97,7 @@ class WeatherProjector(nn.Module):
         self.patcher = PatchMaker(self.patch_size, self.settings.input_dims[-2:])
         self.proj = nn.Linear(input_dim, self.settings.embedding_dim)
 
+    @override
     def forward(self, t: Tensor) -> Tensor:
         """Forward function of the WeatherProjector vision encoder.
 

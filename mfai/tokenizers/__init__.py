@@ -5,12 +5,13 @@ Module with various LLM tokenizers wrapped in a common interface.
 import re
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, List
+from typing import Any
 
 import sentencepiece as spm
 import tiktoken  # noqa
 from huggingface_hub import hf_hub_download, login
 from tokenizers import Tokenizer as HFTokenizer
+from typing_extensions import override
 
 from mfai.encoding import get_tiktoken_encoding
 
@@ -21,7 +22,7 @@ class Tokenizer(ABC):
         pass
 
     @abstractmethod
-    def encode(self, text: str, *args: Any, **kwargs: Any) -> List[int]:
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> list[int]:
         pass
 
     @abstractmethod
@@ -55,7 +56,7 @@ class GPT2Tokenizer(Tokenizer):
         for tok in new_special_tokens:
             if (
                 tok not in self.special_tokens
-                and tok not in self.base_tokenizer._special_tokens
+                and tok not in self.base_tokenizer._special_tokens  # type: ignore[reportPrivateUsage]
             ):
                 self.special_tokens.append(tok)
 
@@ -66,25 +67,31 @@ class GPT2Tokenizer(Tokenizer):
 
         self.tokenizer = tiktoken.Encoding(
             name=f"custom_{self.name()}",
-            pat_str=self.base_tokenizer._pat_str,
-            mergeable_ranks=self.base_tokenizer._mergeable_ranks,
-            special_tokens={**self.base_tokenizer._special_tokens} | special_tokens,
+            pat_str=self.base_tokenizer._pat_str,  # type: ignore[reportPrivateUsage]
+            mergeable_ranks=self.base_tokenizer._mergeable_ranks,  # type: ignore[reportPrivateUsage]
+            special_tokens={**self.base_tokenizer._special_tokens}  # type: ignore[reportPrivateUsage]
+            | special_tokens,
         )
 
+    @override
     def name(self) -> str:
         return "gpt2"
 
-    def encode(self, text: str, *args: Any, **kwargs: Any) -> List[int]:
+    @override
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> list[int]:
         return self.tokenizer.encode(text, allowed_special="all", *args, **kwargs)
 
+    @override
     def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
         return self.tokenizer.decode(tokens, *args, **kwargs)
 
     @property
+    @override
     def eot_token(self) -> int:
         return self.tokenizer.eot_token
 
     @property
+    @override
     def vocab_size(self) -> int:
         return self.tokenizer.n_vocab
 
@@ -107,20 +114,25 @@ class LlamaTokenizer(Tokenizer):
         sp.load(tokenizer_file)
         self.tokenizer = sp
 
+    @override
     def name(self) -> str:
         return "llama"
 
-    def encode(self, text: str, *args: Any, **kwargs: Any) -> List[int]:
+    @override
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> list[int]:
         return self.tokenizer.encode_as_ids(text)
 
+    @override
     def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
         return self.tokenizer.decode_pieces(tokens)
 
     @property
+    @override
     def eot_token(self) -> int:
         return self.tokenizer.eos_id()
 
     @property
+    @override
     def vocab_size(self) -> int:
         return self.tokenizer.vocab_size()
 
@@ -185,22 +197,27 @@ class MiniGPT2Tokenizer(Tokenizer, ABC):
                 self.token_to_id[base_tok_id] = mini_tok_id
                 self.id_to_token[mini_tok_id] = base_tok_id
 
+    @override
     def name(self) -> str:
         return "mini_" + self.gpt2_tokenizer.name()
 
-    def encode(self, text: str, *args: Any, **kwargs: Any) -> List[int]:
+    @override
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> list[int]:
         base_token_ids = self.gpt2_tokenizer.encode(text)
         return [self.token_to_id[x] for x in base_token_ids]
 
+    @override
     def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
         base_tokens = [self.id_to_token[x] for x in tokens]
         return self.gpt2_tokenizer.decode(base_tokens)
 
     @property
+    @override
     def eot_token(self) -> int:
         return self.token_to_id[self.gpt2_tokenizer.eot_token]
 
     @property
+    @override
     def vocab_size(self) -> int:
         return len(self.token_to_id)
 
@@ -247,9 +264,11 @@ class Qwen3_5Tokenizer(Tokenizer):
 
         self.pad_token_id = self._special_to_id["<|endoftext|>"]
 
+    @override
     def name(self) -> str:
         return "Qwen3.5"
 
+    @override
     def encode(self, text: str) -> list[int]:
         stripped = text.strip()
         if stripped in self._special_to_id and "\n" not in stripped:
@@ -266,6 +285,7 @@ class Qwen3_5Tokenizer(Tokenizer):
                 ids.extend(self._tok.encode(part).ids)
         return ids
 
+    @override
     def decode(self, tokens: list, *args: Any, **kwargs: Any) -> str:
         return self._tok.decode(tokens, skip_special_tokens=False)
 
@@ -283,6 +303,7 @@ class Qwen3_5Tokenizer(Tokenizer):
         return s
 
     @property
+    @override
     def eot_token(self) -> int:
         if "Base" not in self._REPO_ID:
             eos_token = "<|im_end|>"  # For classic or "Instruct" Qwen model
@@ -291,5 +312,6 @@ class Qwen3_5Tokenizer(Tokenizer):
         return self._special_to_id[eos_token]
 
     @property
+    @override
     def vocab_size(self) -> int:
         return self._tok.get_vocab_size()

@@ -11,6 +11,7 @@ import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
 from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import offload_wrapper
+from typing_extensions import override
 
 from mfai.pytorch.models.base import BaseModel, ModelType
 from mfai.pytorch.models.utils import expand_to_batch
@@ -29,7 +30,7 @@ if any(
         "To use the GraphLAM, HiLAM or HiLAMParallel models, "
         "install mfai's optional dependency\n\tmfai[weather_forecast]"
     )
-import torch_geometric as pyg
+import torch_geometric.nn as pyg_nn
 
 
 def offload_to_cpu(model: nn.ModuleList) -> nn.ModuleList:
@@ -53,6 +54,7 @@ class GraphLamSettings:
     mesh_aggr: Literal["sum", "mean"] = "sum"
     processor_layers: int = 4
 
+    @override
     def __str__(self) -> str:
         return f"ModelCOnfig : {self.hidden_dims}x{self.hidden_layers}x{self.processor_layers}"
 
@@ -67,7 +69,12 @@ class BaseGraphModel(BaseModel):
     hierarchical = False
     onnx_supported = False
     supported_num_spatial_dims = (1,)
-    num_spatial_dims: int = 1
+
+    @property
+    @override
+    def num_spatial_dims(self) -> int:
+        return 1
+
     model_type = ModelType.GRAPH
     features_last: bool = True
 
@@ -283,6 +290,7 @@ class BaseGraphModel(BaseModel):
             self.mesh_up_features, self.mesh_down_features = [], []
 
     @property
+    @override
     def settings(self) -> GraphLamSettings:
         return self._settings
 
@@ -316,6 +324,7 @@ class BaseGraphModel(BaseModel):
         """
         raise NotImplementedError("process_step not implemented")
 
+    @override
     def forward(
         self,
         x: Tensor,
@@ -365,6 +374,7 @@ class BaseHiGraphModel(BaseGraphModel):
 
     hierarchical = True
 
+    @override
     def finalize_graph_model(self) -> None:
         # Track number of nodes, edges on each level
         # Flatten lists for efficient embedding
@@ -477,6 +487,7 @@ class BaseHiGraphModel(BaseGraphModel):
         if self.settings.offload_to_cpu:
             self.mesh_read_gnns = offload_to_cpu(self.mesh_read_gnns)
 
+    @override
     def get_num_mesh(self) -> tuple[int, int]:
         """
         Compute number of mesh nodes from loaded features,
@@ -486,6 +497,7 @@ class BaseHiGraphModel(BaseGraphModel):
         N_mesh_ignore = N_mesh - self.mesh_static_features[0].shape[0]
         return N_mesh, N_mesh_ignore
 
+    @override
     def embedd_mesh_nodes(self) -> Tensor:
         """
         Embedd static mesh features
@@ -494,6 +506,7 @@ class BaseHiGraphModel(BaseGraphModel):
         """
         return self.mesh_embedders[0](self.mesh_static_features[0])
 
+    @override
     def process_step(self, mesh_rep: Tensor) -> Tensor:
         """
         Process step of embedd-process-decode framework
@@ -598,6 +611,7 @@ class GraphLAM(BaseGraphModel):
     Used for GC-LAM and L1-LAM in Oskarsson et al. (2023).
     """
 
+    @override
     def finalize_graph_model(self) -> None:
         if self.hierarchical:
             raise ValueError("GraphLAM does not use a hierarchical mesh graph")
@@ -633,7 +647,7 @@ class GraphLAM(BaseGraphModel):
             )
             for _ in range(self.settings.processor_layers)
         ]
-        self.processor = pyg.nn.Sequential(
+        self.processor = pyg_nn.Sequential(
             "mesh_rep, edge_rep",
             [
                 (net, "mesh_rep, mesh_rep, edge_rep -> mesh_rep, edge_rep")
@@ -641,6 +655,7 @@ class GraphLAM(BaseGraphModel):
             ],
         )
 
+    @override
     def get_num_mesh(self) -> tuple[int, int]:
         """
         Compute number of mesh nodes from loaded features,
@@ -648,6 +663,7 @@ class GraphLAM(BaseGraphModel):
         """
         return len(self.mesh_static_features), 0
 
+    @override
     def embedd_mesh_nodes(self) -> Tensor:
         """
         Embedd static mesh features
@@ -655,6 +671,7 @@ class GraphLAM(BaseGraphModel):
         """
         return self.mesh_embedder(self.mesh_static_features[0])  # (N_mesh, d_h)
 
+    @override
     def process_step(self, mesh_rep: Tensor) -> Tensor:
         """
         Process step of embedd-process-decode framework
@@ -680,6 +697,7 @@ class HiLAMParallel(BaseHiGraphModel):
     This is a somewhat simpler alternative to the sequential message passing of Hi-LAM.
     """
 
+    @override
     def finalize_graph_model(self) -> None:
         super().finalize_graph_model()
 
@@ -704,7 +722,7 @@ class HiLAMParallel(BaseHiGraphModel):
                 )
                 for _ in range(self.settings.processor_layers)
             ]
-            self.processor = pyg.nn.Sequential(
+            self.processor = pyg_nn.Sequential(
                 "mesh_rep, edge_rep",
                 [
                     (net, "mesh_rep, mesh_rep, edge_rep -> mesh_rep, edge_rep")
@@ -712,6 +730,7 @@ class HiLAMParallel(BaseHiGraphModel):
                 ],
             )
 
+    @override
     def hi_processor_step(
         self,
         mesh_rep_levels: list[Tensor],
@@ -767,6 +786,7 @@ class HiLAM(BaseHiGraphModel):
     The Hi-LAM model from Oskarsson et al. (2023).
     """
 
+    @override
     def finalize_graph_model(self) -> None:
         super().finalize_graph_model()
 
@@ -929,6 +949,7 @@ class HiLAM(BaseHiGraphModel):
 
         return mesh_rep_levels, mesh_same_rep, mesh_up_rep
 
+    @override
     def hi_processor_step(
         self,
         mesh_rep_levels: list[Tensor],

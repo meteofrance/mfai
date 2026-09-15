@@ -4,10 +4,11 @@ from typing import Literal
 import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
+from typing_extensions import override
 
 from mfai.pytorch.models.base import ModelType
 from mfai.pytorch.models.llms import FreezeMLMMixin
-from mfai.pytorch.models.llms.gpt2 import GPT2
+from mfai.pytorch.models.llms.gpt2 import GPT2, CrossAttentionGPT2
 from mfai.pytorch.models.llms.llama2 import Llama2
 from mfai.pytorch.models.llms.llama3 import Llama3
 from mfai.pytorch.models.resnet import (
@@ -91,7 +92,7 @@ class Fuyu(FreezeMLMMixin, nn.Module):
         # Init the backend model
         # Here we only pass the settings that are relevant to the backend model
         # by iterating over the fields of the settings object and filtering out
-        self.backend: GPT2 | Llama2 | Llama3
+        self.backend: GPT2 | Llama2 | CrossAttentionGPT2 | Llama3
         if settings.backend == "gpt2":
             self.backend = GPT2(
                 GPT2.settings_kls(
@@ -189,6 +190,7 @@ class Fuyu(FreezeMLMMixin, nn.Module):
     def context_length(self) -> int:
         return self.backend.context_length
 
+    @override
     def forward(
         self, txt_token_ids: Tensor, vision_inputs: Tensor | list[Tensor]
     ) -> Tensor:
@@ -242,11 +244,11 @@ class Fuyu(FreezeMLMMixin, nn.Module):
 
         if self.settings.inject_vision_each_stage:
             # Inject vision tokens at each stage
-            logits = self.backend.forward_vectors(
+            logits = self.backend.forward_vectors(  # type: ignore[reportCallIssue]
                 x, first_embedding=vis_txt_embeds[:, : vis_embeds.shape[1]]
             )
         else:
-            logits = self.backend.forward_vectors(x)
+            logits = self.backend.forward_vectors(x)  # type: ignore[reportCallIssue]
         # logits shape = (B, max(n'_tok * time + n_tok, context_len), vocab_size)
 
         # removes the vision part of the logits

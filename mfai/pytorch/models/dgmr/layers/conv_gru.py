@@ -4,6 +4,7 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 from torch.nn.utils.parametrizations import spectral_norm
+from typing_extensions import override
 
 
 class ConvGRUCell(torch.nn.Module):
@@ -56,6 +57,7 @@ class ConvGRUCell(torch.nn.Module):
             eps=sn_eps,
         )
 
+    @override
     def forward(self, x: Tensor, prev_state: Tensor) -> Tensor:
         """
         Conv GRU forward, returning the current state.
@@ -103,6 +105,7 @@ class ConvGRU(torch.nn.Module):
         self.output_channels = output_channels
         self.cell = ConvGRUCell(input_channels, output_channels, kernel_size, sn_eps)
 
+    @override
     def forward(self, x: Tensor, hidden_state: Tensor) -> Tensor:
         """Apply the forward function on each cell prior to returning it as a stack.
 

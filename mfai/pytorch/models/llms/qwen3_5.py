@@ -22,8 +22,10 @@ from dataclasses_json import dataclass_json
 from huggingface_hub import snapshot_download
 from safetensors.torch import load_file
 from torch import Tensor
+from typing_extensions import override
 
 from mfai.pytorch.models.base import ModelType
+from mfai.tokenizers import Qwen3_5Tokenizer
 
 use_fast_conv1d = False
 try:
@@ -44,7 +46,6 @@ use_flash_att = False
 try:
     from fla.modules import FusedRMSNormGated  # type: ignore[import-not-found]
     from fla.ops.gated_delta_rule import (  # type: ignore[import-not-found]
-        chunk_gated_delta_rule,
         fused_recurrent_gated_delta_rule,
     )
 
@@ -92,6 +93,7 @@ class Qwen3_5RMSNormGated(nn.Module):
         self.weight = nn.Parameter(torch.ones(hidden_size))
         self.variance_epsilon = eps
 
+    @override
     def forward(self, hidden_states: Tensor, gate: Tensor | None = None) -> Tensor:
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(torch.float32)
@@ -267,11 +269,7 @@ def torch_recurrent_gated_delta_rule(
     core_attn_out = torch.zeros(batch_size, num_heads, sequence_length, v_head_dim).to(
         value
     )
-    last_recurrent_state: Tensor = (
-        torch.zeros(batch_size, num_heads, k_head_dim, v_head_dim).to(value)
-        if initial_state is None
-        else initial_state.to(value)
-    )
+    last_recurrent_state: Tensor = initial_state.to(value)
 
     for i in range(sequence_length):
         q_t = query[:, :, i]
@@ -363,14 +361,12 @@ class Qwen3_5GatedDeltaNet(nn.Module):
         self.A_log = nn.Parameter(torch.log(A))
 
         self.norm = (
-            FusedRMSNormGated(
+            FusedRMSNormGated(  # type: ignore[reportPossiblyUnboundVariable]
                 self.head_v_dim,
                 eps=self.layer_norm_epsilon,
                 activation=self.activation,
                 device=torch.cuda.current_device(),
-                dtype=settings.dtype
-                if settings.dtype is not None
-                else torch.get_default_dtype(),
+                dtype=settings.dtype,
             )
             if use_flash_att
             else Qwen3_5RMSNormGated(self.head_v_dim, eps=self.layer_norm_epsilon)
@@ -380,14 +376,14 @@ class Qwen3_5GatedDeltaNet(nn.Module):
 
         # self.causal_conv1d_fn = causal_conv1d_fn if use_fast_implem else None
         self.causal_conv1d_update = (
-            causal_conv1d_update if use_fast_conv1d else torch_causal_conv1d_update
+            causal_conv1d_update  # type: ignore[reportPossiblyUnboundVariable]
+            if use_fast_conv1d
+            else torch_causal_conv1d_update
         )
         # FIXME: on Hopper architecture (H100) Triton produces wrong results #640
-        self.chunk_gated_delta_rule = (
-            chunk_gated_delta_rule if False else torch_chunk_gated_delta_rule
-        )
+        self.chunk_gated_delta_rule = torch_chunk_gated_delta_rule
         self.recurrent_gated_delta_rule = (
-            fused_recurrent_gated_delta_rule
+            fused_recurrent_gated_delta_rule  # type: ignore[reportPossiblyUnboundVariable]
             if use_flash_att
             else torch_recurrent_gated_delta_rule
         )
@@ -400,9 +396,9 @@ class Qwen3_5GatedDeltaNet(nn.Module):
         self.in_proj_a = nn.Linear(self.hidden_size, self.num_v_heads, bias=False)
 
         # Notebook adaptation for dtype consistency.
-        if settings.dtype is not None:
-            self.to(dtype=settings.dtype)
+        self.to(dtype=settings.dtype)
 
+    @override
     def forward(
         self,
         hidden_states: Tensor,
@@ -452,7 +448,7 @@ class Qwen3_5GatedDeltaNet(nn.Module):
                 )
                 cache_params.conv_states[self.layer_idx] = conv_state
             if use_fast_conv1d:
-                mixed_qkv = causal_conv1d_fn(
+                mixed_qkv = causal_conv1d_fn(  # type: ignore[reportPossiblyUnboundVariable]
                     x=mixed_qkv,
                     weight=self.conv1d.weight.squeeze(1),
                     bias=self.conv1d.bias,
@@ -532,6 +528,7 @@ class RMSNorm(nn.Module):
     def _norm(self, x: Tensor) -> Tensor:
         return x * torch.rsqrt(x.pow(2).mean(dim=-1, keepdim=True) + self.eps)
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         x_norm = self._norm(x.float())
         x_norm = x_norm * (1.0 + self.weight.float())
@@ -643,6 +640,7 @@ class GroupedQueryAttention(nn.Module):
         else:
             self.q_norm = self.k_norm = None
 
+    @override
     def forward(
         self,
         x: Tensor,
@@ -691,7 +689,7 @@ class GroupedQueryAttention(nn.Module):
         keys = keys.repeat_interleave(self.group_size, dim=1)
         values = values_cat_raw.repeat_interleave(self.group_size, dim=1)
 
-        if cache is not None and cache[0] is not None:
+        if cache is not None:
             next_cache = (
                 torch.cat([cache[0], keys_new], dim=2),
                 torch.cat([cache[1], values_new], dim=2),
@@ -730,6 +728,7 @@ class FeedForward(nn.Module):
             settings.hidden_dim, settings.emb_dim, dtype=settings.dtype, bias=False
         )
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         x_fc1 = self.fc1(x)
         x_fc2 = self.fc2(x)
@@ -762,6 +761,7 @@ class TransformerBlock(nn.Module):
         self.norm1 = RMSNorm(settings.emb_dim, eps=settings.rms_norm_eps)
         self.norm2 = RMSNorm(settings.emb_dim, eps=settings.rms_norm_eps)
 
+    @override
     def forward(
         self,
         x: Tensor,
@@ -835,11 +835,7 @@ class Qwen3_5(nn.Module):
             settings.emb_dim, settings.vocab_size, bias=False, dtype=settings.dtype
         )
 
-        head_dim = (
-            settings.emb_dim // settings.n_heads
-            if settings.head_dim is None
-            else settings.head_dim
-        )
+        head_dim = settings.head_dim
         cos, sin = compute_rope_params(
             head_dim=head_dim,
             theta_base=settings.rope_base,
@@ -868,6 +864,7 @@ class Qwen3_5(nn.Module):
         mask = mask_full[row_slice, :pos_end][None, None, :, :]
         return mask
 
+    @override
     def forward(self, in_idx: Tensor, cache: KVCache | None = None) -> Tensor:
         x = self.tok_emb(in_idx)
 
@@ -1155,10 +1152,10 @@ class Qwen3_5(nn.Module):
                 # Feed only the new token to the model; cache handles history
                 logits = self(next_token, cache=cache)
 
-    def generate_text(  # type: ignore[no-untyped-def]
+    def generate_text(
         self,
         prompt: str,
-        tokenizer,
+        tokenizer: Qwen3_5Tokenizer,
         max_new_tokens: int,
     ) -> str:
         input_token_ids = tokenizer.encode(prompt)
@@ -1181,8 +1178,6 @@ class Qwen3_5(nn.Module):
 if __name__ == "__main__":
     # Exemple of basic usage
     import time
-
-    from mfai.tokenizers import Qwen3_5Tokenizer
 
     # Create model Qwen 3.5
     torch.manual_seed(123)

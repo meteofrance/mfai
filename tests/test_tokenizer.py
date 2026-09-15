@@ -1,8 +1,9 @@
 import copy
 
 import pytest
+from typing_extensions import override
 
-from mfai.tokenizers import GPT2Tokenizer, MiniGPT2Tokenizer, Tokenizer
+from mfai.tokenizers import GPT2Tokenizer, MiniGPT2Tokenizer
 
 LOREM_IPSUM = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
 LOREM_IPSUM_SPECIAL_TOKENS = "<|Lorem ipsum|> dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<|endoftext|>"
@@ -12,6 +13,7 @@ LOREM_IPSUM_SPECIAL_TOKENS = "<|Lorem ipsum|> dolor sit amet, consectetur adipis
 ########################         MiniGPT2Tokenizer           ###########################
 ########################################################################################
 class LoremMiniTokenizer(MiniGPT2Tokenizer):
+    @override
     def tokens(self) -> set:
         unique_tokens = set()
         tokens = self.gpt2_tokenizer.encode(LOREM_IPSUM)
@@ -28,7 +30,7 @@ def test_mini_tokenizer() -> None:
 ##########################         Special Tokens           ############################
 ########################################################################################
 @pytest.mark.parametrize("tokenizer", [GPT2Tokenizer(), LoremMiniTokenizer()])
-def test_add_special_tokens(tokenizer: Tokenizer) -> None:
+def test_add_special_tokens(tokenizer: GPT2Tokenizer | MiniGPT2Tokenizer) -> None:
     base_tokenizer = copy.deepcopy(tokenizer)
 
     # Check that the vocab_size is increased by 1 because we add 1 new special token

@@ -9,6 +9,7 @@ from dataclasses import dataclass
 import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
+from typing_extensions import override
 
 from mfai.pytorch.models.base import ModelType
 from mfai.pytorch.models.llms.llama2 import FeedForwardLlama2
@@ -86,6 +87,7 @@ class GroupedQueryAttention(nn.Module):
         self.W_query = nn.Linear(d_in, d_out, bias=False)
         self.out_proj = nn.Linear(d_out, d_out, bias=False)
 
+    @override
     def forward(
         self,
         x: Tensor,
@@ -199,6 +201,7 @@ class TransformerBlock(nn.Module):
         self.norm1 = nn.RMSNorm(emb_dim, eps=1e-5, dtype=dtype)
         self.norm2 = nn.RMSNorm(emb_dim, eps=1e-5, dtype=dtype)
 
+    @override
     def forward(
         self,
         x: Tensor,
@@ -314,6 +317,7 @@ class Llama3(nn.Module):
                 diagonal=1,
             )
 
+        x = embeddings
         for i, block in enumerate(self.trf_blocks):
             if first_embedding is not None:
                 # replace the first token of x by the corresponding first_embedding
@@ -337,6 +341,7 @@ class Llama3(nn.Module):
         logits = self.out_head(x)
         return logits
 
+    @override
     def forward(self, tok_ids: Tensor, use_cache: bool = False) -> Tensor:
         """Performs the forward pass of the LLama3 model.
 

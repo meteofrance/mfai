@@ -7,13 +7,14 @@ Added 2d support and Bilinear interpolation for upsampling.
 import warnings
 from dataclasses import dataclass
 from math import ceil, erf, sqrt
-from typing import Union
+from typing import Literal
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
 from torch.nn.functional import scaled_dot_product_attention
+from typing_extensions import override
 
 from .base import AutoPaddingModel, BaseModel, ModelType
 
@@ -28,7 +29,7 @@ try:
         get_padding,
     )
     from monai.networks.layers.utils import get_norm_layer
-    from monai.utils import optional_import
+    from monai.utils.module import optional_import
 except ImportError as e:
     print(
         "To use the UNetRPP model, install mfai's "
@@ -125,6 +126,7 @@ class LayerNorm(nn.Module):
             raise NotImplementedError
         self.normalized_shape = (normalized_shape,)
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         if self.data_format == "channels_last":
             return F.layer_norm(
@@ -158,7 +160,7 @@ class TransformerBlock(nn.Module):
         pos_embed: bool = False,
         spatial_dims: int = 2,
         proj_size: int = 64,
-        attention_code: str = "torch",
+        attention_code: Literal["torch", "flash"] = "torch",
     ) -> None:
         """
         Args:
@@ -216,22 +218,25 @@ class TransformerBlock(nn.Module):
         if pos_embed:
             self.pos_embed = nn.Parameter(torch.zeros(1, input_size, hidden_size))
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         if self.spatial_dims == 2:
-            B, C, H, W = x.shape
-            x = x.reshape(B, C, H * W).permute(0, 2, 1)
+            bsz, c, h, w = x.shape
+            dep = 1
+            tokens = h * w
         else:
-            B, C, H, W, D = x.shape
-            x = x.reshape(B, C, H * W * D).permute(0, 2, 1)
+            bsz, c, h, w, dep = x.shape
+            tokens = h * w * dep
+        x = x.reshape(bsz, c, tokens).permute(0, 2, 1)
 
         if self.pos_embed is not None:
             x = x + self.pos_embed
         attn = x + self.gamma * self.epa_block(self.norm(x))
 
         if self.spatial_dims == 2:
-            attn_skip = attn.reshape(B, H, W, C).permute(0, 3, 1, 2)
+            attn_skip = attn.reshape(bsz, h, w, c).permute(0, 3, 1, 2)
         else:
-            attn_skip = attn.reshape(B, H, W, D, C).permute(0, 4, 1, 2, 3)
+            attn_skip = attn.reshape(bsz, h, w, dep, c).permute(0, 4, 1, 2, 3)
 
         attn = self.conv51(attn_skip)
         x = attn_skip + self.conv8(attn)
@@ -265,7 +270,7 @@ class EPA(nn.Module):
         channel_attn_drop: float = 0.1,
         spatial_attn_drop: float = 0.1,
         proj_size: int = 64,
-        attention_code: str = "torch",
+        attention_code: Literal["torch", "flash"] = "torch",
     ):
         super().__init__()
         self.num_heads = num_heads
@@ -276,7 +281,7 @@ class EPA(nn.Module):
             )
         self.attention_code = attention_code
         if attention_code == "flash":
-            from flash_attn import flash_attn_func
+            from flash_attn import flash_attn_func  # type: ignore[import-not-found]
 
             self.attn_func = flash_attn_func
             self.use_scaled_dot_product_CA = True
@@ -284,7 +289,7 @@ class EPA(nn.Module):
             self.attn_func = scaled_dot_product_attention
             self.use_scaled_dot_product_CA = True
         else:
-            self.use_scaled_dot_product_CA = False
+            self.use_scaled_dot_product_CA = False  # type: ignore[reportUnreachable]
 
         # qkvv are 4 linear layers (query_shared, key_shared, value_spatial, value_channel)
         self.qkvv = nn.Linear(hidden_size, hidden_size * 4, bias=qkv_bias)
@@ -301,6 +306,7 @@ class EPA(nn.Module):
         self.attn_drop = nn.Dropout(channel_attn_drop)
         self.attn_drop_2 = nn.Dropout(spatial_attn_drop)
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         # TODO: fully optimize this function for each attention code
         B, N, C = x.shape
@@ -331,7 +337,7 @@ class EPA(nn.Module):
                 x_CA = self.attn_func(
                     q_shared, k_shared, v_CA, dropout_p=self.attn_drop.p
                 )
-            elif self.attention_code == "flash":
+            else:
                 # flash attention expects inputs of shape (batch_size, seqlen, nheads, headdim)
                 # so we need to permute the dimensions from (batch, head, channels, spatial_dim)
                 # to (batch, channels, head, spatial_dim)
@@ -370,7 +376,7 @@ class EPA(nn.Module):
 
         return x_CA + x_SA
 
-    @torch.jit.ignore
+    @torch.jit.ignore  # type: ignore[arg-type]
     def no_weight_decay(self) -> set[str]:
         return {"temperature", "temperature2"}
 
@@ -391,7 +397,7 @@ class UNetRPPEncoder(nn.Module):
         transformer_dropout_rate: float = 0.1,
         downsampling_rate: int = 4,
         proj_sizes: tuple[int, ...] = (64, 64, 64, 32),
-        attention_code: str = "torch",
+        attention_code: Literal["torch", "flash"] = "torch",
     ):
         super().__init__()
 
@@ -479,6 +485,7 @@ class UNetRPPEncoder(nn.Module):
             hidden_states.append(x)
         return x, hidden_states
 
+    @override
     def forward(self, x: Tensor) -> tuple[Tensor, list[Tensor]]:
         x, hidden_states = self.forward_features(x)
         return x, hidden_states
@@ -499,7 +506,7 @@ class UNetRUpBlock(nn.Module):
         conv_decoder: bool = False,
         linear_upsampling: bool = False,
         proj_size: int = 64,
-        attention_code: str = "torch",
+        attention_code: Literal["torch", "flash"] = "torch",
     ) -> None:
         """
         Args:
@@ -662,6 +669,7 @@ class UNetRUpBlock(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
+    @override
     def forward(self, inp: Tensor, skip: Tensor | None = None) -> Tensor:
         """
         Forward pass:
@@ -696,7 +704,7 @@ class UNetRPPSettings:
     num_heads_encoder: int = 4
     num_heads_decoder: int = 4
     pos_embed: str = "perceptron"
-    norm_name: Union[tuple, str] = "instance"
+    norm_name: tuple | str = "instance"
     dropout_rate: float = 0.0
     depths: tuple[int, ...] = (3, 3, 3, 3)
     conv_op: str = "Conv2d"
@@ -715,7 +723,7 @@ class UNetRPPSettings:
     # Options: "torch" : scaled_dot_product_attention from torch.nn.functional
     #          "flash" : flash_attention from flash_attn (loose dependency imported only if needed)
     #          "manual" : manual implementation from the original paper
-    attention_code: str = "torch"
+    attention_code: Literal["torch", "flash"] = "torch"
 
 
 class UNetRPP(BaseModel, AutoPaddingModel):
@@ -904,10 +912,12 @@ class UNetRPP(BaseModel, AutoPaddingModel):
             self.check_required_attributes()
 
     @property
+    @override
     def settings(self) -> UNetRPPSettings:
         return self._settings
 
     @property
+    @override
     def num_spatial_dims(self) -> int:
         return self.settings.spatial_dims
 
@@ -932,6 +942,7 @@ class UNetRPP(BaseModel, AutoPaddingModel):
 
         return x
 
+    @override
     def forward(self, x: Tensor) -> Tensor | list[Tensor]:
         x, old_shape = self._maybe_padding(data_tensor=x)
 
@@ -979,6 +990,7 @@ class UNetRPP(BaseModel, AutoPaddingModel):
             logits = self._maybe_unpadding(logits, old_shape=old_shape)
             return logits
 
+    @override
     def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
         d = self.dim_divider
 

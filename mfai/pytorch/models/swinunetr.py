@@ -1,10 +1,11 @@
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from math import ceil
 from typing import Any, Literal
 
 import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
+from typing_extensions import override
 
 from .base import AutoPaddingModel, ModelABC, ModelType
 
@@ -36,8 +37,8 @@ class SwinUNetRSettings:
     use_v2: bool = False
     autopad_enabled: bool = False
 
-    def monai_kwargs(self) -> dict:
-        settings_dict = self.to_dict()
+    def monai_kwargs(self) -> dict[str, Any]:
+        settings_dict = asdict(self)
         settings_dict.pop("autopad_enabled")
         return settings_dict
 
@@ -66,6 +67,7 @@ class UpsampleBlock(nn.Module):
             norm_name=norm_name,
         )
 
+    @override
     def forward(self, inp: Tensor, skip: Tensor) -> Tensor:
         out = self.upsampler(inp)
         # concat along the channels/features dimension
@@ -85,7 +87,11 @@ class SwinUNetR(ModelABC, MonaiSwinUNETR, AutoPaddingModel):
     supported_num_spatial_dims: tuple[int, ...] = (2,)
     features_last: bool = False
     model_type: ModelType = ModelType.VISION_TRANSFORMER
-    num_spatial_dims: int = 2
+
+    @property
+    @override
+    def num_spatial_dims(self) -> int:
+        return 2
 
     def __init__(
         self,
@@ -117,34 +123,34 @@ class SwinUNetR(ModelABC, MonaiSwinUNETR, AutoPaddingModel):
         feature_size = settings.feature_size
         # Using custom up sample block, type differs from base class MonaiSwinUNETR
         # ignoring type for mypy check
-        self.decoder5 = UpsampleBlock(  # type:ignore[assignment]
+        self.decoder5 = UpsampleBlock(
             in_channels=16 * feature_size,
             out_channels=8 * feature_size,
             kernel_size=3,
             norm_name=settings.norm_name,
         )
 
-        self.decoder4 = UpsampleBlock(  # type:ignore[assignment]
+        self.decoder4 = UpsampleBlock(
             in_channels=feature_size * 8,
             out_channels=feature_size * 4,
             kernel_size=3,
             norm_name=settings.norm_name,
         )
 
-        self.decoder3 = UpsampleBlock(  # type:ignore[assignment]
+        self.decoder3 = UpsampleBlock(
             in_channels=feature_size * 4,
             out_channels=feature_size * 2,
             kernel_size=3,
             norm_name=settings.norm_name,
         )
-        self.decoder2 = UpsampleBlock(  # type:ignore[assignment]
+        self.decoder2 = UpsampleBlock(
             in_channels=feature_size * 2,
             out_channels=feature_size,
             kernel_size=3,
             norm_name=settings.norm_name,
         )
 
-        self.decoder1 = UpsampleBlock(  # type:ignore[assignment]
+        self.decoder1 = UpsampleBlock(
             in_channels=feature_size,
             out_channels=feature_size,
             kernel_size=3,
@@ -154,14 +160,17 @@ class SwinUNetR(ModelABC, MonaiSwinUNETR, AutoPaddingModel):
         self.check_required_attributes()
 
     @property
+    @override
     def settings(self) -> SwinUNetRSettings:
         return self._settings
 
-    def forward(self, x: Tensor) -> Tensor:
-        x, old_shape = self._maybe_padding(data_tensor=x)
+    @override
+    def forward(self, x_in: Tensor) -> Tensor:
+        x, old_shape = self._maybe_padding(data_tensor=x_in)
         logits = super().forward(x)
         return self._maybe_unpadding(logits, old_shape=old_shape)
 
+    @override
     def validate_input_shape(self, input_shape: torch.Size) -> tuple[bool, torch.Size]:
         d = self.patch_size**5
 

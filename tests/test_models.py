@@ -10,13 +10,14 @@ import dataclasses
 import tempfile
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pytest
 import torch
 from marshmallow.exceptions import ValidationError
 from torch import Tensor, nn
+from typing_extensions import override
 
 from mfai.pytorch import export_to_onnx, onnx_load_and_infer, padding
 from mfai.pytorch.models import (
@@ -35,7 +36,7 @@ nn_classes: dict[ModelType, list[type[nn.Module]]] = {
     model_type: [
         architecture
         for architecture in list(model_registry.values())
-        if architecture.model_type == model_type
+        if cast(type[ModelABC], architecture).model_type == model_type
     ]
     for model_type in ModelType
 }
@@ -61,6 +62,7 @@ class FakeSumDataset(torch.utils.data.Dataset):
     def __len__(self) -> int:
         return 4
 
+    @override
     def __getitem__(self, idx: int) -> tuple[Tensor, Tensor]:
         x = torch.rand(*self.input_shape)
         y = torch.sum(x, 0).unsqueeze(0)
@@ -84,6 +86,7 @@ class FakePanguDataset(torch.utils.data.Dataset):
     def __len__(self) -> int:
         return 4
 
+    @override
     def __getitem__(self, idx: int) -> dict[str, Tensor]:
         input_surface = torch.rand(*self.surface_shape)
         input_plevel = torch.rand(*self.plevel_shape)

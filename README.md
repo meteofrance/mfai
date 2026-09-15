@@ -666,7 +666,7 @@ options:
                         skip_null.
   --seed_everything SEED_EVERYTHING
                         Set to an int to run seed_everything with this value before classes instantiation.Set to True to use a
-                        random seed. (type: Union[bool, int], default: True)
+                        random seed. (type: bool | int, default: True)
 
 Customize every aspect of training via flags:
   --trainer CONFIG      Path to a configuration file.
@@ -674,7 +674,7 @@ Customize every aspect of training via flags:
                         Show the help for the given subclass of Accelerator and exit.
   --trainer.accelerator ACCELERATOR
                         Supports passing different accelerator types ("cpu", "gpu", "tpu", "ipu", "hpu", "mps", "auto") as well as
-                        custom accelerator instances. (type: Union[str, Accelerator], default: auto, known subclasses:
+                        custom accelerator instances. (type: str | Accelerator, default: auto, known subclasses:
                         lightning.pytorch.accelerators.CPUAccelerator, lightning.pytorch.accelerators.CUDAAccelerator,
                         lightning.pytorch.accelerators.MPSAccelerator, lightning.pytorch.accelerators.XLAAccelerator)
   --trainer.strategy.help CLASS_PATH_OR_NAME
@@ -702,17 +702,17 @@ Segformer architecture with extra:
   --model.model.out_channels OUT_CHANNELS
                         (required, type: int)
   --model.model.input_shape [ITEM,...]
-                        (required, type: Tuple[int, int])
+                        (required, type: tuple[int, int])
 
-SegformerSettings(dims: Tuple[int, ...] = (32, 64, 160, 256), heads: Tuple[int, ...] = (1, 2, 5, 8), ff_expansion: Tuple[int, ...] = (8, 8, 4, 4), reduction_ratio: Tuple[int, ...] = (8, 4, 2, 1), num_layers: int = 2, decoder_dim: int = 256, num_downsampling_chans: int = 32):
+SegformerSettings(dims: tuple[int, ...] = (32, 64, 160, 256), heads: tuple[int, ...] = (1, 2, 5, 8), ff_expansion: tuple[int, ...] = (8, 8, 4, 4), reduction_ratio: tuple[int, ...] = (8, 4, 2, 1), num_layers: int = 2, decoder_dim: int = 256, num_downsampling_chans: int = 32):
   --model.model.settings.dims [ITEM,...]
-                        (type: Tuple[int, ], default: (32, 64, 160, 256))
+                        (type: tuple[int, ], default: (32, 64, 160, 256))
   --model.model.settings.heads [ITEM,...]
-                        (type: Tuple[int, ], default: (1, 2, 5, 8))
+                        (type: tuple[int, ], default: (1, 2, 5, 8))
   --model.model.settings.ff_expansion [ITEM,...]
-                        (type: Tuple[int, ], default: (8, 8, 4, 4))
+                        (type: tuple[int, ], default: (8, 8, 4, 4))
   --model.model.settings.reduction_ratio [ITEM,...]
-                        (type: Tuple[int, ], default: (8, 4, 2, 1))
+                        (type: tuple[int, ], default: (8, 4, 2, 1))
   --model.model.settings.num_layers NUM_LAYERS
                         (type: int, default: 2)
   --model.model.settings.decoder_dim DECODER_DIM

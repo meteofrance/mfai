@@ -4,6 +4,7 @@ from typing import Literal
 import torch
 from dataclasses_json import dataclass_json
 from torch import Tensor, nn
+from typing_extensions import override
 
 from mfai.pytorch.models.base import ModelType
 from mfai.pytorch.models.llms.fuyu import FreezeMLMMixin
@@ -129,6 +130,7 @@ class XAttMultiModalLM(FreezeMLMMixin, nn.Module):
     def context_length(self) -> int:
         return self.backend.context_length
 
+    @override
     def forward(
         self, txt_token_ids: Tensor, vision_inputs: Tensor | list[Tensor]
     ) -> Tensor:

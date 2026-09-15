@@ -74,7 +74,7 @@ def cli_main(args: ArgsType = None) -> None:
 def test_cli() -> None:
     cli_main(
         [
-            "--model.model=Segformer",
+            "--model.model=mfai.pytorch.models.segformer.Segformer",
             "--model.type_segmentation=binary",
             "--model.loss=torch.nn.BCEWithLogitsLoss",
             "--model.model.in_channels=2",

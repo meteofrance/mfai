@@ -76,4 +76,10 @@ def onnx_load_and_infer(
         filepath, providers=["CPUExecutionProvider"]
     )
 
-    return ort_session.run(None, {"input": to_numpy(input)})
+    outputs = ort_session.run(None, {"input": to_numpy(input)})
+    if len(outputs) != 1:
+        raise ValueError(
+            "onnx_load_and_infer expects a single-output model, "
+            f"got {len(outputs)} outputs."
+        )
+    return numpy.asarray(outputs[0])

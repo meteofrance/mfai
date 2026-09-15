@@ -3,14 +3,16 @@ VIT adapted from Lucidrain's repo https://github.com/lucidrains/vit-pytorch.
 Added a multi-token output for multimodal LLMs.
 """
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable, Literal
+from typing import Literal
 
 import torch
 from dataclasses_json import dataclass_json
 from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
 from torch import Size, Tensor, nn
+from typing_extensions import override
 
 from .base import AutoPaddingModel, BaseModel, ModelType
 
@@ -36,6 +38,7 @@ class FeedForward(nn.Module):
             nn.Dropout(dropout),
         )
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         return self.net(x)
 
@@ -64,6 +67,7 @@ class Attention(nn.Module):
             else nn.Identity()
         )
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         x = self.norm(x)
 
@@ -103,6 +107,7 @@ class Transformer(nn.Module):
                 )
             )
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         for attn, ff in self.layers:
             x = attn(x) + x
@@ -162,6 +167,7 @@ class ViTCore(nn.Module):
             emb_dim, n_layers, n_heads, dim_head, mlp_dim, transformer_dropout
         )
 
+    @override
     def forward(self, img: Tensor) -> Tensor:
         # img shape = (B, features, h, w)
         x = self.to_patch_embedding(img)
@@ -200,6 +206,9 @@ class VitPaddingMixin(AutoPaddingModel):
     Mixin implementing the padding logic for ViT models.
     """
 
+    patch_size: tuple[int, int]
+
+    @override
     def validate_input_shape(self, input_shape: Size) -> tuple[bool, Size]:
         """
         Check if the input shape is divisible by the patch size and returns the new shape if padding is required.
@@ -231,7 +240,11 @@ class ViTClassifier(BaseModel, VitPaddingMixin):
     supported_num_spatial_dims: tuple[int, ...] = (2,)
     features_last: bool = False
     model_type: ModelType = ModelType.ENCODER
-    num_spatial_dims: int = 2
+
+    @property
+    @override
+    def num_spatial_dims(self) -> int:
+        return 2
 
     def __init__(
         self,
@@ -273,6 +286,7 @@ class ViTClassifier(BaseModel, VitPaddingMixin):
         self.mlp_head = nn.Linear(settings.emb_dim, out_channels)
         self.check_required_attributes()
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         x, _ = self._maybe_padding(data_tensor=x)
         x = self.vit(x)
@@ -285,6 +299,7 @@ class ViTClassifier(BaseModel, VitPaddingMixin):
         return self.mlp_head(x)
 
     @property
+    @override
     def settings(self) -> ViTClassifierSettings:
         """
         Returns the settings instance used to configure for this model.
@@ -303,7 +318,11 @@ class VitEncoder(BaseModel, VitPaddingMixin):
     supported_num_spatial_dims: tuple[int, ...] = (2,)
     features_last: bool = False
     model_type: ModelType = ModelType.ENCODER
-    num_spatial_dims: int = 2
+
+    @property
+    @override
+    def num_spatial_dims(self) -> int:
+        return 2
 
     def __init__(
         self,
@@ -343,6 +362,7 @@ class VitEncoder(BaseModel, VitPaddingMixin):
         )
         self.check_required_attributes()
 
+    @override
     def forward(self, x: Tensor) -> Tensor:
         """Forward function of the ViT vision encoder.
 
@@ -357,6 +377,7 @@ class VitEncoder(BaseModel, VitPaddingMixin):
         return self.vit(x)
 
     @property
+    @override
     def settings(self) -> ViTEncoderSettings:
         """
         Returns the settings instance used to configure for this model.

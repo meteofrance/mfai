@@ -41,7 +41,7 @@ def test_named_tensor() -> None:
 
     # Concat should raise because of feature names collision
     with pytest.raises(ValueError):
-        nt | nt2
+        _ = nt | nt2
 
     nt3 = NamedTensor(
         torch.rand(3, 256, 256, 50),
@@ -64,7 +64,7 @@ def test_named_tensor() -> None:
     )
     assert nt4.spatial_dim_idx == [1, 2]
     with pytest.raises(ValueError):
-        nt | nt4
+        _ = nt | nt4
 
     # different number of dims => ValueError
     nt5 = NamedTensor(
@@ -74,7 +74,7 @@ def test_named_tensor() -> None:
         feature_dim_name="levels",
     )
     with pytest.raises(ValueError):
-        nt | nt5
+        _ = nt | nt5
 
     # missing feature with __getitem__ lookup => ValueError
     with pytest.raises(ValueError):
@@ -266,6 +266,7 @@ def test_named_tensor() -> None:
     assert feature_tensor.shape == (3, 1, 256, 256)
 
     # Test iteration on batch dimension
+    i = 0
     for i, nt_dim in enumerate(nt.iter_dim("batch")):
         assert nt_dim.tensor.shape == (256, 256, 50)
         assert nt_dim.names == ["lat", "lon", "features"]

@@ -1,6 +1,5 @@
+from abc import ABC
 from importlib.util import find_spec
-
-from torch import nn
 
 # Check for optional dependency
 if any(
@@ -18,16 +17,19 @@ if any(
 from mfai.pytorch.models.llms.gpt2 import GPT2, CrossAttentionGPT2
 from mfai.pytorch.models.llms.llama2 import Llama2
 from mfai.pytorch.models.llms.llama3 import Llama3
+from mfai.pytorch.models.resnet import ResNet50MLM
+from mfai.pytorch.models.vit import VitEncoder
+from mfai.pytorch.models.weather_projector import WeatherProjector
 
 
-class FreezeMLMMixin:
+class FreezeMLMMixin(ABC):
     """
     A Mixin for (un)freezing llm and vision stages
     of a multimodal model.
     """
 
     backend: GPT2 | Llama2 | CrossAttentionGPT2 | Llama3
-    vision_encoder: nn.Module
+    vision_encoder: WeatherProjector | ResNet50MLM | VitEncoder
 
     def freeze_llm(self) -> None:
         """

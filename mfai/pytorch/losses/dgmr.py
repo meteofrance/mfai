@@ -3,6 +3,7 @@
 import torch
 from torch import Tensor, nn
 from torch.nn import functional as F
+from typing_extensions import override
 
 
 class GridCellLoss(nn.Module):
@@ -24,6 +25,7 @@ class GridCellLoss(nn.Module):
         super().__init__()
         self.precip_weight_cap = precip_weight_cap
 
+    @override
     def forward(self, generated_images: Tensor, targets: Tensor) -> Tensor:
         r"""
         Forward function.

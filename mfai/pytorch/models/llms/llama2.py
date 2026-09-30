@@ -131,7 +131,7 @@ class MultiHeadAttentionPySDPALlama2(nn.Module):
         self.register_buffer("cos", cos)
         self.register_buffer("sin", sin)
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor, cache: tuple[Tensor, Tensor] | None = None) -> Tensor:
         batch_size, num_tokens, _ = x.shape
 
         # (b, num_tokens, embed_dim) --> (b, num_tokens, 3 * embed_dim)
@@ -149,6 +149,12 @@ class MultiHeadAttentionPySDPALlama2(nn.Module):
         keys = compute_rope(keys, self.cos, self.sin)
         queries = compute_rope(queries, self.cos, self.sin)
 
+        if cache is not None:
+            prev_k, prev_v = cache
+            keys = torch.cat([prev_k, keys], dim=2)
+            values = torch.cat([prev_v, values], dim=2)
+        next_cache: tuple[Tensor, Tensor] = (keys, values)
+
         # use_dropout = 0. if not self.training else self.dropout
 
         context_vec = nn.functional.scaled_dot_product_attention(
@@ -164,7 +170,7 @@ class MultiHeadAttentionPySDPALlama2(nn.Module):
 
         context_vec = self.proj(context_vec)
 
-        return context_vec
+        return context_vec, next_cache
 
 
 @dataclass_json
@@ -200,11 +206,11 @@ class TransformerBlockLlama2(nn.Module):
         self.norm1 = RMSNorm(settings.emb_dim)
         self.norm2 = RMSNorm(settings.emb_dim)
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor, cache: tuple[Tensor | Tensor]) -> Tensor:
         # Shortcut connection for attention block
         shortcut = x
         x = self.norm1(x)
-        x = self.att(x)  # Shape [batch_size, num_tokens, emb_size]
+        x, next_cache = self.att(x, cache=cache)  # Shape [batch_size, num_tokens, emb_size]
         x = x + shortcut  # Add the original input back
 
         # Shortcut connection for feed-forward block
@@ -213,7 +219,7 @@ class TransformerBlockLlama2(nn.Module):
         x = self.ff(x)
         x = x + shortcut  # Add the original input back
 
-        return x
+        return x, next_cache
 
 
 class Llama2(nn.Module):
@@ -239,11 +245,15 @@ class Llama2(nn.Module):
         self.out_head = nn.Linear(self.emb_dim, vocab_size, bias=False)
         self.context_length = settings.context_length
 
+        # To use KV cache
+        self.current_pos = 0  # Track current position in KV cache
+        self.cache: list[None | tuple[Tensor, Tensor]] = [None] * settings.n_layers
+
     def embed_tokens(self, tok_ids: Tensor) -> Tensor:
         return self.tok_emb(tok_ids)
 
     def forward_vectors(
-        self, embeddings: Tensor, first_embedding: Union[None, Tensor] = None
+        self, embeddings: Tensor, first_embedding: Union[None, Tensor] = None, use_cache: bool = False,
     ) -> Tensor:
         """
         Process a batch of embeddings through the model.
@@ -266,5 +276,28 @@ class Llama2(nn.Module):
         logits = self.out_head(x)
         return logits
 
-    def forward(self, tok_ids: Tensor) -> Tensor:
-        return self.forward_vectors(self.embed_tokens(tok_ids))
+    def forward(self, tok_ids: Tensor, use_cache: bool = False) -> Tensor:
+        """Performs the forward pass of the GPT-2 model.
+
+        Args:
+            tok_ids (Tensor): Tensor of token IDs input with shape (batch_size, sequence_length).
+            use_cache (bool, optional): If True, uses attention caching for computational
+                optimization. Defaults to False.
+
+        Returns:
+            Tensor: Model output tensor with shape (batch_size, sequence_length, hidden_size) or
+                (batch_size, context_length, hidden_size) depending on model dimensions.
+        """
+        x = self.embed_tokens(tok_ids, use_cache=use_cache)
+        return self.forward_vectors(x, use_cache=use_cache)
+
+    def reset_kv_cache(self) -> None:
+        """Clear the Key-Value cache used for incremental decoding.
+
+        This method must be called between processing independent sequences to
+        prevent cross-sequence contamination in autoregressive generation. After
+        calling this method, the cache will be reset to None and ready for a new
+        sequence.
+        """
+        self.current_pos = 0
+        self.cache = [None] * self.settings.n_layers

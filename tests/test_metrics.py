@@ -213,6 +213,13 @@ def test_far() -> None:
     expected_value = 0.5
     assert pytest.approx(auc_value.cpu(), 0.001) == expected_value
 
+    # Testing reset
+    metric = FAR("binary")
+    metric.update(preds, targets)
+    metric.reset()
+    metric.update(targets, targets)
+    torch.testing.assert_close(metric.compute(), torch.tensor(0.0))
+
 
 def test_fnr() -> None:
     """

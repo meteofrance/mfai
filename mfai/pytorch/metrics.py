@@ -31,6 +31,10 @@ class FAR(Metric):
     def compute(self) -> Tensor:
         return 1 - self.p.compute()
 
+    @override
+    def reset(self) -> None:
+        self.p.reset()
+
 
 class FNR(Metric):
     """

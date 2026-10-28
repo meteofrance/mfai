@@ -47,6 +47,9 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
+    - name: Install git  # necessary for the checkout and changed-py-files actions
+      run: apt-get update && apt-get install -y git
+
     - name: Gather Python changed files
       if: github.event_name == 'pull_request'
       id: changed-py-files

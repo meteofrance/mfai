@@ -19,11 +19,11 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
     - name: Gather Python changed files
       id: changed-py-files
-      uses: tj-actions/changed-files@7dee1b0c1557f278e5c7dc244927139d78c0e22a # v47.0.4
+      uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
       with:
         files: |
           *.py
@@ -45,26 +45,27 @@ jobs:
       image: python:3.11-slim
 
     steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
     - name: Install git  # necessary for the checkout and changed-py-files actions
       run: apt-get update && apt-get install -y git
-
-    - uses: actions/checkout@v4
-
-    - name: Install uv
-      uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0
-      with:
-        python-version: 3.11
-        enable-cache: true
 
     - name: Gather Python changed files
       if: github.event_name == 'pull_request'
       id: changed-py-files
-      uses: tj-actions/changed-files@v47
+      uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
       with:
         files: |
           *.py
           **/*.py
           pyproject.toml
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0
+      if: github.event_name != 'pull_request' || steps.changed-py-files.outputs.any_changed == 'true' 
+      with:
+        python-version: 3.11
+        enable-cache: true
 
     - name: Install dependencies
       if: github.event_name != 'pull_request' || steps.changed-py-files.outputs.any_changed == 'true' 

@@ -8,6 +8,7 @@ dependencies = [
   "numpy>=1.24",
   "tensorflow>=2.15",
   "torch>=2.5",
+  "urllib3>=2.8.0",
 ]
 
 [dependency-groups]

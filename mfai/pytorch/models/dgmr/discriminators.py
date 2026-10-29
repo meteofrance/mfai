@@ -22,8 +22,9 @@ class Discriminator(torch.nn.Module):
 
     def __init__(
         self,
-        input_channels: int = 12,
-        num_spatial_frames: int = 8,
+        input_channels: int,
+        num_spatial_frames: int,
+        padding_mode: Literal["zeros", "reflect", "replicate", "circular"],
         conv_type: Literal["standard", "coord", "3d"] = "standard",
         temporal_num_layers: int = 3,
         spatial_num_layers: int = 4,
@@ -34,6 +35,7 @@ class Discriminator(torch.nn.Module):
         Args:
             input_channels: Number of input channels.
             num_spatial_frames: Number of spatial frames.
+            padding_mode: `'zeros'`, `'reflect'`, `'replicate'` or `'circular'`.
             conv_type: the specified convolution type.
             temporal_num_layers: Number of intermediate DBlock layers to use in the temporal discriminator.
             spatial_num_layers: Number of intermediate DBlock layers to use in the spatial discriminator.
@@ -44,11 +46,13 @@ class Discriminator(torch.nn.Module):
         self.spatial_discriminator = SpatialDiscriminator(
             input_channels=input_channels,
             num_timesteps=num_spatial_frames,
+            padding_mode=padding_mode,
             conv_type=conv_type,
             num_layers=spatial_num_layers,
         )
         self.temporal_discriminator = TemporalDiscriminator(
             input_channels=input_channels,
+            padding_mode=padding_mode,
             conv_type=conv_type,
             num_layers=temporal_num_layers,
         )
@@ -73,8 +77,9 @@ class TemporalDiscriminator(torch.nn.Module):
 
     def __init__(
         self,
-        input_channels: int = 12,
-        num_layers: int = 3,
+        input_channels: int,
+        num_layers: int,
+        padding_mode: Literal["zeros", "reflect", "replicate", "circular"],
         conv_type: Literal["standard", "coord", "3d"] = "standard",
     ) -> None:
         """
@@ -83,6 +88,7 @@ class TemporalDiscriminator(torch.nn.Module):
         Args:
             input_channels: Number of channels per timestep
             num_layers: Number of intermediate DBlock layers to use
+            padding_mode: `'zeros'`, `'reflect'`, `'replicate'` or `'circular'`.
             conv_type: Type of 2d convolutions to use, see satflow/models/utils.py for options
 
         """
@@ -93,12 +99,14 @@ class TemporalDiscriminator(torch.nn.Module):
         self.d1 = DBlock(
             input_channels=4 * input_channels,
             output_channels=internal_chn * input_channels,
+            padding_mode=padding_mode,
             conv_type="3d",
             first_relu=False,
         )
         self.d2 = DBlock(
             input_channels=internal_chn * input_channels,
             output_channels=2 * internal_chn * input_channels,
+            padding_mode=padding_mode,
             conv_type="3d",
         )
         self.intermediate_dblocks = torch.nn.ModuleList()
@@ -108,6 +116,7 @@ class TemporalDiscriminator(torch.nn.Module):
                 DBlock(
                     input_channels=internal_chn * input_channels,
                     output_channels=2 * internal_chn * input_channels,
+                    padding_mode=padding_mode,
                     conv_type=conv_type,
                 )
             )
@@ -115,6 +124,7 @@ class TemporalDiscriminator(torch.nn.Module):
         self.d_last = DBlock(
             input_channels=2 * internal_chn * input_channels,
             output_channels=2 * internal_chn * input_channels,
+            padding_mode=padding_mode,
             keep_same_output=True,
             conv_type=conv_type,
         )
@@ -180,8 +190,9 @@ class SpatialDiscriminator(torch.nn.Module):
 
     def __init__(
         self,
-        input_channels: int = 12,
-        num_timesteps: int = 8,
+        input_channels: int,
+        num_timesteps: int,
+        padding_mode: Literal["zeros", "reflect", "replicate", "circular"],
         num_layers: int = 4,
         conv_type: Literal["standard", "coord", "3d"] = "standard",
     ) -> None:
@@ -190,7 +201,8 @@ class SpatialDiscriminator(torch.nn.Module):
 
         Args:
             input_channels: Number of input channels per timestep
-            num_timesteps: Number of timesteps to use, in the paper 8/18 timesteps were chosen
+            num_timesteps: Number of timesteps to use, in the paper 8/18 timesteps were chosen.
+            padding_mode: `'zeros'`, `'reflect'`, `'replicate'` or `'circular'`.
             num_layers: Number of intermediate DBlock layers to use
             conv_type: Type of 2d convolutions to use, see satflow/models/utils.py for options
 
@@ -206,6 +218,7 @@ class SpatialDiscriminator(torch.nn.Module):
         self.d1 = DBlock(
             input_channels=4 * input_channels,
             output_channels=2 * internal_chn * input_channels,
+            padding_mode=padding_mode,
             first_relu=False,
             conv_type=conv_type,
         )
@@ -216,12 +229,14 @@ class SpatialDiscriminator(torch.nn.Module):
                 DBlock(
                     input_channels=internal_chn * input_channels,
                     output_channels=2 * internal_chn * input_channels,
+                    padding_mode=padding_mode,
                     conv_type=conv_type,
                 )
             )
         self.d6 = DBlock(
             input_channels=2 * internal_chn * input_channels,
             output_channels=2 * internal_chn * input_channels,
+            padding_mode=padding_mode,
             keep_same_output=True,
             conv_type=conv_type,
         )

@@ -1,6 +1,6 @@
 """The coordinate convolution class."""
 
-from typing import Any, Literal
+from typing import Any
 
 import torch
 from torch import Tensor, nn
@@ -69,7 +69,6 @@ class CoordConv(nn.Module):
         self,
         in_channels: int,
         out_channels: int,
-        padding_mode: Literal["zeros", "reflect", "replicate", "circular"],
         with_r: bool = False,
         **kwargs: Any,
     ) -> None:
@@ -77,10 +76,8 @@ class CoordConv(nn.Module):
         Args:
             in_channels : number of input channels.
             out_channels : number of output channels.
-            padding_mode: `'zeros'`, `'reflect'`, `'replicate'` or `'circular'`.
             with_r : boolean =False,.
             **kwargs : dict[str, Unknown].
-
         """
         super().__init__()
         self.addcoords = AddCoords(with_r=with_r)

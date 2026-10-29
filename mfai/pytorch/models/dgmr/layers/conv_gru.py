@@ -112,7 +112,11 @@ class ConvGRU(torch.nn.Module):
         super().__init__()
         self.output_channels = output_channels
         self.cell = ConvGRUCell(
-            input_channels=input_channels, output_channels=output_channels, kernel_size=kernel_size, sn_eps=sn_eps, padding_mode=padding_mode
+            input_channels=input_channels,
+            output_channels=output_channels,
+            kernel_size=kernel_size,
+            sn_eps=sn_eps,
+            padding_mode=padding_mode,
         )
 
     @override

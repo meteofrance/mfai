@@ -106,7 +106,6 @@ class UpsampleGBlock(torch.nn.Module):
         self,
         input_channels: int,
         output_channels: int,
-        padding_mode: Literal["zeros", "reflect", "replicate", "circular"],
         conv_type: Literal["standard", "coord", "3d"] = "standard",
         spectral_normalized_eps: float = 0.0001,
     ) -> None:
@@ -116,7 +115,6 @@ class UpsampleGBlock(torch.nn.Module):
         Args:
             input_channels: Number of input channels.
             output_channels: Number of output channels.
-            padding_mode: `'zeros'`, `'reflect'`, `'replicate'` or `'circular'`.
             conv_type: Type of the convolution. Default is 'standard'.
             spectral_normalized_eps: Epsilon for numerical stability in calculating norms. Default is 1e-4.
 
@@ -133,7 +131,6 @@ class UpsampleGBlock(torch.nn.Module):
                 in_channels=input_channels,
                 out_channels=output_channels,
                 kernel_size=1,
-                padding_mode=padding_mode,
             ),
             eps=spectral_normalized_eps,
         )
@@ -145,7 +142,6 @@ class UpsampleGBlock(torch.nn.Module):
                 out_channels=input_channels,
                 kernel_size=3,
                 padding=1,
-                padding_mode=padding_mode,
             ),
             eps=spectral_normalized_eps,
         )
@@ -155,7 +151,6 @@ class UpsampleGBlock(torch.nn.Module):
                 out_channels=output_channels,
                 kernel_size=3,
                 padding=1,
-                padding_mode=padding_mode,
             ),
             eps=spectral_normalized_eps,
         )

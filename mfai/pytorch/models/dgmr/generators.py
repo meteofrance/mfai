@@ -1,6 +1,7 @@
 """Generator module."""
 
 import logging
+from typing import Literal
 
 import einops
 import torch
@@ -8,7 +9,6 @@ from torch import Tensor
 from torch.nn.modules.pixelshuffle import PixelShuffle
 from torch.nn.utils.parametrizations import spectral_norm
 from typing_extensions import override
-from typing import Literal
 
 from ..base import ModelType
 from .blocks import (
@@ -78,7 +78,6 @@ class Sampler(torch.nn.Module):
         self.up_g1 = UpsampleGBlock(
             input_channels=latent_channels,
             output_channels=latent_channels // 2,
-            padding_mode=padding_mode,
         )
 
         self.convGRU2 = ConvGRU(
@@ -103,7 +102,6 @@ class Sampler(torch.nn.Module):
         self.up_g2 = UpsampleGBlock(
             input_channels=latent_channels // 2,
             output_channels=latent_channels // 4,
-            padding_mode=padding_mode,
         )
 
         self.convGRU3 = ConvGRU(
@@ -128,7 +126,6 @@ class Sampler(torch.nn.Module):
         self.up_g3 = UpsampleGBlock(
             input_channels=latent_channels // 4,
             output_channels=latent_channels // 8,
-            padding_mode=padding_mode,
         )
 
         self.convGRU4 = ConvGRU(
@@ -153,7 +150,6 @@ class Sampler(torch.nn.Module):
         self.up_g4 = UpsampleGBlock(
             input_channels=latent_channels // 8,
             output_channels=latent_channels // 16,
-            padding_mode=padding_mode,
         )
 
         self.bn = torch.nn.BatchNorm2d(latent_channels // 16)

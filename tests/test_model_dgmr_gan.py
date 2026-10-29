@@ -31,8 +31,11 @@ def test_dblock() -> None:
 
 
 def test_gblock() -> None:
-    model = GBlock(input_channels=12,
-        output_channels=12,padding_mode="zeros",)
+    model = GBlock(
+        input_channels=12,
+        output_channels=12,
+        padding_mode="zeros",
+    )
     x = torch.rand((2, 12, 128, 128))
     out = model(x)
     y = torch.rand((2, 12, 128, 128))
@@ -95,9 +98,7 @@ def test_latent_conditioning_stack() -> None:
 
 def test_context_conditioning_stack() -> None:
     model = ContextConditioningStack(
-        input_channels= 1,
-        output_channels= 768,
-        padding_mode="zeros"
+        input_channels=1, output_channels=768, padding_mode="zeros"
     )
     x = torch.rand((2, 4, 1, 128, 128))
     out = model(x)
@@ -132,7 +133,7 @@ def test_temporal_discriminator() -> None:
 def test_spatial_discriminator() -> None:
     model = SpatialDiscriminator(
         input_channels=1,
-        num_timesteps= 8,
+        num_timesteps=8,
         padding_mode="zeros",
     )
     x = torch.rand((2, 18, 1, 128, 128))

@@ -20,7 +20,7 @@ from mfai.pytorch.models.dgmr.layers.conv_gru import ConvGRU, ConvGRUCell
 
 
 def test_dblock() -> None:
-    model = DBlock(12, 12, keep_same_output=True)
+    model = DBlock(12, 12, padding_mode="zeros", keep_same_output=True)
     x = torch.rand((2, 12, 128, 128))
     out = model(x)
     y = torch.rand((2, 12, 128, 128))
@@ -31,7 +31,11 @@ def test_dblock() -> None:
 
 
 def test_gblock() -> None:
-    model = GBlock()
+    model = GBlock(
+        input_channels=12,
+        output_channels=12,
+        padding_mode="zeros",
+    )
     x = torch.rand((2, 12, 128, 128))
     out = model(x)
     y = torch.rand((2, 12, 128, 128))
@@ -45,6 +49,7 @@ def test_conv_gru_cell() -> None:
     model = ConvGRUCell(
         input_channels=768 + 384,
         output_channels=384,
+        padding_mode="zeros",
         kernel_size=3,
     )
     x = torch.rand((2, 768, 32, 32))
@@ -61,6 +66,7 @@ def test_conv_gru() -> None:
     model = ConvGRU(
         input_channels=768 + 384,
         output_channels=384,
+        padding_mode="zeros",
         kernel_size=3,
     )
     init_states = [torch.rand((2, 384, 32, 32)) for _ in range(4)]
@@ -76,7 +82,11 @@ def test_conv_gru() -> None:
 
 
 def test_latent_conditioning_stack() -> None:
-    model = LatentConditioningStack()
+    model = LatentConditioningStack(
+        input_channels=8,
+        output_channels=768,
+        padding_mode="zeros",
+    )
     x = torch.rand((2, 4, 1, 128, 128))
     out = model(x)
     assert out.size() == (1, 768, 4, 4)
@@ -87,7 +97,9 @@ def test_latent_conditioning_stack() -> None:
 
 
 def test_context_conditioning_stack() -> None:
-    model = ContextConditioningStack()
+    model = ContextConditioningStack(
+        input_channels=1, output_channels=768, padding_mode="zeros"
+    )
     x = torch.rand((2, 4, 1, 128, 128))
     out = model(x)
     y = torch.rand((2, 96, 32, 32))
@@ -104,7 +116,11 @@ def test_context_conditioning_stack() -> None:
 
 
 def test_temporal_discriminator() -> None:
-    model = TemporalDiscriminator(input_channels=1)
+    model = TemporalDiscriminator(
+        input_channels=1,
+        num_layers=3,
+        padding_mode="zeros",
+    )
     x = torch.rand((2, 8, 1, 256, 256))
     out = model(x)
     assert out.shape == (2, 1, 1)
@@ -115,7 +131,11 @@ def test_temporal_discriminator() -> None:
 
 
 def test_spatial_discriminator() -> None:
-    model = SpatialDiscriminator(input_channels=1)
+    model = SpatialDiscriminator(
+        input_channels=1,
+        num_timesteps=8,
+        padding_mode="zeros",
+    )
     x = torch.rand((2, 18, 1, 128, 128))
     out = model(x)
     assert out.shape == (2, 1, 1)
@@ -126,7 +146,11 @@ def test_spatial_discriminator() -> None:
 
 
 def test_discriminator() -> None:
-    model = Discriminator(input_channels=1)
+    model = Discriminator(
+        input_channels=1,
+        num_spatial_frames=8,
+        padding_mode="zeros",
+    )
     x = torch.rand((2, 18, 1, 256, 256))
     out = model(x)
     assert out.shape == (2, 2, 1)
@@ -145,16 +169,19 @@ def test_sampler(apply_last_relu: bool) -> None:
     forecast_steps = 18
     conditioning_stack = ContextConditioningStack(
         input_channels=input_channels,
-        conv_type=conv_type,
         output_channels=context_channels,
+        padding_mode="zeros",
+        conv_type=conv_type,
     )
     latent_stack = LatentConditioningStack(
         input_channels=8 * input_channels,
         output_channels=latent_channels,
+        padding_mode="zeros",
     )
     sampler = Sampler(
         forecast_steps=forecast_steps,
         latent_channels=latent_channels,
+        padding_mode="zeros",
         context_channels=context_channels,
         apply_last_relu=apply_last_relu,
     )
@@ -176,23 +203,27 @@ def test_sampler(apply_last_relu: bool) -> None:
 
 def test_generator() -> None:
     input_channels = 1
+    padding_mode = "zeros"
     conv_type: Literal["standard", "coord", "3d"] = "standard"
     context_channels = 384
     latent_channels = 768
     forecast_steps = 18
     conditioning_stack = ContextConditioningStack(
         input_channels=input_channels,
+        padding_mode=padding_mode,
         conv_type=conv_type,
         output_channels=context_channels,
     )
     latent_stack = LatentConditioningStack(
         input_channels=8 * input_channels,
         output_channels=latent_channels,
+        padding_mode=padding_mode,
     )
     sampler = Sampler(
         forecast_steps=forecast_steps,
         latent_channels=latent_channels,
         context_channels=context_channels,
+        padding_mode=padding_mode,
     )
     model = Generator(
         conditioning_stack=conditioning_stack,

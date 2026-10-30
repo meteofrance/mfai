@@ -20,8 +20,9 @@ class GBlock(torch.nn.Module):
 
     def __init__(
         self,
-        input_channels: int = 12,
-        output_channels: int = 12,
+        input_channels: int,
+        output_channels: int,
+        padding_mode: Literal["zeros", "reflect", "replicate", "circular"],
         conv_type: Literal["standard", "coord", "3d"] = "standard",
         spectral_normalized_eps: float = 0.0001,
     ) -> None:
@@ -31,6 +32,7 @@ class GBlock(torch.nn.Module):
         Args:
             input_channels: Number of input channels
             output_channels: Number of output channels
+            padding_mode: `'zeros'`, `'reflect'`, `'replicate'` or `'circular'`.
             conv_type: Type of convolution desired, see satflow/models/utils.py for options
             spectral_normalized_eps: Epsilon for numerical stability in calculating norms. Default is 1e-4.
 
@@ -47,6 +49,7 @@ class GBlock(torch.nn.Module):
                 in_channels=input_channels,
                 out_channels=output_channels,
                 kernel_size=1,
+                padding_mode=padding_mode,
             ),
             eps=spectral_normalized_eps,
         )
@@ -57,6 +60,7 @@ class GBlock(torch.nn.Module):
                 out_channels=input_channels,
                 kernel_size=3,
                 padding=1,
+                padding_mode=padding_mode,
             ),
             eps=spectral_normalized_eps,
         )
@@ -66,6 +70,7 @@ class GBlock(torch.nn.Module):
                 out_channels=output_channels,
                 kernel_size=3,
                 padding=1,
+                padding_mode=padding_mode,
             ),
             eps=spectral_normalized_eps,
         )
@@ -177,6 +182,7 @@ class DBlock(torch.nn.Module):
         self,
         input_channels: int,
         output_channels: int,
+        padding_mode: Literal["zeros", "reflect", "replicate", "circular"],
         conv_type: Literal["standard", "coord", "3d"] = "standard",
         first_relu: bool = True,
         keep_same_output: bool = False,
@@ -187,6 +193,7 @@ class DBlock(torch.nn.Module):
         Args:
             input_channels: Number of input channels
             output_channels: Number of output channels
+            padding_mode: `'zeros'`, `'reflect'`, `'replicate'` or `'circular'`.
             conv_type: Type of the convolution. Default is 'standard'.
             first_relu: Whether to have an ReLU before the first 3x3 convolution. Default is 'True'.
             keep_same_output: Whether the output should have the same spatial dimensions
@@ -212,6 +219,7 @@ class DBlock(torch.nn.Module):
                 in_channels=input_channels,
                 out_channels=output_channels,
                 kernel_size=1,
+                padding_mode=padding_mode,
             )
         )
         self.first_conv = spectral_norm(
@@ -220,6 +228,7 @@ class DBlock(torch.nn.Module):
                 out_channels=output_channels,
                 kernel_size=3,
                 padding=1,
+                padding_mode=padding_mode,
             )
         )
         self.last_conv = spectral_norm(
@@ -229,6 +238,7 @@ class DBlock(torch.nn.Module):
                 kernel_size=3,
                 padding=1,
                 stride=1,
+                padding_mode=padding_mode,
             )
         )
         # Downsample at end of 3x3
@@ -275,8 +285,9 @@ class LBlock(torch.nn.Module):
 
     def __init__(
         self,
-        input_channels: int = 12,
-        output_channels: int = 12,
+        input_channels: int,
+        output_channels: int,
+        padding_mode: Literal["zeros", "reflect", "replicate", "circular"],
         kernel_size: int = 3,
         conv_type: Literal["standard", "coord", "3d"] = "standard",
     ) -> None:
@@ -299,6 +310,7 @@ class LBlock(torch.nn.Module):
             in_channels=input_channels,
             out_channels=output_channels - input_channels,
             kernel_size=1,
+            padding_mode=padding_mode,
         )
 
         self.first_conv_3x3 = conv2d(
@@ -307,6 +319,7 @@ class LBlock(torch.nn.Module):
             kernel_size=kernel_size,
             padding=1,
             stride=1,
+            padding_mode=padding_mode,
         )
         self.relu = torch.nn.ReLU()
         self.last_conv_3x3 = conv2d(
@@ -315,6 +328,7 @@ class LBlock(torch.nn.Module):
             kernel_size=kernel_size,
             padding=1,
             stride=1,
+            padding_mode=padding_mode,
         )
 
     @override
@@ -340,8 +354,9 @@ class ContextConditioningStack(torch.nn.Module):
 
     def __init__(
         self,
-        input_channels: int = 1,
-        output_channels: int = 768,
+        input_channels: int,
+        output_channels: int,
+        padding_mode: Literal["zeros", "reflect", "replicate", "circular"],
         num_context_steps: int = 4,
         conv_type: Literal["standard", "coord", "3d"] = "standard",
     ) -> None:
@@ -351,6 +366,7 @@ class ContextConditioningStack(torch.nn.Module):
         Args:
             input_channels: Number of input channels per timestep
             output_channels: Number of output channels for the lowest block
+            padding_mode: `'zeros'`, `'reflect'`, `'replicate'` or `'circular'`.
             num_context_steps: number of context steps (int)
             conv_type: Type of 2D convolution to use, see satflow/models/utils.py for options
 
@@ -366,6 +382,7 @@ class ContextConditioningStack(torch.nn.Module):
             input_channels=4 * input_channels,
             output_channels=((output_channels // 4) * input_channels)
             // num_context_steps,
+            padding_mode=padding_mode,
             conv_type=conv_type,
         )
         self.d2 = DBlock(
@@ -373,17 +390,20 @@ class ContextConditioningStack(torch.nn.Module):
             // num_context_steps,
             output_channels=((output_channels // 2) * input_channels)
             // num_context_steps,
+            padding_mode=padding_mode,
             conv_type=conv_type,
         )
         self.d3 = DBlock(
             input_channels=((output_channels // 2) * input_channels)
             // num_context_steps,
             output_channels=(output_channels * input_channels) // num_context_steps,
+            padding_mode=padding_mode,
             conv_type=conv_type,
         )
         self.d4 = DBlock(
             input_channels=(output_channels * input_channels) // num_context_steps,
             output_channels=(output_channels * 2 * input_channels) // num_context_steps,
+            padding_mode=padding_mode,
             conv_type=conv_type,
         )
         self.conv1 = spectral_norm(
@@ -392,6 +412,7 @@ class ContextConditioningStack(torch.nn.Module):
                 out_channels=(output_channels // 8) * input_channels,
                 kernel_size=3,
                 padding=1,
+                padding_mode=padding_mode,
             )
         )
 
@@ -401,6 +422,7 @@ class ContextConditioningStack(torch.nn.Module):
                 out_channels=(output_channels // 4) * input_channels,
                 kernel_size=3,
                 padding=1,
+                padding_mode=padding_mode,
             )
         )
 
@@ -410,6 +432,7 @@ class ContextConditioningStack(torch.nn.Module):
                 out_channels=(output_channels // 2) * input_channels,
                 kernel_size=3,
                 padding=1,
+                padding_mode=padding_mode,
             )
         )
 
@@ -419,6 +442,7 @@ class ContextConditioningStack(torch.nn.Module):
                 out_channels=output_channels * input_channels,
                 kernel_size=3,
                 padding=1,
+                padding_mode=padding_mode,
             )
         )
 
@@ -477,8 +501,9 @@ class LatentConditioningStack(torch.nn.Module):
 
     def __init__(
         self,
-        input_channels: int = 8,
-        output_channels: int = 768,
+        input_channels: int,
+        output_channels: int,
+        padding_mode: Literal["zeros", "reflect", "replicate", "circular"],
         use_attention: bool = True,
         mu: float = 0.0,
         sigma: float = 1.0,
@@ -491,6 +516,7 @@ class LatentConditioningStack(torch.nn.Module):
                 of the final image shape.
             output_channels: Number of output channels for the conditioning
                 stack.
+            padding_mode: `'zeros'`, `'reflect'`, `'replicate'` or `'circular'`.
             use_attention: Whether to have a self-attention block or not.
             mu: mean of normal latent distribution
             sigma : standard deviation of latent normal distribution
@@ -511,16 +537,23 @@ class LatentConditioningStack(torch.nn.Module):
                 out_channels=self.input_channels,
                 kernel_size=(3, 3),
                 padding=1,
+                padding_mode=padding_mode,
             )
         )
         self.l_block1 = LBlock(
-            input_channels=self.input_channels, output_channels=output_channels // 32
+            input_channels=self.input_channels,
+            output_channels=output_channels // 32,
+            padding_mode=padding_mode,
         )
         self.l_block2 = LBlock(
-            input_channels=output_channels // 32, output_channels=output_channels // 16
+            input_channels=output_channels // 32,
+            output_channels=output_channels // 16,
+            padding_mode=padding_mode,
         )
         self.l_block3 = LBlock(
-            input_channels=output_channels // 16, output_channels=output_channels // 4
+            input_channels=output_channels // 16,
+            output_channels=output_channels // 4,
+            padding_mode=padding_mode,
         )
         if self.use_attention:
             self.att_block = AttentionLayer(
@@ -528,7 +561,9 @@ class LatentConditioningStack(torch.nn.Module):
                 output_channels=output_channels // 4,
             )
         self.l_block4 = LBlock(
-            input_channels=output_channels // 4, output_channels=output_channels
+            input_channels=output_channels // 4,
+            output_channels=output_channels,
+            padding_mode=padding_mode,
         )
 
     @override

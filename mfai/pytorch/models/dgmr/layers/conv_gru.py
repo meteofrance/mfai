@@ -1,5 +1,7 @@
 """Implementation of Conv GRU and cell module."""
 
+from typing import Literal
+
 import torch
 import torch.nn.functional as F
 from torch import Tensor
@@ -14,6 +16,7 @@ class ConvGRUCell(torch.nn.Module):
         self,
         input_channels: int,
         output_channels: int,
+        padding_mode: Literal["zeros", "reflect", "replicate", "circular"],
         kernel_size: int = 3,
         sn_eps: float = 0.0001,
     ) -> None:
@@ -22,8 +25,9 @@ class ConvGRUCell(torch.nn.Module):
         Args:
           input_channels: number of input channels (int)
           output_channels: number of output channels (int)
-          kernel_size: kernel size of the convolutions. Default: 3.
-          sn_eps: constant for spectral normalization. Default: 1e-4.
+          padding_mode: `zeros`, `reflect`, `replicate` or `circular`.
+          kernel_size: kernel size of the convolutions.
+          sn_eps: constant for spectral normalization.
 
         """
         super().__init__()
@@ -35,6 +39,7 @@ class ConvGRUCell(torch.nn.Module):
                 out_channels=output_channels,
                 kernel_size=(kernel_size, kernel_size),
                 padding=1,
+                padding_mode=padding_mode,
             ),
             eps=sn_eps,
         )
@@ -44,6 +49,7 @@ class ConvGRUCell(torch.nn.Module):
                 out_channels=output_channels,
                 kernel_size=(kernel_size, kernel_size),
                 padding=1,
+                padding_mode=padding_mode,
             ),
             eps=sn_eps,
         )
@@ -53,6 +59,7 @@ class ConvGRUCell(torch.nn.Module):
                 out_channels=output_channels,
                 kernel_size=(kernel_size, kernel_size),
                 padding=1,
+                padding_mode=padding_mode,
             ),
             eps=sn_eps,
         )
@@ -99,11 +106,18 @@ class ConvGRU(torch.nn.Module):
         output_channels: int,
         kernel_size: int = 3,
         sn_eps: float = 0.0001,
+        padding_mode: Literal["zeros", "reflect", "replicate", "circular"] = "zeros",
     ) -> None:
         """Initialize the convolution layer."""
         super().__init__()
         self.output_channels = output_channels
-        self.cell = ConvGRUCell(input_channels, output_channels, kernel_size, sn_eps)
+        self.cell = ConvGRUCell(
+            input_channels=input_channels,
+            output_channels=output_channels,
+            kernel_size=kernel_size,
+            sn_eps=sn_eps,
+            padding_mode=padding_mode,
+        )
 
     @override
     def forward(self, x: Tensor, hidden_state: Tensor) -> Tensor:

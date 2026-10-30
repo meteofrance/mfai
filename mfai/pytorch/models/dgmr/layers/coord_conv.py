@@ -66,7 +66,11 @@ class CoordConv(nn.Module):
     """Coordinate convolution class."""
 
     def __init__(
-        self, in_channels: int, out_channels: int, with_r: bool = False, **kwargs: Any
+        self,
+        in_channels: int,
+        out_channels: int,
+        with_r: bool = False,
+        **kwargs: Any,
     ) -> None:
         """
         Args:
@@ -74,7 +78,6 @@ class CoordConv(nn.Module):
             out_channels : number of output channels.
             with_r : boolean =False,.
             **kwargs : dict[str, Unknown].
-
         """
         super().__init__()
         self.addcoords = AddCoords(with_r=with_r)

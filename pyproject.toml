@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-  "setuptools==83.0.0",
+  "setuptools==84.1.0",
   "wheel==0.47.0",
   "setuptools-git-versioning==3.1.0",
 ]
@@ -95,7 +95,8 @@ dev = [
   "pytest==9.1.1",
   "pytest-cov==7.1.0",
   "ruff==0.15.20",
-  "pyright[nodejs]==1.1.411",
+  "pyright[nodejs]==1.1.414",
+  "mlflow",
 ]
 
 [project.urls]

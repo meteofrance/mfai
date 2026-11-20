@@ -173,3 +173,10 @@ mf.crt
 
 # IDEs
 .vscode
+
+# uv lock file
+# We dont want to pin our dev dependencies this precisely
+# and be stuck on versions that present potential security risks.
+# This way CI will re lock the dependencies from the pyproject.toml, and our
+# security protection comes from our use of uv's `exclude-newer = "15 days"`
+uv.lock
